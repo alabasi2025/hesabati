@@ -1,0 +1,90 @@
+<div class="login-container">
+  <!-- Background Effects -->
+  <div class="bg-effects">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <!-- Login Card -->
+  <div class="login-card">
+    <!-- Logo Section -->
+    <div class="logo-section">
+      <div class="logo-icon">
+        <span class="material-icons-round">account_balance_wallet</span>
+      </div>
+      <h1 class="app-title">حساباتي</h1>
+      <p class="app-subtitle">نظام إدارة مالية شخصية شاملة</p>
+    </div>
+
+    <!-- Form Section -->
+    <form (ngSubmit)="onLogin()" class="login-form">
+      <!-- Error Message -->
+      @if (error()) {
+        <div class="error-message animate-slide-in-up">
+          <span class="material-icons-round">error_outline</span>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      <!-- Username Field -->
+      <div class="field-group">
+        <label class="field-label">
+          <span class="material-icons-round">person</span>
+          اسم المستخدم
+        </label>
+        <input
+          type="text"
+          class="input-3d"
+          placeholder="أدخل اسم المستخدم"
+          [ngModel]="username()"
+          (ngModelChange)="username.set($event)"
+          name="username"
+          autocomplete="username"
+        />
+      </div>
+
+      <!-- Password Field -->
+      <div class="field-group">
+        <label class="field-label">
+          <span class="material-icons-round">lock</span>
+          كلمة المرور
+        </label>
+        <div class="password-wrapper">
+          <input
+            [type]="showPassword() ? 'text' : 'password'"
+            class="input-3d"
+            placeholder="أدخل كلمة المرور"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            name="password"
+            autocomplete="current-password"
+          />
+          <button type="button" class="toggle-password" (click)="togglePassword()">
+            <span class="material-icons-round">
+              {{ showPassword() ? 'visibility_off' : 'visibility' }}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Login Button -->
+      <button type="submit" class="login-btn" [disabled]="isLoading()">
+        @if (isLoading()) {
+          <div class="spinner"></div>
+          <span>جاري تسجيل الدخول...</span>
+        } @else {
+          <span class="material-icons-round">login</span>
+          <span>تسجيل الدخول</span>
+        }
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      <div class="footer-line"></div>
+      <p>نظام حساباتي &copy; 2026</p>
+    </div>
+  </div>
+</div>

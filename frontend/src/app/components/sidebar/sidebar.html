@@ -1,0 +1,71 @@
+<aside class="sidebar" [class.collapsed]="isCollapsed()">
+  <!-- Logo -->
+  <div class="sidebar-header">
+    <div class="logo-wrapper" (click)="toggleCollapse()">
+      <div class="logo-box">
+        <span class="material-icons-round">account_balance_wallet</span>
+      </div>
+      @if (!isCollapsed()) {
+        <div class="logo-text">
+          <h2>حساباتي</h2>
+          <span>إدارة مالية</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    @for (section of menuSections; track section.title) {
+      <div class="nav-section">
+        @if (!isCollapsed()) {
+          <div class="section-title">{{ section.title }}</div>
+        }
+        @for (item of section.items; track item.route) {
+          <a
+            class="nav-item"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+            [title]="item.label"
+          >
+            <div class="nav-icon">
+              <span class="material-icons-round">{{ item.icon }}</span>
+            </div>
+            @if (!isCollapsed()) {
+              <span class="nav-label">{{ item.label }}</span>
+            }
+            @if (item.badge && !isCollapsed()) {
+              <span class="nav-badge">{{ item.badge }}</span>
+            }
+          </a>
+        }
+      </div>
+    }
+  </nav>
+
+  <!-- User Section -->
+  <div class="sidebar-footer">
+    <div class="user-info" [class.collapsed]="isCollapsed()">
+      <div class="user-avatar">
+        <span class="material-icons-round">person</span>
+      </div>
+      @if (!isCollapsed()) {
+        <div class="user-details">
+          <span class="user-name">{{ user()?.fullName }}</span>
+          <span class="user-role">
+            @switch (user()?.role) {
+              @case ('admin') { مدير النظام }
+              @case ('accountant') { محاسب }
+              @case ('manager') { مدير }
+              @default { مستخدم }
+            }
+          </span>
+        </div>
+        <button class="logout-btn" (click)="logout()" title="تسجيل الخروج">
+          <span class="material-icons-round">logout</span>
+        </button>
+      }
+    </div>
+  </div>
+</aside>
