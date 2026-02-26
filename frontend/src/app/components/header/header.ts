@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
 export class HeaderComponent {
   private auth = inject(AuthService);
   
-  pageTitle = input<string>('لوحة المعلومات');
+  pageTitle = input<string>('لوحة التحكم');
   user = this.auth.user;
 
   getCurrentDate(): string {

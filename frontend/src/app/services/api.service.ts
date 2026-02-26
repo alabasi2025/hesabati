@@ -8,7 +8,9 @@ export interface DashboardStats {
   funds: number;
   suppliers: number;
   partners: number;
-  transactions: number;
+  vouchers: number;
+  pendingAccounts: number;
+  warehouses: number;
   totalSalaries: string;
 }
 
@@ -78,6 +80,14 @@ export class ApiService {
       headers: this.getHeaders(),
     });
     if (!response.ok) throw new Error('فشل جلب الشركاء');
+    return response.json();
+  }
+
+  async getPendingAccounts(): Promise<any[]> {
+    const response = await fetch(`${this.API_URL}/dashboard/pending-accounts`, {
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) throw new Error('فشل جلب الحسابات المعلقة');
     return response.json();
   }
 }

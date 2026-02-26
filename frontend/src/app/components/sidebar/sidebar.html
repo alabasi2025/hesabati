@@ -8,7 +8,7 @@
       @if (!isCollapsed()) {
         <div class="logo-text">
           <h2>حساباتي</h2>
-          <span>إدارة مالية</span>
+          <span>إدارة محطات الكهرباء</span>
         </div>
       }
     </div>
@@ -21,24 +21,50 @@
         @if (!isCollapsed()) {
           <div class="section-title">{{ section.title }}</div>
         }
-        @for (item of section.items; track item.route) {
-          <a
-            class="nav-item"
-            [routerLink]="item.route"
-            routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
-            [title]="item.label"
-          >
-            <div class="nav-icon">
-              <span class="material-icons-round">{{ item.icon }}</span>
+        @for (item of section.items; track item.label) {
+          <!-- Item with children (expandable) -->
+          @if (item.children) {
+            <div class="nav-item-group" [class.expanded]="isExpanded(item.label)">
+              <button class="nav-item has-children" (click)="toggleItem(item.label)" [title]="item.label">
+                <div class="nav-icon">
+                  <span class="material-icons-round">{{ item.icon }}</span>
+                </div>
+                @if (!isCollapsed()) {
+                  <span class="nav-label">{{ item.label }}</span>
+                  <span class="material-icons-round expand-arrow">{{ isExpanded(item.label) ? 'expand_less' : 'expand_more' }}</span>
+                }
+              </button>
+              @if (isExpanded(item.label) && !isCollapsed()) {
+                <div class="nav-children">
+                  @for (child of item.children; track child.label) {
+                    <a class="nav-child-item" [routerLink]="child.route" routerLinkActive="active">
+                      <span class="material-icons-round child-icon">{{ child.icon }}</span>
+                      <span class="child-label">{{ child.label }}</span>
+                    </a>
+                  }
+                </div>
+              }
             </div>
-            @if (!isCollapsed()) {
-              <span class="nav-label">{{ item.label }}</span>
-            }
-            @if (item.badge && !isCollapsed()) {
-              <span class="nav-badge">{{ item.badge }}</span>
-            }
-          </a>
+          } @else {
+            <!-- Simple item (no children) -->
+            <a
+              class="nav-item"
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+              [title]="item.label"
+            >
+              <div class="nav-icon">
+                <span class="material-icons-round">{{ item.icon }}</span>
+              </div>
+              @if (!isCollapsed()) {
+                <span class="nav-label">{{ item.label }}</span>
+                @if (item.badge) {
+                  <span class="nav-badge" [style.background-color]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                }
+              }
+            </a>
+          }
         }
       </div>
     }
@@ -52,15 +78,8 @@
       </div>
       @if (!isCollapsed()) {
         <div class="user-details">
-          <span class="user-name">{{ user()?.fullName }}</span>
-          <span class="user-role">
-            @switch (user()?.role) {
-              @case ('admin') { مدير النظام }
-              @case ('accountant') { محاسب }
-              @case ('manager') { مدير }
-              @default { مستخدم }
-            }
-          </span>
+          <span class="user-name">{{ user()?.fullName || 'المالك' }}</span>
+          <span class="user-role">مدير النظام</span>
         </div>
         <button class="logout-btn" (click)="logout()" title="تسجيل الخروج">
           <span class="material-icons-round">logout</span>

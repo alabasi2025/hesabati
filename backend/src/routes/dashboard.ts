@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { db } from '../db/index.ts';
-import { stations, employees, accounts, funds, suppliers, transactions, partners } from '../db/schema/index.ts';
+import { stations, employees, accounts, funds, suppliers, vouchers, partners, pendingAccounts, reconciliations, warehouses } from '../db/schema/index.ts';
 import { eq, sql, count } from 'drizzle-orm';
 
 const dashboardRoutes = new Hono();
@@ -13,7 +13,9 @@ dashboardRoutes.get('/stats', async (c) => {
     const [fundCount] = await db.select({ count: count() }).from(funds).where(eq(funds.isActive, true));
     const [supplierCount] = await db.select({ count: count() }).from(suppliers).where(eq(suppliers.isActive, true));
     const [partnerCount] = await db.select({ count: count() }).from(partners).where(eq(partners.isActive, true));
-    const [transactionCount] = await db.select({ count: count() }).from(transactions);
+    const [voucherCount] = await db.select({ count: count() }).from(vouchers);
+    const [pendingCount] = await db.select({ count: count() }).from(pendingAccounts).where(eq(pendingAccounts.status, 'pending'));
+    const [warehouseCount] = await db.select({ count: count() }).from(warehouses).where(eq(warehouses.isActive, true));
 
     // حساب إجمالي الرواتب
     const salaryResult = await db.select({
@@ -27,7 +29,9 @@ dashboardRoutes.get('/stats', async (c) => {
       funds: fundCount.count,
       suppliers: supplierCount.count,
       partners: partnerCount.count,
-      transactions: transactionCount.count,
+      vouchers: voucherCount.count,
+      pendingAccounts: pendingCount.count,
+      warehouses: warehouseCount.count,
       totalSalaries: salaryResult[0]?.total || '0',
     });
   } catch (error) {
@@ -84,6 +88,15 @@ dashboardRoutes.get('/suppliers', async (c) => {
 dashboardRoutes.get('/partners', async (c) => {
   try {
     const result = await db.select().from(partners);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: 'حدث خطأ' }, 500);
+  }
+});
+
+dashboardRoutes.get('/pending-accounts', async (c) => {
+  try {
+    const result = await db.select().from(pendingAccounts);
     return c.json(result);
   } catch (error) {
     return c.json({ error: 'حدث خطأ' }, 500);

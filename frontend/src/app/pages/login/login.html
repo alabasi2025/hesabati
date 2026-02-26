@@ -4,25 +4,41 @@
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
     <div class="grid-overlay"></div>
+    <div class="particles">
+      <div class="particle p1"></div>
+      <div class="particle p2"></div>
+      <div class="particle p3"></div>
+      <div class="particle p4"></div>
+      <div class="particle p5"></div>
+      <div class="particle p6"></div>
+    </div>
   </div>
 
   <!-- Login Card -->
   <div class="login-card">
+    <!-- Glow Effect -->
+    <div class="card-glow"></div>
+
     <!-- Logo Section -->
     <div class="logo-section">
       <div class="logo-icon">
-        <span class="material-icons-round">account_balance_wallet</span>
+        <div class="logo-inner">
+          <span class="material-icons-round">bolt</span>
+        </div>
+        <div class="logo-ring"></div>
+        <div class="logo-ring ring-2"></div>
       </div>
       <h1 class="app-title">حساباتي</h1>
-      <p class="app-subtitle">نظام إدارة مالية شخصية شاملة</p>
+      <p class="app-subtitle">إدارة محطات الكهرباء والحسابات الشخصية</p>
     </div>
 
     <!-- Form Section -->
     <form (ngSubmit)="onLogin()" class="login-form">
       <!-- Error Message -->
       @if (error()) {
-        <div class="error-message animate-slide-in-up">
+        <div class="error-message">
           <span class="material-icons-round">error_outline</span>
           <span>{{ error() }}</span>
         </div>
@@ -34,15 +50,18 @@
           <span class="material-icons-round">person</span>
           اسم المستخدم
         </label>
-        <input
-          type="text"
-          class="input-3d"
-          placeholder="أدخل اسم المستخدم"
-          [ngModel]="username()"
-          (ngModelChange)="username.set($event)"
-          name="username"
-          autocomplete="username"
-        />
+        <div class="input-wrapper">
+          <input
+            type="text"
+            class="input-3d"
+            placeholder="أدخل اسم المستخدم"
+            [ngModel]="username()"
+            (ngModelChange)="username.set($event)"
+            name="username"
+            autocomplete="username"
+          />
+          <div class="input-highlight"></div>
+        </div>
       </div>
 
       <!-- Password Field -->
@@ -51,21 +70,24 @@
           <span class="material-icons-round">lock</span>
           كلمة المرور
         </label>
-        <div class="password-wrapper">
-          <input
-            [type]="showPassword() ? 'text' : 'password'"
-            class="input-3d"
-            placeholder="أدخل كلمة المرور"
-            [ngModel]="password()"
-            (ngModelChange)="password.set($event)"
-            name="password"
-            autocomplete="current-password"
-          />
-          <button type="button" class="toggle-password" (click)="togglePassword()">
-            <span class="material-icons-round">
-              {{ showPassword() ? 'visibility_off' : 'visibility' }}
-            </span>
-          </button>
+        <div class="input-wrapper">
+          <div class="password-wrapper">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              class="input-3d"
+              placeholder="أدخل كلمة المرور"
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
+              name="password"
+              autocomplete="current-password"
+            />
+            <button type="button" class="toggle-password" (click)="togglePassword()">
+              <span class="material-icons-round">
+                {{ showPassword() ? 'visibility_off' : 'visibility' }}
+              </span>
+            </button>
+          </div>
+          <div class="input-highlight"></div>
         </div>
       </div>
 
@@ -78,6 +100,7 @@
           <span class="material-icons-round">login</span>
           <span>تسجيل الدخول</span>
         }
+        <div class="btn-shine"></div>
       </button>
     </form>
 
