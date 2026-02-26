@@ -1,0 +1,83 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">groups</span> الموظفين والرواتب</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">person_add</span> إضافة موظف</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-card blue"><span class="material-icons-round">groups</span><div><span class="num">{{ filteredEmployees().length }}</span><span class="lbl">موظف</span></div></div>
+    <div class="summary-card green"><span class="material-icons-round">payments</span><div><span class="num">{{ totalSalaries() | number:'1.0-0' }}</span><span class="lbl">إجمالي الرواتب (ر.ي)</span></div></div>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="filter-tab" [class.active]="filterStation() === 'all'" (click)="filterStation.set('all')">الكل</button>
+    <button class="filter-tab" [class.active]="filterStation() === 'admin'" (click)="filterStation.set('admin')">الإدارة</button>
+    @for (s of stations(); track s.id) {
+      <button class="filter-tab" [class.active]="filterStation() === '' + s.id" (click)="filterStation.set('' + s.id)">{{ s.name }}</button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!filteredEmployees().length) {
+    <div class="empty-state"><span class="material-icons-round">person_off</span><p>لا يوجد موظفين</p></div>
+  } @else {
+    <table class="data-table">
+      <thead><tr><th>#</th><th>الاسم</th><th>المسمى الوظيفي</th><th>المحطة</th><th>الراتب</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+      <tbody>
+        @for (emp of filteredEmployees(); track emp.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td><div class="emp-cell"><div class="emp-avatar-sm"><span class="material-icons-round">person</span></div><span class="emp-name-cell">{{ emp.fullName }}</span></div></td>
+            <td>{{ emp.jobTitle || '-' }}</td>
+            <td>{{ emp.stationName || 'الإدارة' }}</td>
+            <td class="salary-cell">{{ emp.salary | number:'1.0-0' }} ر.ي</td>
+            <td><span class="status-badge" [class]="getStatusClass(emp.status)">{{ getStatusLabel(emp.status) }}</span></td>
+            <td>
+              <button class="action-btn edit" (click)="openEdit(emp)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="remove(emp.id)"><span class="material-icons-round">delete</span></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row"><div class="modal-icon green"><span class="material-icons-round">person</span></div><h2>{{ editingId() ? 'تعديل موظف' : 'إضافة موظف جديد' }}</h2></div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group"><label>الاسم الكامل</label><input [(ngModel)]="form.fullName" /></div>
+            <div class="form-group"><label>المسمى الوظيفي</label><input [(ngModel)]="form.jobTitle" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>المحطة</label>
+              <select [(ngModel)]="form.stationId">
+                <option [ngValue]="null">الإدارة</option>
+                @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+              </select>
+            </div>
+            <div class="form-group"><label>القسم</label><input [(ngModel)]="form.department" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>الراتب</label><input type="number" [(ngModel)]="form.salary" /></div>
+            <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" /></div>
+          </div>
+          <div class="form-group"><label>الحالة</label>
+            <select [(ngModel)]="form.status"><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="suspended">موقوف</option></select>
+          </div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

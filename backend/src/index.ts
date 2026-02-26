@@ -5,14 +5,17 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import authRoutes from './routes/auth.ts';
 import dashboardRoutes from './routes/dashboard.ts';
+import apiRoutes from './routes/api.ts';
 import { authMiddleware } from './middleware/auth.ts';
 
 const app = new Hono();
 
 // Middleware
 app.use('*', cors({
-  origin: ['http://localhost:4200', 'http://localhost:5173'],
-  credentials: true,
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
 }));
 app.use('*', logger());
 
@@ -22,6 +25,7 @@ app.route('/api/auth', authRoutes);
 // Protected routes
 app.use('/api/*', authMiddleware());
 app.route('/api/dashboard', dashboardRoutes);
+app.route('/api', apiRoutes);
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', message: 'حساباتي - النظام يعمل بنجاح' }));

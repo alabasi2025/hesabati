@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
 
 export interface DashboardStats {
+  businesses: number;
   stations: number;
   employees: number;
   accounts: number;
@@ -14,9 +15,29 @@ export interface DashboardStats {
   totalSalaries: string;
 }
 
+export interface Business {
+  id: number;
+  name: string;
+  code: string;
+  description: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
+  sortOrder: number;
+  partners: any[];
+  stats: {
+    stations: number;
+    employees: number;
+    accounts: number;
+    funds: number;
+    suppliers: number;
+    pendingAccounts: number;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = '/api';
   private auth = inject(AuthService);
 
   private getHeaders(): HeadersInit {
@@ -27,67 +48,65 @@ export class ApiService {
     };
   }
 
-  async getDashboardStats(): Promise<DashboardStats> {
-    const response = await fetch(`${this.API_URL}/dashboard/stats`, {
-      headers: this.getHeaders(),
+  private async request<T>(path: string, options?: RequestInit): Promise<T> {
+    const res = await fetch(`${this.API_URL}${path}`, {
+      ...options,
+      headers: { ...this.getHeaders(), ...options?.headers },
     });
-    if (!response.ok) throw new Error('فشل جلب الإحصائيات');
-    return response.json();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `خطأ ${res.status}`);
+    }
+    return res.json();
   }
 
-  async getStations(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/stations`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب المحطات');
-    return response.json();
-  }
+  // ===================== Dashboard =====================
+  getDashboardStats() { return this.request<DashboardStats>('/dashboard/stats'); }
 
-  async getEmployees(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/employees`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب الموظفين');
-    return response.json();
-  }
+  // ===================== الأعمال =====================
+  getBusinesses()          { return this.request<Business[]>('/businesses'); }
+  getBusiness(id: number)  { return this.request<Business>(`/businesses/${id}`); }
 
-  async getAccounts(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/accounts`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب الحسابات');
-    return response.json();
-  }
+  // ===================== المحطات (حسب العمل) =====================
+  getStations(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/stations`); }
+  getStation(bizId: number, id: number)        { return this.request<any>(`/businesses/${bizId}/stations/${id}`); }
+  updateStation(id: number, d: any)            { return this.request<any>(`/stations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
 
-  async getFunds(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/funds`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب الصناديق');
-    return response.json();
-  }
+  // ===================== الموظفين (حسب العمل) =====================
+  getEmployees(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/employees`); }
+  createEmployee(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/employees`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateEmployee(id: number, d: any)             { return this.request<any>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteEmployee(id: number)                     { return this.request<any>(`/employees/${id}`, { method: 'DELETE' }); }
 
-  async getSuppliers(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/suppliers`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب الموردين');
-    return response.json();
-  }
+  // ===================== الحسابات (حسب العمل) =====================
+  getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
+  createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateAccount(id: number, d: any)              { return this.request<any>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteAccount(id: number)                      { return this.request<any>(`/accounts/${id}`, { method: 'DELETE' }); }
 
-  async getPartners(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/partners`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب الشركاء');
-    return response.json();
-  }
+  // ===================== الصناديق (حسب العمل) =====================
+  getFunds(bizId: number)                        { return this.request<any[]>(`/businesses/${bizId}/funds`); }
+  createFund(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/funds`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateFund(id: number, d: any)                 { return this.request<any>(`/funds/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
 
-  async getPendingAccounts(): Promise<any[]> {
-    const response = await fetch(`${this.API_URL}/dashboard/pending-accounts`, {
-      headers: this.getHeaders(),
-    });
-    if (!response.ok) throw new Error('فشل جلب الحسابات المعلقة');
-    return response.json();
-  }
+  // ===================== السندات (حسب العمل) =====================
+  getVouchers(bizId: number, type?: string)      { return this.request<any[]>(`/businesses/${bizId}/vouchers${type ? '?type=' + type : ''}`); }
+  createVoucher(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/vouchers`, { method: 'POST', body: JSON.stringify(d) }); }
+  deleteVoucher(id: number)                      { return this.request<any>(`/vouchers/${id}`, { method: 'DELETE' }); }
+
+  // ===================== الموردين (حسب العمل) =====================
+  getSuppliers(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/suppliers`); }
+  createSupplier(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/suppliers`, { method: 'POST', body: JSON.stringify(d) }); }
+
+  // ===================== المخازن (حسب العمل) =====================
+  getWarehouses(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/warehouses`); }
+
+  // ===================== الحسابات المعلقة (حسب العمل) =====================
+  getPendingAccounts(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/pending-accounts`); }
+
+  // ===================== تصنيفات السندات (حسب العمل) =====================
+  getVoucherCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/voucher-categories`); }
+
+  // ===================== العملات (عامة) =====================
+  getCurrencies() { return this.request<any[]>('/currencies'); }
 }

@@ -8,17 +8,23 @@ export const routes: Routes = [
     canActivate: [loginGuard],
   },
   {
-    path: 'dashboard',
-    loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent),
+    path: 'businesses',
+    loadComponent: () => import('./pages/business-select/business-select').then(m => m.BusinessSelectComponent),
     canActivate: [authGuard],
   },
   {
-    path: '',
-    redirectTo: 'login',
-    pathMatch: 'full',
+    path: 'biz/:bizId',
+    loadComponent: () => import('./pages/business-layout/business-layout').then(m => m.BusinessLayoutComponent),
+    canActivate: [authGuard],
+    children: [
+      { path: '', loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent) },
+      { path: 'stations', loadComponent: () => import('./pages/stations/stations').then(m => m.StationsComponent) },
+      { path: 'accounts', loadComponent: () => import('./pages/accounts/accounts').then(m => m.AccountsComponent) },
+      { path: 'employees', loadComponent: () => import('./pages/employees/employees').then(m => m.EmployeesComponent) },
+      { path: 'funds', loadComponent: () => import('./pages/funds/funds').then(m => m.FundsComponent) },
+      { path: 'vouchers', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
+    ],
   },
-  {
-    path: '**',
-    redirectTo: 'login',
-  },
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '**', redirectTo: 'login' },
 ];

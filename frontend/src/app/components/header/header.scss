@@ -3,9 +3,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 32px;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--bg-header);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.3s ease;
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
 .header-right {
@@ -16,13 +20,25 @@
 
 .page-title {
   font-size: 24px;
-  font-weight: 700;
-  color: rgba(241, 245, 249, 0.95);
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .biz-name {
+    font-weight: 900;
+  }
+  .separator {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
 }
 
 .page-date {
   font-size: 13px;
-  color: rgba(148, 163, 184, 0.6);
+  color: var(--text-secondary);
+  font-weight: 600;
 }
 
 .header-left {
@@ -38,22 +54,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(148, 163, 184, 0.08);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: rgba(148, 163, 184, 0.6);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(203, 213, 225, 0.9);
-    border-color: rgba(148, 163, 184, 0.12);
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
   }
 
-  .material-icons-round {
-    font-size: 20px;
-  }
+  .material-icons-round { font-size: 20px; }
 }
 
 .notification-dot {
@@ -64,5 +78,5 @@
   height: 8px;
   background: #ef4444;
   border-radius: 50%;
-  border: 2px solid rgba(15, 23, 42, 0.9);
+  border: 2px solid var(--bg-header);
 }

@@ -1,0 +1,62 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">bolt</span> المحطات</h2>
+    <span class="badge">{{ stations().length }}</span>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else {
+    <div class="cards-grid">
+      @for (s of stations(); track s.id; let i = $index) {
+        <div class="station-card" [class]="'accent-' + (i % 5)">
+          <div class="station-header">
+            <div class="station-icon">
+              <span class="material-icons-round">bolt</span>
+            </div>
+            <div class="station-info">
+              <h3>{{ s.name }}</h3>
+              <span class="station-code">{{ s.code }}</span>
+            </div>
+            <span class="status-badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
+              {{ s.isActive ? 'نشطة' : 'متوقفة' }}
+            </span>
+          </div>
+
+          <div class="station-details">
+            @if (s.location) {
+              <div class="detail-row">
+                <span class="material-icons-round">location_on</span>
+                <span>{{ s.location }}</span>
+              </div>
+            }
+            @if (s.billingSystems && s.billingSystems.length > 0) {
+              <div class="detail-row">
+                <span class="material-icons-round">dns</span>
+                <div class="billing-tags">
+                  @for (b of s.billingSystems; track b) {
+                    <span class="billing-tag">{{ getBillingLabel(b) }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="station-footer">
+            <div class="footer-stat">
+              <span class="material-icons-round">groups</span>
+              <span>{{ s.hasEmployees ? 'يوجد موظفين' : 'بدون موظفين' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (stations().length === 0) {
+      <div class="empty-state">
+        <span class="material-icons-round">bolt</span>
+        <p>لا توجد محطات في هذا العمل</p>
+      </div>
+    }
+  }
+</div>

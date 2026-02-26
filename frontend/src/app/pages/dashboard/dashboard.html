@@ -1,247 +1,150 @@
-<div class="layout">
-  <app-sidebar />
-  
-  <main class="main-content">
-    <app-header pageTitle="لوحة التحكم" />
-
-    <div class="dashboard-content">
-      <!-- Welcome Section -->
-      <div class="welcome-section animate-fade-in">
-        <div class="welcome-card">
-          <div class="welcome-text">
-            <h2>مرحباً بك في <span class="gradient-text">حساباتي</span></h2>
-            <p>نظام إدارة محطات الكهرباء والحسابات الشخصية</p>
-          </div>
-          <div class="welcome-icon animate-float">
-            <span class="material-icons-round">bolt</span>
-          </div>
+<div class="dashboard-page">
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>جاري تحميل البيانات...</p>
+    </div>
+  } @else {
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card stat-1" (click)="navigate('stations')">
+        <div class="stat-icon"><span class="material-icons-round">bolt</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stations().length }}</span>
+          <span class="stat-label">محطة</span>
         </div>
       </div>
-
-      <!-- Stats Grid -->
-      <div class="stats-grid">
-        @for (card of statCards(); track card.label; let i = $index) {
-          <div class="stat-card card-3d" [style.animation-delay]="(i * 0.08) + 's'">
-            <div class="stat-icon" [style.background]="card.gradient">
-              <span class="material-icons-round" [style.color]="card.color">{{ card.icon }}</span>
-            </div>
-            <div class="stat-info">
-              <span class="stat-value">{{ card.value }}</span>
-              <span class="stat-label">{{ card.label }}</span>
-            </div>
-          </div>
-        }
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="section-block animate-slide-in-up">
-        <h3 class="section-title">
-          <span class="material-icons-round">flash_on</span>
-          إجراءات سريعة
-        </h3>
-        <div class="actions-grid">
-          @for (action of quickActions; track action.label) {
-            <button class="action-card glass-light">
-              <div class="action-icon" [style.color]="action.color">
-                <span class="material-icons-round">{{ action.icon }}</span>
-              </div>
-              <span class="action-label">{{ action.label }}</span>
-            </button>
-          }
+      <div class="stat-card stat-2" (click)="navigate('employees')">
+        <div class="stat-icon"><span class="material-icons-round">groups</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ employees().length }}</span>
+          <span class="stat-label">موظف</span>
         </div>
       </div>
-
-      <!-- Stations Overview -->
-      <div class="section-block animate-slide-in-up">
-        <h3 class="section-title">
-          <span class="material-icons-round">bolt</span>
-          المحطات
-        </h3>
-        <div class="stations-grid">
-          @for (station of stations(); track station.code) {
-            <div class="station-card card-3d">
-              <div class="station-header">
-                <div class="station-icon" [class.active]="station.status === 'active'" [class.partner]="station.status === 'partner'">
-                  <span class="material-icons-round">bolt</span>
-                </div>
-                <div class="station-status" [class.active]="station.status === 'active'" [class.partner]="station.status === 'partner'">
-                  @switch (station.status) {
-                    @case ('active') { نشطة }
-                    @case ('partner') { شراكة }
-                    @default { - }
-                  }
-                </div>
-              </div>
-              <h4 class="station-name">{{ station.name }}</h4>
-              <div class="station-details">
-                <div class="detail-row">
-                  <span class="material-icons-round">person</span>
-                  <span>{{ station.manager }}</span>
-                </div>
-                @if (station.employees > 0) {
-                  <div class="detail-row">
-                    <span class="material-icons-round">group</span>
-                    <span>{{ station.employees }} موظف</span>
-                  </div>
-                }
-                <div class="detail-row systems">
-                  <span class="material-icons-round">dns</span>
-                  <span>{{ station.systems }}</span>
-                </div>
-              </div>
-            </div>
-          }
+      <div class="stat-card stat-3" (click)="navigate('accounts')">
+        <div class="stat-icon"><span class="material-icons-round">account_balance_wallet</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ accounts().length }}</span>
+          <span class="stat-label">حساب ومحفظة</span>
         </div>
       </div>
-
-      <!-- Two Columns -->
-      <div class="two-columns">
-        <!-- Monthly Budget -->
-        <div class="section-block animate-slide-in-up">
-          <h3 class="section-title">
-            <span class="material-icons-round">request_page</span>
-            ملخص الميزانية الشهرية
-          </h3>
-          <div class="budget-list">
-            <div class="budget-item">
-              <div class="budget-label">
-                <span class="budget-dot" style="background: #ef4444;"></span>
-                الرواتب
-              </div>
-              <span class="budget-value">3,830,000 ر.ي</span>
-            </div>
-            <div class="budget-item">
-              <div class="budget-label">
-                <span class="budget-dot" style="background: #a855f7;"></span>
-                الإيجارات
-              </div>
-              <span class="budget-value">1,625,000 ر.ي</span>
-            </div>
-            <div class="budget-item">
-              <div class="budget-label">
-                <span class="budget-dot" style="background: #6366f1;"></span>
-                عائد وزارة الكهرباء
-              </div>
-              <span class="budget-value">450,000 ر.ي</span>
-            </div>
-            <div class="budget-item">
-              <div class="budget-label">
-                <span class="budget-dot" style="background: #d946ef;"></span>
-                الزيت للمولدات
-              </div>
-              <span class="budget-value">1,053,000 ر.ي</span>
-            </div>
-            <div class="budget-item">
-              <div class="budget-label">
-                <span class="budget-dot" style="background: #fb923c;"></span>
-                صيانة مولدات
-              </div>
-              <span class="budget-value">1,000,000 ر.ي</span>
-            </div>
-            <div class="budget-item">
-              <div class="budget-label">
-                <span class="budget-dot" style="background: #0ea5e9;"></span>
-                النت والاتصالات
-              </div>
-              <span class="budget-value">77,500 ر.ي</span>
-            </div>
-            <div class="budget-item total">
-              <div class="budget-label">الإجمالي (بدون الديزل)</div>
-              <span class="budget-value">10,458,500 ر.ي</span>
-            </div>
-          </div>
+      <div class="stat-card stat-4" (click)="navigate('funds')">
+        <div class="stat-icon"><span class="material-icons-round">inventory_2</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ funds().length }}</span>
+          <span class="stat-label">صندوق</span>
         </div>
-
-        <!-- Right Column -->
-        <div class="right-column">
-          <!-- Pending Accounts -->
-          <div class="section-block animate-slide-in-up pending-section">
-            <h3 class="section-title warning">
-              <span class="material-icons-round">pending_actions</span>
-              حسابات معلقة تحتاج تصفية
-            </h3>
-            <div class="pending-list">
-              @for (item of pendingItems(); track item.person) {
-                <div class="pending-card">
-                  <div class="pending-icon">
-                    <span class="material-icons-round">warning_amber</span>
-                  </div>
-                  <div class="pending-info">
-                    <span class="pending-person">{{ item.person }}</span>
-                    <span class="pending-desc">{{ item.description }}</span>
-                  </div>
-                  <span class="pending-status">{{ item.status }}</span>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Partners & Currencies -->
-          <div class="section-block animate-slide-in-up">
-            <h3 class="section-title">
-              <span class="material-icons-round">handshake</span>
-              الشركاء
-            </h3>
-            <div class="partners-list">
-              <div class="partner-card glass-light">
-                <div class="partner-avatar" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.15));">
-                  <span class="material-icons-round" style="color: #60a5fa;">person</span>
-                </div>
-                <div class="partner-info">
-                  <span class="partner-name">محمد المراني</span>
-                  <span class="partner-type">شريك رئيسي - المحطات الخمس</span>
-                </div>
-              </div>
-              <div class="partner-card glass-light">
-                <div class="partner-avatar" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15));">
-                  <span class="material-icons-round" style="color: #4ade80;">person</span>
-                </div>
-                <div class="partner-info">
-                  <span class="partner-name">عمر إسحاق</span>
-                  <span class="partner-type">شريك - محطة معبر</span>
-                </div>
-              </div>
-              <div class="partner-card glass-light">
-                <div class="partner-avatar" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(124, 58, 237, 0.15));">
-                  <span class="material-icons-round" style="color: #c084fc;">person</span>
-                </div>
-                <div class="partner-info">
-                  <span class="partner-name">إبراهيم نجم الدين</span>
-                  <span class="partner-type">شريك - محطة معبر</span>
-                </div>
-              </div>
-            </div>
-
-            <h3 class="section-title" style="margin-top: 20px;">
-              <span class="material-icons-round">currency_exchange</span>
-              العملات
-            </h3>
-            <div class="currencies-list">
-              <div class="currency-card glass-light">
-                <span class="currency-symbol">ر.ي</span>
-                <div class="currency-info">
-                  <span class="currency-name">ريال يمني</span>
-                  <span class="currency-rate">العملة الأساسية</span>
-                </div>
-              </div>
-              <div class="currency-card glass-light">
-                <span class="currency-symbol">ر.س</span>
-                <div class="currency-info">
-                  <span class="currency-name">ريال سعودي</span>
-                  <span class="currency-rate">165 ر.ي</span>
-                </div>
-              </div>
-              <div class="currency-card glass-light">
-                <span class="currency-symbol">$</span>
-                <div class="currency-info">
-                  <span class="currency-name">دولار أمريكي</span>
-                  <span class="currency-rate">540 ر.ي</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      </div>
+      <div class="stat-card stat-5">
+        <div class="stat-icon"><span class="material-icons-round">payments</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ formatNumber(totalSalaries()) }}</span>
+          <span class="stat-label">إجمالي الرواتب (ر.ي)</span>
+        </div>
+      </div>
+      <div class="stat-card stat-6" (click)="navigate('suppliers')">
+        <div class="stat-icon"><span class="material-icons-round">local_shipping</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ suppliers().length }}</span>
+          <span class="stat-label">مورد</span>
         </div>
       </div>
     </div>
-  </main>
+
+    <!-- Quick Actions -->
+    <div class="section-card">
+      <h3 class="section-title"><span class="material-icons-round">flash_on</span> إجراءات سريعة</h3>
+      <div class="quick-actions">
+        <button class="action-btn action-green" (click)="navigate('vouchers/receipt')">
+          <span class="material-icons-round">arrow_downward</span> سند قبض
+        </button>
+        <button class="action-btn action-red" (click)="navigate('vouchers/payment')">
+          <span class="material-icons-round">arrow_upward</span> سند صرف
+        </button>
+        <button class="action-btn action-purple" (click)="navigate('vouchers/transfer')">
+          <span class="material-icons-round">swap_horiz</span> تحويل
+        </button>
+        <button class="action-btn action-blue" (click)="navigate('employees')">
+          <span class="material-icons-round">person_add</span> إضافة موظف
+        </button>
+      </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="two-cols">
+      <!-- Stations -->
+      <div class="section-card">
+        <h3 class="section-title"><span class="material-icons-round">bolt</span> المحطات</h3>
+        <div class="items-list">
+          @for (s of stations(); track s.id) {
+            <div class="list-item" (click)="navigate('stations')">
+              <div class="item-icon" [style.background]="biz.currentBusinessColor() + '18'" [style.color]="biz.currentBusinessColor()">
+                <span class="material-icons-round">location_on</span>
+              </div>
+              <div class="item-info">
+                <span class="item-name">{{ s.name }}</span>
+                <span class="item-detail">{{ s.location || s.billingSystem || '' }}</span>
+              </div>
+              @if (s.isActive) {
+                <span class="badge badge-active">نشطة</span>
+              } @else {
+                <span class="badge badge-inactive">غير نشطة</span>
+              }
+            </div>
+          }
+          @if (stations().length === 0) {
+            <div class="empty-state">لا توجد محطات</div>
+          }
+        </div>
+      </div>
+
+      <!-- Partners -->
+      <div class="section-card">
+        <h3 class="section-title"><span class="material-icons-round">handshake</span> الشركاء</h3>
+        <div class="items-list">
+          @for (p of partners(); track p.id) {
+            <div class="list-item">
+              <div class="item-icon partner-icon">
+                <span class="material-icons-round">person</span>
+              </div>
+              <div class="item-info">
+                <span class="item-name">{{ p.fullName }}</span>
+                <span class="item-detail">{{ p.role || 'شريك' }}</span>
+              </div>
+              <div class="share-badge" [style.color]="biz.currentBusinessColor()">
+                {{ p.sharePercentage }}%
+              </div>
+            </div>
+          }
+          @if (partners().length === 0) {
+            <div class="empty-state">لا يوجد شركاء</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Accounts -->
+    @if (pendingAccounts().length > 0) {
+      <div class="section-card pending-section">
+        <h3 class="section-title pending-title">
+          <span class="material-icons-round">warning</span>
+          حسابات معلقة ({{ pendingAccounts().length }})
+        </h3>
+        <div class="items-list">
+          @for (p of pendingAccounts(); track p.id) {
+            <div class="list-item pending-item">
+              <div class="item-icon pending-icon">
+                <span class="material-icons-round">error_outline</span>
+              </div>
+              <div class="item-info">
+                <span class="item-name">{{ p.personOrEntity }}</span>
+                <span class="item-detail">{{ p.description }}</span>
+              </div>
+              <span class="badge badge-pending">{{ p.status === 'pending' ? 'معلق' : p.status }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
 </div>

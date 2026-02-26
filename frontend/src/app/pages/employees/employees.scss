@@ -1,0 +1,32 @@
+@use '../shared-page.scss';
+
+.summary-row { display: flex; gap: 16px; margin-bottom: 20px; }
+.summary-card {
+  display: flex; align-items: center; gap: 14px; padding: 16px 22px;
+  border-radius: 14px; border: 1px solid var(--border-color); flex: 1;
+  .material-icons-round { font-size: 28px; }
+  .num { display: block; font-size: 22px; font-weight: 800; color: var(--text-primary); }
+  .lbl { display: block; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  &.blue { background: var(--stat-1-bg); .material-icons-round { color: var(--stat-1-color); } }
+  &.green { background: var(--stat-2-bg); .material-icons-round { color: var(--stat-2-color); } }
+}
+
+.filter-tabs {
+  display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.filter-tab {
+  padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-primary); font-size: 13px;
+  font-weight: 700; cursor: pointer; font-family: 'Tajawal', sans-serif; transition: all 0.2s;
+  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  &.active { background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); color: white; border-color: transparent; }
+}
+
+.emp-cell { display: flex; align-items: center; gap: 10px; }
+.emp-avatar-sm {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--stat-1-bg);
+  display: flex; align-items: center; justify-content: center;
+  .material-icons-round { font-size: 16px; color: var(--stat-1-color); }
+}
+.emp-name-cell { font-weight: 700; }
+.salary-cell { font-weight: 800; color: var(--accent-green); direction: ltr; text-align: right; }

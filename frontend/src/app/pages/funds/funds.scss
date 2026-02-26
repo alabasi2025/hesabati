@@ -1,0 +1,81 @@
+@use '../shared-page.scss';
+
+.filter-tabs {
+  display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.filter-tab {
+  padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-primary); font-size: 13px;
+  font-weight: 700; cursor: pointer; font-family: 'Tajawal', sans-serif; transition: all 0.2s;
+  &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  &.active { background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); color: white; border-color: transparent; }
+}
+
+.funds-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+}
+
+.fund-card {
+  padding: 20px; border-radius: 16px; border: 1px solid var(--border-color);
+  background: var(--bg-card); box-shadow: var(--shadow-card); transition: all 0.3s;
+  position: relative; overflow: hidden;
+
+  &::before { content: ''; position: absolute; top: 0; right: 0; width: 4px; height: 100%; }
+  &.type-blue::before   { background: var(--accent-blue); }
+  &.type-green::before  { background: var(--accent-green); }
+  &.type-amber::before  { background: var(--accent-amber); }
+  &.type-purple::before { background: var(--accent-purple); }
+  &.type-teal::before   { background: var(--accent-teal); }
+  &.type-red::before    { background: var(--accent-red); }
+
+  &:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+}
+
+.fund-card-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.fund-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  .material-icons-round { font-size: 22px; color: white; }
+  &.blue   { background: linear-gradient(135deg, #3b82f6, #6366f1); }
+  &.green  { background: linear-gradient(135deg, #22c55e, #14b8a6); }
+  &.amber  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  &.purple { background: linear-gradient(135deg, #a855f7, #ec4899); }
+  &.teal   { background: linear-gradient(135deg, #14b8a6, #06b6d4); }
+  &.red    { background: linear-gradient(135deg, #ef4444, #f97316); }
+}
+
+.fund-name { font-size: 16px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px; }
+.fund-type-badge {
+  display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 6px; background: var(--bg-surface); color: var(--text-secondary); margin-bottom: 10px;
+}
+.fund-detail {
+  display: flex; align-items: center; gap: 6px; font-size: 12px;
+  color: var(--text-secondary); margin-bottom: 4px; font-weight: 600;
+  .material-icons-round { font-size: 14px; }
+}
+
+.fund-balances {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+  padding-top: 10px; border-top: 1px solid var(--border-color);
+}
+.balance-chip {
+  display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+  border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-color);
+}
+.bal-amount { font-size: 14px; font-weight: 800; color: var(--text-primary); direction: ltr; }
+.bal-currency { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+
+.fund-status {
+  display: flex; align-items: center; gap: 6px; margin-top: 10px;
+  font-size: 12px; color: var(--text-secondary); font-weight: 600;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint);
+  &.active { background: var(--accent-green); }
+}
+
+@media (max-width: 1200px) { .funds-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .funds-grid { grid-template-columns: 1fr; } }

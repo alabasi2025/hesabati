@@ -1,15 +1,20 @@
 <header class="app-header">
   <div class="header-right">
-    <h1 class="page-title">{{ pageTitle() }}</h1>
+    <h1 class="page-title">
+      @if (biz.currentBusinessName()) {
+        <span class="biz-name" [style.color]="biz.currentBusinessColor()">{{ biz.currentBusinessName() }}</span>
+        <span class="separator">|</span>
+      }
+      {{ pageTitle() }}
+    </h1>
     <span class="page-date">{{ getCurrentDate() }}</span>
   </div>
   <div class="header-left">
+    <button class="theme-toggle-btn" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'الوضع النهاري' : 'الوضع الليلي'">
+      <span class="material-icons-round">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+    </button>
     <button class="header-btn" title="الإشعارات">
       <span class="material-icons-round">notifications</span>
-      <span class="notification-dot"></span>
-    </button>
-    <button class="header-btn" title="البحث">
-      <span class="material-icons-round">search</span>
     </button>
   </div>
 </header>

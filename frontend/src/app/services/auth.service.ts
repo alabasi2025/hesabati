@@ -14,7 +14,7 @@ export interface LoginResponse {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:3000/api/auth';
+  private readonly API_URL = '/api/auth';
   
   private currentUser = signal<User | null>(null);
   private token = signal<string | null>(null);
@@ -64,5 +64,9 @@ export class AuthService {
 
   getToken(): string | null {
     return this.token();
+  }
+
+  getUserName(): string {
+    return this.currentUser()?.fullName || 'المالك';
   }
 }

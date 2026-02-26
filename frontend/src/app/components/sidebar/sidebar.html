@@ -2,13 +2,13 @@
   <!-- Logo -->
   <div class="sidebar-header">
     <div class="logo-wrapper" (click)="toggleCollapse()">
-      <div class="logo-box">
-        <span class="material-icons-round">account_balance_wallet</span>
+      <div class="logo-box" [style.background]="biz.currentBusinessColor() + '20'" [style.color]="biz.currentBusinessColor()">
+        <span class="material-icons-round">{{ biz.currentBusinessIcon() || 'bolt' }}</span>
       </div>
       @if (!isCollapsed()) {
         <div class="logo-text">
-          <h2>حساباتي</h2>
-          <span>إدارة محطات الكهرباء</span>
+          <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
+          <span>نظام الإدارة المالية</span>
         </div>
       }
     </div>
@@ -16,13 +16,12 @@
 
   <!-- Navigation -->
   <nav class="sidebar-nav">
-    @for (section of menuSections; track section.title) {
+    @for (section of menuSections(); track section.title) {
       <div class="nav-section">
         @if (!isCollapsed()) {
           <div class="section-title">{{ section.title }}</div>
         }
         @for (item of section.items; track item.label) {
-          <!-- Item with children (expandable) -->
           @if (item.children) {
             <div class="nav-item-group" [class.expanded]="isExpanded(item.label)">
               <button class="nav-item has-children" (click)="toggleItem(item.label)" [title]="item.label">
@@ -46,12 +45,11 @@
               }
             </div>
           } @else {
-            <!-- Simple item (no children) -->
             <a
               class="nav-item"
               [routerLink]="item.route"
               routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+              [routerLinkActiveOptions]="{exact: !item.route?.includes('/')}"
               [title]="item.label"
             >
               <div class="nav-icon">

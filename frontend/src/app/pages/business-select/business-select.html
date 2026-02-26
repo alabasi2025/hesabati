@@ -1,0 +1,112 @@
+<div class="business-select-page">
+  <!-- Header Bar -->
+  <div class="top-bar">
+    <div class="logo-area">
+      <span class="material-icons-round logo-icon">bolt</span>
+      <span class="logo-text">حساباتي</span>
+    </div>
+    <div class="top-actions">
+      <button class="theme-toggle-btn" (click)="toggleTheme()">
+        {{ theme.isDark() ? 'light_mode' : 'dark_mode' }}
+      </button>
+      <button class="logout-btn" (click)="logout()">
+        <span class="material-icons-round">logout</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Welcome Section -->
+  <div class="welcome-section">
+    <h1 class="welcome-title">{{ getGreeting() }}، <span class="gradient-text">{{ userName() }}</span></h1>
+    <p class="welcome-subtitle">اختر العمل الذي تريد الدخول إليه</p>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>جاري تحميل الأعمال...</p>
+    </div>
+  }
+
+  <!-- Business Cards -->
+  @if (!loading()) {
+    <div class="businesses-grid">
+      @for (biz of businesses(); track biz.id) {
+        <div class="business-card" [style.--biz-color]="biz.color" (click)="enterBusiness(biz)">
+          <div class="card-glow" [style.background]="biz.color + '22'"></div>
+          <div class="card-content">
+            <div class="card-header">
+              <div class="icon-wrapper" [style.background]="biz.color + '20'" [style.color]="biz.color">
+                <span class="material-icons-round">{{ biz.icon }}</span>
+              </div>
+              <div class="card-badge" [style.background]="biz.color">
+                {{ biz.stats.stations }} محطة
+              </div>
+            </div>
+
+            <h2 class="card-title">{{ biz.name }}</h2>
+            <p class="card-desc">{{ biz.description }}</p>
+
+            <!-- Partners -->
+            @if (biz.partners && biz.partners.length > 0) {
+              <div class="partners-section">
+                <span class="partners-label">الشركاء:</span>
+                <div class="partners-list">
+                  @for (p of biz.partners; track p.id) {
+                    <span class="partner-chip" [style.border-color]="biz.color + '55'">
+                      {{ p.fullName }} ({{ p.sharePercentage }}%)
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Stats Grid -->
+            <div class="stats-mini">
+              <div class="stat-item">
+                <span class="stat-num" [style.color]="biz.color">{{ biz.stats.employees }}</span>
+                <span class="stat-label">موظف</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-num" [style.color]="biz.color">{{ biz.stats.accounts }}</span>
+                <span class="stat-label">حساب</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-num" [style.color]="biz.color">{{ biz.stats.funds }}</span>
+                <span class="stat-label">صندوق</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-num" [style.color]="biz.color">{{ biz.stats.suppliers }}</span>
+                <span class="stat-label">مورد</span>
+              </div>
+            </div>
+
+            @if (biz.stats.pendingAccounts > 0) {
+              <div class="pending-badge">
+                <span class="material-icons-round">warning</span>
+                {{ biz.stats.pendingAccounts }} حسابات معلقة
+              </div>
+            }
+
+            <div class="enter-btn" [style.background]="biz.color">
+              <span>الدخول</span>
+              <span class="material-icons-round">arrow_back</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Add New Business Card -->
+      <div class="business-card add-card">
+        <div class="card-content add-content">
+          <div class="add-icon">
+            <span class="material-icons-round">add_circle_outline</span>
+          </div>
+          <h3>إضافة عمل جديد</h3>
+          <p>قريباً...</p>
+        </div>
+      </div>
+    </div>
+  }
+</div>
