@@ -19,6 +19,7 @@ export interface Business {
   id: number;
   name: string;
   code: string;
+  type: 'stations' | 'single_station' | 'personal';
   description: string;
   icon: string;
   color: string;

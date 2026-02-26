@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ApiService, Business } from '../../services/api.service';
 import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../services/auth.service';
+import { BusinessService, BusinessType } from '../../services/business.service';
 
 @Component({
   selector: 'app-business-select',
@@ -16,6 +17,7 @@ export class BusinessSelectComponent implements OnInit {
   private api = inject(ApiService);
   private router = inject(Router);
   private auth = inject(AuthService);
+  private bizService = inject(BusinessService);
   theme = inject(ThemeService);
 
   businesses = signal<Business[]>([]);
@@ -39,6 +41,8 @@ export class BusinessSelectComponent implements OnInit {
   }
 
   enterBusiness(biz: Business) {
+    const type: BusinessType = (biz.type as BusinessType) || 'stations';
+    this.bizService.setBusiness(biz.id, biz.name, biz.color, biz.icon, type);
     this.router.navigate(['/biz', biz.id]);
   }
 

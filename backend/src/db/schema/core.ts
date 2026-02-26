@@ -69,6 +69,7 @@ export const businesses = pgTable('businesses', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 200 }).notNull(),
   code: varchar('code', { length: 50 }).notNull().unique(),
+  type: varchar('type', { length: 30 }).default('stations'), // stations | single_station | personal
   description: text('description'),
   icon: varchar('icon', { length: 50 }).default('business'),
   color: varchar('color', { length: 20 }).default('#3b82f6'),

@@ -1,7 +1,7 @@
 import { Component, signal, inject, effect } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { BusinessService } from '../../services/business.service';
+import { BusinessService, BusinessType } from '../../services/business.service';
 
 interface MenuItem {
   icon: string;
@@ -38,49 +38,144 @@ export class SidebarComponent {
   constructor() {
     effect(() => {
       const bizId = this.biz.currentBusinessId();
+      const bizType = this.biz.currentBusinessType();
       if (bizId) {
-        this.buildMenu(bizId);
+        this.buildMenu(bizId, bizType);
       }
     });
   }
 
-  private buildMenu(bizId: number) {
+  private buildMenu(bizId: number, type: BusinessType) {
     const b = `/biz/${bizId}`;
-    this.menuSections.set([
-      {
-        title: 'الرئيسية',
-        items: [
-          { icon: 'dashboard', label: 'لوحة التحكم', route: b },
-          { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
-        ],
-      },
-      {
-        title: 'الأعمال',
-        items: [
-          { icon: 'bolt', label: 'المحطات', route: `${b}/stations` },
-          { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
-          { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
-        ],
-      },
-      {
-        title: 'العمليات المالية',
-        items: [
-          { icon: 'receipt_long', label: 'السندات', route: `${b}/vouchers` },
-        ],
-      },
-      {
-        title: 'الأشخاص',
-        items: [
-          { icon: 'groups', label: 'الموظفين والرواتب', route: `${b}/employees` },
-        ],
-      },
-      {
-        title: 'التصفيات والتقارير',
-        items: [
-          { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
-        ],
-      },
-    ]);
+
+    // ===== عمل المحطات (شراكة المراني) =====
+    if (type === 'stations') {
+      this.menuSections.set([
+        {
+          title: 'الرئيسية',
+          items: [
+            { icon: 'dashboard', label: 'لوحة التحكم', route: b },
+            { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
+          ],
+        },
+        {
+          title: 'المحطات',
+          items: [
+            { icon: 'bolt', label: 'المحطات', route: `${b}/stations` },
+            { icon: 'receipt_long', label: 'التحصيل والتوريد', route: `${b}/collections` },
+          ],
+        },
+        {
+          title: 'المالية',
+          items: [
+            { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
+            { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
+            { icon: 'arrow_downward', label: 'سند قبض', route: `${b}/vouchers/receipt` },
+            { icon: 'arrow_upward', label: 'سند صرف', route: `${b}/vouchers/payment` },
+            { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
+          ],
+        },
+        {
+          title: 'الأشخاص',
+          items: [
+            { icon: 'groups', label: 'الموظفين والرواتب', route: `${b}/employees` },
+            { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
+          ],
+        },
+        {
+          title: 'المخزن والموردين',
+          items: [
+            { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
+            { icon: 'local_shipping', label: 'الموردين', route: `${b}/suppliers` },
+          ],
+        },
+        {
+          title: 'التصفيات والتقارير',
+          items: [
+            { icon: 'balance', label: 'التصفيات', route: `${b}/settlements` },
+            { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
+            { icon: 'warning', label: 'حسابات معلقة', route: `${b}/pending`, badge: 3, badgeColor: 'red' },
+          ],
+        },
+      ]);
+    }
+
+    // ===== محطة معبر (محطة واحدة) =====
+    else if (type === 'single_station') {
+      this.menuSections.set([
+        {
+          title: 'الرئيسية',
+          items: [
+            { icon: 'dashboard', label: 'لوحة التحكم', route: b },
+            { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
+          ],
+        },
+        {
+          title: 'المحطة',
+          items: [
+            { icon: 'bolt', label: 'المحطة', route: `${b}/stations` },
+          ],
+        },
+        {
+          title: 'المالية',
+          items: [
+            { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
+            { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
+            { icon: 'arrow_downward', label: 'سند قبض', route: `${b}/vouchers/receipt` },
+            { icon: 'arrow_upward', label: 'سند صرف', route: `${b}/vouchers/payment` },
+          ],
+        },
+        {
+          title: 'الأشخاص',
+          items: [
+            { icon: 'groups', label: 'الموظفين والرواتب', route: `${b}/employees` },
+            { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
+          ],
+        },
+        {
+          title: 'المخزن والموردين',
+          items: [
+            { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
+            { icon: 'local_shipping', label: 'الموردين', route: `${b}/suppliers` },
+          ],
+        },
+        {
+          title: 'التصفيات والتقارير',
+          items: [
+            { icon: 'balance', label: 'التصفيات', route: `${b}/settlements` },
+            { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
+          ],
+        },
+      ]);
+    }
+
+    // ===== الأعمال الشخصية =====
+    else if (type === 'personal') {
+      this.menuSections.set([
+        {
+          title: 'الرئيسية',
+          items: [
+            { icon: 'dashboard', label: 'لوحة التحكم', route: b },
+            { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
+          ],
+        },
+        {
+          title: 'المالية الشخصية',
+          items: [
+            { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
+            { icon: 'arrow_upward', label: 'سند صرف شخصي', route: `${b}/vouchers/payment` },
+            { icon: 'arrow_downward', label: 'سند قبض شخصي', route: `${b}/vouchers/receipt` },
+          ],
+        },
+        {
+          title: 'المجمع',
+          items: [
+            { icon: 'summarize', label: 'ملخص كل الأعمال', route: `${b}/summary` },
+            { icon: 'assessment', label: 'التقارير الشخصية', route: `${b}/reports` },
+          ],
+        },
+      ]);
+    }
   }
 
   toggleCollapse() {

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { SidebarComponent } from '../../components/sidebar/sidebar';
 import { HeaderComponent } from '../../components/header/header';
-import { BusinessService } from '../../services/business.service';
+import { BusinessService, BusinessType } from '../../services/business.service';
 import { ApiService } from '../../services/api.service';
 
 @Component({
@@ -52,7 +52,8 @@ export class BusinessLayoutComponent implements OnInit {
       if (bizId) {
         try {
           const biz = await this.api.getBusiness(bizId);
-          this.bizService.setBusiness(biz.id, biz.name, biz.color, biz.icon);
+          const bizType: BusinessType = (biz.type as BusinessType) || 'stations';
+          this.bizService.setBusiness(biz.id, biz.name, biz.color, biz.icon, bizType);
         } catch (e) {
           this.router.navigate(['/']);
         }

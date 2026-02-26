@@ -1,0 +1,163 @@
+<div class="summary-page">
+
+  <!-- رأس الصفحة -->
+  <div class="page-header">
+    <div class="header-content">
+      <span class="material-icons header-icon">summarize</span>
+      <div>
+        <h1>ملخص كل الأعمال</h1>
+        <p>نظرة شاملة على جميع أعمالك في مكان واحد</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- تحميل -->
+  <div *ngIf="loading()" class="loading-state">
+    <span class="material-icons spinning">refresh</span>
+    <p>جاري تحميل البيانات...</p>
+  </div>
+
+  <!-- خطأ -->
+  <div *ngIf="error()" class="error-state">
+    <span class="material-icons">error_outline</span>
+    <p>{{ error() }}</p>
+  </div>
+
+  <ng-container *ngIf="!loading() && !error()">
+
+    <!-- بطاقات الإجماليات الكبيرة -->
+    <div class="totals-grid">
+      <div class="total-card total-stations">
+        <span class="material-icons">bolt</span>
+        <div class="total-info">
+          <span class="total-value">{{ totals().stations }}</span>
+          <span class="total-label">إجمالي المحطات</span>
+        </div>
+      </div>
+      <div class="total-card total-employees">
+        <span class="material-icons">groups</span>
+        <div class="total-info">
+          <span class="total-value">{{ totals().employees }}</span>
+          <span class="total-label">إجمالي الموظفين</span>
+        </div>
+      </div>
+      <div class="total-card total-accounts">
+        <span class="material-icons">account_balance_wallet</span>
+        <div class="total-info">
+          <span class="total-value">{{ totals().accounts }}</span>
+          <span class="total-label">إجمالي الحسابات</span>
+        </div>
+      </div>
+      <div class="total-card total-funds">
+        <span class="material-icons">savings</span>
+        <div class="total-info">
+          <span class="total-value">{{ totals().funds }}</span>
+          <span class="total-label">إجمالي الصناديق</span>
+        </div>
+      </div>
+      <div class="total-card total-suppliers">
+        <span class="material-icons">local_shipping</span>
+        <div class="total-info">
+          <span class="total-value">{{ totals().suppliers }}</span>
+          <span class="total-label">إجمالي الموردين</span>
+        </div>
+      </div>
+      <div class="total-card total-pending" [class.has-pending]="totals().pendingAccounts > 0">
+        <span class="material-icons">warning</span>
+        <div class="total-info">
+          <span class="total-value">{{ totals().pendingAccounts }}</span>
+          <span class="total-label">حسابات معلقة</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- تفاصيل كل عمل -->
+    <div class="section-title">
+      <span class="material-icons">business</span>
+      <h2>تفاصيل الأعمال</h2>
+    </div>
+
+    <div class="businesses-grid">
+      <div
+        *ngFor="let biz of businesses()"
+        class="biz-card"
+        [style.--biz-color]="biz.color"
+      >
+        <!-- رأس البطاقة -->
+        <div class="biz-card-header">
+          <div class="biz-icon-wrap">
+            <span class="material-icons biz-icon">{{ biz.icon }}</span>
+          </div>
+          <div class="biz-info">
+            <h3>{{ biz.name }}</h3>
+            <span class="biz-type-badge">
+              <span class="material-icons">{{ getTypeIcon(biz.type) }}</span>
+              {{ getTypeLabel(biz.type) }}
+            </span>
+          </div>
+          <a [routerLink]="['/biz', biz.id]" class="enter-btn">
+            <span class="material-icons">open_in_new</span>
+          </a>
+        </div>
+
+        <!-- إحصائيات العمل -->
+        <div class="biz-stats">
+          <div class="stat-item" *ngIf="biz.stations > 0">
+            <span class="material-icons">bolt</span>
+            <span class="stat-val">{{ biz.stations }}</span>
+            <span class="stat-lbl">محطة</span>
+          </div>
+          <div class="stat-item" *ngIf="biz.employees > 0">
+            <span class="material-icons">groups</span>
+            <span class="stat-val">{{ biz.employees }}</span>
+            <span class="stat-lbl">موظف</span>
+          </div>
+          <div class="stat-item">
+            <span class="material-icons">account_balance_wallet</span>
+            <span class="stat-val">{{ biz.accounts }}</span>
+            <span class="stat-lbl">حساب</span>
+          </div>
+          <div class="stat-item" *ngIf="biz.funds > 0">
+            <span class="material-icons">savings</span>
+            <span class="stat-val">{{ biz.funds }}</span>
+            <span class="stat-lbl">صندوق</span>
+          </div>
+          <div class="stat-item" *ngIf="biz.suppliers > 0">
+            <span class="material-icons">local_shipping</span>
+            <span class="stat-val">{{ biz.suppliers }}</span>
+            <span class="stat-lbl">مورد</span>
+          </div>
+        </div>
+
+        <!-- الشركاء -->
+        <div class="biz-partners" *ngIf="biz.partners && biz.partners.length > 0">
+          <div class="partners-title">
+            <span class="material-icons">handshake</span>
+            الشركاء
+          </div>
+          <div class="partners-list">
+            <div *ngFor="let p of biz.partners" class="partner-chip">
+              <span class="material-icons">person</span>
+              <span>{{ p.fullName }}</span>
+              <span class="partner-share">{{ p.sharePercentage }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- تنبيه حسابات معلقة -->
+        <div class="pending-alert" *ngIf="biz.pendingAccounts > 0">
+          <span class="material-icons">warning</span>
+          <span>{{ biz.pendingAccounts }} حساب معلق يحتاج تصفية</span>
+        </div>
+
+        <!-- زر الدخول -->
+        <a [routerLink]="['/biz', biz.id]" class="enter-biz-btn">
+          <span class="material-icons">login</span>
+          الدخول على {{ biz.name }}
+        </a>
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>
