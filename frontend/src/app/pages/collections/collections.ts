@@ -114,9 +114,9 @@ export class CollectionsComponent implements OnInit {
   // ===================== Collection =====================
   selectCollectionOT(ot: any) {
     this.selectedCollectionOT.set(ot);
-    const entries = (ot.accounts || []).map((la: any) => ({
+    const entries = (ot.linkedAccounts || []).filter((la: any) => la.isActive !== false).map((la: any) => ({
       accountId: la.accountId || la.id,
-      accountName: la.accountName || la.account?.name || '',
+      accountName: la.label || la.accountName || '',
       accountType: la.accountType || '',
       amount: '',
       notes: '',
@@ -165,9 +165,9 @@ export class CollectionsComponent implements OnInit {
   // ===================== Delivery =====================
   selectDeliveryOT(ot: any) {
     this.selectedDeliveryOT.set(ot);
-    const entries = (ot.accounts || []).map((la: any) => ({
+    const entries = (ot.linkedAccounts || []).filter((la: any) => la.isActive !== false).map((la: any) => ({
       accountId: la.accountId || la.id,
-      accountName: la.accountName || la.account?.name || '',
+      accountName: la.label || la.accountName || '',
       accountType: la.accountType || '',
       amount: '',
       reference: '',
