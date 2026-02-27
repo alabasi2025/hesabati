@@ -114,9 +114,12 @@
               @for (opt of filter.values; track opt.value) {
                 <button class="sub-chip"
                         [class.active]="isSubFilterActive(filter.key, opt.value)"
-                        [style.--chip-color]="getTypeInfo(activeType()).color"
+                        [style.--chip-color]="opt.color || getTypeInfo(activeType()).color"
                         (click)="toggleSubFilter(filter.key, opt.value)">
-                  {{ opt.value }}
+                  @if (opt.icon) {
+                    <span class="material-icons-round sub-chip-icon">{{ opt.icon }}</span>
+                  }
+                  {{ opt.displayName || opt.value }}
                   <span class="chip-count">{{ opt.count }}</span>
                 </button>
               }

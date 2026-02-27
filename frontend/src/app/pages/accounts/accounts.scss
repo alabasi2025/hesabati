@@ -233,6 +233,13 @@
     .chip-count { background: rgba(255,255,255,0.25); color: white; }
   }
 
+  .sub-chip-icon {
+    font-size: 14px;
+    color: var(--chip-color, #3b82f6);
+  }
+
+  &.active .sub-chip-icon { color: white; }
+
   &:not(.active):hover {
     border-color: var(--chip-color, #3b82f6);
     color: var(--chip-color, #3b82f6);
