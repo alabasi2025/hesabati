@@ -12,6 +12,7 @@ import {
   billingSystemsConfig, billingAccountTypes,
   sidebarSections, sidebarItems, userSidebarConfig,
   users,
+  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
 } from '../db/schema/index.ts';
 
 const api = new Hono();
@@ -705,8 +706,8 @@ api.get('/operation-types/:id', async (c) => {
 api.post('/businesses/:bizId/operation-types', async (c) => {
   const bizId = parseInt(c.req.param('bizId'));
   const body = await c.req.json();
-  const { linkedAccounts, ...otData } = body;
-  const [created] = await db.insert(operationTypes).values({ ...otData, businessId: bizId }).returning();
+  const { linkedAccounts, screens, ...rest } = body;
+  const [created] = await db.insert(operationTypes).values({ ...rest, businessId: bizId, screens: screens ? `{${screens.join(',')}}` : null }).returning();
   
   if (linkedAccounts && linkedAccounts.length > 0) {
     for (const la of linkedAccounts) {
@@ -886,12 +887,231 @@ api.delete('/billing-systems-config/:id', async (c) => {
 });
 
 // ===================== أنواع حسابات الفوترة =====================
-api.get('/businesses/:bizId/billing-account-types', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
-  const rows = await db.select().from(billingAccountTypes)
-    .where(eq(billingAccountTypes.businessId, bizId))
-    .orderBy(billingAccountTypes.sortOrder);
+api.get('/api.get("/businesses/:bizId/billing-account-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(billingAccountTypes).where(eq(billingAccountTypes.businessId, bizId)).orderBy(billingAccountTypes.sortOrder);
   return c.json(rows);
+});
+
+// ===================== أنواع الصناديق =====================
+api.get("/businesses/:bizId/fund-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(fundTypes).where(eq(fundTypes.businessId, bizId)).orderBy(fundTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/fund-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(fundTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/fund-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(fundTypes).set({ ...body, updatedAt: new Date() }).where(eq(fundTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/fund-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(fundTypes).where(eq(fundTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع البنوك =====================
+api.get("/businesses/:bizId/bank-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(bankTypes).where(eq(bankTypes.businessId, bizId)).orderBy(bankTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/bank-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(bankTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/bank-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(bankTypes).set({ ...body, updatedAt: new Date() }).where(eq(bankTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/bank-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(bankTypes).where(eq(bankTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع الصرافين =====================
+api.get("/businesses/:bizId/exchange-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(exchangeTypes).where(eq(exchangeTypes.businessId, bizId)).orderBy(exchangeTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/exchange-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(exchangeTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/exchange-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(exchangeTypes).set({ ...body, updatedAt: new Date() }).where(eq(exchangeTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/exchange-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(exchangeTypes).where(eq(exchangeTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع المحافظ الإلكترونية =====================
+api.get("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).orderBy(eWalletTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(eWalletTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(eWalletTypes).where(eq(eWalletTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع الصرافين =====================
+api.get("/businesses/:bizId/exchange-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(exchangeTypes).where(eq(exchangeTypes.businessId, bizId)).orderBy(exchangeTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/exchange-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(exchangeTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/exchange-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(exchangeTypes).set({ ...body, updatedAt: new Date() }).where(eq(exchangeTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/exchange-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(exchangeTypes).where(eq(exchangeTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع المحافظ الإلكترونية =====================
+api.get("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).orderBy(eWalletTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(eWalletTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(eWalletTypes).where(eq(eWalletTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع المحافظ الإلكترونية =====================
+api.get("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).orderBy(eWalletTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(eWalletTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(eWalletTypes).where(eq(eWalletTypes.id, id));
+  return c.json({ success: true });
+});
+
+api.post('/businesses/:bizId/billing-account-types', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+});
+
+// ===================== أنواع المحافظ الإلكترونية =====================
+api.get("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const rows = await db.select().from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).orderBy(eWalletTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/e-wallet-types", async (c) => {
+  const bizId = parseInt(c.req.param("bizId"));
+  const body = await c.req.json();
+  const [created] = await db.insert(eWalletTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(eWalletTypes).where(eq(eWalletTypes.id, id));
+  return c.json({ success: true });
 });
 
 api.post('/businesses/:bizId/billing-account-types', async (c) => {
