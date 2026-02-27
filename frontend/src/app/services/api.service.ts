@@ -140,9 +140,12 @@ export class ApiService {
   getVoucherCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/voucher-categories`); }
 
   // ===================== أنواع العمليات (القوالب) =====================
-  getOperationTypes(bizId: number, category?: string) {
+  getOperationTypes(bizId: number, category?: string, screen?: string) {
     let url = `/businesses/${bizId}/operation-types`;
-    if (category) url += `?category=${category}`;
+    const params: string[] = [];
+    if (category) params.push(`category=${category}`);
+    if (screen) params.push(`screen=${screen}`);
+    if (params.length) url += `?${params.join('&')}`;
     return this.request<any[]>(url);
   }
   getOperationType(id: number)                      { return this.request<any>(`/operation-types/${id}`); }
@@ -168,6 +171,30 @@ export class ApiService {
   createBillingAccountType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/billing-account-types`, { method: 'POST', body: JSON.stringify(d) }); }
   updateBillingAccountType(id: number, d: any)        { return this.request<any>(`/billing-account-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteBillingAccountType(id: number)                { return this.request<any>(`/billing-account-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع الصناديق =====================
+  getFundTypes(bizId: number)                         { return this.request<any[]>(`/businesses/${bizId}/fund-types`); }
+  createFundType(bizId: number, d: any)               { return this.request<any>(`/businesses/${bizId}/fund-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateFundType(id: number, d: any)                  { return this.request<any>(`/fund-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteFundType(id: number)                          { return this.request<any>(`/fund-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع البنوك =====================
+  getBankTypes(bizId: number)                         { return this.request<any[]>(`/businesses/${bizId}/bank-types`); }
+  createBankType(bizId: number, d: any)               { return this.request<any>(`/businesses/${bizId}/bank-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateBankType(id: number, d: any)                  { return this.request<any>(`/bank-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteBankType(id: number)                          { return this.request<any>(`/bank-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع الصرافين =====================
+  getExchangeTypes(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/exchange-types`); }
+  createExchangeType(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/exchange-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateExchangeType(id: number, d: any)              { return this.request<any>(`/exchange-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteExchangeType(id: number)                      { return this.request<any>(`/exchange-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع المحافظ الإلكترونية =====================
+  getEWalletTypes(bizId: number)                      { return this.request<any[]>(`/businesses/${bizId}/e-wallet-types`); }
+  createEWalletType(bizId: number, d: any)            { return this.request<any>(`/businesses/${bizId}/e-wallet-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateEWalletType(id: number, d: any)               { return this.request<any>(`/e-wallet-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteEWalletType(id: number)                       { return this.request<any>(`/e-wallet-types/${id}`, { method: 'DELETE' }); }
 
   // ===================== التبويب الجانبي =====================
   getSidebarSections(bizId: number)                      { return this.request<any[]>(`/businesses/${bizId}/sidebar-sections`); }
