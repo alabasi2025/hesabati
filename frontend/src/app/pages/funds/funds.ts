@@ -128,7 +128,7 @@ export class FundsComponent implements OnInit {
       if (data.stationId === '' || data.stationId === null) delete data.stationId;
       
       if (this.editingFundId()) {
-        await this.api.updateFund(this.editingFundId()!, data);
+        await this.api.updateFund(this.bizId, this.editingFundId()!, data);
       } else {
         await this.api.createFund(this.bizId, data);
       }

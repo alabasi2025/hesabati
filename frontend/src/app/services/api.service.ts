@@ -91,6 +91,7 @@ export class ApiService {
 
   // ===================== الحسابات مع الصلاحيات =====================
   getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
+  getAllAccounts(bizId: number)                   { return this.request<{ accounts: any[]; stations: any[] }>(`/businesses/${bizId}/accounts?all=true`); }
   createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   updateAccount(id: number, d: any)              { return this.request<any>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteAccount(id: number)                      { return this.request<any>(`/accounts/${id}`, { method: 'DELETE' }); }
@@ -104,7 +105,8 @@ export class ApiService {
   // ===================== الصناديق =====================
   getFunds(bizId: number)                        { return this.request<any[]>(`/businesses/${bizId}/funds`); }
   createFund(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/funds`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateFund(id: number, d: any)                 { return this.request<any>(`/funds/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  updateFund(bizId: number, id: number, d: any)  { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteFund(bizId: number, id: number)           { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'DELETE' }); }
 
   // ===================== السندات =====================
   getVouchers(bizId: number, type?: string)      { return this.request<any[]>(`/businesses/${bizId}/vouchers${type ? '?type=' + type : ''}`); }

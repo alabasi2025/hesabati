@@ -256,10 +256,13 @@ api.delete('/employee-billing-accounts/:id', async (c) => {
 // ===================== الحسابات مع الصلاحيات =====================
 api.get('/businesses/:bizId/accounts', bizAuthMiddleware(), async (c) => {
   const bizId = c.get('bizId') as number;
-  const rows = await db.select().from(accounts).where(eq(accounts.businessId, bizId)).orderBy(accounts.accountType, accounts.name);
+  const includeAll = c.req.query('all') === 'true'; // دمج الصناديق والفوترة
+
+  // 1. جلب الحسابات من جدول accounts
+  const accountRows = await db.select().from(accounts).where(eq(accounts.businessId, bizId)).orderBy(accounts.accountType, accounts.name);
   
   // جلب الأرصدة والروابط دفعة واحدة بدلاً من N+1
-  const accountIds = rows.map(a => a.id);
+  const accountIds = accountRows.map(a => a.id);
   
   let balances: any[] = [];
   let allLinks: any[] = [];
@@ -283,7 +286,108 @@ api.get('/businesses/:bizId/accounts', bizAuthMiddleware(), async (c) => {
   const linkMap: Record<number, any[]> = {};
   for (const l of allLinks) { if (!linkMap[l.fromAccountId]) linkMap[l.fromAccountId] = []; linkMap[l.fromAccountId].push(l); }
   
-  return c.json(rows.map(a => ({ ...a, balances: balanceMap[a.id] || [], allowedLinks: linkMap[a.id] || [] })));
+  const enrichedAccounts = accountRows.map(a => ({ ...a, balances: balanceMap[a.id] || [], allowedLinks: linkMap[a.id] || [], _source: 'accounts' as const }));
+
+  if (!includeAll) {
+    return c.json(enrichedAccounts);
+  }
+
+  // 2. جلب الصناديق من جدول funds وتحويلها لنفس الشكل
+  const fundRows = await db.select({
+    id: funds.id, name: funds.name, fundType: funds.fundType,
+    stationId: funds.stationId, responsiblePerson: funds.responsiblePerson,
+    description: funds.description, isActive: funds.isActive, notes: funds.notes,
+    createdAt: funds.createdAt, stationName: stations.name,
+  }).from(funds)
+    .leftJoin(stations, eq(funds.stationId, stations.id))
+    .where(eq(funds.businessId, bizId))
+    .orderBy(funds.fundType, funds.name);
+  
+  const fundIds = fundRows.map(f => f.id);
+  let fBalances: any[] = [];
+  if (fundIds.length > 0) {
+    fBalances = await db.select({
+      fundId: fundBalances.fundId, currencyId: fundBalances.currencyId,
+      balance: fundBalances.balance, currencyCode: currencies.code, currencySymbol: currencies.symbol,
+    }).from(fundBalances)
+      .leftJoin(currencies, eq(fundBalances.currencyId, currencies.id))
+      .where(inArray(fundBalances.fundId, fundIds));
+  }
+  const fBalanceMap: Record<number, any[]> = {};
+  for (const b of fBalances) { if (!fBalanceMap[b.fundId]) fBalanceMap[b.fundId] = []; fBalanceMap[b.fundId].push(b); }
+
+  // تحويل الصناديق لنفس شكل الحسابات
+  const fundTypeLabels: Record<string, string> = {
+    collection: 'تحصيل وتوريد', salary_advance: 'سلف', custody: 'عهدة',
+    safe: 'خزنة', expense: 'مصروفات', deposit: 'إيداع', personal: 'شخصي',
+  };
+  const fundsAsAccounts = fundRows.map(f => ({
+    id: f.id,
+    name: f.name,
+    accountType: 'fund',
+    subType: f.fundType,
+    subTypeLabel: fundTypeLabels[f.fundType] || f.fundType,
+    provider: f.stationName || '',
+    responsiblePerson: f.responsiblePerson || '',
+    accountNumber: '',
+    isActive: f.isActive,
+    notes: f.notes,
+    description: f.description,
+    stationId: f.stationId,
+    stationName: f.stationName,
+    createdAt: f.createdAt,
+    balances: fBalanceMap[f.id] || [],
+    allowedLinks: [],
+    _source: 'funds' as const,
+  }));
+
+  // 3. جلب حسابات الفوترة من جدول employee_billing_accounts
+  const billingRows = await db.select({
+    id: employeeBillingAccounts.id,
+    employeeId: employeeBillingAccounts.employeeId,
+    stationId: employeeBillingAccounts.stationId,
+    billingSystem: employeeBillingAccounts.billingSystem,
+    collectionMethod: employeeBillingAccounts.collectionMethod,
+    label: employeeBillingAccounts.label,
+    sortOrder: employeeBillingAccounts.sortOrder,
+    isActive: employeeBillingAccounts.isActive,
+    notes: employeeBillingAccounts.notes,
+    employeeName: employees.fullName,
+    stationName: stations.name,
+  }).from(employeeBillingAccounts)
+    .leftJoin(employees, eq(employeeBillingAccounts.employeeId, employees.id))
+    .leftJoin(stations, eq(employeeBillingAccounts.stationId, stations.id))
+    .where(eq(employees.businessId, bizId))
+    .orderBy(employeeBillingAccounts.stationId, employeeBillingAccounts.employeeId);
+
+  const billingAsAccounts = billingRows.map(b => ({
+    id: b.id,
+    name: b.label || `فوترة - ${b.employeeName}`,
+    accountType: 'billing',
+    subType: b.billingSystem || '',
+    subTypeLabel: b.billingSystem || '',
+    provider: b.billingSystem || '',
+    responsiblePerson: b.employeeName || '',
+    accountNumber: '',
+    isActive: b.isActive,
+    notes: b.notes,
+    stationId: b.stationId,
+    stationName: b.stationName,
+    collectionMethod: b.collectionMethod,
+    createdAt: null,
+    balances: [],
+    allowedLinks: [],
+    _source: 'billing' as const,
+  }));
+
+  // 4. جلب المحطات لفلتر المحطة
+  const stationRows = await db.select({ id: stations.id, name: stations.name })
+    .from(stations).where(eq(stations.businessId, bizId)).orderBy(stations.name);
+
+  return c.json({
+    accounts: [...enrichedAccounts, ...fundsAsAccounts, ...billingAsAccounts],
+    stations: stationRows,
+  });
 });
 
 api.post('/businesses/:bizId/accounts', bizAuthMiddleware(), async (c) => {
@@ -454,6 +558,15 @@ api.put('/businesses/:bizId/funds/:id', bizAuthMiddleware(), async (c) => {
   const body = await c.req.json();
   const [updated] = await db.update(funds).set({ ...body, updatedAt: new Date() }).where(eq(funds.id, id)).returning();
   return c.json(updated);
+});
+
+api.delete('/businesses/:bizId/funds/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(funds).where(and(eq(funds.id, id), eq(funds.businessId, bizId)));
+  if (!existing) return c.json({ error: 'صندوق غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  await db.delete(funds).where(eq(funds.id, id));
+  return c.json({ success: true });
 });
 
 // Legacy

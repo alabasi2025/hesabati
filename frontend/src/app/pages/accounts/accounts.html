@@ -7,13 +7,13 @@
         <span class="material-icons-round">account_balance_wallet</span>
       </div>
       <div>
-        <h1 class="page-title">الحسابات</h1>
-        <p class="page-subtitle">إدارة كل حسابات العمل (صناديق، بنوك، محافظ، فوترة...)</p>
+        <h1 class="page-title">قائمة الحسابات</h1>
+        <p class="page-subtitle">السجل المركزي لجميع الحسابات</p>
       </div>
     </div>
     <div class="header-right">
-      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
-        <span class="material-icons-round">help_outline</span>
+      <button class="help-btn" (click)="showHowItWorks.set(true)" title="مبدأ العمل">
+        <span class="material-icons-round">lightbulb</span>
       </button>
       <button class="btn-3d btn-primary" (click)="openCreate()">
         <span class="material-icons-round">add</span>
@@ -27,40 +27,42 @@
     <div class="alert-error" (click)="error.set('')">
       <span class="material-icons-round">error_outline</span>
       {{ error() }}
-      <span class="close-x">✕</span>
+      <span class="material-icons-round close-x">close</span>
     </div>
   }
 
   <!-- ===== Stats Bar ===== -->
   @if (!loading() && accounts().length > 0) {
     <div class="stats-bar">
-      <div class="stat-card">
+      <div class="stat-card clickable" [class.active-stat]="activeType() === 'all'" [style.--card-color]="'#3b82f6'" (click)="setActiveType('all')">
         <div class="stat-icon blue"><span class="material-icons-round">account_balance_wallet</span></div>
         <div>
           <div class="stat-num">{{ stats().total }}</div>
-          <div class="stat-label">إجمالي الحسابات</div>
+          <div class="stat-label">الكل</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon green"><span class="material-icons-round">check_circle</span></div>
         <div>
           <div class="stat-num">{{ stats().active }}</div>
-          <div class="stat-label">حسابات نشطة</div>
+          <div class="stat-label">نشط</div>
         </div>
       </div>
       @for (t of stats().byType; track t.value) {
-        <div class="stat-card type-stat clickable"
-             [class.active-stat]="activeType() === t.value"
-             [style.--card-color]="t.color"
-             (click)="setActiveType(activeType() === t.value ? 'all' : t.value)">
-          <div class="stat-icon" [style.background]="t.color + '25'" [style.color]="t.color">
-            <span class="material-icons-round">{{ t.icon }}</span>
+        @if (t.count > 0) {
+          <div class="stat-card clickable"
+               [class.active-stat]="activeType() === t.value"
+               [style.--card-color]="t.color"
+               (click)="setActiveType(activeType() === t.value ? 'all' : t.value)">
+            <div class="stat-icon" [style.background]="'linear-gradient(135deg, ' + t.color + ', ' + t.color + 'cc)'">
+              <span class="material-icons-round" style="color:white">{{ t.icon }}</span>
+            </div>
+            <div>
+              <div class="stat-num">{{ t.count }}</div>
+              <div class="stat-label">{{ t.label }}</div>
+            </div>
           </div>
-          <div>
-            <div class="stat-num">{{ t.count }}</div>
-            <div class="stat-label">{{ t.label }}</div>
-          </div>
-        </div>
+        }
       }
     </div>
   }
@@ -90,12 +92,12 @@
     </div>
   </div>
 
-  <!-- ===== Sub-Filters (تظهر فقط عند اختيار نوع معين) ===== -->
-  @if (activeType() !== 'all' && subFilterOptions().length > 0) {
+  <!-- ===== Sub-Filters Panel (ديناميكي حسب النوع المختار) ===== -->
+  @if (activeType() !== 'all' && (subFilterOptions().length > 0 || (typeHasStationFilter() && availableStations().length > 0))) {
     <div class="sub-filters-panel">
       <div class="sub-filters-header">
-        <span class="material-icons-round">filter_list</span>
-        <span class="sub-filters-title">فلاتر فرعية</span>
+        <span class="material-icons-round">tune</span>
+        <span class="sub-filters-title">فلاتر {{ getTypeInfo(activeType()).label }}</span>
         @if (hasActiveSubFilters()) {
           <button class="clear-sub-btn" (click)="clearSubFilters()">
             <span class="material-icons-round">clear_all</span>
@@ -104,6 +106,28 @@
         }
       </div>
       <div class="sub-filters-body">
+        <!-- فلتر المحطة (للصناديق والفوترة) -->
+        @if (typeHasStationFilter() && availableStations().length > 0) {
+          <div class="sub-filter-group">
+            <div class="sub-filter-label">
+              <span class="material-icons-round">location_on</span>
+              المحطة
+            </div>
+            <div class="sub-filter-chips">
+              @for (station of availableStations(); track station.id) {
+                <button class="sub-chip"
+                        [class.active]="activeStationFilter() === station.id"
+                        [style.--chip-color]="getTypeInfo(activeType()).color"
+                        (click)="setStationFilter(station.id)">
+                  <span class="material-icons-round sub-chip-icon">local_gas_station</span>
+                  {{ station.name }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- فلاتر فرعية ديناميكية -->
         @for (filter of subFilterOptions(); track filter.key) {
           <div class="sub-filter-group">
             <div class="sub-filter-label">
@@ -185,7 +209,7 @@
         <div class="account-group" [style.--group-color]="group.color">
           <div class="group-header" (click)="toggleGroup(group.key)">
             <div class="group-header-right">
-              <div class="group-icon" [style.background]="group.color">
+              <div class="group-icon" [style.background]="'linear-gradient(135deg, ' + group.color + ', ' + group.color + 'cc)'">
                 <span class="material-icons-round">{{ group.icon }}</span>
               </div>
               <div class="group-info">
@@ -209,35 +233,31 @@
                     <div class="card-glow"></div>
 
                     <div class="acc-card-top">
-                      <div class="acc-icon-3d" [style.background]="getTypeInfo(acc.accountType).color">
+                      <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.accountType).color + ', ' + getTypeInfo(acc.accountType).color + 'cc)'">
                         <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
                       </div>
                       <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
                            [style.background]="getTypeInfo(acc.accountType).color + '18'">
-                        {{ getTypeInfo(acc.accountType).label }}
+                        {{ acc.subTypeLabel || acc.subType || acc.provider || getTypeInfo(acc.accountType).label }}
                       </div>
                       <div class="acc-actions-top">
-                        <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
-                          <span class="material-icons-round">edit</span>
-                        </button>
-                        <button class="icon-btn delete-btn" (click)="deleteAccount(acc.id); $event.stopPropagation()">
-                          <span class="material-icons-round">delete</span>
-                        </button>
+                        @if (acc._source !== 'billing') {
+                          <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
+                            <span class="material-icons-round">edit</span>
+                          </button>
+                          <button class="icon-btn delete-btn" (click)="deleteAccount(acc); $event.stopPropagation()">
+                            <span class="material-icons-round">delete</span>
+                          </button>
+                        }
                       </div>
                     </div>
 
                     <div class="acc-card-body">
                       <h3 class="acc-name">{{ acc.name }}</h3>
-                      @if (acc.provider && activeType() === 'all') {
+                      @if (acc.provider && acc.accountType !== 'billing') {
                         <div class="acc-detail">
                           <span class="material-icons-round">business</span>
                           {{ acc.provider }}
-                        </div>
-                      }
-                      @if (acc.subType) {
-                        <div class="acc-detail">
-                          <span class="material-icons-round">label</span>
-                          {{ acc.subType }}
                         </div>
                       }
                       @if (acc.responsiblePerson) {
@@ -246,11 +266,25 @@
                           {{ acc.responsiblePerson }}
                         </div>
                       }
+                      @if (acc.stationName) {
+                        <div class="acc-detail">
+                          <span class="material-icons-round">local_gas_station</span>
+                          {{ acc.stationName }}
+                        </div>
+                      }
                       @if (acc.accountNumber) {
                         <div class="acc-detail">
                           <span class="material-icons-round">tag</span>
                           {{ acc.accountNumber }}
                         </div>
+                      }
+                      @if (acc.balances && acc.balances.length > 0) {
+                        @for (bal of acc.balances; track bal.currencyId) {
+                          <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
+                            <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
+                            {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
+                          </div>
+                        }
                       }
                     </div>
 
@@ -283,7 +317,7 @@
       <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-icon amber">
-            <span class="material-icons-round">help_outline</span>
+            <span class="material-icons-round">lightbulb</span>
           </div>
           <h2>مبدأ العمل - الحسابات</h2>
           <button class="modal-close" (click)="showHowItWorks.set(false)">
@@ -292,39 +326,42 @@
         </div>
         <div class="modal-body">
           <div class="hiw-section">
-            <h3><span class="material-icons-round">account_balance_wallet</span> ما هي الحسابات؟</h3>
+            <h3><span class="material-icons-round">hub</span> السجل المركزي</h3>
             <p>
-              الحسابات هي كل "مكان" يمكن أن تتحرك منه أو إليه الأموال. مثلاً:
-              صندوق التحصيل، محفظة جوالي، صراف الحوشبي، حساب نظام المغربي.
+              هذه الصفحة هي السجل المركزي لجميع الحسابات في النظام. تعرض الحسابات من جميع المصادر:
+              الحسابات العادية، الصناديق، وحسابات الفوترة.
             </p>
           </div>
           <div class="hiw-section">
-            <h3><span class="material-icons-round">category</span> أنواع الحسابات</h3>
-            <p>الفلاتر أعلاه تظهر تلقائياً حسب الأنواع الموجودة في النظام. أي نوع جديد يُضاف يظهر تلقائياً.</p>
+            <h3><span class="material-icons-round">filter_list</span> الفلاتر الذكية</h3>
+            <p>
+              اختر نوع الحساب من الأزرار أعلاه لتظهر فلاتر فرعية خاصة بكل نوع:
+              عند اختيار "فوترة" تظهر فلاتر حسب النظام والمحطة والموظف.
+              عند اختيار "صندوق" تظهر فلاتر حسب نوع الصندوق والمحطة.
+              عند اختيار "بنك" تظهر فلاتر حسب نوع الحساب والبنك.
+              عند اختيار "صراف" تظهر فلاتر حسب الصراف.
+              عند اختيار "محفظة" تظهر فلاتر حسب نوع المحفظة والمحفظة.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">sync</span> التكامل مع الشاشات المتخصصة</h3>
+            <p>
+              الشاشات المتخصصة (إدارة الصناديق، أنظمة الفوترة، إدارة البنوك...) هي طرق وصول سريعة لنفس الحسابات.
+              أي حساب يُنشأ من شاشة متخصصة يظهر تلقائياً هنا.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">category</span> أنواع الحسابات الموجودة</h3>
             <div class="hiw-types">
               @for (t of dynamicFilters(); track t.value) {
                 <div class="hiw-type-row">
-                  <div class="hiw-type-icon" [style.background]="t.color">
+                  <div class="hiw-type-icon" [style.background]="'linear-gradient(135deg, ' + t.color + ', ' + t.color + 'cc)'">
                     <span class="material-icons-round">{{ t.icon }}</span>
                   </div>
                   <strong>{{ t.label }}</strong>
                 </div>
               }
             </div>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">filter_list</span> التجميع والفلاتر الفرعية</h3>
-            <p>
-              عند اختيار نوع حساب معين، تظهر الحسابات مجموعة حسب الجهة/المزود.
-              كما تظهر فلاتر فرعية ديناميكية (حسب النظام، نوع الحساب، الموظف...) لتسهيل التصفح.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">receipt</span> حسابات الفوترة</h3>
-            <p>
-              حسابات الفوترة تُنشأ تلقائياً من شاشة <strong>أنظمة الفوترة</strong> وتظهر هنا بنوع "فوترة".
-              لا تحتاج لإضافتها يدوياً من هذه الصفحة.
-            </p>
           </div>
         </div>
       </div>
@@ -336,7 +373,7 @@
     <div class="modal-overlay" (click)="showForm.set(false)">
       <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-icon" [style.background]="getTypeInfo(form().accountType).color">
+          <div class="modal-icon" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(form().accountType).color + ', ' + getTypeInfo(form().accountType).color + 'cc)'">
             <span class="material-icons-round">{{ getTypeInfo(form().accountType).icon }}</span>
           </div>
           <h2>{{ editingId() ? 'تعديل الحساب' : 'حساب جديد' }}</h2>
