@@ -638,8 +638,10 @@ api.get('/suppliers', async (c) => {
 api.get('/businesses/:bizId/operation-types', async (c) => {
   const bizId = parseInt(c.req.param('bizId'));
   const category = c.req.query('category');
+  const screen = c.req.query('screen');
   const conditions = [eq(operationTypes.businessId, bizId)];
   if (category) conditions.push(eq(operationTypes.category, category));
+  if (screen) conditions.push(sql`${screen} = ANY(${operationTypes.screens})`);
   
   const rows = await db.select().from(operationTypes)
     .where(and(...conditions))
