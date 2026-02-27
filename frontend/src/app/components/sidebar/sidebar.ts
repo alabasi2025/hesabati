@@ -66,12 +66,18 @@ export class SidebarComponent {
           ],
         },
         {
-          title: 'المالية',
+          title: 'الإعداد',
           items: [
-            { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
+            { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
+            { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
+          ],
+        },
+        {
+          title: 'العمليات المالية',
+          items: [
+            { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
+            { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
             { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
-            { icon: 'arrow_downward', label: 'سند قبض', route: `${b}/vouchers/receipt` },
-            { icon: 'arrow_upward', label: 'سند صرف', route: `${b}/vouchers/payment` },
             { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
           ],
         },
@@ -117,12 +123,18 @@ export class SidebarComponent {
           ],
         },
         {
-          title: 'المالية',
+          title: 'الإعداد',
           items: [
-            { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
+            { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
+            { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
+          ],
+        },
+        {
+          title: 'العمليات المالية',
+          items: [
+            { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
+            { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
             { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
-            { icon: 'arrow_downward', label: 'سند قبض', route: `${b}/vouchers/receipt` },
-            { icon: 'arrow_upward', label: 'سند صرف', route: `${b}/vouchers/payment` },
           ],
         },
         {
@@ -160,11 +172,17 @@ export class SidebarComponent {
           ],
         },
         {
+          title: 'الإعداد',
+          items: [
+            { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
+            { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
+          ],
+        },
+        {
           title: 'المالية الشخصية',
           items: [
-            { icon: 'account_balance_wallet', label: 'الحسابات والمحافظ', route: `${b}/accounts` },
-            { icon: 'arrow_upward', label: 'سند صرف شخصي', route: `${b}/vouchers/payment` },
-            { icon: 'arrow_downward', label: 'سند قبض شخصي', route: `${b}/vouchers/receipt` },
+            { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
+            { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
           ],
         },
         {

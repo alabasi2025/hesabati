@@ -6,7 +6,7 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'accountant', 'manager
 export const currencyCodeEnum = pgEnum('currency_code', ['YER', 'SAR', 'USD']);
 
 export const accountTypeEnum = pgEnum('account_type', [
-  'e_wallet', 'bank', 'exchange', 'service', 'cash', 'custody',
+  'fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service',
 ]);
 
 export const fundTypeEnum = pgEnum('fund_type', [
@@ -29,7 +29,7 @@ export const billingSystemEnum = pgEnum('billing_system', [
 ]);
 
 export const collectionMethodEnum = pgEnum('collection_method', [
-  'cash', 'jawali', 'one_cash', 'jeeb', 'haseb', 'exchange', 'bank',
+  'cash_mobile', 'manual_assign', 'electronic', 'haseb_deposit',
 ]);
 
 export const reconciliationTypeEnum = pgEnum('reconciliation_type', [
@@ -63,13 +63,13 @@ export const currencies = pgTable('currencies', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// ===================== BUSINESSES (الأعمال) - المحور الرئيسي =====================
+// ===================== BUSINESSES (الأعمال) =====================
 
 export const businesses = pgTable('businesses', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 200 }).notNull(),
   code: varchar('code', { length: 50 }).notNull().unique(),
-  type: varchar('type', { length: 30 }).default('stations'), // stations | single_station | personal
+  type: varchar('type', { length: 30 }).default('stations'),
   description: text('description'),
   icon: varchar('icon', { length: 50 }).default('business'),
   color: varchar('color', { length: 20 }).default('#3b82f6'),
@@ -80,7 +80,7 @@ export const businesses = pgTable('businesses', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== BUSINESS PARTNERS (شركاء العمل) =====================
+// ===================== BUSINESS PARTNERS =====================
 
 export const businessPartners = pgTable('business_partners', {
   id: serial('id').primaryKey(),
@@ -88,13 +88,13 @@ export const businessPartners = pgTable('business_partners', {
   fullName: varchar('full_name', { length: 200 }).notNull(),
   sharePercentage: decimal('share_percentage', { precision: 5, scale: 2 }),
   phone: varchar('phone', { length: 20 }),
-  role: varchar('role', { length: 100 }), // مالك، شريك، مدير
+  role: varchar('role', { length: 100 }),
   notes: text('notes'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// ===================== STATIONS (المحطات) - تابعة لعمل =====================
+// ===================== STATIONS =====================
 
 export const stations = pgTable('stations', {
   id: serial('id').primaryKey(),
@@ -111,7 +111,7 @@ export const stations = pgTable('stations', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== EMPLOYEES - تابعين لعمل =====================
+// ===================== EMPLOYEES =====================
 
 export const employees = pgTable('employees', {
   id: serial('id').primaryKey(),
@@ -126,12 +126,13 @@ export const employees = pgTable('employees', {
   status: employeeStatusEnum('status').notNull().default('active'),
   hireDate: date('hire_date'),
   monthlyAllowance: decimal('monthly_allowance', { precision: 15, scale: 2 }).default('0'),
+  isManager: boolean('is_manager').notNull().default(false),
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== ACCOUNTS - تابعة لعمل =====================
+// ===================== ACCOUNTS (الحسابات) =====================
 
 export const accounts = pgTable('accounts', {
   id: serial('id').primaryKey(),
@@ -144,11 +145,34 @@ export const accounts = pgTable('accounts', {
   responsiblePerson: varchar('responsible_person', { length: 200 }),
   parentAccountId: integer('parent_account_id'),
   supportedCurrencies: jsonb('supported_currencies').$type<string[]>().default(['YER', 'SAR', 'USD']),
+  
+  // 4 صلاحيات قبض وصرف
+  canInitiateReceipt: boolean('can_initiate_receipt').notNull().default(true),    // يقدر يسوي قبض (يسحب من غيره)
+  canInitiatePayment: boolean('can_initiate_payment').notNull().default(true),    // يقدر يسوي صرف (يدفع لغيره)
+  canReceivePayment: boolean('can_receive_payment').notNull().default(true),      // يقدر يستقبل صرف إليه
+  canBeDebitedByReceipt: boolean('can_be_debited_by_receipt').notNull().default(true), // يقدر يتنفذ عليه قبض
+  
+  // صلاحيات القيود
+  canCreateVoucher: boolean('can_create_voucher').notNull().default(false),       // يقدر ينشئ قيد/سند
+  canApproveVoucher: boolean('can_approve_voucher').notNull().default(false),     // يقدر يعتمد قيد/سند
+  
   receivesFromStations: boolean('receives_from_stations').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== ACCOUNT ALLOWED LINKS (الحسابات المسموح التعامل بينها) =====================
+
+export const accountAllowedLinks = pgTable('account_allowed_links', {
+  id: serial('id').primaryKey(),
+  fromAccountId: integer('from_account_id').notNull().references(() => accounts.id),
+  toAccountId: integer('to_account_id').notNull().references(() => accounts.id),
+  linkType: varchar('link_type', { length: 30 }).notNull(), // 'receipt' | 'payment' | 'transfer'
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 // ===================== ACCOUNT BALANCES =====================
@@ -161,7 +185,22 @@ export const accountBalances = pgTable('account_balances', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== FUNDS - تابعة لعمل =====================
+// ===================== EMPLOYEE BILLING ACCOUNTS (حسابات الموظفين في أنظمة الفوترة) =====================
+
+export const employeeBillingAccounts = pgTable('employee_billing_accounts', {
+  id: serial('id').primaryKey(),
+  employeeId: integer('employee_id').notNull().references(() => employees.id),
+  stationId: integer('station_id').notNull().references(() => stations.id),
+  billingSystem: billingSystemEnum('billing_system').notNull(),
+  collectionMethod: collectionMethodEnum('collection_method').notNull(),
+  label: varchar('label', { length: 200 }).notNull(), // مثل: "المغربي - نقدي جوال"
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== FUNDS =====================
 
 export const funds = pgTable('funds', {
   id: serial('id').primaryKey(),
@@ -187,7 +226,7 @@ export const fundBalances = pgTable('fund_balances', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== SUPPLIERS - تابعين لعمل =====================
+// ===================== SUPPLIERS =====================
 
 export const suppliers = pgTable('suppliers', {
   id: serial('id').primaryKey(),
@@ -227,7 +266,7 @@ export const voucherCategories = pgTable('voucher_categories', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// ===================== VOUCHERS - تابعة لعمل =====================
+// ===================== VOUCHERS (السندات) =====================
 
 export const vouchers = pgTable('vouchers', {
   id: serial('id').primaryKey(),
@@ -249,7 +288,6 @@ export const vouchers = pgTable('vouchers', {
   supplierId: integer('supplier_id').references(() => suppliers.id),
 
   categoryId: integer('category_id').references(() => voucherCategories.id),
-  collectionMethod: collectionMethodEnum('collection_method'),
 
   description: text('description'),
   reference: varchar('reference', { length: 200 }),
@@ -261,35 +299,66 @@ export const vouchers = pgTable('vouchers', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== DAILY COLLECTIONS - تابعة لعمل =====================
+// ===================== ATTACHMENTS (المرفقات) =====================
+
+export const attachments = pgTable('attachments', {
+  id: serial('id').primaryKey(),
+  entityType: varchar('entity_type', { length: 50 }).notNull(), // 'voucher' | 'collection' | 'delivery'
+  entityId: integer('entity_id').notNull(),
+  fileName: varchar('file_name', { length: 300 }).notNull(),
+  filePath: varchar('file_path', { length: 500 }).notNull(),
+  fileType: varchar('file_type', { length: 50 }),
+  fileSize: integer('file_size'),
+  description: text('description'),
+  uploadedBy: integer('uploaded_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== DAILY COLLECTIONS (التحصيل اليومي) =====================
 
 export const dailyCollections = pgTable('daily_collections', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
   stationId: integer('station_id').notNull().references(() => stations.id),
-  collectorId: integer('collector_id').references(() => employees.id),
   collectionDate: date('collection_date').notNull(),
-  billingSystem: billingSystemEnum('billing_system'),
-
-  cashAmount: decimal('cash_amount', { precision: 20, scale: 2 }).default('0'),
-  jawaliAmount: decimal('jawali_amount', { precision: 20, scale: 2 }).default('0'),
-  oneCashAmount: decimal('one_cash_amount', { precision: 20, scale: 2 }).default('0'),
-  jeebAmount: decimal('jeeb_amount', { precision: 20, scale: 2 }).default('0'),
-  hasebAmount: decimal('haseb_amount', { precision: 20, scale: 2 }).default('0'),
-  exchangeAmount: decimal('exchange_amount', { precision: 20, scale: 2 }).default('0'),
-
-  totalAmount: decimal('total_amount', { precision: 20, scale: 2 }).notNull(),
   currencyId: integer('currency_id').references(() => currencies.id),
+  totalAmount: decimal('total_amount', { precision: 20, scale: 2 }).notNull().default('0'),
+  isFullyDelivered: boolean('is_fully_delivered').notNull().default(false),
+  notes: text('notes'),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
 
-  isDelivered: boolean('is_delivered').notNull().default(false),
-  deliveredTo: varchar('delivered_to', { length: 200 }),
-  deliveryMethod: varchar('delivery_method', { length: 100 }),
+// ===================== COLLECTION DETAILS (تفاصيل التحصيل لكل موظف) =====================
+
+export const collectionDetails = pgTable('collection_details', {
+  id: serial('id').primaryKey(),
+  collectionId: integer('collection_id').notNull().references(() => dailyCollections.id),
+  employeeId: integer('employee_id').notNull().references(() => employees.id),
+  billingAccountId: integer('billing_account_id').notNull().references(() => employeeBillingAccounts.id),
+  amount: decimal('amount', { precision: 20, scale: 2 }).notNull().default('0'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== DELIVERY RECORDS (التوريد) =====================
+
+export const deliveryRecords = pgTable('delivery_records', {
+  id: serial('id').primaryKey(),
+  collectionId: integer('collection_id').notNull().references(() => dailyCollections.id),
+  employeeId: integer('employee_id').notNull().references(() => employees.id),
+  toAccountId: integer('to_account_id').notNull().references(() => accounts.id),
+  amount: decimal('amount', { precision: 20, scale: 2 }).notNull(),
+  currencyId: integer('currency_id').references(() => currencies.id),
+  deliveryDate: date('delivery_date').notNull(),
+  reference: varchar('reference', { length: 200 }),
   notes: text('notes'),
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// ===================== EXPENSE BUDGET - تابعة لعمل =====================
+// ===================== EXPENSE BUDGET =====================
 
 export const expenseBudget = pgTable('expense_budget', {
   id: serial('id').primaryKey(),
@@ -329,7 +398,7 @@ export const salaryRecords = pgTable('salary_records', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// ===================== WAREHOUSES - تابعة لعمل =====================
+// ===================== WAREHOUSES =====================
 
 export const warehouses = pgTable('warehouses', {
   id: serial('id').primaryKey(),
@@ -393,7 +462,7 @@ export const inventoryMovements = pgTable('inventory_movements', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// ===================== RECONCILIATIONS - تابعة لعمل =====================
+// ===================== RECONCILIATIONS =====================
 
 export const reconciliations = pgTable('reconciliations', {
   id: serial('id').primaryKey(),
@@ -419,7 +488,7 @@ export const reconciliations = pgTable('reconciliations', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// ===================== PENDING ACCOUNTS - تابعة لعمل =====================
+// ===================== PENDING ACCOUNTS =====================
 
 export const pendingAccounts = pgTable('pending_accounts', {
   id: serial('id').primaryKey(),
@@ -482,5 +551,42 @@ export const auditLog = pgTable('audit_log', {
   oldData: jsonb('old_data'),
   newData: jsonb('new_data'),
   ipAddress: varchar('ip_address', { length: 50 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== OPERATION TYPES (أنواع العمليات - القوالب) =====================
+
+export const operationTypes = pgTable('operation_types', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 50 }).default('receipt_long'),
+  color: varchar('color', { length: 20 }).default('#3b82f6'),
+  category: varchar('category', { length: 50 }).notNull().default('voucher'), // 'voucher' | 'journal' | 'collection' | 'delivery'
+  voucherType: varchar('voucher_type', { length: 30 }), // 'payment' | 'receipt' | 'transfer' | 'journal'
+  mainAccountId: integer('main_account_id').references(() => accounts.id),
+  mainFundId: integer('main_fund_id').references(() => funds.id),
+  requiresAttachment: boolean('requires_attachment').notNull().default(false),
+  hasMultiLines: boolean('has_multi_lines').notNull().default(false),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== OPERATION TYPE ACCOUNTS (الحسابات المرتبطة بكل نوع عملية) =====================
+
+export const operationTypeAccounts = pgTable('operation_type_accounts', {
+  id: serial('id').primaryKey(),
+  operationTypeId: integer('operation_type_id').notNull().references(() => operationTypes.id),
+  accountId: integer('account_id').references(() => accounts.id),
+  employeeBillingAccountId: integer('employee_billing_account_id').references(() => employeeBillingAccounts.id),
+  label: varchar('label', { length: 200 }),
+  permission: varchar('permission', { length: 30 }).notNull().default('both'), // 'receive_only' | 'pay_only' | 'both'
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

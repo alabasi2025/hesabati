@@ -1,9 +1,8 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 
 @Component({
   selector: 'app-vouchers',
@@ -13,80 +12,188 @@ import { BusinessService } from '../../services/business.service';
   styleUrl: './vouchers.scss',
 })
 export class VouchersComponent implements OnInit {
-  private api = inject(ApiService);
   private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
+  private api = inject(ApiService);
 
   bizId = 0;
-  vouchers = signal<any[]>([]);
-  accounts = signal<any[]>([]);
   loading = signal(true);
+  saving = signal(false);
+  vouchers = signal<any[]>([]);
+  operationTypes = signal<any[]>([]);
+  accounts = signal<any[]>([]);
+  error = signal('');
+
+  // UI State
+  showHowItWorks = signal(false);
   showForm = signal(false);
   activeTab = signal<string>('all');
+  selectedVoucher = signal<any>(null);
 
-  form: any = {
-    voucherType: 'receipt', amount: 0, currencyId: 1,
-    fromAccountId: null, toAccountId: null, description: '', reference: '',
-  };
+  // Form state
+  voucherType = signal<'receipt' | 'payment'>('payment');
+  selectedOpType = signal<any>(null);
+  form = signal<any>({
+    operationTypeId: null,
+    fromAccountId: null,
+    toAccountId: null,
+    amount: '',
+    description: '',
+    voucherDate: new Date().toISOString().split('T')[0],
+    reference: '',
+    notes: '',
+  });
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
+  // Linked accounts from selected operation type
+  linkedAccounts = computed(() => {
+    const ot = this.selectedOpType();
+    if (!ot || !ot.accounts) return [];
+    return ot.accounts;
+  });
+
+  // Voucher operation types only
+  voucherOpTypes = computed(() => {
+    return this.operationTypes().filter(ot => ot.category === 'voucher');
+  });
+
+  filteredVouchers = computed(() => {
+    const tab = this.activeTab();
+    const all = this.vouchers();
+    if (tab === 'all') return all;
+    return all.filter(v => v.voucherType === tab);
+  });
+
+  stats = computed(() => {
+    const all = this.vouchers();
+    const receipts = all.filter(v => v.voucherType === 'receipt');
+    const payments = all.filter(v => v.voucherType === 'payment');
+    const totalReceipt = receipts.reduce((s, v) => s + parseFloat(v.amount || 0), 0);
+    const totalPayment = payments.reduce((s, v) => s + parseFloat(v.amount || 0), 0);
+    return { total: all.length, receipts: receipts.length, payments: payments.length, totalReceipt, totalPayment };
+  });
+
+  tabs = [
+    { value: 'all', label: 'الكل', icon: 'receipt_long', color: '#64748b' },
+    { value: 'receipt', label: 'سندات القبض', icon: 'call_received', color: '#22c55e' },
+    { value: 'payment', label: 'سندات الصرف', icon: 'call_made', color: '#ef4444' },
+  ];
+
+  async ngOnInit() {
+    this.route.parent?.params.subscribe(async (params) => {
       this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
+      await Promise.all([this.loadVouchers(), this.loadOperationTypes(), this.loadAccounts()]);
     });
   }
 
-  async load() {
+  async loadVouchers() {
     this.loading.set(true);
     try {
-      const [v, a] = await Promise.all([this.api.getVouchers(this.bizId), this.api.getAccounts(this.bizId)]);
-      this.vouchers.set(v); this.accounts.set(a);
-    } catch (e) { console.error(e); }
-    this.loading.set(false);
+      const data = await this.api.getVouchers(this.bizId);
+      this.vouchers.set(data);
+    } catch (e: any) {
+      this.error.set(e.message);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
-  async switchTab(tab: string) { this.activeTab.set(tab); await this.load(); }
-
-  filteredVouchers() {
-    const t = this.activeTab();
-    if (t === 'all') return this.vouchers();
-    return this.vouchers().filter(v => v.voucherType === t);
+  async loadOperationTypes() {
+    try {
+      const data = await this.api.getOperationTypes(this.bizId);
+      this.operationTypes.set(data);
+    } catch (e) { /* ignore */ }
   }
 
-  getTypeLabel(t: string): string {
-    const m: Record<string, string> = { receipt: 'سند قبض', payment: 'سند صرف', transfer: 'تحويل', collection: 'تحصيل', delivery: 'توريد' };
-    return m[t] || t;
+  async loadAccounts() {
+    try {
+      const data = await this.api.getAccounts(this.bizId);
+      this.accounts.set(data);
+    } catch (e) { /* ignore */ }
   }
-  getTypeClass(t: string): string {
-    const m: Record<string, string> = { receipt: 'receipt', payment: 'payment', transfer: 'transfer', collection: 'receipt', delivery: 'payment' };
-    return m[t] || '';
-  }
-  getStatusLabel(s: string): string { return s === 'confirmed' ? 'مؤكد' : s === 'draft' ? 'مسودة' : 'ملغي'; }
-  getStatusClass(s: string): string { return s === 'confirmed' ? 'active' : s === 'draft' ? 'partner' : 'inactive'; }
-  getAccountName(id: number | null): string { if (!id) return '-'; return this.accounts().find(a => a.id === id)?.name || '-'; }
 
-  openAdd(type: string = 'receipt') {
-    this.form = { voucherType: type, amount: 0, currencyId: 1, fromAccountId: null, toAccountId: null, description: '', reference: '' };
+  openCreate(type: 'receipt' | 'payment') {
+    this.voucherType.set(type);
+    this.selectedOpType.set(null);
+    this.form.set({
+      operationTypeId: null,
+      fromAccountId: null,
+      toAccountId: null,
+      amount: '',
+      description: '',
+      voucherDate: new Date().toISOString().split('T')[0],
+      reference: '',
+      notes: '',
+    });
     this.showForm.set(true);
   }
 
-  async save() {
+  selectOpType(ot: any) {
+    this.selectedOpType.set(ot);
+    this.form.update(f => ({ ...f, operationTypeId: ot.id, fromAccountId: null, toAccountId: null }));
+  }
+
+  setFormField(field: string, value: any) {
+    this.form.update(f => ({ ...f, [field]: value }));
+  }
+
+  async saveVoucher() {
+    const f = this.form();
+    if (!f.amount || parseFloat(f.amount) <= 0) { this.error.set('أدخل المبلغ'); return; }
+    if (!f.description) { this.error.set('أدخل البيان'); return; }
+
+    this.saving.set(true);
     try {
-      await this.api.createVoucher(this.bizId, { ...this.form, amount: String(this.form.amount) });
-      this.showForm.set(false); await this.load();
-    } catch (e) { console.error(e); }
+      await this.api.createVoucher(this.bizId, {
+        ...f,
+        voucherType: this.voucherType(),
+        amount: String(parseFloat(f.amount)),
+      });
+      this.showForm.set(false);
+      await this.loadVouchers();
+    } catch (e: any) {
+      this.error.set(e.message);
+    } finally {
+      this.saving.set(false);
+    }
   }
 
-  async cancel(id: number) {
-    if (confirm('هل أنت متأكد من إلغاء هذا السند؟')) { await this.api.deleteVoucher(id); await this.load(); }
+  async deleteVoucher(id: number) {
+    if (!confirm('هل تريد حذف هذا السند؟')) return;
+    try {
+      await this.api.deleteVoucher(id);
+      await this.loadVouchers();
+    } catch (e: any) {
+      this.error.set(e.message);
+    }
   }
 
-  formatDate(d: string): string { return new Date(d).toLocaleDateString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric' }); }
+  getAccountName(id: number): string {
+    const acc = this.accounts().find(a => a.id === id);
+    return acc?.name || '-';
+  }
 
-  tabs = [
-    { value: 'all', label: 'الكل', icon: 'receipt_long' },
-    { value: 'receipt', label: 'سندات القبض', icon: 'arrow_downward' },
-    { value: 'payment', label: 'سندات الصرف', icon: 'arrow_upward' },
-    { value: 'transfer', label: 'التحويلات', icon: 'swap_horiz' },
-  ];
+  getTypeLabel(t: string): string {
+    const m: Record<string, string> = { receipt: 'سند قبض', payment: 'سند صرف', transfer: 'تحويل' };
+    return m[t] || t;
+  }
+
+  getTypeIcon(t: string): string {
+    const m: Record<string, string> = { receipt: 'call_received', payment: 'call_made', transfer: 'swap_horiz' };
+    return m[t] || 'receipt_long';
+  }
+
+  getTypeColor(t: string): string {
+    const m: Record<string, string> = { receipt: '#22c55e', payment: '#ef4444', transfer: '#3b82f6' };
+    return m[t] || '#64748b';
+  }
+
+  formatAmount(amount: any): string {
+    return parseFloat(amount || 0).toLocaleString('ar-YE');
+  }
+
+  formatDate(d: string): string {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('ar-YE');
+  }
+
+  trackById(_: number, item: any) { return item.id; }
 }

@@ -1,72 +1,309 @@
-<div class="page-content">
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
   <div class="page-header">
-    <h2><span class="material-icons-round">account_balance_wallet</span> الحسابات والمحافظ</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة حساب</button>
+    <div class="header-left">
+      <div class="page-icon-3d blue">
+        <span class="material-icons-round">account_balance_wallet</span>
+      </div>
+      <div>
+        <h1 class="page-title">الحسابات</h1>
+        <p class="page-subtitle">إدارة كل حسابات العمل (صناديق، بنوك، محافظ، صرافين...)</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
+        <span class="material-icons-round">help_outline</span>
+      </button>
+      <button class="btn-3d btn-primary" (click)="openCreate()">
+        <span class="material-icons-round">add</span>
+        حساب جديد
+      </button>
+    </div>
   </div>
 
-  <div class="filter-tabs">
-    @for (t of accountTypes; track t.value) {
-      <button class="filter-tab" [class.active]="activeFilter() === t.value" (click)="activeFilter.set(t.value)">{{ t.label }}</button>
-    }
-  </div>
+  <!-- ===== Error ===== -->
+  @if (error()) {
+    <div class="alert-error" (click)="error.set('')">
+      <span class="material-icons-round">error_outline</span>
+      {{ error() }}
+      <span class="close-x">✕</span>
+    </div>
+  }
 
-  @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!filteredAccounts().length) {
-    <div class="empty-state"><span class="material-icons-round">account_balance_wallet</span><p>لا توجد حسابات</p></div>
-  } @else {
-    <div class="accounts-grid">
-      @for (acc of filteredAccounts(); track acc.id) {
-        <div class="account-card" [class]="'type-' + getTypeColor(acc.accountType)">
-          <div class="acc-card-header">
-            <div class="acc-icon" [class]="getTypeColor(acc.accountType)">
-              <span class="material-icons-round">{{ getTypeIcon(acc.accountType) }}</span>
-            </div>
-            <div class="acc-actions">
-              <button class="action-btn edit" (click)="openEdit(acc)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(acc.id)"><span class="material-icons-round">delete</span></button>
-            </div>
+  <!-- ===== Stats Bar ===== -->
+  @if (!loading() && accounts().length > 0) {
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-icon blue"><span class="material-icons-round">account_balance_wallet</span></div>
+        <div>
+          <div class="stat-num">{{ stats().total }}</div>
+          <div class="stat-label">إجمالي الحسابات</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><span class="material-icons-round">check_circle</span></div>
+        <div>
+          <div class="stat-num">{{ stats().active }}</div>
+          <div class="stat-label">حسابات نشطة</div>
+        </div>
+      </div>
+      @for (t of stats().byType; track t.value) {
+        <div class="stat-card type-stat">
+          <div class="stat-icon" [style.background]="t.color">
+            <span class="material-icons-round">{{ t.icon }}</span>
           </div>
-          <h3 class="acc-name">{{ acc.name }}</h3>
-          <span class="acc-type-badge">{{ getTypeLabel(acc.accountType) }}</span>
-          @if (acc.accountNumber) { <div class="acc-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
-          @if (acc.provider) { <div class="acc-detail"><span class="material-icons-round">business</span> {{ acc.provider }}</div> }
-          @if (acc.responsiblePerson) { <div class="acc-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }
+          <div>
+            <div class="stat-num">{{ t.count }}</div>
+            <div class="stat-label">{{ t.label }}</div>
+          </div>
         </div>
       }
     </div>
   }
 
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon blue"><span class="material-icons-round">account_balance_wallet</span></div><h2>{{ editingId() ? 'تعديل حساب' : 'إضافة حساب جديد' }}</h2></div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+  <!-- ===== Search + Filter ===== -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <span class="material-icons-round search-icon">search</span>
+      <input type="text" placeholder="ابحث عن حساب..." class="search-input"
+             [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
+    </div>
+    <div class="type-tabs">
+      @for (t of accountTypes; track t.value) {
+        <button class="type-tab" [class.active]="activeType() === t.value"
+                [style.--tab-color]="t.color"
+                (click)="activeType.set(t.value)">
+          <span class="material-icons-round">{{ t.icon }}</span>
+          {{ t.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ===== Loading ===== -->
+  @if (loading()) {
+    <div class="accounts-grid">
+      @for (i of [1,2,3,4,5,6]; track i) {
+        <div class="skeleton-card"></div>
+      }
+    </div>
+  }
+
+  <!-- ===== Accounts Grid ===== -->
+  @if (!loading()) {
+    @if (filteredAccounts().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-3d">
+          <span class="material-icons-round">account_balance_wallet</span>
         </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group"><label>اسم الحساب</label><input [(ngModel)]="form.name" placeholder="مثال: جوالي - محمد" /></div>
-            <div class="form-group"><label>نوع الحساب</label>
-              <select [(ngModel)]="form.accountType">
-                <option value="e_wallet">محفظة إلكترونية</option><option value="bank">بنك</option>
-                <option value="exchange">صراف</option><option value="service">خدمة</option>
-                <option value="cash">نقد/خزنة</option><option value="custody">عهدة</option>
-              </select>
+        <h3>لا توجد حسابات</h3>
+        <p>أضف حسابات العمل (صناديق، بنوك، محافظ...) لتبدأ في تسجيل العمليات</p>
+        <button class="btn-3d btn-primary" (click)="openCreate()">
+          <span class="material-icons-round">add</span>
+          أضف أول حساب
+        </button>
+      </div>
+    } @else {
+      <div class="accounts-grid">
+        @for (acc of filteredAccounts(); track acc.id) {
+          <div class="account-card-3d" [class.inactive]="!acc.isActive"
+               [style.--card-color]="getTypeInfo(acc.accountType).color">
+            <div class="card-glow"></div>
+
+            <div class="acc-card-top">
+              <div class="acc-icon-3d" [style.background]="getTypeInfo(acc.accountType).color">
+                <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
+              </div>
+              <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
+                   [style.background]="getTypeInfo(acc.accountType).color + '18'">
+                {{ getTypeInfo(acc.accountType).label }}
+              </div>
+              <div class="acc-actions-top">
+                <button class="icon-btn edit-btn" (click)="openEdit(acc)">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="icon-btn delete-btn" (click)="deleteAccount(acc.id)">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="acc-card-body">
+              <h3 class="acc-name">{{ acc.name }}</h3>
+              @if (acc.provider) {
+                <div class="acc-detail">
+                  <span class="material-icons-round">business</span>
+                  {{ acc.provider }}
+                </div>
+              }
+              @if (acc.responsiblePerson) {
+                <div class="acc-detail">
+                  <span class="material-icons-round">person</span>
+                  {{ acc.responsiblePerson }}
+                </div>
+              }
+              @if (acc.accountNumber) {
+                <div class="acc-detail">
+                  <span class="material-icons-round">tag</span>
+                  {{ acc.accountNumber }}
+                </div>
+              }
+            </div>
+
+            <div class="acc-card-footer">
+              @if (!acc.isActive) {
+                <span class="inactive-badge">
+                  <span class="material-icons-round">pause_circle</span>
+                  موقوف
+                </span>
+              } @else {
+                <span class="active-badge">
+                  <span class="material-icons-round">check_circle</span>
+                  نشط
+                </span>
+              }
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-group"><label>رقم الحساب</label><input [(ngModel)]="form.accountNumber" /></div>
-            <div class="form-group"><label>المزود</label><input [(ngModel)]="form.provider" /></div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ===== How It Works Modal ===== -->
+  @if (showHowItWorks()) {
+    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
+      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon amber">
+            <span class="material-icons-round">help_outline</span>
           </div>
-          <div class="form-group"><label>المسؤول</label><input [(ngModel)]="form.responsiblePerson" /></div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2"></textarea></div>
+          <h2>مبدأ العمل - الحسابات</h2>
+          <button class="modal-close" (click)="showHowItWorks.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <div class="modal-body">
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">account_balance_wallet</span> ما هي الحسابات؟</h3>
+            <p>
+              الحسابات هي كل "مكان" يمكن أن تتحرك منه أو إليه الأموال. مثلاً:
+              صندوق التحصيل، محفظة جوالي، صراف الحوشبي، حساب نظام المغربي.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">category</span> أنواع الحسابات</h3>
+            <div class="hiw-types">
+              @for (t of accountTypes.slice(1); track t.value) {
+                <div class="hiw-type-row">
+                  <div class="hiw-type-icon" [style.background]="t.color">
+                    <span class="material-icons-round">{{ t.icon }}</span>
+                  </div>
+                  <strong>{{ t.label }}</strong>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">auto_awesome</span> الصلاحيات الجديدة</h3>
+            <p>
+              بدل تحديد صلاحيات لكل حساب، الآن تسوي "أنواع عمليات" جاهزة من صفحة
+              <strong>أنواع العمليات</strong>. كل نوع يحدد الحسابات المرتبطة وكيف تتعامل معها.
+            </p>
+          </div>
         </div>
       </div>
     </div>
   }
+
+  <!-- ===== Create/Edit Form Modal ===== -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon" [style.background]="getTypeInfo(form().accountType).color">
+            <span class="material-icons-round">{{ getTypeInfo(form().accountType).icon }}</span>
+          </div>
+          <h2>{{ editingId() ? 'تعديل الحساب' : 'حساب جديد' }}</h2>
+          <button class="modal-close" (click)="showForm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+
+          <div class="form-group">
+            <label class="form-label">اسم الحساب <span class="required">*</span></label>
+            <input class="form-input" type="text" placeholder="مثال: صندوق التحصيل والتوريد"
+                   [value]="form().name" (input)="setFormField('name', $any($event.target).value)">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">نوع الحساب</label>
+            <div class="type-selector">
+              @for (t of accountTypes.slice(1); track t.value) {
+                <button class="type-option" [class.selected]="form().accountType === t.value"
+                        [style.--opt-color]="t.color"
+                        (click)="setFormField('accountType', t.value)">
+                  <span class="material-icons-round">{{ t.icon }}</span>
+                  {{ t.label }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">الجهة / المزود</label>
+              <input class="form-input" type="text" placeholder="مثال: بنك الكريمي، جوالي"
+                     [value]="form().provider" (input)="setFormField('provider', $any($event.target).value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم الحساب</label>
+              <input class="form-input" type="text" placeholder="رقم الحساب أو الرقم المرجعي"
+                     [value]="form().accountNumber" (input)="setFormField('accountNumber', $any($event.target).value)">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">المسؤول</label>
+              <input class="form-input" type="text" placeholder="اسم المسؤول عن الحساب"
+                     [value]="form().responsiblePerson" (input)="setFormField('responsiblePerson', $any($event.target).value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">تصنيف فرعي</label>
+              <input class="form-input" type="text" placeholder="تصنيف إضافي (اختياري)"
+                     [value]="form().subType" (input)="setFormField('subType', $any($event.target).value)">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ملاحظات</label>
+            <textarea class="form-input" rows="2" placeholder="ملاحظات إضافية..."
+                      [value]="form().notes || ''"
+                      (input)="setFormField('notes', $any($event.target).value)"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="toggle-label">
+              <span>الحساب نشط</span>
+              <div class="toggle-switch" [class.on]="form().isActive"
+                   (click)="setFormField('isActive', !form().isActive)">
+                <div class="toggle-knob"></div>
+              </div>
+            </label>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="saveForm()">
+            <span class="material-icons-round">save</span>
+            {{ editingId() ? 'حفظ التعديلات' : 'إضافة الحساب' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

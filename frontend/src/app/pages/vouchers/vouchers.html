@@ -1,89 +1,337 @@
-<div class="page-content">
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
   <div class="page-header">
-    <h2><span class="material-icons-round">receipt_long</span> السندات</h2>
-    <div class="header-actions">
-      <button class="add-btn green" (click)="openAdd('receipt')"><span class="material-icons-round">arrow_downward</span> سند قبض</button>
-      <button class="add-btn red" (click)="openAdd('payment')"><span class="material-icons-round">arrow_upward</span> سند صرف</button>
-      <button class="add-btn blue" (click)="openAdd('transfer')"><span class="material-icons-round">swap_horiz</span> تحويل</button>
+    <div class="header-left">
+      <div class="page-icon-3d green">
+        <span class="material-icons-round">receipt_long</span>
+      </div>
+      <div>
+        <h1 class="page-title">سندات الصرف والقبض</h1>
+        <p class="page-subtitle">تسجيل حركات الأموال بين الحسابات</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
+        <span class="material-icons-round">help_outline</span>
+      </button>
+      <button class="btn-3d btn-receipt" (click)="openCreate('receipt')">
+        <span class="material-icons-round">call_received</span>
+        سند قبض
+      </button>
+      <button class="btn-3d btn-payment" (click)="openCreate('payment')">
+        <span class="material-icons-round">call_made</span>
+        سند صرف
+      </button>
     </div>
   </div>
 
-  <div class="filter-tabs">
-    @for (t of tabs; track t.value) {
-      <button class="filter-tab" [class.active]="activeTab() === t.value" (click)="switchTab(t.value)">
-        <span class="material-icons-round">{{ t.icon }}</span> {{ t.label }}
-      </button>
-    }
-  </div>
-
-  @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!filteredVouchers().length) {
-    <div class="empty-state"><span class="material-icons-round">receipt_long</span><p>لا توجد سندات</p></div>
-  } @else {
-    <table class="data-table">
-      <thead><tr><th>#</th><th>النوع</th><th>المبلغ</th><th>من</th><th>إلى</th><th>الوصف</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-      <tbody>
-        @for (v of filteredVouchers(); track v.id; let i = $index) {
-          <tr>
-            <td>{{ v.voucherNumber || (i + 1) }}</td>
-            <td><span class="voucher-type" [class]="getTypeClass(v.voucherType)">{{ getTypeLabel(v.voucherType) }}</span></td>
-            <td class="amount-cell"><strong>{{ v.amount | number:'1.0-0' }}</strong> ر.ي</td>
-            <td>{{ getAccountName(v.fromAccountId) }}</td>
-            <td>{{ getAccountName(v.toAccountId) }}</td>
-            <td>{{ v.description || '-' }}</td>
-            <td>{{ v.createdAt ? formatDate(v.createdAt) : '-' }}</td>
-            <td><span class="status-badge" [class]="getStatusClass(v.status)">{{ getStatusLabel(v.status) }}</span></td>
-            <td><button class="action-btn delete" (click)="cancel(v.id)"><span class="material-icons-round">cancel</span></button></td>
-          </tr>
-        }
-      </tbody>
-    </table>
+  <!-- ===== Error ===== -->
+  @if (error()) {
+    <div class="alert-error" (click)="error.set('')">
+      <span class="material-icons-round">error_outline</span>
+      {{ error() }}
+      <span class="close-x">✕</span>
+    </div>
   }
 
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon" [class]="form.voucherType === 'receipt' ? 'green' : form.voucherType === 'payment' ? 'red' : 'blue'">
-              <span class="material-icons-round">{{ form.voucherType === 'receipt' ? 'arrow_downward' : form.voucherType === 'payment' ? 'arrow_upward' : 'swap_horiz' }}</span>
-            </div>
-            <h2>{{ form.voucherType === 'receipt' ? 'سند قبض جديد' : form.voucherType === 'payment' ? 'سند صرف جديد' : 'تحويل جديد' }}</h2>
-          </div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+  <!-- ===== Stats Cards ===== -->
+  @if (!loading()) {
+    <div class="stats-row">
+      <div class="stat-card-3d total">
+        <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ stats().total }}</div>
+          <div class="sc-label">إجمالي السندات</div>
         </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group"><label>المبلغ</label><input type="number" [(ngModel)]="form.amount" /></div>
-            <div class="form-group"><label>النوع</label>
-              <select [(ngModel)]="form.voucherType">
-                <option value="receipt">سند قبض</option><option value="payment">سند صرف</option><option value="transfer">تحويل</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>من حساب</label>
-              <select [(ngModel)]="form.fromAccountId">
-                <option [ngValue]="null">-- اختر --</option>
-                @for (a of accounts(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
-              </select>
-            </div>
-            <div class="form-group"><label>إلى حساب</label>
-              <select [(ngModel)]="form.toAccountId">
-                <option [ngValue]="null">-- اختر --</option>
-                @for (a of accounts(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
-              </select>
-            </div>
-          </div>
-          <div class="form-group"><label>الوصف</label><textarea [(ngModel)]="form.description" rows="2"></textarea></div>
-          <div class="form-group"><label>المرجع</label><input [(ngModel)]="form.reference" /></div>
+      </div>
+      <div class="stat-card-3d receipt">
+        <div class="sc-icon"><span class="material-icons-round">call_received</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ stats().receipts }}</div>
+          <div class="sc-label">سندات قبض</div>
+          <div class="sc-amount">{{ formatAmount(stats().totalReceipt) }}</div>
         </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">حفظ السند</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+      </div>
+      <div class="stat-card-3d payment">
+        <div class="sc-icon"><span class="material-icons-round">call_made</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ stats().payments }}</div>
+          <div class="sc-label">سندات صرف</div>
+          <div class="sc-amount">{{ formatAmount(stats().totalPayment) }}</div>
         </div>
       </div>
     </div>
   }
+
+  <!-- ===== Tabs ===== -->
+  <div class="tabs-bar">
+    @for (tab of tabs; track tab.value) {
+      <button class="tab-btn" [class.active]="activeTab() === tab.value"
+              [style.--tab-color]="tab.color"
+              (click)="activeTab.set(tab.value)">
+        <span class="material-icons-round">{{ tab.icon }}</span>
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ===== Loading ===== -->
+  @if (loading()) {
+    <div class="loading-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="skeleton-row"></div>
+      }
+    </div>
+  }
+
+  <!-- ===== Vouchers List ===== -->
+  @if (!loading()) {
+    @if (filteredVouchers().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-3d">
+          <span class="material-icons-round">receipt_long</span>
+        </div>
+        <h3>لا توجد سندات</h3>
+        <p>أنشئ سند قبض أو صرف لتسجيل حركة مالية</p>
+        <div class="empty-actions">
+          <button class="btn-3d btn-receipt" (click)="openCreate('receipt')">
+            <span class="material-icons-round">call_received</span>
+            سند قبض
+          </button>
+          <button class="btn-3d btn-payment" (click)="openCreate('payment')">
+            <span class="material-icons-round">call_made</span>
+            سند صرف
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="vouchers-list">
+        @for (v of filteredVouchers(); track v.id) {
+          <div class="voucher-row-3d" [style.--v-color]="getTypeColor(v.voucherType)">
+            <div class="vr-type-indicator"></div>
+            <div class="vr-icon">
+              <span class="material-icons-round">{{ getTypeIcon(v.voucherType) }}</span>
+            </div>
+            <div class="vr-main">
+              <div class="vr-desc">{{ v.description || 'بدون بيان' }}</div>
+              <div class="vr-meta">
+                <span class="vr-date">
+                  <span class="material-icons-round">calendar_today</span>
+                  {{ formatDate(v.voucherDate || v.createdAt) }}
+                </span>
+                @if (v.fromAccountId) {
+                  <span class="vr-account">
+                    <span class="material-icons-round">arrow_forward</span>
+                    {{ v.fromAccountName || getAccountName(v.fromAccountId) }}
+                  </span>
+                }
+                @if (v.toAccountId) {
+                  <span class="vr-account">
+                    <span class="material-icons-round">arrow_back</span>
+                    {{ v.toAccountName || getAccountName(v.toAccountId) }}
+                  </span>
+                }
+              </div>
+            </div>
+            <div class="vr-right">
+              <div class="vr-amount" [style.color]="getTypeColor(v.voucherType)">
+                {{ formatAmount(v.amount) }}
+              </div>
+              <span class="vr-type-badge" [style.background]="getTypeColor(v.voucherType) + '18'"
+                    [style.color]="getTypeColor(v.voucherType)">
+                {{ getTypeLabel(v.voucherType) }}
+              </span>
+            </div>
+            <div class="vr-actions">
+              <button class="icon-btn delete-btn" (click)="deleteVoucher(v.id)">
+                <span class="material-icons-round">delete</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ===== How It Works Modal ===== -->
+  @if (showHowItWorks()) {
+    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
+      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon amber">
+            <span class="material-icons-round">help_outline</span>
+          </div>
+          <h2>مبدأ العمل - السندات</h2>
+          <button class="modal-close" (click)="showHowItWorks.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">call_received</span> سند القبض</h3>
+            <p>
+              يُستخدم عندما يستلم حساب مبلغاً من حساب آخر.
+              مثلاً: استلام تحصيل يومي من موظف.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">call_made</span> سند الصرف</h3>
+            <p>
+              يُستخدم عندما يدفع حساب مبلغاً لحساب آخر.
+              مثلاً: إيداع في صراف أو تحويل لمحفظة.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">category</span> أنواع العمليات</h3>
+            <p>
+              لما تنشئ سنداً، تختار أولاً "نوع العملية" من القوالب المحفوظة.
+              هذا يحدد الحسابات المتاحة تلقائياً.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Create Voucher Modal ===== -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header" [class.receipt-header]="voucherType() === 'receipt'"
+             [class.payment-header]="voucherType() === 'payment'">
+          <div class="modal-icon" [class.receipt-icon]="voucherType() === 'receipt'"
+               [class.payment-icon]="voucherType() === 'payment'">
+            <span class="material-icons-round">{{ voucherType() === 'receipt' ? 'call_received' : 'call_made' }}</span>
+          </div>
+          <div>
+            <h2>{{ voucherType() === 'receipt' ? 'سند قبض جديد' : 'سند صرف جديد' }}</h2>
+            <p class="modal-subtitle">{{ voucherType() === 'receipt' ? 'استلام مبلغ من حساب' : 'دفع مبلغ لحساب' }}</p>
+          </div>
+          <button class="modal-close" (click)="showForm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Step 1: Select Operation Type -->
+          @if (voucherOpTypes().length > 0) {
+            <div class="form-step">
+              <div class="step-header">
+                <div class="step-num">١</div>
+                <span>اختر نوع العملية (اختياري)</span>
+              </div>
+              <div class="op-types-grid">
+                @for (ot of voucherOpTypes(); track ot.id) {
+                  <button class="op-type-btn" [class.selected]="selectedOpType()?.id === ot.id"
+                          (click)="selectOpType(ot)">
+                    <span class="material-icons-round">{{ ot.icon || 'receipt_long' }}</span>
+                    {{ ot.name }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Step 2: Accounts -->
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">{{ voucherOpTypes().length > 0 ? '٢' : '١' }}</div>
+              <span>الحسابات</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">
+                  {{ voucherType() === 'payment' ? 'الحساب المصروف منه' : 'الحساب المستلِم' }}
+                  <span class="required">*</span>
+                </label>
+                <select class="form-select" [value]="form().fromAccountId"
+                        (change)="setFormField('fromAccountId', +$any($event.target).value || null)">
+                  <option [value]="null">اختر الحساب...</option>
+                  @for (acc of accounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  {{ voucherType() === 'payment' ? 'الحساب المستلِم' : 'الحساب المصروف منه' }}
+                </label>
+                <select class="form-select" [value]="form().toAccountId"
+                        (change)="setFormField('toAccountId', +$any($event.target).value || null)">
+                  <option [value]="null">اختر الحساب...</option>
+                  @if (linkedAccounts().length > 0) {
+                    @for (la of linkedAccounts(); track la.id) {
+                      <option [value]="la.accountId">{{ la.accountName }}</option>
+                    }
+                  } @else {
+                    @for (acc of accounts(); track acc.id) {
+                      @if (acc.id !== form().fromAccountId) {
+                        <option [value]="acc.id">{{ acc.name }}</option>
+                      }
+                    }
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Amount & Details -->
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">{{ voucherOpTypes().length > 0 ? '٣' : '٢' }}</div>
+              <span>المبلغ والبيان</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">المبلغ <span class="required">*</span></label>
+                <div class="amount-input-wrap">
+                  <input class="form-input amount-input" type="number" placeholder="0"
+                         [value]="form().amount"
+                         (input)="setFormField('amount', $any($event.target).value)">
+                  <span class="currency-label">ر.ي</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">التاريخ</label>
+                <input class="form-input" type="date" [value]="form().voucherDate"
+                       (change)="setFormField('voucherDate', $any($event.target).value)">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">البيان <span class="required">*</span></label>
+              <input class="form-input" type="text" placeholder="وصف العملية..."
+                     [value]="form().description"
+                     (input)="setFormField('description', $any($event.target).value)">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">الرقم المرجعي</label>
+                <input class="form-input" type="text" placeholder="رقم الإشعار أو المرجع"
+                       [value]="form().reference"
+                       (input)="setFormField('reference', $any($event.target).value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">ملاحظات</label>
+                <input class="form-input" type="text" placeholder="ملاحظات إضافية"
+                       [value]="form().notes || ''"
+                       (input)="setFormField('notes', $any($event.target).value)">
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
+          <button class="btn-3d" [class.btn-receipt]="voucherType() === 'receipt'"
+                  [class.btn-payment]="voucherType() === 'payment'"
+                  [disabled]="saving()" (click)="saveVoucher()">
+            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+            {{ saving() ? 'جاري الحفظ...' : 'حفظ السند' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

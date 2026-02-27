@@ -1,0 +1,406 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d teal">
+        <span class="material-icons-round">account_balance_wallet</span>
+      </div>
+      <div>
+        <h1 class="page-title">التحصيل والتوريد اليومي</h1>
+        <p class="page-subtitle">تسجيل التحصيل اليومي وتوريد الأموال</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
+        <span class="material-icons-round">help_outline</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Error ===== -->
+  @if (error()) {
+    <div class="alert-error" (click)="error.set('')">
+      <span class="material-icons-round">error_outline</span>
+      {{ error() }}
+      <span class="close-x">✕</span>
+    </div>
+  }
+
+  <!-- ===== View Tabs ===== -->
+  <div class="view-tabs">
+    <button class="view-tab" [class.active]="activeView() === 'collection'"
+            (click)="activeView.set('collection')">
+      <div class="vt-icon collection-icon">
+        <span class="material-icons-round">call_received</span>
+      </div>
+      <span>تسجيل التحصيل</span>
+    </button>
+    <button class="view-tab" [class.active]="activeView() === 'delivery'"
+            (click)="activeView.set('delivery')">
+      <div class="vt-icon delivery-icon">
+        <span class="material-icons-round">call_made</span>
+      </div>
+      <span>توريد الأموال</span>
+    </button>
+    <button class="view-tab" [class.active]="activeView() === 'history'"
+            (click)="activeView.set('history')">
+      <div class="vt-icon history-icon">
+        <span class="material-icons-round">history</span>
+      </div>
+      <span>السجل</span>
+    </button>
+  </div>
+
+  <!-- ===== Loading ===== -->
+  @if (loading()) {
+    <div class="loading-center">
+      <div class="loading-spinner"></div>
+      <p>جاري التحميل...</p>
+    </div>
+  }
+
+  <!-- ============================= -->
+  <!-- ===== COLLECTION VIEW ======= -->
+  <!-- ============================= -->
+  @if (!loading() && activeView() === 'collection') {
+    <div class="view-section">
+
+      @if (collectionOpTypes().length === 0) {
+        <div class="no-op-types-card">
+          <div class="noopt-icon">
+            <span class="material-icons-round">category</span>
+          </div>
+          <h3>لا توجد أنواع عمليات للتحصيل</h3>
+          <p>اذهب إلى "أنواع العمليات" وأنشئ نوعاً من فئة "تحصيل" لتظهر هنا</p>
+        </div>
+      }
+
+      @if (collectionOpTypes().length > 0 && !selectedCollectionOT()) {
+        <div class="select-ot-section">
+          <h2 class="section-title">
+            <span class="material-icons-round">category</span>
+            اختر نوع التحصيل
+          </h2>
+          <div class="ot-cards-grid">
+            @for (ot of collectionOpTypes(); track ot.id) {
+              <button class="ot-card-3d" (click)="selectCollectionOT(ot)">
+                <div class="ot-card-icon collection">
+                  <span class="material-icons-round">{{ ot.icon || 'call_received' }}</span>
+                </div>
+                <div class="ot-card-body">
+                  <div class="ot-card-name">{{ ot.name }}</div>
+                  @if (ot.description) {
+                    <div class="ot-card-desc">{{ ot.description }}</div>
+                  }
+                  <div class="ot-card-count">
+                    <span class="material-icons-round">group</span>
+                    {{ ot.accounts?.length || 0 }} حساب
+                  </div>
+                </div>
+                <span class="material-icons-round ot-arrow">arrow_back_ios</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (selectedCollectionOT()) {
+        <div class="collection-form-section">
+          <div class="cf-header">
+            <button class="back-btn" (click)="selectedCollectionOT.set(null); collectionEntries.set([])">
+              <span class="material-icons-round">arrow_forward</span>
+            </button>
+            <div class="cf-title-wrap">
+              <div class="cf-icon collection">
+                <span class="material-icons-round">{{ selectedCollectionOT().icon || 'call_received' }}</span>
+              </div>
+              <div>
+                <h2>{{ selectedCollectionOT().name }}</h2>
+                <p>{{ selectedCollectionOT().description || 'تسجيل التحصيل اليومي' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="global-fields">
+            <div class="form-group">
+              <label class="form-label">البيان العام (يطبق على الكل)</label>
+              <input class="form-input" type="text" placeholder="مثال: تحصيل يوم 27 فبراير..."
+                     [value]="collectionDescription()"
+                     (input)="collectionDescription.set($any($event.target).value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">التاريخ</label>
+              <input class="form-input" type="date" [value]="collectionDate()"
+                     (change)="collectionDate.set($any($event.target).value)">
+            </div>
+          </div>
+
+          <div class="entries-table-wrap">
+            <div class="entries-table-header">
+              <span>الحساب</span>
+              <span>المبلغ المحصّل</span>
+              <span>ملاحظات</span>
+            </div>
+            @for (entry of collectionEntries(); track trackByIndex($index); let i = $index) {
+              <div class="entry-row" [class.has-amount]="parseFloat(entry.amount) > 0">
+                <div class="entry-account">
+                  <div class="entry-account-icon">
+                    <span class="material-icons-round">account_circle</span>
+                  </div>
+                  <span>{{ entry.accountName }}</span>
+                </div>
+                <div class="entry-amount-wrap">
+                  <input class="entry-amount-input" type="number" placeholder="0"
+                         [value]="entry.amount"
+                         (input)="updateCollectionEntry(i, 'amount', $any($event.target).value)">
+                  <span class="entry-currency">ر.ي</span>
+                </div>
+                <input class="entry-notes-input" type="text" placeholder="ملاحظة..."
+                       [value]="entry.notes"
+                       (input)="updateCollectionEntry(i, 'notes', $any($event.target).value)">
+              </div>
+            }
+          </div>
+
+          <div class="cf-footer">
+            <div class="total-display">
+              <span class="total-label">إجمالي التحصيل:</span>
+              <span class="total-amount collection-color">{{ formatAmount(collectionTotal()) }}</span>
+              <span class="total-currency">ر.ي</span>
+            </div>
+            <button class="btn-3d btn-collection" [disabled]="saving() || collectionTotal() === 0"
+                    (click)="saveCollection()">
+              <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+              {{ saving() ? 'جاري الحفظ...' : 'حفظ التحصيل' }}
+            </button>
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ============================= -->
+  <!-- ===== DELIVERY VIEW ========= -->
+  <!-- ============================= -->
+  @if (!loading() && activeView() === 'delivery') {
+    <div class="view-section">
+
+      @if (deliveryOpTypes().length === 0) {
+        <div class="no-op-types-card">
+          <div class="noopt-icon delivery">
+            <span class="material-icons-round">category</span>
+          </div>
+          <h3>لا توجد أنواع عمليات للتوريد</h3>
+          <p>اذهب إلى "أنواع العمليات" وأنشئ نوعاً من فئة "توريد" لتظهر هنا</p>
+        </div>
+      }
+
+      @if (deliveryOpTypes().length > 0 && !selectedDeliveryOT()) {
+        <div class="select-ot-section">
+          <h2 class="section-title">
+            <span class="material-icons-round">category</span>
+            اختر نوع التوريد
+          </h2>
+          <div class="ot-cards-grid">
+            @for (ot of deliveryOpTypes(); track ot.id) {
+              <button class="ot-card-3d" (click)="selectDeliveryOT(ot)">
+                <div class="ot-card-icon delivery">
+                  <span class="material-icons-round">{{ ot.icon || 'call_made' }}</span>
+                </div>
+                <div class="ot-card-body">
+                  <div class="ot-card-name">{{ ot.name }}</div>
+                  @if (ot.description) {
+                    <div class="ot-card-desc">{{ ot.description }}</div>
+                  }
+                  <div class="ot-card-count">
+                    <span class="material-icons-round">group</span>
+                    {{ ot.accounts?.length || 0 }} حساب
+                  </div>
+                </div>
+                <span class="material-icons-round ot-arrow">arrow_back_ios</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (selectedDeliveryOT()) {
+        <div class="collection-form-section">
+          <div class="cf-header">
+            <button class="back-btn" (click)="selectedDeliveryOT.set(null); deliveryEntries.set([])">
+              <span class="material-icons-round">arrow_forward</span>
+            </button>
+            <div class="cf-title-wrap">
+              <div class="cf-icon delivery">
+                <span class="material-icons-round">{{ selectedDeliveryOT().icon || 'call_made' }}</span>
+              </div>
+              <div>
+                <h2>{{ selectedDeliveryOT().name }}</h2>
+                <p>{{ selectedDeliveryOT().description || 'توريد الأموال' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="global-fields">
+            <div class="form-group">
+              <label class="form-label">البيان العام</label>
+              <input class="form-input" type="text" placeholder="مثال: توريد يوم 27 فبراير..."
+                     [value]="deliveryDescription()"
+                     (input)="deliveryDescription.set($any($event.target).value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">التاريخ</label>
+              <input class="form-input" type="date" [value]="deliveryDate()"
+                     (change)="deliveryDate.set($any($event.target).value)">
+            </div>
+          </div>
+
+          <div class="entries-table-wrap">
+            <div class="entries-table-header delivery-header">
+              <span>الحساب</span>
+              <span>المبلغ</span>
+              <span>رقم الإشعار</span>
+              <span>ملاحظات</span>
+            </div>
+            @for (entry of deliveryEntries(); track trackByIndex($index); let i = $index) {
+              <div class="entry-row delivery-row" [class.has-amount]="parseFloat(entry.amount) > 0">
+                <div class="entry-account">
+                  <div class="entry-account-icon delivery">
+                    <span class="material-icons-round">account_balance</span>
+                  </div>
+                  <span>{{ entry.accountName }}</span>
+                </div>
+                <div class="entry-amount-wrap">
+                  <input class="entry-amount-input" type="number" placeholder="0"
+                         [value]="entry.amount"
+                         (input)="updateDeliveryEntry(i, 'amount', $any($event.target).value)">
+                  <span class="entry-currency">ر.ي</span>
+                </div>
+                <input class="entry-ref-input" type="text" placeholder="رقم الإشعار..."
+                       [value]="entry.reference"
+                       (input)="updateDeliveryEntry(i, 'reference', $any($event.target).value)">
+                <input class="entry-notes-input" type="text" placeholder="ملاحظة..."
+                       [value]="entry.notes"
+                       (input)="updateDeliveryEntry(i, 'notes', $any($event.target).value)">
+              </div>
+            }
+          </div>
+
+          <div class="cf-footer">
+            <div class="total-display">
+              <span class="total-label">إجمالي التوريد:</span>
+              <span class="total-amount delivery-color">{{ formatAmount(deliveryTotal()) }}</span>
+              <span class="total-currency">ر.ي</span>
+            </div>
+            <button class="btn-3d btn-delivery" [disabled]="saving() || deliveryTotal() === 0"
+                    (click)="saveDelivery()">
+              <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+              {{ saving() ? 'جاري الحفظ...' : 'حفظ التوريد' }}
+            </button>
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ============================= -->
+  <!-- ===== HISTORY VIEW ========== -->
+  <!-- ============================= -->
+  @if (!loading() && activeView() === 'history') {
+    <div class="view-section">
+
+      <div class="history-stats">
+        <div class="hs-card collection">
+          <div class="hs-icon"><span class="material-icons-round">call_received</span></div>
+          <div class="hs-body">
+            <div class="hs-num">{{ historyStats().receiptCount }}</div>
+            <div class="hs-label">عمليات تحصيل</div>
+            <div class="hs-amount">{{ formatAmount(historyStats().totalReceipts) }} ر.ي</div>
+          </div>
+        </div>
+        <div class="hs-card delivery">
+          <div class="hs-icon"><span class="material-icons-round">call_made</span></div>
+          <div class="hs-body">
+            <div class="hs-num">{{ historyStats().paymentCount }}</div>
+            <div class="hs-label">عمليات توريد</div>
+            <div class="hs-amount">{{ formatAmount(historyStats().totalPayments) }} ر.ي</div>
+          </div>
+        </div>
+      </div>
+
+      @if (vouchers().length === 0) {
+        <div class="empty-history">
+          <span class="material-icons-round">history</span>
+          <p>لا توجد عمليات مسجلة بعد</p>
+        </div>
+      } @else {
+        <div class="history-list">
+          @for (v of vouchers(); track v.id) {
+            <div class="history-row" [class.receipt-row]="v.voucherType === 'receipt'"
+                 [class.payment-row]="v.voucherType === 'payment'">
+              <div class="hr-icon" [class.receipt-icon]="v.voucherType === 'receipt'"
+                   [class.payment-icon]="v.voucherType === 'payment'">
+                <span class="material-icons-round">
+                  {{ v.voucherType === 'receipt' ? 'call_received' : 'call_made' }}
+                </span>
+              </div>
+              <div class="hr-main">
+                <div class="hr-desc">{{ v.description || 'بدون بيان' }}</div>
+                <div class="hr-date">{{ formatDate(v.voucherDate || v.createdAt) }}</div>
+              </div>
+              <div class="hr-amount" [class.receipt-amount]="v.voucherType === 'receipt'"
+                   [class.payment-amount]="v.voucherType === 'payment'">
+                {{ formatAmount(v.amount) }}
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ===== How It Works Modal ===== -->
+  @if (showHowItWorks()) {
+    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
+      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon amber">
+            <span class="material-icons-round">help_outline</span>
+          </div>
+          <h2>مبدأ العمل - التحصيل والتوريد</h2>
+          <button class="modal-close" (click)="showHowItWorks.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">category</span> أنواع العمليات</h3>
+            <p>
+              قبل تسجيل التحصيل، لازم تنشئ "نوع عملية" من فئة "تحصيل" في صفحة أنواع العمليات.
+              كل نوع عملية فيه قائمة الحسابات (الموظفين والأنظمة) اللي تتحصل منها.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">call_received</span> التحصيل اليومي</h3>
+            <p>
+              تختار نوع العملية → تظهر لك كل الحسابات جاهزة في جدول → تكتب البيان مرة واحدة للكل →
+              تعبي المبالغ لكل حساب → الخانة الفاضية تعني ما تحصّل شي.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">call_made</span> التوريد</h3>
+            <p>
+              بعد التحصيل، تختار نوع عملية "توريد" → تحدد وين وردت الفلوس (صراف، محفظة، بنك) →
+              تضيف رقم الإشعار لكل توريد.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

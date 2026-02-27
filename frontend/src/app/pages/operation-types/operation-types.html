@@ -1,0 +1,469 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d">
+        <span class="material-icons-round">auto_awesome</span>
+      </div>
+      <div>
+        <h1 class="page-title">أنواع العمليات</h1>
+        <p class="page-subtitle">قوالب جاهزة لكل نوع عملية مالية في عملك</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل هذا؟">
+        <span class="material-icons-round">help_outline</span>
+      </button>
+      <button class="btn-3d btn-primary" (click)="openCreate()">
+        <span class="material-icons-round">add</span>
+        نوع جديد
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Error ===== -->
+  @if (error()) {
+    <div class="alert-error" (click)="error.set('')">
+      <span class="material-icons-round">error_outline</span>
+      {{ error() }}
+      <span class="close-x">✕</span>
+    </div>
+  }
+
+  <!-- ===== Category Filter ===== -->
+  <div class="category-tabs">
+    @for (cat of categories; track cat.value) {
+      <button class="cat-tab" [class.active]="activeCategory() === cat.value"
+              (click)="activeCategory.set(cat.value)">
+        <span class="material-icons-round">{{ cat.icon }}</span>
+        {{ cat.label }}
+        @if (cat.value !== 'all') {
+          <span class="cat-count">{{ countByCategory(cat.value) }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ===== Loading ===== -->
+  @if (loading()) {
+    <div class="loading-grid">
+      @for (i of [1,2,3,4,5,6]; track i) {
+        <div class="skeleton-card"></div>
+      }
+    </div>
+  }
+
+  <!-- ===== Operation Types Grid ===== -->
+  @if (!loading()) {
+    @if (filteredTypes().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-3d">
+          <span class="material-icons-round">auto_awesome</span>
+        </div>
+        <h3>لا توجد أنواع عمليات بعد</h3>
+        <p>أضف نوع عملية جديد لتبدأ في تنظيم عملياتك المالية</p>
+        <button class="btn-3d btn-primary" (click)="openCreate()">
+          <span class="material-icons-round">add</span>
+          أضف أول نوع
+        </button>
+      </div>
+    } @else {
+      <div class="ot-grid">
+        @for (ot of filteredTypes(); track ot.id) {
+          <div class="ot-card-3d" [style.--card-color]="ot.color">
+            <!-- Card Glow -->
+            <div class="card-glow"></div>
+
+            <!-- Card Header -->
+            <div class="ot-card-header">
+              <div class="ot-icon-3d" [style.background]="ot.color">
+                <span class="material-icons-round">{{ ot.icon }}</span>
+              </div>
+              <div class="ot-meta">
+                <span class="ot-category-badge" [attr.data-cat]="ot.category">
+                  {{ getCategoryLabel(ot.category) }}
+                </span>
+                @if (ot.voucherType) {
+                  <span class="ot-type-badge">{{ getVoucherTypeLabel(ot.voucherType) }}</span>
+                }
+              </div>
+              <div class="ot-actions-top">
+                <button class="icon-btn edit-btn" (click)="openEdit(ot)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="icon-btn delete-btn" (click)="deleteOT(ot.id)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="ot-card-body">
+              <h3 class="ot-name">{{ ot.name }}</h3>
+              @if (ot.description) {
+                <p class="ot-desc">{{ ot.description }}</p>
+              }
+
+              <!-- Main Account/Fund -->
+              @if (ot.mainAccountName) {
+                <div class="ot-main-account">
+                  <span class="material-icons-round">account_balance_wallet</span>
+                  <span>{{ ot.mainAccountName }}</span>
+                </div>
+              }
+
+              <!-- Flags -->
+              <div class="ot-flags">
+                @if (ot.requiresAttachment) {
+                  <span class="flag-badge attachment">
+                    <span class="material-icons-round">attach_file</span>
+                    يتطلب مرفق
+                  </span>
+                }
+                @if (ot.hasMultiLines) {
+                  <span class="flag-badge multi">
+                    <span class="material-icons-round">format_list_bulleted</span>
+                    متعدد الأسطر
+                  </span>
+                }
+                @if (!ot.isActive) {
+                  <span class="flag-badge inactive">
+                    <span class="material-icons-round">pause_circle</span>
+                    موقوف
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Linked Accounts -->
+            <div class="ot-accounts-section">
+              <div class="ot-accounts-header">
+                <span class="material-icons-round">link</span>
+                <span>الحسابات المرتبطة ({{ ot.linkedAccounts?.length || 0 }})</span>
+                <button class="add-account-btn" (click)="openAccountsModal(ot)">
+                  <span class="material-icons-round">manage_accounts</span>
+                  إدارة
+                </button>
+              </div>
+              @if (ot.linkedAccounts && ot.linkedAccounts.length > 0) {
+                <div class="linked-accounts-list">
+                  @for (la of ot.linkedAccounts.slice(0, 4); track la.id) {
+                    <div class="linked-account-chip" [class.inactive]="!la.isActive">
+                      <span class="material-icons-round">person</span>
+                      <span>{{ la.label || la.accountName }}</span>
+                      <span class="perm-dot" [attr.data-perm]="la.permission"></span>
+                    </div>
+                  }
+                  @if (ot.linkedAccounts.length > 4) {
+                    <div class="more-accounts">+{{ ot.linkedAccounts.length - 4 }} أكثر</div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ===== How It Works Modal ===== -->
+  @if (showHowItWorks()) {
+    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
+      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon amber">
+            <span class="material-icons-round">help_outline</span>
+          </div>
+          <h2>مبدأ العمل - أنواع العمليات</h2>
+          <button class="modal-close" (click)="showHowItWorks.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body hiw-body">
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">auto_awesome</span> ما هي أنواع العمليات؟</h3>
+            <p>
+              بدل ما تعبي نفس المعلومات في كل مرة، تسوي "نوع عملية" جاهز مرة وحدة. مثلاً:
+              "استلام تحصيل يومي الدهمية" - هذا النوع يحفظ كل الحسابات المرتبطة وكيف تتعامل معها.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">category</span> أنواع القوالب</h3>
+            <div class="hiw-table">
+              <div class="hiw-row">
+                <span class="hiw-badge voucher">سندات</span>
+                <span>قوالب لسندات الصرف والقبض والتحويل</span>
+              </div>
+              <div class="hiw-row">
+                <span class="hiw-badge journal">قيود</span>
+                <span>قوالب للقيود المحاسبية (بدون صندوق)</span>
+              </div>
+              <div class="hiw-row">
+                <span class="hiw-badge collection">تحصيل</span>
+                <span>قوالب لتسجيل التحصيل اليومي</span>
+              </div>
+              <div class="hiw-row">
+                <span class="hiw-badge delivery">توريد</span>
+                <span>قوالب لتوريد الأموال للصرافين والمحافظ</span>
+              </div>
+            </div>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">link</span> الحسابات المرتبطة</h3>
+            <p>
+              كل نوع عملية عنده قائمة حسابات مرتبطة. لما تفتح العملية تظهر هذي الحسابات جاهزة.
+              كل حساب عنده صلاحية: يستقبل فقط، يدفع فقط، أو الاثنين.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">tips_and_updates</span> مثال عملي</h3>
+            <p>
+              نوع "إيداع صراف الحوشبي": مربوط بصندوق التحصيل، الحسابات المرتبطة: الحوشبي الوسيط.
+              لما رايد يفتحه: يكتب المبلغ ويرفق صورة الإيصال، وتنتهي العملية.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Create/Edit Form Modal ===== -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon" [style.background]="form().color">
+            <span class="material-icons-round">{{ form().icon }}</span>
+          </div>
+          <h2>{{ editingId() ? 'تعديل نوع العملية' : 'نوع عملية جديد' }}</h2>
+          <button class="modal-close" (click)="showForm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Name -->
+          <div class="form-group">
+            <label class="form-label">اسم النوع <span class="required">*</span></label>
+            <input class="form-input" type="text" placeholder="مثال: استلام تحصيل يومي الدهمية"
+                   [value]="form().name" (input)="setFormField('name', $any($event.target).value)">
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label class="form-label">وصف مختصر</label>
+            <textarea class="form-input" rows="2" placeholder="اشرح متى تستخدم هذا النوع..."
+                      [value]="form().description || ''"
+                      (input)="setFormField('description', $any($event.target).value)"></textarea>
+          </div>
+
+          <!-- Category + Voucher Type -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">نوع القالب</label>
+              <select class="form-select" [value]="form().category"
+                      (change)="setFormField('category', $any($event.target).value)">
+                @for (cat of categories.slice(1); track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
+              </select>
+            </div>
+            @if (form().category === 'voucher' || form().category === 'journal') {
+              <div class="form-group">
+                <label class="form-label">نوع السند/القيد</label>
+                <select class="form-select" [value]="form().voucherType"
+                        (change)="setFormField('voucherType', $any($event.target).value)">
+                  @for (vt of voucherTypes; track vt.value) {
+                    <option [value]="vt.value">{{ vt.label }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+
+          <!-- Main Account/Fund -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">الحساب الرئيسي (اختياري)</label>
+              <select class="form-select" [value]="form().mainAccountId || ''"
+                      (change)="setFormField('mainAccountId', $any($event.target).value ? +$any($event.target).value : null)">
+                <option value="">— بدون حساب رئيسي —</option>
+                @for (acc of accounts(); track acc.id) {
+                  <option [value]="acc.id">{{ acc.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">الصندوق الرئيسي (اختياري)</label>
+              <select class="form-select" [value]="form().mainFundId || ''"
+                      (change)="setFormField('mainFundId', $any($event.target).value ? +$any($event.target).value : null)">
+                <option value="">— بدون صندوق رئيسي —</option>
+                @for (f of funds(); track f.id) {
+                  <option [value]="f.id">{{ f.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- Icon Picker -->
+          <div class="form-group">
+            <label class="form-label">الأيقونة</label>
+            <div class="icon-picker">
+              @for (ic of icons; track ic) {
+                <button class="icon-option" [class.selected]="form().icon === ic"
+                        (click)="setFormField('icon', ic)">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Color Picker -->
+          <div class="form-group">
+            <label class="form-label">اللون</label>
+            <div class="color-picker">
+              @for (c of colors; track c) {
+                <button class="color-dot" [class.selected]="form().color === c"
+                        [style.background]="c" (click)="setFormField('color', c)">
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Flags -->
+          <div class="form-row flags-row">
+            <label class="toggle-label">
+              <span>يتطلب مرفق</span>
+              <div class="toggle-switch" [class.on]="form().requiresAttachment"
+                   (click)="setFormField('requiresAttachment', !form().requiresAttachment)">
+                <div class="toggle-knob"></div>
+              </div>
+            </label>
+            <label class="toggle-label">
+              <span>متعدد الأسطر</span>
+              <div class="toggle-switch" [class.on]="form().hasMultiLines"
+                   (click)="setFormField('hasMultiLines', !form().hasMultiLines)">
+                <div class="toggle-knob"></div>
+              </div>
+            </label>
+            <label class="toggle-label">
+              <span>مفعّل</span>
+              <div class="toggle-switch" [class.on]="form().isActive"
+                   (click)="setFormField('isActive', !form().isActive)">
+                <div class="toggle-knob"></div>
+              </div>
+            </label>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="saveForm()">
+            <span class="material-icons-round">save</span>
+            {{ editingId() ? 'حفظ التعديلات' : 'إضافة النوع' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Linked Accounts Modal ===== -->
+  @if (showAccountsModal() && selectedOT()) {
+    <div class="modal-overlay" (click)="showAccountsModal.set(false)">
+      <div class="modal-3d accounts-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon" [style.background]="selectedOT().color">
+            <span class="material-icons-round">{{ selectedOT().icon }}</span>
+          </div>
+          <div>
+            <h2>الحسابات المرتبطة</h2>
+            <p class="modal-subtitle">{{ selectedOT().name }}</p>
+          </div>
+          <button class="modal-close" (click)="showAccountsModal.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Existing Linked Accounts -->
+          <div class="linked-accounts-full">
+            @if (selectedOT().linkedAccounts?.length === 0) {
+              <div class="no-linked">
+                <span class="material-icons-round">link_off</span>
+                لا توجد حسابات مرتبطة بعد
+              </div>
+            }
+            @for (la of selectedOT().linkedAccounts; track la.id) {
+              <div class="la-row" [class.inactive]="!la.isActive">
+                <div class="la-info">
+                  <span class="material-icons-round la-icon">account_circle</span>
+                  <div>
+                    <div class="la-name">{{ la.label || la.accountName }}</div>
+                    <div class="la-account-name">{{ la.accountName }}</div>
+                  </div>
+                </div>
+                <div class="la-perm">
+                  <span class="perm-badge" [attr.data-perm]="la.permission">
+                    {{ getPermissionLabel(la.permission) }}
+                  </span>
+                </div>
+                <button class="icon-btn delete-btn sm" (click)="removeLinkedAccount(la.id)">
+                  <span class="material-icons-round">remove_circle</span>
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Add New Linked Account -->
+          <div class="add-linked-form">
+            <h4 class="add-linked-title">
+              <span class="material-icons-round">add_link</span>
+              إضافة حساب مرتبط
+            </h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">الحساب</label>
+                <select class="form-select" [value]="newLinkedAccount().accountId || ''"
+                        (change)="setLinkedField('accountId', $any($event.target).value ? +$any($event.target).value : null)">
+                  <option value="">— اختر حساباً —</option>
+                  @for (acc of accounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">تسمية مخصصة (اختياري)</label>
+                <input class="form-input" type="text" placeholder="مثال: رايد - المغربي نقدي"
+                       [value]="newLinkedAccount().label"
+                       (input)="setLinkedField('label', $any($event.target).value)">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">الصلاحية</label>
+                <select class="form-select" [value]="newLinkedAccount().permission"
+                        (change)="setLinkedField('permission', $any($event.target).value)">
+                  @for (p of permissions; track p.value) {
+                    <option [value]="p.value">{{ p.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group flex-end">
+                <button class="btn-3d btn-primary" (click)="addLinkedAccount()">
+                  <span class="material-icons-round">add</span>
+                  إضافة
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="showAccountsModal.set(false)">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
