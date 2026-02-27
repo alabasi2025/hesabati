@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { BusinessService } from '../../services/business.service';
 
 @Component({
   selector: 'app-collections',
@@ -14,109 +15,109 @@ import { ApiService } from '../../services/api.service';
 export class CollectionsComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  biz = inject(BusinessService);
 
   bizId = 0;
   loading = signal(true);
   saving = signal(false);
   error = signal('');
+  success = signal('');
 
   // UI State
   showHowItWorks = signal(false);
-  activeView = signal<'collection' | 'delivery' | 'history'>('collection');
+  activeTab = signal<'operations' | 'funds'>('operations');
+  activeOpsTab = signal<'collection' | 'delivery' | 'history'>('collection');
+  // activeView maps to both tabs - 'collection'/'delivery'/'history' go to operations, 'funds' goes to funds tab
+  activeView = signal<'collection' | 'delivery' | 'history' | 'funds'>('collection');
 
   // Data
   operationTypes = signal<any[]>([]);
   accounts = signal<any[]>([]);
+  funds = signal<any[]>([]);
   vouchers = signal<any[]>([]);
 
-  // Selected operation types
-  selectedCollectionOT = signal<any>(null);
-  selectedDeliveryOT = signal<any>(null);
+  // Selected fund for details
+  selectedFund = signal<any>(null);
 
   // Collection form
+  selectedCollectionOT = signal<any>(null);
   collectionDate = signal(new Date().toISOString().split('T')[0]);
   collectionDescription = signal('');
-  collectionEntries = signal<{ accountId: number; accountName: string; amount: string; notes: string }[]>([]);
+  collectionEntries = signal<{ accountId: number; accountName: string; accountType: string; amount: string; notes: string }[]>([]);
 
   // Delivery form
+  selectedDeliveryOT = signal<any>(null);
   deliveryDate = signal(new Date().toISOString().split('T')[0]);
   deliveryDescription = signal('');
-  deliveryEntries = signal<{ accountId: number; accountName: string; amount: string; reference: string; notes: string }[]>([]);
+  deliveryEntries = signal<{ accountId: number; accountName: string; accountType: string; amount: string; reference: string; notes: string }[]>([]);
 
   // Computed
-  collectionOpTypes = computed(() => {
-    return this.operationTypes().filter(ot => ot.category === 'collection');
-  });
+  collectionOpTypes = computed(() => this.operationTypes().filter(ot => ot.category === 'collection'));
+  deliveryOpTypes = computed(() => this.operationTypes().filter(ot =>
+    ot.category === 'delivery' || ot.category === 'transfer'
+  ));
 
-  deliveryOpTypes = computed(() => {
-    return this.operationTypes().filter(ot => ot.category === 'delivery');
-  });
-
-  allOpTypes = computed(() => {
-    return this.operationTypes().filter(ot =>
-      ot.category === 'collection' || ot.category === 'delivery'
-    );
-  });
-
-  collectionTotal = computed(() => {
-    return this.collectionEntries().reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-  });
-
-  deliveryTotal = computed(() => {
-    return this.deliveryEntries().reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-  });
+  collectionTotal = computed(() =>
+    this.collectionEntries().reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+  );
+  deliveryTotal = computed(() =>
+    this.deliveryEntries().reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+  );
 
   historyStats = computed(() => {
     const all = this.vouchers();
     const receipts = all.filter(v => v.voucherType === 'receipt');
     const payments = all.filter(v => v.voucherType === 'payment');
     return {
-      totalReceipts: receipts.reduce((s, v) => s + parseFloat(v.amount || 0), 0),
-      totalPayments: payments.reduce((s, v) => s + parseFloat(v.amount || 0), 0),
+      totalReceipts: receipts.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
+      totalPayments: payments.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
       receiptCount: receipts.length,
       paymentCount: payments.length,
     };
   });
 
+  // Fund groups
+  collectionFunds = computed(() => this.funds().filter(f => f.fundType === 'collection'));
+  advanceFunds = computed(() => this.funds().filter(f => f.fundType === 'salary_advance'));
+  custodyFunds = computed(() => this.funds().filter(f => f.fundType === 'custody'));
+  safeFunds = computed(() => this.funds().filter(f => f.fundType === 'safe'));
+  otherFunds = computed(() => this.funds().filter(f =>
+    !['collection', 'salary_advance', 'custody', 'safe'].includes(f.fundType)
+  ));
+
   async ngOnInit() {
     this.route.parent?.params.subscribe(async (params) => {
       this.bizId = parseInt(params['bizId']);
-      await Promise.all([this.loadOperationTypes(), this.loadAccounts(), this.loadVouchers()]);
+      if (this.bizId) await this.loadAll();
     });
   }
 
-  async loadOperationTypes() {
+  async loadAll() {
     this.loading.set(true);
     try {
-      const data = await this.api.getOperationTypes(this.bizId);
-      this.operationTypes.set(data);
+      const [ots, accs, fds, vcs] = await Promise.all([
+        this.api.getOperationTypes(this.bizId),
+        this.api.getAccounts(this.bizId),
+        this.api.getFunds(this.bizId),
+        this.api.getVouchers(this.bizId),
+      ]);
+      this.operationTypes.set(ots);
+      this.accounts.set(accs);
+      this.funds.set(fds);
+      this.vouchers.set(vcs);
     } catch (e: any) {
-      this.error.set(e.message);
-    } finally {
-      this.loading.set(false);
+      this.error.set('خطأ في تحميل البيانات');
     }
+    this.loading.set(false);
   }
 
-  async loadAccounts() {
-    try {
-      const data = await this.api.getAccounts(this.bizId);
-      this.accounts.set(data);
-    } catch (e) { /* ignore */ }
-  }
-
-  async loadVouchers() {
-    try {
-      const data = await this.api.getVouchers(this.bizId);
-      this.vouchers.set(data);
-    } catch (e) { /* ignore */ }
-  }
-
-  // ===== Collection =====
+  // ===================== Collection =====================
   selectCollectionOT(ot: any) {
     this.selectedCollectionOT.set(ot);
     const entries = (ot.accounts || []).map((la: any) => ({
-      accountId: la.accountId,
+      accountId: la.accountId || la.id,
       accountName: la.accountName || la.account?.name || '',
+      accountType: la.accountType || '',
       amount: '',
       notes: '',
     }));
@@ -133,39 +134,41 @@ export class CollectionsComponent implements OnInit {
 
   async saveCollection() {
     const entries = this.collectionEntries().filter(e => parseFloat(e.amount) > 0);
-    if (entries.length === 0) { this.error.set('أدخل مبلغاً واحداً على الأقل'); return; }
-
+    if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
     this.saving.set(true);
+    this.error.set('');
     try {
       for (const entry of entries) {
         await this.api.createVoucher(this.bizId, {
           voucherType: 'receipt',
           operationTypeId: this.selectedCollectionOT()?.id,
           toAccountId: entry.accountId,
-          amount: String(parseFloat(entry.amount)),
-          description: this.collectionDescription() || `تحصيل ${entry.accountName}`,
+          amount: parseFloat(entry.amount),
+          currencyId: 1,
+          description: this.collectionDescription() || `تحصيل - ${entry.accountName}`,
           voucherDate: this.collectionDate(),
-          notes: entry.notes,
         });
       }
-      await this.loadVouchers();
+      this.success.set(`✅ تم حفظ ${entries.length} قيد تحصيل بنجاح`);
+      setTimeout(() => this.success.set(''), 4000);
       this.selectedCollectionOT.set(null);
       this.collectionEntries.set([]);
       this.collectionDescription.set('');
-      this.activeView.set('history');
+      this.activeOpsTab.set('history');
+      await this.loadAll();
     } catch (e: any) {
-      this.error.set(e.message);
-    } finally {
-      this.saving.set(false);
+      this.showError('خطأ في الحفظ');
     }
+    this.saving.set(false);
   }
 
-  // ===== Delivery =====
+  // ===================== Delivery =====================
   selectDeliveryOT(ot: any) {
     this.selectedDeliveryOT.set(ot);
     const entries = (ot.accounts || []).map((la: any) => ({
-      accountId: la.accountId,
+      accountId: la.accountId || la.id,
       accountName: la.accountName || la.account?.name || '',
+      accountType: la.accountType || '',
       amount: '',
       reference: '',
       notes: '',
@@ -183,49 +186,129 @@ export class CollectionsComponent implements OnInit {
 
   async saveDelivery() {
     const entries = this.deliveryEntries().filter(e => parseFloat(e.amount) > 0);
-    if (entries.length === 0) { this.error.set('أدخل مبلغاً واحداً على الأقل'); return; }
-
+    if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
     this.saving.set(true);
+    this.error.set('');
     try {
       for (const entry of entries) {
         await this.api.createVoucher(this.bizId, {
           voucherType: 'payment',
           operationTypeId: this.selectedDeliveryOT()?.id,
-          fromAccountId: entry.accountId,
-          amount: String(parseFloat(entry.amount)),
-          description: this.deliveryDescription() || `توريد ${entry.accountName}`,
+          toAccountId: entry.accountId,
+          amount: parseFloat(entry.amount),
+          currencyId: 1,
+          description: this.deliveryDescription() || `توريد - ${entry.accountName}`,
           voucherDate: this.deliveryDate(),
           reference: entry.reference,
-          notes: entry.notes,
         });
       }
-      await this.loadVouchers();
+      this.success.set(`✅ تم حفظ ${entries.length} قيد توريد بنجاح`);
+      setTimeout(() => this.success.set(''), 4000);
       this.selectedDeliveryOT.set(null);
       this.deliveryEntries.set([]);
       this.deliveryDescription.set('');
-      this.activeView.set('history');
+      this.activeOpsTab.set('history');
+      await this.loadAll();
     } catch (e: any) {
-      this.error.set(e.message);
-    } finally {
-      this.saving.set(false);
+      this.showError('خطأ في الحفظ');
+    }
+    this.saving.set(false);
+  }
+
+  // ===================== Funds =====================
+  selectFund(fund: any) {
+    if (this.selectedFund()?.id === fund.id) {
+      this.selectedFund.set(null);
+    } else {
+      this.selectedFund.set(fund);
     }
   }
 
-  // ===== Helpers =====
+  getFundBalance(fund: any): number {
+    const all = this.vouchers();
+    let balance = 0;
+    for (const v of all) {
+      if (v.toFundId === fund.id) balance += parseFloat(v.amount || 0);
+      if (v.fromFundId === fund.id) balance -= parseFloat(v.amount || 0);
+    }
+    return balance;
+  }
+
+  getFundVouchers(fund: any): any[] {
+    return this.vouchers().filter(v =>
+      v.fromFundId === fund.id || v.toFundId === fund.id
+    ).slice(0, 15);
+  }
+
+  getFundTypeLabel(t: string): string {
+    const m: Record<string, string> = {
+      collection: 'تحصيل وتوريد',
+      salary_advance: 'سلف موظفين',
+      custody: 'عهدة',
+      safe: 'خزنة',
+      expense: 'خرج',
+      deposit: 'توريدات'
+    };
+    return m[t] || t;
+  }
+
+  getFundTypeIcon(t: string): string {
+    const m: Record<string, string> = {
+      collection: 'receipt_long',
+      salary_advance: 'request_quote',
+      custody: 'lock',
+      safe: 'savings',
+      expense: 'shopping_cart',
+      deposit: 'move_to_inbox'
+    };
+    return m[t] || 'inventory_2';
+  }
+
+  getFundTypeColor(t: string): string {
+    const m: Record<string, string> = {
+      collection: '#3b82f6',
+      salary_advance: '#f59e0b',
+      custody: '#8b5cf6',
+      safe: '#10b981',
+      expense: '#ef4444',
+      deposit: '#06b6d4'
+    };
+    return m[t] || '#64748b';
+  }
+
+  getVoucherTypeLabel(t: string): string {
+    const m: Record<string, string> = {
+      receipt: 'قبض', payment: 'صرف', transfer: 'تحويل', journal: 'قيد'
+    };
+    return m[t] || t;
+  }
+
+  getVoucherTypeColor(t: string): string {
+    return t === 'receipt' ? '#10b981' : t === 'payment' ? '#ef4444' : '#f59e0b';
+  }
+
+  getRecentVouchers(): any[] {
+    return this.vouchers()
+      .filter(v => v.voucherType === 'receipt' || v.voucherType === 'payment')
+      .slice(0, 20);
+  }
+
+  // ===================== Helpers =====================
+  showError(msg: string) {
+    this.error.set(msg);
+    setTimeout(() => this.error.set(''), 4000);
+  }
+
   formatAmount(amount: any): string {
     return parseFloat(amount || 0).toLocaleString('ar-YE');
   }
 
   formatDate(d: string): string {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-YE');
+    return new Date(d).toLocaleDateString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  getAccountName(id: number): string {
-    return this.accounts().find(a => a.id === id)?.name || '-';
-  }
-
+  parseFloat(v: any): number { return parseFloat(v) || 0; }
   trackById(_: number, item: any) { return item.id; }
   trackByIndex(i: number) { return i; }
-  parseFloat(v: any): number { return parseFloat(v) || 0; }
 }

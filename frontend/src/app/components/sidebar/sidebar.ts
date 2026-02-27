@@ -74,6 +74,7 @@ export class SidebarComponent {
           items: [
             { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
             { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
+            { icon: 'savings', label: 'إدارة الصناديق', route: `${b}/funds` },
           ],
         },
         {
@@ -81,7 +82,6 @@ export class SidebarComponent {
           items: [
             { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
             { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-            { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
             { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
           ],
         },

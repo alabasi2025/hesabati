@@ -50,6 +50,13 @@
       </div>
       <span>السجل</span>
     </button>
+    <button class="view-tab" [class.active]="activeView() === 'funds'"
+            (click)="activeView.set('funds')">
+      <div class="vt-icon funds-icon">
+        <span class="material-icons-round">savings</span>
+      </div>
+      <span>الصناديق</span>
+    </button>
   </div>
 
   <!-- ===== Loading ===== -->
@@ -360,6 +367,80 @@
         </div>
       }
 
+    </div>
+  }
+
+  <!-- ============================= -->
+  <!-- ===== FUNDS VIEW ============ -->
+  <!-- ============================= -->
+  @if (!loading() && activeView() === 'funds') {
+    <div class="view-section">
+
+      @if (funds().length === 0) {
+        <div class="no-op-types-card">
+          <div class="noopt-icon">
+            <span class="material-icons-round">savings</span>
+          </div>
+          <h3>لا توجد صناديق</h3>
+          <p>اذهب إلى قسم <strong>الصناديق</strong> من القائمة الجانبية لإضافة صناديق</p>
+        </div>
+      } @else {
+
+        <!-- Fund Summary Cards -->
+        <div class="funds-summary">
+          @for (fund of funds(); track fund.id) {
+            <div class="fund-summary-card" [class.selected]="selectedFund()?.id === fund.id"
+              (click)="selectFund(fund)">
+              <div class="fsc-header">
+                <div class="fsc-icon" [style.background]="getFundTypeColor(fund.fundType) + '20'"
+                  [style.color]="getFundTypeColor(fund.fundType)">
+                  <span class="material-icons-round">{{ getFundTypeIcon(fund.fundType) }}</span>
+                </div>
+                <div class="fsc-info">
+                  <strong>{{ fund.name }}</strong>
+                  <span class="fsc-type">{{ getFundTypeLabel(fund.fundType) }}</span>
+                </div>
+                <span class="material-icons-round fsc-expand">
+                  {{ selectedFund()?.id === fund.id ? 'expand_less' : 'expand_more' }}
+                </span>
+              </div>
+              <div class="fsc-balance" [class.positive]="getFundBalance(fund) >= 0"
+                [class.negative]="getFundBalance(fund) < 0">
+                <span class="fsc-balance-label">الرصيد الحالي</span>
+                <span class="fsc-balance-value">{{ formatAmount(getFundBalance(fund)) }} ر.ي</span>
+              </div>
+
+              @if (selectedFund()?.id === fund.id) {
+                <div class="fund-transactions" (click)="$event.stopPropagation()">
+                  <div class="ft-header">
+                    <span class="material-icons-round">history</span>
+                    الحركات التفصيلية
+                  </div>
+                  @if (getFundVouchers(fund).length === 0) {
+                    <div class="ft-empty">لا توجد حركات مسجلة لهذا الصندوق بعد</div>
+                  } @else {
+                    <div class="ft-list">
+                      @for (v of getFundVouchers(fund); track v.id) {
+                        <div class="ft-row">
+                          <span class="ft-type" [style.color]="getVoucherTypeColor(v.voucherType)">
+                            {{ getVoucherTypeLabel(v.voucherType) }}
+                          </span>
+                          <span class="ft-desc">{{ v.description || v.voucherNumber }}</span>
+                          <span class="ft-date">{{ formatDate(v.voucherDate || v.createdAt) }}</span>
+                          <span class="ft-amount" [style.color]="getVoucherTypeColor(v.voucherType)">
+                            {{ formatAmount(v.amount) }} ر.ي
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      }
     </div>
   }
 
