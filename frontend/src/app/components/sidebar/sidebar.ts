@@ -155,11 +155,14 @@ export class SidebarComponent {
           { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
           { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
           { icon: 'savings', label: 'إدارة الصناديق', route: `${b}/funds` },
+          { icon: 'account_balance', label: 'إدارة البنوك', route: `${b}/banks` },
+          { icon: 'currency_exchange', label: 'إدارة الصرافين', route: `${b}/exchangers` },
+          { icon: 'wallet', label: 'إدارة المحافظ', route: `${b}/wallets` },
+          { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
         ]},
         { title: 'العمليات المالية', items: [
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
           { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-          { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
         ]},
         { title: 'الأشخاص', items: [
           { icon: 'groups', label: 'الموظفين والرواتب', route: `${b}/employees` },

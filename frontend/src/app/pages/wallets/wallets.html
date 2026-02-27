@@ -1,0 +1,145 @@
+<div class="page-content">
+  <div class="page-header">
+    <div class="page-title-area">
+      <div class="page-icon teal"><span class="material-icons-round">account_balance_wallet</span></div>
+      <div>
+        <h2>إدارة المحافظ الإلكترونية</h2>
+        <p class="page-subtitle">{{ accounts().length }} محفظة في {{ walletTypes().length }} تصنيف</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="add-btn secondary" (click)="openAddType()"><span class="material-icons-round">category</span> تصنيف جديد</button>
+      <button class="add-btn" (click)="openAddAccount()"><span class="material-icons-round">add</span> محفظة جديدة</button>
+    </div>
+  </div>
+
+  <div class="filter-tabs">
+    @for (t of getFilterTabs(); track t.value) {
+      <button class="filter-tab" [class.active]="activeFilter() === t.value" (click)="activeFilter.set(t.value)">
+        <span class="material-icons-round tab-icon">{{ t.icon }}</span>
+        <span class="tab-label">{{ t.label }}</span>
+        <span class="tab-count">{{ t.count }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="types-bar">
+    <div class="types-bar-title"><span class="material-icons-round">category</span> التصنيفات</div>
+    <div class="types-list">
+      @for (t of walletTypes(); track t.id) {
+        <div class="type-chip" [style.border-color]="t.color">
+          <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
+          <span class="type-chip-name">{{ t.name }}</span>
+          <span class="type-chip-key">({{ t.subTypeKey }})</span>
+          <button class="chip-action" (click)="openEditType(t)"><span class="material-icons-round">edit</span></button>
+          <button class="chip-action delete" (click)="confirmDelete('type', t.id, t.name)"><span class="material-icons-round">close</span></button>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!filteredAccounts().length) {
+    <div class="empty-state"><span class="material-icons-round">account_balance_wallet</span><p>لا توجد محافظ إلكترونية</p>
+      <button class="add-btn small" (click)="openAddAccount()"><span class="material-icons-round">add</span> إضافة محفظة</button>
+    </div>
+  } @else {
+    <div class="accounts-grid">
+      @for (acc of filteredAccounts(); track acc.id) {
+        <div class="account-card" [style.border-right-color]="getTypeInfo(acc.subType).color">
+          <div class="card-header">
+            <div class="card-icon" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.subType).color + ', ' + getTypeInfo(acc.subType).color + '99)'">
+              <span class="material-icons-round">{{ getTypeInfo(acc.subType).icon }}</span>
+            </div>
+            <div class="card-actions">
+              <button class="action-btn edit" (click)="openEditAccount(acc)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="confirmDelete('account', acc.id, acc.name)"><span class="material-icons-round">delete</span></button>
+            </div>
+          </div>
+          <h3 class="card-name">{{ acc.name }}</h3>
+          <span class="card-type-badge" [style.color]="getTypeInfo(acc.subType).color" [style.background]="getTypeInfo(acc.subType).color + '20'">{{ getTypeInfo(acc.subType).name }}</span>
+          @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
+          @if (acc.provider) { <div class="card-detail"><span class="material-icons-round">phone_android</span> {{ acc.provider }}</div> }
+          @if (acc.responsiblePerson) { <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }
+          <div class="card-balance"><span class="material-icons-round">account_balance_wallet</span><span class="balance-text">{{ getBalanceDisplay(acc) }}</span></div>
+          <div class="card-status"><span class="status-dot" [class.active]="acc.isActive"></span> {{ acc.isActive ? 'نشط' : 'متوقف' }}</div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (showAccountForm()) {
+    <div class="modal-overlay" (click)="showAccountForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon teal"><span class="material-icons-round">account_balance_wallet</span></div>
+            <div><h2>{{ editingAccountId() ? 'تعديل محفظة' : 'إضافة محفظة جديدة' }}</h2><p>ستظهر تلقائياً في صفحة الحسابات</p></div>
+          </div>
+          <button class="close-btn" (click)="showAccountForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group"><label>اسم المحفظة</label><input [(ngModel)]="accountForm.name" placeholder="مثال: جوالي - حساب 1" /></div>
+            <div class="form-group"><label>التصنيف</label>
+              <select [(ngModel)]="accountForm.subType">
+                @for (t of walletTypes(); track t.id) { <option [value]="t.subTypeKey">{{ t.name }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>رقم الحساب / الهاتف</label><input [(ngModel)]="accountForm.accountNumber" placeholder="رقم الحساب أو الهاتف" dir="ltr" /></div>
+            <div class="form-group"><label>مزود الخدمة</label><input [(ngModel)]="accountForm.provider" placeholder="اسم مزود الخدمة" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>المسؤول</label><input [(ngModel)]="accountForm.responsiblePerson" placeholder="اسم المسؤول" /></div>
+          </div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="accountForm.notes" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveAccount()"><span class="material-icons-round">{{ editingAccountId() ? 'save' : 'add' }}</span> {{ editingAccountId() ? 'حفظ التعديلات' : 'إضافة المحفظة' }}</button>
+          <button class="btn-cancel" (click)="showAccountForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showTypeForm()) {
+    <div class="modal-overlay" (click)="showTypeForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row"><div class="modal-icon purple"><span class="material-icons-round">category</span></div><div><h2>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h2><p>تصنيفات المحافظ تظهر كفلاتر فرعية</p></div></div>
+          <button class="close-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group"><label>اسم التصنيف</label><input [(ngModel)]="typeForm.name" placeholder="مثال: محافظ محلية" /></div>
+            <div class="form-group"><label>المفتاح (بالإنجليزي)</label><input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: local" dir="ltr" /></div>
+          </div>
+          <div class="form-group"><label>الوصف</label><textarea [(ngModel)]="typeForm.description" rows="2"></textarea></div>
+          <div class="form-group"><label>الأيقونة</label>
+            <div class="icon-picker">@for (icon of iconOptions; track icon) { <button class="icon-option" [class.selected]="typeForm.icon === icon" (click)="typeForm.icon = icon"><span class="material-icons-round">{{ icon }}</span></button> }</div>
+          </div>
+          <div class="form-group"><label>اللون</label>
+            <div class="color-picker">@for (c of ['#4CAF50','#2196F3','#FF9800','#9C27B0','#607D8B','#E91E63','#00BCD4','#F44336','#795548','#3F51B5']; track c) { <button class="color-option" [style.background]="c" [class.selected]="typeForm.color === c" (click)="typeForm.color = c"></button> }</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveType()"><span class="material-icons-round">{{ editingTypeId() ? 'save' : 'add' }}</span> {{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
+          <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showDeleteConfirm()) {
+    <div class="modal-overlay" (click)="showDeleteConfirm.set(false)">
+      <div class="modal-card small" (click)="$event.stopPropagation()">
+        <div class="modal-header"><div class="modal-title-row"><div class="modal-icon red"><span class="material-icons-round">warning</span></div><h2>تأكيد الحذف</h2></div><button class="close-btn" (click)="showDeleteConfirm.set(false)"><span class="material-icons-round">close</span></button></div>
+        <div class="modal-body"><p class="delete-msg">هل أنت متأكد من حذف <strong>{{ deleteTarget()?.name }}</strong>؟</p><p class="delete-warn">هذا الإجراء لا يمكن التراجع عنه</p></div>
+        <div class="modal-footer"><button class="btn-delete" (click)="executeDelete()"><span class="material-icons-round">delete</span> حذف</button><button class="btn-cancel" (click)="showDeleteConfirm.set(false)">إلغاء</button></div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,153 @@
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { ApiService } from '../../services/api.service';
+import { BusinessService } from '../../services/business.service';
+
+@Component({
+  selector: 'app-banks',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './banks.html',
+  styleUrl: './banks.scss',
+})
+export class BanksComponent implements OnInit {
+  private api = inject(ApiService);
+  private route = inject(ActivatedRoute);
+  biz = inject(BusinessService);
+
+  bizId = 0;
+  accounts = signal<any[]>([]);
+  bankTypes = signal<any[]>([]);
+  loading = signal(true);
+  activeFilter = signal<string>('all');
+
+  showAccountForm = signal(false);
+  editingAccountId = signal<number | null>(null);
+  accountForm: any = { name: '', subType: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
+
+  showTypeForm = signal(false);
+  editingTypeId = signal<number | null>(null);
+  typeForm: any = { name: '', subTypeKey: '', description: '', icon: 'account_balance', color: '#4CAF50' };
+
+  showDeleteConfirm = signal(false);
+  deleteTarget = signal<{ type: 'account' | 'type'; id: number; name: string } | null>(null);
+
+  iconOptions = [
+    'account_balance', 'credit_card', 'savings', 'local_atm', 'payments',
+    'attach_money', 'monetization_on', 'toll', 'currency_exchange', 'language',
+    'public', 'store', 'business', 'corporate_fare', 'domain',
+  ];
+
+  ngOnInit() {
+    this.route.parent?.params.subscribe(params => {
+      this.bizId = parseInt(params['bizId']);
+      if (this.bizId) this.load();
+    });
+  }
+
+  async load() {
+    this.loading.set(true);
+    try {
+      const [accs, types] = await Promise.all([
+        this.api.getAccounts(this.bizId),
+        this.api.getBankTypes(this.bizId),
+      ]);
+      this.accounts.set(accs.filter((a: any) => a.accountType === 'bank'));
+      this.bankTypes.set(types);
+    } catch (e) { console.error(e); }
+    this.loading.set(false);
+  }
+
+  getFilterTabs() {
+    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
+      ...this.bankTypes().map(t => ({
+        value: t.subTypeKey, label: t.name, icon: t.icon,
+        count: this.accounts().filter(a => a.subType === t.subTypeKey).length,
+      }))
+    ];
+  }
+
+  filteredAccounts() {
+    const f = this.activeFilter();
+    if (f === 'all') return this.accounts();
+    return this.accounts().filter(a => a.subType === f);
+  }
+
+  getTypeInfo(subType: string) {
+    const t = this.bankTypes().find(bt => bt.subTypeKey === subType);
+    return t || { name: subType || 'عام', icon: 'account_balance', color: '#607D8B' };
+  }
+
+  openAddAccount(subType?: string) {
+    this.accountForm = { name: '', subType: subType || (this.bankTypes().length ? this.bankTypes()[0].subTypeKey : ''), accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
+    this.editingAccountId.set(null);
+    this.showAccountForm.set(true);
+  }
+
+  openEditAccount(acc: any) {
+    this.accountForm = { name: acc.name, subType: acc.subType || '', accountNumber: acc.accountNumber || '', provider: acc.provider || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '' };
+    this.editingAccountId.set(acc.id);
+    this.showAccountForm.set(true);
+  }
+
+  async saveAccount() {
+    try {
+      const data = { ...this.accountForm, accountType: 'bank' };
+      if (this.editingAccountId()) {
+        await this.api.updateAccount(this.editingAccountId()!, data);
+      } else {
+        await this.api.createAccount(this.bizId, data);
+      }
+      this.showAccountForm.set(false);
+      await this.load();
+    } catch (e) { console.error(e); }
+  }
+
+  openAddType() {
+    this.typeForm = { name: '', subTypeKey: '', description: '', icon: 'account_balance', color: '#4CAF50' };
+    this.editingTypeId.set(null);
+    this.showTypeForm.set(true);
+  }
+
+  openEditType(t: any) {
+    this.typeForm = { name: t.name, subTypeKey: t.subTypeKey, description: t.description || '', icon: t.icon || 'account_balance', color: t.color || '#4CAF50' };
+    this.editingTypeId.set(t.id);
+    this.showTypeForm.set(true);
+  }
+
+  async saveType() {
+    try {
+      if (this.editingTypeId()) {
+        await this.api.updateBankType(this.editingTypeId()!, this.typeForm);
+      } else {
+        await this.api.createBankType(this.bizId, this.typeForm);
+      }
+      this.showTypeForm.set(false);
+      await this.load();
+    } catch (e) { console.error(e); }
+  }
+
+  confirmDelete(type: 'account' | 'type', id: number, name: string) {
+    this.deleteTarget.set({ type, id, name });
+    this.showDeleteConfirm.set(true);
+  }
+
+  async executeDelete() {
+    const target = this.deleteTarget();
+    if (!target) return;
+    try {
+      if (target.type === 'account') await this.api.deleteAccount(target.id);
+      else await this.api.deleteBankType(target.id);
+      this.showDeleteConfirm.set(false);
+      this.deleteTarget.set(null);
+      await this.load();
+    } catch (e) { console.error(e); }
+  }
+
+  getBalanceDisplay(acc: any): string {
+    if (!acc.balances || acc.balances.length === 0) return '0';
+    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+  }
+}
