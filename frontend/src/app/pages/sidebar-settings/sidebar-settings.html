@@ -1,0 +1,334 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-right">
+      <div class="header-icon">
+        <span class="material-icons-round">tune</span>
+      </div>
+      <div>
+        <h1>إعدادات التبويب الجانبي</h1>
+        <p>إدارة الشاشات والأقسام وصلاحيات كل مستخدم</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Message -->
+  @if (message()) {
+    <div class="toast" [class.success]="messageType() === 'success'" [class.error]="messageType() === 'error'">
+      <span class="material-icons-round">{{ messageType() === 'success' ? 'check_circle' : 'error' }}</span>
+      {{ message() }}
+    </div>
+  }
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
+      <span class="material-icons-round">people</span>
+      صلاحيات المستخدمين
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'sections'" (click)="activeTab.set('sections')">
+      <span class="material-icons-round">folder</span>
+      الأقسام
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'items'" (click)="activeTab.set('items')">
+      <span class="material-icons-round">list</span>
+      الشاشات
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <span class="material-icons-round spin">sync</span>
+      <p>جاري التحميل...</p>
+    </div>
+  } @else {
+
+    <!-- ==================== Users Tab ==================== -->
+    @if (activeTab() === 'users') {
+      <div class="users-layout">
+        <!-- Users List -->
+        <div class="users-list-panel">
+          <div class="panel-header">
+            <h3>المستخدمون</h3>
+            <span class="count-badge">{{ users().length }}</span>
+          </div>
+          @for (user of users(); track user.id) {
+            <div class="user-card" [class.selected]="selectedUser()?.id === user.id" (click)="selectUser(user)">
+              <div class="user-card-icon" [class]="'role-' + user.role">
+                <span class="material-icons-round">{{ getRoleIcon(user.role) }}</span>
+              </div>
+              <div class="user-card-info">
+                <span class="user-card-name">{{ user.fullName }}</span>
+                <span class="user-card-role">{{ getRoleLabel(user.role) }}</span>
+              </div>
+              @if (selectedUser()?.id === user.id) {
+                <span class="material-icons-round check-icon">check_circle</span>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- User Config Panel -->
+        <div class="user-config-panel">
+          @if (!selectedUser()) {
+            <div class="empty-state">
+              <span class="material-icons-round">touch_app</span>
+              <p>اختر مستخدماً لتعديل صلاحيات التبويب الجانبي</p>
+            </div>
+          } @else {
+            <div class="panel-header">
+              <h3>
+                <span class="material-icons-round">{{ getRoleIcon(selectedUser()!.role) }}</span>
+                تبويب {{ selectedUser()!.fullName }}
+              </h3>
+              <button class="save-btn" (click)="saveUserConfig()" [disabled]="savingUser()">
+                <span class="material-icons-round">{{ savingUser() ? 'sync' : 'save' }}</span>
+                {{ savingUser() ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+              </button>
+            </div>
+
+            <div class="config-hint">
+              <span class="material-icons-round">info</span>
+              فعّل أو عطّل الشاشات لهذا المستخدم. اسحب العناصر لإعادة ترتيبها.
+            </div>
+
+            @for (sectionName of getSectionNames(); track sectionName) {
+              <div class="config-section">
+                <div class="config-section-header">
+                  <h4>{{ sectionName }}</h4>
+                  <div class="section-actions">
+                    @if (!isSectionAllVisible(sectionName)) {
+                      <button class="mini-btn" (click)="toggleAllInSection(getSectionId(sectionName), true)" title="تفعيل الكل">
+                        <span class="material-icons-round">visibility</span>
+                      </button>
+                    }
+                    @if (!isSectionNoneVisible(sectionName)) {
+                      <button class="mini-btn" (click)="toggleAllInSection(getSectionId(sectionName), false)" title="تعطيل الكل">
+                        <span class="material-icons-round">visibility_off</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <div class="config-items-list">
+                  @for (item of getItemsForSection(sectionName); track item.itemId; let i = $index) {
+                    <div
+                      class="config-item"
+                      [class.visible]="item.isVisible"
+                      [class.hidden-item]="!item.isVisible"
+                      [class.drag-over]="dragOverIndex() === i"
+                      draggable="true"
+                      (dragstart)="onDragStart($event, i, sectionName)"
+                      (dragover)="onDragOver($event, i)"
+                      (dragleave)="onDragLeave()"
+                      (drop)="onDrop($event, i, sectionName)"
+                      (dragend)="onDragEnd()"
+                    >
+                      <span class="drag-handle material-icons-round">drag_indicator</span>
+                      <div class="config-item-icon">
+                        <span class="material-icons-round">{{ item.icon }}</span>
+                      </div>
+                      <span class="config-item-label">{{ item.label }}</span>
+                      <button
+                        class="toggle-btn"
+                        [class.on]="item.isVisible"
+                        (click)="toggleItemVisibility(item.itemId)"
+                        [title]="item.isVisible ? 'إخفاء' : 'إظهار'"
+                      >
+                        <span class="material-icons-round">{{ item.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ==================== Sections Tab ==================== -->
+    @if (activeTab() === 'sections') {
+      <div class="management-panel">
+        <div class="panel-header">
+          <h3>أقسام التبويب الجانبي</h3>
+          <button class="add-btn" (click)="openSectionForm()">
+            <span class="material-icons-round">add</span>
+            قسم جديد
+          </button>
+        </div>
+
+        <div class="items-grid">
+          @for (section of sections(); track section.id) {
+            <div class="management-card">
+              <div class="card-icon">
+                <span class="material-icons-round">{{ section.icon }}</span>
+              </div>
+              <div class="card-info">
+                <h4>{{ section.name }}</h4>
+                <span class="card-meta">ترتيب: {{ section.sortOrder }} | {{ getItemsBySection(section.id).length }} عنصر</span>
+              </div>
+              <div class="card-actions">
+                <button class="icon-btn" (click)="openSectionForm(section)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="icon-btn danger" (click)="deleteSection(section)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Section Form Modal -->
+      @if (showSectionForm()) {
+        <div class="modal-overlay" (click)="closeSectionForm()">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>{{ editingSection() ? 'تعديل القسم' : 'قسم جديد' }}</h3>
+              <button class="close-btn" (click)="closeSectionForm()">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label>اسم القسم</label>
+                <input type="text" [value]="sectionForm().name" (input)="sectionForm.set({...sectionForm(), name: $any($event.target).value})" placeholder="مثال: العمليات المالية" />
+              </div>
+              <div class="form-group">
+                <label>الأيقونة</label>
+                <div class="icon-picker">
+                  @for (icon of commonIcons; track icon) {
+                    <button
+                      class="icon-option"
+                      [class.selected]="sectionForm().icon === icon"
+                      (click)="sectionForm.set({...sectionForm(), icon: icon})"
+                    >
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
+                <label>الترتيب</label>
+                <input type="number" [value]="sectionForm().sortOrder" (input)="sectionForm.set({...sectionForm(), sortOrder: +$any($event.target).value})" />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-cancel" (click)="closeSectionForm()">إلغاء</button>
+              <button class="btn-save" (click)="saveSection()">
+                <span class="material-icons-round">save</span>
+                حفظ
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- ==================== Items Tab ==================== -->
+    @if (activeTab() === 'items') {
+      <div class="management-panel">
+        <div class="panel-header">
+          <h3>شاشات التبويب الجانبي</h3>
+          <button class="add-btn" (click)="openItemForm()">
+            <span class="material-icons-round">add</span>
+            شاشة جديدة
+          </button>
+        </div>
+
+        @for (section of sections(); track section.id) {
+          <div class="items-section-group">
+            <h4 class="section-group-title">
+              <span class="material-icons-round">{{ section.icon }}</span>
+              {{ section.name }}
+            </h4>
+            <div class="items-grid">
+              @for (item of getItemsBySection(section.id); track item.id) {
+                <div class="management-card">
+                  <div class="card-icon">
+                    <span class="material-icons-round">{{ item.icon }}</span>
+                  </div>
+                  <div class="card-info">
+                    <h4>{{ item.label }}</h4>
+                    <span class="card-meta">{{ item.screenKey }} | ترتيب: {{ item.sortOrder }}</span>
+                  </div>
+                  <div class="card-actions">
+                    <button class="icon-btn" (click)="openItemForm(item)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="icon-btn danger" (click)="deleteItem(item)" title="حذف">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Item Form Modal -->
+      @if (showItemForm()) {
+        <div class="modal-overlay" (click)="closeItemForm()">
+          <div class="modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>{{ editingItem() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h3>
+              <button class="close-btn" (click)="closeItemForm()">
+                <span class="material-icons-round">close</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label>القسم</label>
+                <select [value]="itemForm().sectionId" (change)="itemForm.set({...itemForm(), sectionId: +$any($event.target).value})">
+                  @for (sec of sections(); track sec.id) {
+                    <option [value]="sec.id">{{ sec.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>معرّف الشاشة (screen key)</label>
+                <input type="text" [value]="itemForm().screenKey" (input)="itemForm.set({...itemForm(), screenKey: $any($event.target).value})" placeholder="مثال: accounts" />
+              </div>
+              <div class="form-group">
+                <label>اسم الشاشة</label>
+                <input type="text" [value]="itemForm().label" (input)="itemForm.set({...itemForm(), label: $any($event.target).value})" placeholder="مثال: الحسابات" />
+              </div>
+              <div class="form-group">
+                <label>المسار (route)</label>
+                <input type="text" [value]="itemForm().route" (input)="itemForm.set({...itemForm(), route: $any($event.target).value})" placeholder="مثال: /biz/{bizId}/accounts" dir="ltr" />
+              </div>
+              <div class="form-group">
+                <label>الأيقونة</label>
+                <div class="icon-picker">
+                  @for (icon of commonIcons; track icon) {
+                    <button
+                      class="icon-option"
+                      [class.selected]="itemForm().icon === icon"
+                      (click)="itemForm.set({...itemForm(), icon: icon})"
+                    >
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
+                <label>الترتيب</label>
+                <input type="number" [value]="itemForm().sortOrder" (input)="itemForm.set({...itemForm(), sortOrder: +$any($event.target).value})" />
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-cancel" (click)="closeItemForm()">إلغاء</button>
+              <button class="btn-save" (click)="saveItem()">
+                <span class="material-icons-round">save</span>
+                حفظ
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>
