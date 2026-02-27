@@ -360,25 +360,45 @@ api.get('/businesses/:bizId/accounts', bizAuthMiddleware(), async (c) => {
     .where(eq(employees.businessId, bizId))
     .orderBy(employeeBillingAccounts.stationId, employeeBillingAccounts.employeeId);
 
-  const billingAsAccounts = billingRows.map(b => ({
-    id: b.id,
-    name: b.label || `فوترة - ${b.employeeName}`,
-    accountType: 'billing',
-    subType: b.billingSystem || '',
-    subTypeLabel: b.billingSystem || '',
-    provider: b.billingSystem || '',
-    responsiblePerson: b.employeeName || '',
-    accountNumber: '',
-    isActive: b.isActive,
-    notes: b.notes,
-    stationId: b.stationId,
-    stationName: b.stationName,
-    collectionMethod: b.collectionMethod,
-    createdAt: null,
-    balances: [],
-    allowedLinks: [],
-    _source: 'billing' as const,
-  }));
+  // خريطة ترجمة أنظمة الفوترة من enum إلى أسماء عربية
+  const BILLING_SYSTEM_NAMES: Record<string, string> = {
+    'moghrabi_v1': 'المغربي نسخة 1 (الدهمية)',
+    'moghrabi_v2': 'المغربي نسخة 2 (الصبالية وجمال)',
+    'moghrabi_v3': 'المغربي نسخة 3 (غليل)',
+    'support_fund': 'صندوق الدعم',
+    'support_fund_west': 'صندوق الدعم - الساحل الغربي',
+    'prepaid': 'الدفع المسبق',
+  };
+  const COLLECTION_METHOD_NAMES: Record<string, string> = {
+    'cash_mobile': 'تحصيل نقدي بالجوال',
+    'manual_assign': 'تحصيل إسناد يدوي',
+    'electronic': 'سداد إلكتروني',
+    'haseb_deposit': 'إيداع حاسب',
+  };
+  const billingAsAccounts = billingRows.map(b => {
+    const sysName = BILLING_SYSTEM_NAMES[b.billingSystem || ''] || b.billingSystem || '';
+    const methodName = COLLECTION_METHOD_NAMES[b.collectionMethod || ''] || b.collectionMethod || '';
+    return {
+      id: b.id,
+      name: b.label || `${sysName} - ${b.employeeName}`,
+      accountType: 'billing',
+      subType: sysName,
+      subTypeLabel: sysName,
+      provider: sysName,
+      responsiblePerson: b.employeeName || '',
+      accountNumber: '',
+      isActive: b.isActive,
+      notes: b.notes,
+      stationId: b.stationId,
+      stationName: b.stationName,
+      collectionMethod: methodName,
+      billingSystemKey: b.billingSystem || '',
+      createdAt: null,
+      balances: [],
+      allowedLinks: [],
+      _source: 'billing' as const,
+    };
+  });
 
   // 4. جلب المحطات لفلتر المحطة
   const stationRows = await db.select({ id: stations.id, name: stations.name })
