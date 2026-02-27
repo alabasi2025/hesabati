@@ -169,6 +169,22 @@ export class ApiService {
   updateBillingAccountType(id: number, d: any)        { return this.request<any>(`/billing-account-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteBillingAccountType(id: number)                { return this.request<any>(`/billing-account-types/${id}`, { method: 'DELETE' }); }
 
+  // ===================== التبويب الجانبي =====================
+  getSidebarSections(bizId: number)                      { return this.request<any[]>(`/businesses/${bizId}/sidebar-sections`); }
+  createSidebarSection(bizId: number, d: any)            { return this.request<any>(`/businesses/${bizId}/sidebar-sections`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSidebarSection(id: number, d: any)               { return this.request<any>(`/sidebar-sections/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSidebarSection(id: number)                       { return this.request<any>(`/sidebar-sections/${id}`, { method: 'DELETE' }); }
+
+  getSidebarItems(bizId: number)                         { return this.request<any[]>(`/businesses/${bizId}/sidebar-items`); }
+  createSidebarItem(d: any)                              { return this.request<any>(`/sidebar-items`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSidebarItem(id: number, d: any)                  { return this.request<any>(`/sidebar-items/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSidebarItem(id: number)                          { return this.request<any>(`/sidebar-items/${id}`, { method: 'DELETE' }); }
+
+  getUserSidebar(bizId: number, userId: number)          { return this.request<any[]>(`/businesses/${bizId}/users/${userId}/sidebar`); }
+  updateUserSidebar(bizId: number, userId: number, d: any) { return this.request<any>(`/businesses/${bizId}/users/${userId}/sidebar`, { method: 'PUT', body: JSON.stringify(d) }); }
+
+  getUsers()                                             { return this.request<any[]>('/users'); }
+
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }
 
