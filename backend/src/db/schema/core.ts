@@ -597,6 +597,8 @@ export const operationTypes = pgTable('operation_types', {
   category: varchar('category', { length: 50 }).notNull().default('voucher'), // 'voucher' | 'journal' | 'collection' | 'delivery'
   voucherType: varchar('voucher_type', { length: 30 }), // 'payment' | 'receipt' | 'transfer' | 'journal'
   mainAccountId: integer('main_account_id').references(() => accounts.id),
+  paymentMethod: varchar('payment_method', { length: 30 }), // 'cash' | 'bank' | 'exchange' | 'e_wallet'
+  screens: text('screens').default('{}'), // PostgreSQL text[] stored as text for Drizzle compat
   mainFundId: integer('main_fund_id').references(() => funds.id),
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),
