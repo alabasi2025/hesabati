@@ -126,15 +126,35 @@ export class ApiService {
   // ===================== التوريد =====================
   createDelivery(collectionId: number, d: any)   { return this.request<any>(`/collections/${collectionId}/deliveries`, { method: 'POST', body: JSON.stringify(d) }); }
 
+  // ===================== الشركاء =====================
+  getPartners(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/partners`); }
+  createPartner(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/partners`, { method: 'POST', body: JSON.stringify(d) }); }
+  updatePartner(id: number, d: any)              { return this.request<any>(`/partners/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deletePartner(id: number)                      { return this.request<any>(`/partners/${id}`, { method: 'DELETE' }); }
+
   // ===================== الموردين =====================
   getSuppliers(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/suppliers`); }
   createSupplier(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/suppliers`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSupplier(id: number, d: any)             { return this.request<any>(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSupplier(id: number)                     { return this.request<any>(`/suppliers/${id}`, { method: 'DELETE' }); }
 
   // ===================== المخازن =====================
   getWarehouses(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/warehouses`); }
+  createWarehouse(bizId: number, d: any)         { return this.request<any>(`/businesses/${bizId}/warehouses`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateWarehouse(id: number, d: any)            { return this.request<any>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteWarehouse(id: number)                    { return this.request<any>(`/warehouses/${id}`, { method: 'DELETE' }); }
 
   // ===================== الحسابات المعلقة =====================
   getPendingAccounts(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/pending-accounts`); }
+  createPendingAccount(bizId: number, d: any)    { return this.request<any>(`/businesses/${bizId}/pending-accounts`, { method: 'POST', body: JSON.stringify(d) }); }
+  updatePendingAccount(id: number, d: any)       { return this.request<any>(`/pending-accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deletePendingAccount(id: number)               { return this.request<any>(`/pending-accounts/${id}`, { method: 'DELETE' }); }
+
+  // ===================== التصفيات =====================
+  getSettlements(bizId: number)                  { return this.request<any[]>(`/businesses/${bizId}/settlements`); }
+  createSettlement(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/settlements`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSettlement(id: number, d: any)           { return this.request<any>(`/settlements/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSettlement(id: number)                   { return this.request<any>(`/settlements/${id}`, { method: 'DELETE' }); }
 
   // ===================== تصنيفات السندات =====================
   getVoucherCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/voucher-categories`); }

@@ -1453,4 +1453,127 @@ api.get('/users', async (c) => {
   return c.json(rows);
 });
 
+// ===================== الشركاء CRUD =====================
+api.get('/businesses/:bizId/partners', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(businessPartners).where(eq(businessPartners.businessId, bizId)).orderBy(businessPartners.id);
+  return c.json(rows);
+});
+
+api.post('/businesses/:bizId/partners', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const [created] = await db.insert(businessPartners).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/partners/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const { businessId, ...updateData } = body;
+  const [updated] = await db.update(businessPartners).set(updateData).where(eq(businessPartners.id, id)).returning();
+  if (!updated) return c.json({ error: 'شريك غير موجود' }, 404);
+  return c.json(updated);
+});
+
+api.delete('/partners/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(businessPartners).where(eq(businessPartners.id, id)).returning();
+  if (!deleted) return c.json({ error: 'شريك غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
+// ===================== الموردين CRUD =====================
+api.put('/suppliers/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(suppliers).set({ ...body, updatedAt: new Date() }).where(eq(suppliers.id, id)).returning();
+  if (!updated) return c.json({ error: 'مورد غير موجود' }, 404);
+  return c.json(updated);
+});
+
+api.delete('/suppliers/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(suppliers).where(eq(suppliers.id, id)).returning();
+  if (!deleted) return c.json({ error: 'مورد غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
+// ===================== المخازن CRUD =====================
+api.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const [created] = await db.insert(warehouses).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/warehouses/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(warehouses).set({ ...body, updatedAt: new Date() }).where(eq(warehouses.id, id)).returning();
+  if (!updated) return c.json({ error: 'مخزن غير موجود' }, 404);
+  return c.json(updated);
+});
+
+api.delete('/warehouses/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(warehouses).where(eq(warehouses.id, id)).returning();
+  if (!deleted) return c.json({ error: 'مخزن غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
+// ===================== الحسابات المعلقة CRUD =====================
+api.post('/businesses/:bizId/pending-accounts', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const [created] = await db.insert(pendingAccounts).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/pending-accounts/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(pendingAccounts).set({ ...body, updatedAt: new Date() }).where(eq(pendingAccounts.id, id)).returning();
+  if (!updated) return c.json({ error: 'حساب معلق غير موجود' }, 404);
+  return c.json(updated);
+});
+
+api.delete('/pending-accounts/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(pendingAccounts).where(eq(pendingAccounts.id, id)).returning();
+  if (!deleted) return c.json({ error: 'حساب معلق غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
+// ===================== التصفيات CRUD =====================
+api.get('/businesses/:bizId/settlements', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(reconciliations).where(eq(reconciliations.businessId, bizId)).orderBy(desc(reconciliations.createdAt));
+  return c.json(rows);
+});
+
+api.post('/businesses/:bizId/settlements', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const difference = body.expectedAmount && body.actualAmount ? String(Number(body.expectedAmount) - Number(body.actualAmount)) : null;
+  const [created] = await db.insert(reconciliations).values({ ...body, businessId: bizId, difference }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/settlements/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const difference = body.expectedAmount && body.actualAmount ? String(Number(body.expectedAmount) - Number(body.actualAmount)) : null;
+  const [updated] = await db.update(reconciliations).set({ ...body, difference, updatedAt: new Date() }).where(eq(reconciliations.id, id)).returning();
+  if (!updated) return c.json({ error: 'تصفية غير موجودة' }, 404);
+  return c.json(updated);
+});
+
+api.delete('/settlements/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(reconciliations).where(eq(reconciliations.id, id)).returning();
+  if (!deleted) return c.json({ error: 'تصفية غير موجودة' }, 404);
+  return c.json({ success: true });
+});
+
 export default api;

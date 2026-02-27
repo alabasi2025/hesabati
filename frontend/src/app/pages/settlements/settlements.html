@@ -1,0 +1,132 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">balance</span> التصفيات</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add_circle</span> تصفية جديدة</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-card amber"><span class="material-icons-round">balance</span><div><span class="num">{{ filteredSettlements().length }}</span><span class="lbl">تصفية</span></div></div>
+    <div class="summary-card blue"><span class="material-icons-round">arrow_upward</span><div><span class="num">{{ totalExpected() | number:'1.0-0' }}</span><span class="lbl">المتوقع (ر.ي)</span></div></div>
+    <div class="summary-card green"><span class="material-icons-round">arrow_downward</span><div><span class="num">{{ totalActual() | number:'1.0-0' }}</span><span class="lbl">الفعلي (ر.ي)</span></div></div>
+    <div class="summary-card" [class.red]="totalDifference() !== 0" [class.green]="totalDifference() === 0"><span class="material-icons-round">compare_arrows</span><div><span class="num">{{ totalDifference() | number:'1.0-0' }}</span><span class="lbl">الفرق</span></div></div>
+  </div>
+
+  <div class="filters-row">
+    <div class="filter-group">
+      <span class="filter-label">النوع:</span>
+      <div class="filter-tabs">
+        <button class="filter-tab" [class.active]="filterType() === 'all'" (click)="filterType.set('all')">الكل</button>
+        <button class="filter-tab" [class.active]="filterType() === 'manager'" (click)="filterType.set('manager')">مدير</button>
+        <button class="filter-tab" [class.active]="filterType() === 'exchange'" (click)="filterType.set('exchange')">صراف</button>
+        <button class="filter-tab" [class.active]="filterType() === 'accountant'" (click)="filterType.set('accountant')">محاسب</button>
+        <button class="filter-tab" [class.active]="filterType() === 'supplier'" (click)="filterType.set('supplier')">مورد</button>
+        <button class="filter-tab" [class.active]="filterType() === 'custody'" (click)="filterType.set('custody')">عهدة</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">الحالة:</span>
+      <div class="filter-tabs">
+        <button class="filter-tab" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">الكل</button>
+        <button class="filter-tab" [class.active]="filterStatus() === 'open'" (click)="filterStatus.set('open')">مفتوحة</button>
+        <button class="filter-tab" [class.active]="filterStatus() === 'in_progress'" (click)="filterStatus.set('in_progress')">قيد التنفيذ</button>
+        <button class="filter-tab" [class.active]="filterStatus() === 'completed'" (click)="filterStatus.set('completed')">مكتملة</button>
+      </div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!filteredSettlements().length) {
+    <div class="empty-state"><span class="material-icons-round">balance</span><p>لا يوجد تصفيات</p></div>
+  } @else {
+    <table class="data-table">
+      <thead><tr><th>#</th><th>العنوان</th><th>النوع</th><th>مع</th><th>المتوقع</th><th>الفعلي</th><th>الفرق</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+      <tbody>
+        @for (r of filteredSettlements(); track r.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td>
+              <div class="title-cell">
+                <div class="type-icon"><span class="material-icons-round">{{ getTypeIcon(r.reconciliationType) }}</span></div>
+                <span class="title-text">{{ r.title }}</span>
+              </div>
+            </td>
+            <td><span class="type-badge">{{ getTypeLabel(r.reconciliationType) }}</span></td>
+            <td>{{ r.withPerson || '-' }}</td>
+            <td class="amount-cell positive">{{ r.expectedAmount ? (r.expectedAmount | number:'1.0-0') : '-' }}</td>
+            <td class="amount-cell">{{ r.actualAmount ? (r.actualAmount | number:'1.0-0') : '-' }}</td>
+            <td class="amount-cell" [class.negative]="(+r.expectedAmount - +r.actualAmount) !== 0">{{ r.expectedAmount && r.actualAmount ? ((+r.expectedAmount - +r.actualAmount) | number:'1.0-0') : '-' }}</td>
+            <td><span class="status-pill" [class]="getStatusClass(r.status)">{{ getStatusLabel(r.status) }}</span></td>
+            <td>
+              <button class="action-btn edit" (click)="openEdit(r)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="remove(r)"><span class="material-icons-round">delete</span></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card wide" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row"><div class="modal-icon purple"><span class="material-icons-round">balance</span></div><div><h2>{{ editingId() ? 'تعديل تصفية' : 'تصفية جديدة' }}</h2><p>مطابقة الأرصدة والحسابات</p></div></div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group"><label>عنوان التصفية</label><input [(ngModel)]="form.title" placeholder="مثال: تصفية مدير محطة الدهمية" /></div>
+            <div class="form-group"><label>النوع</label>
+              <select [(ngModel)]="form.reconciliationType">
+                <option value="manager">مدير</option><option value="exchange">صراف</option>
+                <option value="accountant">محاسب</option><option value="supplier">مورد</option>
+                <option value="custody">عهدة</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>مع (الشخص)</label><input [(ngModel)]="form.withPerson" placeholder="اسم الشخص" /></div>
+            <div class="form-group"><label>الحالة</label>
+              <select [(ngModel)]="form.status">
+                <option value="open">مفتوحة</option><option value="in_progress">قيد التنفيذ</option>
+                <option value="completed">مكتملة</option><option value="disputed">متنازع عليها</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>المحطة (اختياري)</label>
+              <select [(ngModel)]="form.stationId"><option [ngValue]="null">بدون</option>
+                @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+              </select>
+            </div>
+            <div class="form-group"><label>الحساب (اختياري)</label>
+              <select [(ngModel)]="form.accountId"><option [ngValue]="null">بدون</option>
+                @for (a of accounts(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>من تاريخ</label><input type="date" [(ngModel)]="form.periodStart" /></div>
+            <div class="form-group"><label>إلى تاريخ</label><input type="date" [(ngModel)]="form.periodEnd" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>المبلغ المتوقع</label><input type="number" [(ngModel)]="form.expectedAmount" /></div>
+            <div class="form-group"><label>المبلغ الفعلي</label><input type="number" [(ngModel)]="form.actualAmount" /></div>
+          </div>
+          @if (form.expectedAmount && form.actualAmount) {
+            <div class="diff-display" [class.balanced]="form.expectedAmount === form.actualAmount" [class.unbalanced]="form.expectedAmount !== form.actualAmount">
+              <span class="material-icons-round">{{ form.expectedAmount === form.actualAmount ? 'check_circle' : 'warning' }}</span>
+              <span>الفرق: {{ (form.expectedAmount - form.actualAmount) | number:'1.0-0' }} ر.ي</span>
+            </div>
+          }
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء التصفية' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

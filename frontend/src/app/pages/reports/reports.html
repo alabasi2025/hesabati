@@ -1,0 +1,159 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">assessment</span> التقارير</h2>
+  </div>
+
+  <!-- تبويبات التقارير -->
+  <div class="report-tabs">
+    @for (r of reportTypes; track r.id) {
+      <button class="report-tab" [class.active]="activeReport() === r.id" (click)="setReport(r.id)">
+        <span class="material-icons-round">{{ r.icon }}</span>
+        <span>{{ r.label }}</span>
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري تحميل البيانات...</p></div>
+  } @else {
+
+    <!-- تقرير النظرة العامة -->
+    @if (activeReport() === 'overview') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">dashboard</span> ملخص عام</h3>
+        <div class="stats-grid">
+          <div class="stat-card amber"><div class="stat-icon"><span class="material-icons-round">account_balance</span></div><div class="stat-info"><span class="stat-num">{{ stats().totalAccounts }}</span><span class="stat-lbl">حساب</span></div></div>
+          <div class="stat-card blue"><div class="stat-icon"><span class="material-icons-round">savings</span></div><div class="stat-info"><span class="stat-num">{{ stats().totalFunds }}</span><span class="stat-lbl">صندوق</span></div></div>
+          <div class="stat-card green"><div class="stat-icon"><span class="material-icons-round">groups</span></div><div class="stat-info"><span class="stat-num">{{ stats().totalEmployees }}</span><span class="stat-lbl">موظف</span></div></div>
+          <div class="stat-card purple"><div class="stat-icon"><span class="material-icons-round">receipt_long</span></div><div class="stat-info"><span class="stat-num">{{ stats().totalVouchers }}</span><span class="stat-lbl">سند</span></div></div>
+          <div class="stat-card red"><div class="stat-icon"><span class="material-icons-round">menu_book</span></div><div class="stat-info"><span class="stat-num">{{ stats().totalJournal }}</span><span class="stat-lbl">قيد</span></div></div>
+          <div class="stat-card teal"><div class="stat-icon"><span class="material-icons-round">payments</span></div><div class="stat-info"><span class="stat-num">{{ stats().totalSalaries | number:'1.0-0' }}</span><span class="stat-lbl">إجمالي الرواتب</span></div></div>
+        </div>
+
+        <div class="voucher-summary">
+          <h3 class="section-title"><span class="material-icons-round">receipt_long</span> ملخص السندات</h3>
+          <div class="voucher-cards">
+            <div class="voucher-card receipt">
+              <span class="material-icons-round">arrow_downward</span>
+              <div><span class="v-num">{{ stats().receiptVouchers }}</span><span class="v-lbl">سند قبض</span></div>
+              <span class="v-amount">{{ stats().totalReceipts | number:'1.0-0' }} ر.ي</span>
+            </div>
+            <div class="voucher-card payment">
+              <span class="material-icons-round">arrow_upward</span>
+              <div><span class="v-num">{{ stats().paymentVouchers }}</span><span class="v-lbl">سند صرف</span></div>
+              <span class="v-amount">{{ stats().totalPayments | number:'1.0-0' }} ر.ي</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- تقرير الحسابات -->
+    @if (activeReport() === 'accounts') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">account_balance</span> تقرير الحسابات ({{ accounts().length }})</h3>
+        @for (group of accountsByType(); track group.type) {
+          <div class="group-card">
+            <div class="group-header"><h4>{{ getAccountTypeLabel(group.type) }}</h4><span class="group-count">{{ group.count }}</span></div>
+            <table class="data-table compact">
+              <thead><tr><th>#</th><th>الاسم</th><th>الرمز</th><th>العملة</th></tr></thead>
+              <tbody>
+                @for (a of group.items; track a.id; let i = $index) {
+                  <tr><td>{{ i + 1 }}</td><td class="name-cell">{{ a.name }}</td><td>{{ a.code || '-' }}</td><td>{{ a.currencyCode || 'YER' }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- تقرير الصناديق -->
+    @if (activeReport() === 'funds') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">savings</span> تقرير الصناديق ({{ funds().length }})</h3>
+        @for (group of fundsByType(); track group.type) {
+          <div class="group-card">
+            <div class="group-header"><h4>{{ getFundTypeLabel(group.type) }}</h4><span class="group-count">{{ group.count }}</span></div>
+            <table class="data-table compact">
+              <thead><tr><th>#</th><th>الاسم</th><th>المحطة</th></tr></thead>
+              <tbody>
+                @for (f of group.items; track f.id; let i = $index) {
+                  <tr><td>{{ i + 1 }}</td><td class="name-cell">{{ f.name }}</td><td>{{ f.stationName || '-' }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- تقرير الرواتب -->
+    @if (activeReport() === 'employees') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">groups</span> تقرير الرواتب</h3>
+        @for (group of employeesByStation(); track group.station) {
+          <div class="group-card">
+            <div class="group-header"><h4>{{ group.station }}</h4><span class="group-count">{{ group.count }} موظف</span><span class="group-total">{{ group.totalSalary | number:'1.0-0' }} ر.ي</span></div>
+            <table class="data-table compact">
+              <thead><tr><th>#</th><th>الاسم</th><th>المسمى</th><th>الراتب</th><th>الحالة</th></tr></thead>
+              <tbody>
+                @for (e of group.items; track e.id; let i = $index) {
+                  <tr>
+                    <td>{{ i + 1 }}</td><td class="name-cell">{{ e.fullName }}</td><td>{{ e.jobTitle || '-' }}</td>
+                    <td class="salary-cell">{{ e.salary | number:'1.0-0' }}</td>
+                    <td><span class="status-badge" [class]="e.status === 'active' ? 'active' : 'inactive'">{{ e.status === 'active' ? 'نشط' : 'غير نشط' }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- تقرير السندات -->
+    @if (activeReport() === 'vouchers') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">receipt_long</span> تقرير السندات ({{ vouchers().length }})</h3>
+        @if (!vouchers().length) {
+          <div class="empty-state"><span class="material-icons-round">receipt_long</span><p>لا يوجد سندات</p></div>
+        } @else {
+          <table class="data-table">
+            <thead><tr><th>#</th><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>التاريخ</th></tr></thead>
+            <tbody>
+              @for (v of vouchers(); track v.id; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td><span class="type-badge" [class]="v.voucherType === 'receipt' ? 'receipt' : 'payment'">{{ v.voucherType === 'receipt' ? 'قبض' : 'صرف' }}</span></td>
+                  <td class="amount-cell">{{ v.amount | number:'1.0-0' }} ر.ي</td>
+                  <td>{{ v.description || '-' }}</td>
+                  <td class="date-cell">{{ v.voucherDate || v.createdAt | date:'yyyy/MM/dd' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+
+    <!-- تقرير القيود -->
+    @if (activeReport() === 'journal') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">menu_book</span> تقرير القيود المحاسبية ({{ journalEntries().length }})</h3>
+        @if (!journalEntries().length) {
+          <div class="empty-state"><span class="material-icons-round">menu_book</span><p>لا يوجد قيود</p></div>
+        } @else {
+          <table class="data-table">
+            <thead><tr><th>#</th><th>الوصف</th><th>التاريخ</th></tr></thead>
+            <tbody>
+              @for (j of journalEntries(); track j.id; let i = $index) {
+                <tr><td>{{ i + 1 }}</td><td>{{ j.description || '-' }}</td><td class="date-cell">{{ j.entryDate || j.createdAt | date:'yyyy/MM/dd' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  }
+</div>

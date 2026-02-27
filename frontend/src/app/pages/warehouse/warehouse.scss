@@ -1,0 +1,52 @@
+@use '../shared-page.scss';
+
+.summary-row { display: flex; gap: 16px; margin-bottom: 20px; }
+.summary-card {
+  display: flex; align-items: center; gap: 14px; padding: 16px 22px;
+  border-radius: 14px; border: 1px solid var(--border-color); flex: 1;
+  .material-icons-round { font-size: 28px; }
+  .num { display: block; font-size: 22px; font-weight: 800; color: var(--text-primary); }
+  .lbl { display: block; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  &.amber { background: rgba(245,158,11,0.08); .material-icons-round { color: #f59e0b; } }
+  &.blue { background: var(--stat-1-bg); .material-icons-round { color: var(--stat-1-color); } }
+  &.green { background: var(--stat-2-bg); .material-icons-round { color: var(--stat-2-color); } }
+}
+
+.filter-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.filter-tab {
+  padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-primary); font-size: 13px;
+  font-weight: 700; cursor: pointer; font-family: 'Tajawal', sans-serif; transition: all 0.2s;
+  &:hover { background: var(--bg-card-hover); }
+  &.active { background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); color: white; border-color: transparent; }
+}
+
+.warehouse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+
+.warehouse-card {
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 18px;
+  padding: 24px; box-shadow: var(--shadow-card); transition: all 0.3s;
+  &:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
+  &.main { border-top: 3px solid #f59e0b; }
+  &.station { border-top: 3px solid #3b82f6; }
+}
+.wh-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.wh-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  .material-icons-round { font-size: 24px; color: white; }
+  &.main { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  &.station { background: linear-gradient(135deg, #3b82f6, #6366f1); }
+}
+.wh-actions { display: flex; gap: 4px; }
+.wh-name { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
+
+.wh-details { margin-top: 14px; }
+.wh-detail {
+  display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);
+  font-weight: 600; margin-top: 6px;
+  .material-icons-round { font-size: 16px; color: var(--text-muted); }
+  &.notes { font-style: italic; }
+}
+
+@media (max-width: 640px) { .warehouse-grid { grid-template-columns: 1fr; } .summary-row { flex-direction: column; } }
