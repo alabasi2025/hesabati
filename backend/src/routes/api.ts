@@ -10,6 +10,7 @@ import {
   operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines,
   billingSystemsConfig, billingAccountTypes,
+  sidebarSections, sidebarItems, userSidebarConfig,
 } from '../db/schema/index.ts';
 
 const api = new Hono();
@@ -875,6 +876,170 @@ api.delete('/billing-account-types/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   await db.delete(billingAccountTypes).where(eq(billingAccountTypes.id, id));
   return c.json({ success: true });
+});
+
+// ===================== التبويب الجانبي - الأقسام =====================
+api.get('/businesses/:bizId/sidebar-sections', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const rows = await db.select().from(sidebarSections).where(eq(sidebarSections.businessId, bizId)).orderBy(sidebarSections.sortOrder);
+  return c.json(rows);
+});
+
+api.post('/businesses/:bizId/sidebar-sections', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+  const [created] = await db.insert(sidebarSections).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/sidebar-sections/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(sidebarSections).set({ ...body, updatedAt: new Date() }).where(eq(sidebarSections.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete('/sidebar-sections/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  // Delete items in this section first
+  const items = await db.select().from(sidebarItems).where(eq(sidebarItems.sectionId, id));
+  for (const item of items) {
+    await db.delete(userSidebarConfig).where(eq(userSidebarConfig.sidebarItemId, item.id));
+  }
+  await db.delete(sidebarItems).where(eq(sidebarItems.sectionId, id));
+  await db.delete(sidebarSections).where(eq(sidebarSections.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== التبويب الجانبي - العناصر =====================
+api.get('/businesses/:bizId/sidebar-items', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const rows = await db.select({
+    id: sidebarItems.id, sectionId: sidebarItems.sectionId,
+    screenKey: sidebarItems.screenKey, label: sidebarItems.label,
+    icon: sidebarItems.icon, route: sidebarItems.route,
+    sortOrder: sidebarItems.sortOrder, isActive: sidebarItems.isActive,
+    badge: sidebarItems.badge, badgeColor: sidebarItems.badgeColor,
+    sectionName: sidebarSections.name, sectionIcon: sidebarSections.icon,
+    sectionSortOrder: sidebarSections.sortOrder,
+  }).from(sidebarItems)
+    .leftJoin(sidebarSections, eq(sidebarItems.sectionId, sidebarSections.id))
+    .where(eq(sidebarSections.businessId, bizId))
+    .orderBy(sidebarSections.sortOrder, sidebarItems.sortOrder);
+  return c.json(rows);
+});
+
+api.post('/sidebar-items', async (c) => {
+  const body = await c.req.json();
+  const [created] = await db.insert(sidebarItems).values(body).returning();
+  // Auto-create config for all users in this business
+  const section = await db.select().from(sidebarSections).where(eq(sidebarSections.id, body.sectionId));
+  if (section.length > 0) {
+    const bizId = section[0].businessId;
+    const configs = await db.select().from(userSidebarConfig).where(eq(userSidebarConfig.businessId, bizId));
+    const userIds = [...new Set(configs.map(c => c.userId))];
+    for (const userId of userIds) {
+      await db.insert(userSidebarConfig).values({
+        userId, businessId: bizId, sidebarItemId: created.id,
+        isVisible: false, customSortOrder: body.sortOrder || 0,
+      });
+    }
+  }
+  return c.json(created, 201);
+});
+
+api.put('/sidebar-items/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(sidebarItems).set(body).where(eq(sidebarItems.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete('/sidebar-items/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  await db.delete(userSidebarConfig).where(eq(userSidebarConfig.sidebarItemId, id));
+  await db.delete(sidebarItems).where(eq(sidebarItems.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== تخصيص التبويب لكل مستخدم =====================
+api.get('/businesses/:bizId/users/:userId/sidebar', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const userId = parseInt(c.req.param('userId'));
+  
+  const configs = await db.select({
+    configId: userSidebarConfig.id,
+    isVisible: userSidebarConfig.isVisible,
+    customSortOrder: userSidebarConfig.customSortOrder,
+    customSectionName: userSidebarConfig.customSectionName,
+    itemId: sidebarItems.id,
+    screenKey: sidebarItems.screenKey,
+    label: sidebarItems.label,
+    icon: sidebarItems.icon,
+    route: sidebarItems.route,
+    badge: sidebarItems.badge,
+    badgeColor: sidebarItems.badgeColor,
+    sectionId: sidebarSections.id,
+    sectionName: sidebarSections.name,
+    sectionIcon: sidebarSections.icon,
+    sectionSortOrder: sidebarSections.sortOrder,
+  }).from(userSidebarConfig)
+    .innerJoin(sidebarItems, eq(userSidebarConfig.sidebarItemId, sidebarItems.id))
+    .innerJoin(sidebarSections, eq(sidebarItems.sectionId, sidebarSections.id))
+    .where(and(
+      eq(userSidebarConfig.userId, userId),
+      eq(userSidebarConfig.businessId, bizId),
+    ))
+    .orderBy(sidebarSections.sortOrder, userSidebarConfig.customSortOrder, sidebarItems.sortOrder);
+  
+  return c.json(configs);
+});
+
+// Bulk update user sidebar config (for drag & drop reorder + visibility)
+api.put('/businesses/:bizId/users/:userId/sidebar', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const userId = parseInt(c.req.param('userId'));
+  const body = await c.req.json();
+  
+  // body.items = [{ sidebarItemId, isVisible, customSortOrder, customSectionName }]
+  if (body.items && Array.isArray(body.items)) {
+    for (const item of body.items) {
+      // Check if config exists
+      const existing = await db.select().from(userSidebarConfig)
+        .where(and(
+          eq(userSidebarConfig.userId, userId),
+          eq(userSidebarConfig.businessId, bizId),
+          eq(userSidebarConfig.sidebarItemId, item.sidebarItemId),
+        ));
+      
+      if (existing.length > 0) {
+        await db.update(userSidebarConfig).set({
+          isVisible: item.isVisible,
+          customSortOrder: item.customSortOrder,
+          customSectionName: item.customSectionName || null,
+          updatedAt: new Date(),
+        }).where(eq(userSidebarConfig.id, existing[0].id));
+      } else {
+        await db.insert(userSidebarConfig).values({
+          userId, businessId: bizId,
+          sidebarItemId: item.sidebarItemId,
+          isVisible: item.isVisible,
+          customSortOrder: item.customSortOrder,
+          customSectionName: item.customSectionName || null,
+        });
+      }
+    }
+  }
+  return c.json({ success: true });
+});
+
+// ===================== المستخدمين (للمدير) =====================
+api.get('/users', async (c) => {
+  const rows = await db.select({
+    id: users.id, username: users.username, fullName: users.fullName,
+    role: users.role, isActive: users.isActive, createdAt: users.createdAt,
+  }).from(users).orderBy(users.id);
+  return c.json(rows);
 });
 
 export default api;
