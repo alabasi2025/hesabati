@@ -385,6 +385,39 @@ api.post('/businesses/:bizId/vouchers', async (c) => {
   }
   
   const [created] = await db.insert(vouchers).values({ ...cleanBody, businessId: bizId, voucherNumber }).returning();
+  
+  // Update account balances
+  const currencyId = cleanBody.currencyId || 1;
+  const amount = parseFloat(cleanBody.amount || '0');
+  
+  // Helper to upsert account balance
+  const updateAccountBalance = async (accountId: number, delta: number) => {
+    if (!accountId || delta === 0) return;
+    const existing = await db.select().from(accountBalances)
+      .where(and(eq(accountBalances.accountId, accountId), eq(accountBalances.currencyId, currencyId)));
+    if (existing.length > 0) {
+      await db.update(accountBalances)
+        .set({ balance: sql`${accountBalances.balance} + ${delta}`, updatedAt: new Date() })
+        .where(and(eq(accountBalances.accountId, accountId), eq(accountBalances.currencyId, currencyId)));
+    } else {
+      await db.insert(accountBalances).values({ accountId, currencyId, balance: String(delta) });
+    }
+  };
+  
+  if (created.voucherType === 'receipt') {
+    // Receipt: credit toAccountId (increases balance), debit fromAccountId (decreases)
+    if (created.toAccountId) await updateAccountBalance(created.toAccountId, amount);
+    if (created.fromAccountId) await updateAccountBalance(created.fromAccountId, -amount);
+  } else if (created.voucherType === 'payment') {
+    // Payment: debit fromAccountId (decreases), credit toAccountId (increases)
+    if (created.fromAccountId) await updateAccountBalance(created.fromAccountId, -amount);
+    if (created.toAccountId) await updateAccountBalance(created.toAccountId, amount);
+  } else if (created.voucherType === 'transfer') {
+    // Transfer: debit fromAccountId, credit toAccountId
+    if (created.fromAccountId) await updateAccountBalance(created.fromAccountId, -amount);
+    if (created.toAccountId) await updateAccountBalance(created.toAccountId, amount);
+  }
+  
   return c.json(created, 201);
 });
 
