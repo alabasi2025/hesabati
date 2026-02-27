@@ -77,7 +77,7 @@
       @if (!isCollapsed()) {
         <div class="user-details">
           <span class="user-name">{{ user()?.fullName || 'المالك' }}</span>
-          <span class="user-role">مدير النظام</span>
+          <span class="user-role">{{ getRoleLabel() }}</span>
         </div>
         <button class="logout-btn" (click)="logout()" title="تسجيل الخروج">
           <span class="material-icons-round">logout</span>
