@@ -200,6 +200,37 @@ export const employeeBillingAccounts = pgTable('employee_billing_accounts', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// ===================== BILLING SYSTEMS CONFIG =====================
+
+export const billingSystemsConfig = pgTable('billing_systems_config', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  icon: varchar('icon', { length: 50 }).default('receipt'),
+  color: varchar('color', { length: 20 }).default('#3b82f6'),
+  stationMode: varchar('station_mode', { length: 20 }).notNull().default('per_station'),
+  stationIds: jsonb('station_ids').$type<number[]>().default([]),
+  supportedMethodIds: jsonb('supported_method_ids').$type<number[]>().default([]),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== BILLING ACCOUNT TYPES =====================
+
+export const billingAccountTypes = pgTable('billing_account_types', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 50 }).default('receipt'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ===================== FUNDS =====================
 
 export const funds = pgTable('funds', {
