@@ -157,6 +157,18 @@ export class ApiService {
   createJournalEntry(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/journal-entries`, { method: 'POST', body: JSON.stringify(d) }); }
   deleteJournalEntry(id: number)                { return this.request<any>(`/journal-entries/${id}`, { method: 'DELETE' }); }
 
+  // ===================== إعدادات أنظمة الفوترة =====================
+  getBillingSystemsConfig(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/billing-systems-config`); }
+  createBillingSystemConfig(bizId: number, d: any)    { return this.request<any>(`/businesses/${bizId}/billing-systems-config`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateBillingSystemConfig(id: number, d: any)       { return this.request<any>(`/billing-systems-config/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteBillingSystemConfig(id: number)               { return this.request<any>(`/billing-systems-config/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع حسابات الفوترة =====================
+  getBillingAccountTypes(bizId: number)               { return this.request<any[]>(`/businesses/${bizId}/billing-account-types`); }
+  createBillingAccountType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/billing-account-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateBillingAccountType(id: number, d: any)        { return this.request<any>(`/billing-account-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteBillingAccountType(id: number)                { return this.request<any>(`/billing-account-types/${id}`, { method: 'DELETE' }); }
+
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }
 
