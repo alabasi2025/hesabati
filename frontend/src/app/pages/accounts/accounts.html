@@ -52,7 +52,7 @@
         <div class="stat-card type-stat clickable"
              [class.active-stat]="activeType() === t.value"
              [style.--card-color]="t.color"
-             (click)="activeType.set(activeType() === t.value ? 'all' : t.value)">
+             (click)="setActiveType(activeType() === t.value ? 'all' : t.value)">
           <div class="stat-icon" [style.background]="t.color + '25'" [style.color]="t.color">
             <span class="material-icons-round">{{ t.icon }}</span>
           </div>
@@ -65,31 +65,67 @@
     </div>
   }
 
-  <!-- ===== Search + Filter ===== -->
+  <!-- ===== Search + Main Filter ===== -->
   <div class="filter-bar">
     <div class="search-box">
       <span class="material-icons-round search-icon">search</span>
       <input type="text" placeholder="ابحث عن حساب..." class="search-input"
              [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
     </div>
-    <!-- فلاتر ديناميكية: تظهر تلقائياً حسب الأنواع الموجودة في قاعدة البيانات -->
     <div class="type-tabs">
       <button class="type-tab" [class.active]="activeType() === 'all'"
               [style.--tab-color]="'#64748b'"
-              (click)="activeType.set('all')">
+              (click)="setActiveType('all')">
         <span class="material-icons-round">apps</span>
         الكل
       </button>
       @for (t of dynamicFilters(); track t.value) {
         <button class="type-tab" [class.active]="activeType() === t.value"
                 [style.--tab-color]="t.color"
-                (click)="activeType.set(t.value)">
+                (click)="setActiveType(t.value)">
           <span class="material-icons-round">{{ t.icon }}</span>
           {{ t.label }}
         </button>
       }
     </div>
   </div>
+
+  <!-- ===== Sub-Filters (تظهر فقط عند اختيار نوع معين) ===== -->
+  @if (activeType() !== 'all' && subFilterOptions().length > 0) {
+    <div class="sub-filters-panel">
+      <div class="sub-filters-header">
+        <span class="material-icons-round">filter_list</span>
+        <span class="sub-filters-title">فلاتر فرعية</span>
+        @if (hasActiveSubFilters()) {
+          <button class="clear-sub-btn" (click)="clearSubFilters()">
+            <span class="material-icons-round">clear_all</span>
+            مسح الفلاتر
+          </button>
+        }
+      </div>
+      <div class="sub-filters-body">
+        @for (filter of subFilterOptions(); track filter.key) {
+          <div class="sub-filter-group">
+            <div class="sub-filter-label">
+              <span class="material-icons-round">{{ filter.icon }}</span>
+              {{ filter.label }}
+            </div>
+            <div class="sub-filter-chips">
+              @for (opt of filter.values; track opt.value) {
+                <button class="sub-chip"
+                        [class.active]="isSubFilterActive(filter.key, opt.value)"
+                        [style.--chip-color]="getTypeInfo(activeType()).color"
+                        (click)="toggleSubFilter(filter.key, opt.value)">
+                  {{ opt.value }}
+                  <span class="chip-count">{{ opt.count }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
 
   <!-- ===== Loading ===== -->
   @if (loading()) {
@@ -100,7 +136,7 @@
     </div>
   }
 
-  <!-- ===== Accounts Grid ===== -->
+  <!-- ===== Grouped Accounts ===== -->
   @if (!loading()) {
     @if (filteredAccounts().length === 0) {
       <div class="empty-state">
@@ -110,7 +146,7 @@
         <h3>لا توجد حسابات</h3>
         @if (activeType() !== 'all') {
           <p>لا توجد حسابات من نوع "{{ getTypeInfo(activeType()).label }}"</p>
-          <button class="btn-3d btn-ghost" (click)="activeType.set('all')">
+          <button class="btn-3d btn-ghost" (click)="setActiveType('all')">
             <span class="material-icons-round">clear</span>
             إلغاء الفلتر
           </button>
@@ -123,68 +159,118 @@
         }
       </div>
     } @else {
-      <div class="accounts-grid">
-        @for (acc of filteredAccounts(); track acc.id) {
-          <div class="account-card-3d" [class.inactive]="!acc.isActive"
-               [style.--card-color]="getTypeInfo(acc.accountType).color">
-            <div class="card-glow"></div>
-
-            <div class="acc-card-top">
-              <div class="acc-icon-3d" [style.background]="getTypeInfo(acc.accountType).color">
-                <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
-              </div>
-              <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
-                   [style.background]="getTypeInfo(acc.accountType).color + '18'">
-                {{ getTypeInfo(acc.accountType).label }}
-              </div>
-              <div class="acc-actions-top">
-                <button class="icon-btn edit-btn" (click)="openEdit(acc)">
-                  <span class="material-icons-round">edit</span>
-                </button>
-                <button class="icon-btn delete-btn" (click)="deleteAccount(acc.id)">
-                  <span class="material-icons-round">delete</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="acc-card-body">
-              <h3 class="acc-name">{{ acc.name }}</h3>
-              @if (acc.provider) {
-                <div class="acc-detail">
-                  <span class="material-icons-round">business</span>
-                  {{ acc.provider }}
-                </div>
-              }
-              @if (acc.responsiblePerson) {
-                <div class="acc-detail">
-                  <span class="material-icons-round">person</span>
-                  {{ acc.responsiblePerson }}
-                </div>
-              }
-              @if (acc.accountNumber) {
-                <div class="acc-detail">
-                  <span class="material-icons-round">tag</span>
-                  {{ acc.accountNumber }}
-                </div>
-              }
-            </div>
-
-            <div class="acc-card-footer">
-              @if (!acc.isActive) {
-                <span class="inactive-badge">
-                  <span class="material-icons-round">pause_circle</span>
-                  موقوف
-                </span>
-              } @else {
-                <span class="active-badge">
-                  <span class="material-icons-round">check_circle</span>
-                  نشط
-                </span>
-              }
-            </div>
+      <!-- Group Controls -->
+      @if (groupedAccounts().length > 1) {
+        <div class="group-controls">
+          <span class="group-summary">
+            <span class="material-icons-round">folder_open</span>
+            {{ groupedAccounts().length }} مجموعات · {{ filteredAccounts().length }} حساب
+          </span>
+          <div class="group-actions">
+            <button class="group-action-btn" (click)="expandAll()" title="فتح الكل">
+              <span class="material-icons-round">unfold_more</span>
+            </button>
+            <button class="group-action-btn" (click)="collapseAll()" title="طي الكل">
+              <span class="material-icons-round">unfold_less</span>
+            </button>
           </div>
-        }
-      </div>
+        </div>
+      }
+
+      <!-- Grouped Display -->
+      @for (group of groupedAccounts(); track group.key) {
+        <div class="account-group" [style.--group-color]="group.color">
+          <div class="group-header" (click)="toggleGroup(group.key)">
+            <div class="group-header-right">
+              <div class="group-icon" [style.background]="group.color">
+                <span class="material-icons-round">{{ group.icon }}</span>
+              </div>
+              <div class="group-info">
+                <h3 class="group-title">{{ group.label }}</h3>
+                <span class="group-count">{{ group.count }} حساب</span>
+              </div>
+            </div>
+            <button class="group-toggle-btn">
+              <span class="material-icons-round">
+                {{ group.collapsed ? 'expand_more' : 'expand_less' }}
+              </span>
+            </button>
+          </div>
+
+          @if (!group.collapsed) {
+            <div class="group-body">
+              <div class="accounts-grid">
+                @for (acc of group.accounts; track acc.id) {
+                  <div class="account-card-3d" [class.inactive]="!acc.isActive"
+                       [style.--card-color]="getTypeInfo(acc.accountType).color">
+                    <div class="card-glow"></div>
+
+                    <div class="acc-card-top">
+                      <div class="acc-icon-3d" [style.background]="getTypeInfo(acc.accountType).color">
+                        <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
+                      </div>
+                      <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
+                           [style.background]="getTypeInfo(acc.accountType).color + '18'">
+                        {{ getTypeInfo(acc.accountType).label }}
+                      </div>
+                      <div class="acc-actions-top">
+                        <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
+                          <span class="material-icons-round">edit</span>
+                        </button>
+                        <button class="icon-btn delete-btn" (click)="deleteAccount(acc.id); $event.stopPropagation()">
+                          <span class="material-icons-round">delete</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="acc-card-body">
+                      <h3 class="acc-name">{{ acc.name }}</h3>
+                      @if (acc.provider && activeType() === 'all') {
+                        <div class="acc-detail">
+                          <span class="material-icons-round">business</span>
+                          {{ acc.provider }}
+                        </div>
+                      }
+                      @if (acc.subType) {
+                        <div class="acc-detail">
+                          <span class="material-icons-round">label</span>
+                          {{ acc.subType }}
+                        </div>
+                      }
+                      @if (acc.responsiblePerson) {
+                        <div class="acc-detail">
+                          <span class="material-icons-round">person</span>
+                          {{ acc.responsiblePerson }}
+                        </div>
+                      }
+                      @if (acc.accountNumber) {
+                        <div class="acc-detail">
+                          <span class="material-icons-round">tag</span>
+                          {{ acc.accountNumber }}
+                        </div>
+                      }
+                    </div>
+
+                    <div class="acc-card-footer">
+                      @if (!acc.isActive) {
+                        <span class="inactive-badge">
+                          <span class="material-icons-round">pause_circle</span>
+                          موقوف
+                        </span>
+                      } @else {
+                        <span class="active-badge">
+                          <span class="material-icons-round">check_circle</span>
+                          نشط
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
     }
   }
 
@@ -224,17 +310,17 @@
             </div>
           </div>
           <div class="hiw-section">
+            <h3><span class="material-icons-round">filter_list</span> التجميع والفلاتر الفرعية</h3>
+            <p>
+              عند اختيار نوع حساب معين، تظهر الحسابات مجموعة حسب الجهة/المزود.
+              كما تظهر فلاتر فرعية ديناميكية (حسب النظام، نوع الحساب، الموظف...) لتسهيل التصفح.
+            </p>
+          </div>
+          <div class="hiw-section">
             <h3><span class="material-icons-round">receipt</span> حسابات الفوترة</h3>
             <p>
               حسابات الفوترة تُنشأ تلقائياً من شاشة <strong>أنظمة الفوترة</strong> وتظهر هنا بنوع "فوترة".
               لا تحتاج لإضافتها يدوياً من هذه الصفحة.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">auto_awesome</span> أنواع العمليات</h3>
-            <p>
-              بدل تحديد صلاحيات لكل حساب، الآن تسوي "أنواع عمليات" جاهزة من صفحة
-              <strong>أنواع العمليات</strong>. كل نوع يحدد الحسابات المرتبطة وكيف تتعامل معها.
             </p>
           </div>
         </div>
