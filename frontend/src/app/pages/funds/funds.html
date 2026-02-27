@@ -1,71 +1,218 @@
 <div class="page-content">
+  <!-- Header -->
   <div class="page-header">
-    <h2><span class="material-icons-round">inventory_2</span> الصناديق</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة صندوق</button>
+    <div class="page-title-area">
+      <div class="page-icon green"><span class="material-icons-round">inventory_2</span></div>
+      <div>
+        <h2>إدارة الصناديق</h2>
+        <p class="page-subtitle">{{ accounts().length }} صندوق في {{ fundTypes().length }} تصنيف</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="add-btn secondary" (click)="openAddType()">
+        <span class="material-icons-round">category</span> تصنيف جديد
+      </button>
+      <button class="add-btn" (click)="openAddAccount()">
+        <span class="material-icons-round">add</span> صندوق جديد
+      </button>
+    </div>
   </div>
 
+  <!-- Filter Tabs -->
   <div class="filter-tabs">
-    @for (t of fundTypes; track t.value) {
-      <button class="filter-tab" [class.active]="activeFilter() === t.value" (click)="activeFilter.set(t.value)">{{ t.label }}</button>
+    @for (t of getFilterTabs(); track t.value) {
+      <button class="filter-tab" [class.active]="activeFilter() === t.value" (click)="activeFilter.set(t.value)">
+        <span class="material-icons-round tab-icon">{{ t.icon }}</span>
+        <span class="tab-label">{{ t.label }}</span>
+        <span class="tab-count">{{ t.count }}</span>
+      </button>
     }
   </div>
 
+  <!-- Types Management Bar -->
+  <div class="types-bar">
+    <div class="types-bar-title"><span class="material-icons-round">category</span> التصنيفات</div>
+    <div class="types-list">
+      @for (t of fundTypes(); track t.id) {
+        <div class="type-chip" [style.border-color]="t.color">
+          <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
+          <span class="type-chip-name">{{ t.name }}</span>
+          <span class="type-chip-key">({{ t.subTypeKey }})</span>
+          <button class="chip-action" (click)="openEditType(t)" title="تعديل"><span class="material-icons-round">edit</span></button>
+          <button class="chip-action delete" (click)="confirmDelete('type', t.id, t.name)" title="حذف"><span class="material-icons-round">close</span></button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Content -->
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!filteredFunds().length) {
-    <div class="empty-state"><span class="material-icons-round">inventory_2</span><p>لا توجد صناديق</p></div>
+  } @else if (!filteredAccounts().length) {
+    <div class="empty-state">
+      <span class="material-icons-round">inventory_2</span>
+      <p>لا توجد صناديق</p>
+      <button class="add-btn small" (click)="openAddAccount()"><span class="material-icons-round">add</span> إضافة صندوق</button>
+    </div>
   } @else {
-    <div class="funds-grid">
-      @for (fund of filteredFunds(); track fund.id) {
-        <div class="fund-card" [class]="'type-' + getTypeColor(fund.fundType)">
-          <div class="fund-card-header">
-            <div class="fund-icon" [class]="getTypeColor(fund.fundType)"><span class="material-icons-round">{{ getTypeIcon(fund.fundType) }}</span></div>
-            <button class="action-btn edit" (click)="openEdit(fund)"><span class="material-icons-round">edit</span></button>
+    <div class="accounts-grid">
+      @for (acc of filteredAccounts(); track acc.id) {
+        <div class="account-card" [style.border-right-color]="getTypeInfo(acc.subType).color">
+          <div class="card-header">
+            <div class="card-icon" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.subType).color + ', ' + getTypeInfo(acc.subType).color + '99)'">
+              <span class="material-icons-round">{{ getTypeInfo(acc.subType).icon }}</span>
+            </div>
+            <div class="card-actions">
+              <button class="action-btn edit" (click)="openEditAccount(acc)" title="تعديل"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="confirmDelete('account', acc.id, acc.name)" title="حذف"><span class="material-icons-round">delete</span></button>
+            </div>
           </div>
-          <h3 class="fund-name">{{ fund.name }}</h3>
-          <span class="fund-type-badge">{{ getTypeLabel(fund.fundType) }}</span>
-          @if (fund.stationName) { <div class="fund-detail"><span class="material-icons-round">bolt</span> {{ fund.stationName }}</div> }
-          @if (fund.responsiblePerson) { <div class="fund-detail"><span class="material-icons-round">person</span> {{ fund.responsiblePerson }}</div> }
-          @if (fund.description) { <div class="fund-detail"><span class="material-icons-round">info</span> {{ fund.description }}</div> }
-          <div class="fund-status"><span class="status-dot" [class.active]="fund.isActive"></span> {{ fund.isActive ? 'نشط' : 'متوقف' }}</div>
+          <h3 class="card-name">{{ acc.name }}</h3>
+          <span class="card-type-badge" [style.color]="getTypeInfo(acc.subType).color" [style.background]="getTypeInfo(acc.subType).color + '20'">{{ getTypeInfo(acc.subType).name }}</span>
+          @if (acc.responsiblePerson) {
+            <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div>
+          }
+          <div class="card-balance">
+            <span class="material-icons-round">account_balance_wallet</span>
+            <span class="balance-text">{{ getBalanceDisplay(acc) }}</span>
+          </div>
+          <div class="card-status">
+            <span class="status-dot" [class.active]="acc.isActive"></span>
+            {{ acc.isActive ? 'نشط' : 'متوقف' }}
+          </div>
         </div>
       }
     </div>
   }
 
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
+  <!-- Account Form Modal -->
+  @if (showAccountForm()) {
+    <div class="modal-overlay" (click)="showAccountForm.set(false)">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon purple"><span class="material-icons-round">inventory_2</span></div><h2>{{ editingId() ? 'تعديل صندوق' : 'إضافة صندوق جديد' }}</h2></div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+          <div class="modal-title-row">
+            <div class="modal-icon green"><span class="material-icons-round">inventory_2</span></div>
+            <div>
+              <h2>{{ editingAccountId() ? 'تعديل صندوق' : 'إضافة صندوق جديد' }}</h2>
+              <p>سيظهر تلقائياً في صفحة الحسابات</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showAccountForm.set(false)"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
-            <div class="form-group"><label>اسم الصندوق</label><input [(ngModel)]="form.name" /></div>
-            <div class="form-group"><label>نوع الصندوق</label>
-              <select [(ngModel)]="form.fundType">
-                <option value="collection">تحصيل وتوريد</option><option value="salary_advance">سلف موظفين</option>
-                <option value="custody">عهدة</option><option value="safe">خزنة</option>
-                <option value="expense">خرج</option><option value="deposit">توريدات</option>
+            <div class="form-group">
+              <label>اسم الصندوق</label>
+              <input [(ngModel)]="accountForm.name" placeholder="مثال: صندوق التحصيل - الدهمية" />
+            </div>
+            <div class="form-group">
+              <label>التصنيف</label>
+              <select [(ngModel)]="accountForm.subType">
+                @for (t of fundTypes(); track t.id) {
+                  <option [value]="t.subTypeKey">{{ t.name }}</option>
+                }
               </select>
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>المحطة</label>
-              <select [(ngModel)]="form.stationId">
-                <option [ngValue]="null">بدون محطة (عام)</option>
-                @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
-              </select>
+            <div class="form-group">
+              <label>المسؤول</label>
+              <input [(ngModel)]="accountForm.responsiblePerson" placeholder="اسم المسؤول عن الصندوق" />
             </div>
-            <div class="form-group"><label>المسؤول</label><input [(ngModel)]="form.responsiblePerson" /></div>
           </div>
-          <div class="form-group"><label>الوصف</label><textarea [(ngModel)]="form.description" rows="2"></textarea></div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2"></textarea></div>
+          <div class="form-group">
+            <label>ملاحظات</label>
+            <textarea [(ngModel)]="accountForm.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+          </div>
         </div>
         <div class="modal-footer">
-          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+          <button class="btn-save" (click)="saveAccount()">
+            <span class="material-icons-round">{{ editingAccountId() ? 'save' : 'add' }}</span>
+            {{ editingAccountId() ? 'حفظ التعديلات' : 'إضافة الصندوق' }}
+          </button>
+          <button class="btn-cancel" (click)="showAccountForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Type Form Modal -->
+  @if (showTypeForm()) {
+    <div class="modal-overlay" (click)="showTypeForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon purple"><span class="material-icons-round">category</span></div>
+            <div>
+              <h2>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h2>
+              <p>تصنيفات الصناديق تظهر كفلاتر فرعية</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم التصنيف</label>
+              <input [(ngModel)]="typeForm.name" placeholder="مثال: تحصيل وتوريد" />
+            </div>
+            <div class="form-group">
+              <label>المفتاح (بالإنجليزي)</label>
+              <input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: collection" dir="ltr" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea [(ngModel)]="typeForm.description" rows="2" placeholder="وصف مختصر للتصنيف..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <div class="icon-picker">
+              @for (icon of iconOptions; track icon) {
+                <button class="icon-option" [class.selected]="typeForm.icon === icon" (click)="typeForm.icon = icon">
+                  <span class="material-icons-round">{{ icon }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label>اللون</label>
+            <div class="color-picker">
+              @for (c of ['#4CAF50','#2196F3','#FF9800','#9C27B0','#607D8B','#E91E63','#00BCD4','#F44336','#795548','#3F51B5']; track c) {
+                <button class="color-option" [style.background]="c" [class.selected]="typeForm.color === c" (click)="typeForm.color = c"></button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveType()">
+            <span class="material-icons-round">{{ editingTypeId() ? 'save' : 'add' }}</span>
+            {{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}
+          </button>
+          <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation -->
+  @if (showDeleteConfirm()) {
+    <div class="modal-overlay" (click)="showDeleteConfirm.set(false)">
+      <div class="modal-card small" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon red"><span class="material-icons-round">warning</span></div>
+            <h2>تأكيد الحذف</h2>
+          </div>
+          <button class="close-btn" (click)="showDeleteConfirm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-msg">هل أنت متأكد من حذف <strong>{{ deleteTarget()?.name }}</strong>؟</p>
+          <p class="delete-warn">هذا الإجراء لا يمكن التراجع عنه</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-delete" (click)="executeDelete()"><span class="material-icons-round">delete</span> حذف</button>
+          <button class="btn-cancel" (click)="showDeleteConfirm.set(false)">إلغاء</button>
         </div>
       </div>
     </div>

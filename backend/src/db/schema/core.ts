@@ -696,3 +696,63 @@ export const userSidebarConfig = pgTable('user_sidebar_config', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+// ===================== FUND TYPES (أنواع الصناديق) =====================
+export const fundTypes = pgTable('fund_types', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 100 }).default('savings'),
+  color: varchar('color', { length: 50 }).default('#4CAF50'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== BANK TYPES (أنواع البنوك) =====================
+export const bankTypes = pgTable("bank_types", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  subTypeKey: varchar("sub_type_key", { length: 100 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 100 }).default("account_balance"),
+  color: varchar("color", { length: 50 }).default("#4CAF50"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ===================== EXCHANGE TYPES (أنواع الصرافين) =====================
+export const exchangeTypes = pgTable("exchange_types", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  subTypeKey: varchar("sub_type_key", { length: 100 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 100 }).default("currency_exchange"),
+  color: varchar("color", { length: 50 }).default("#4CAF50"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ===================== E-WALLET TYPES (أنواع المحافظ الإلكترونية) =====================
+export const eWalletTypes = pgTable("e_wallet_types", {
+  id: serial("id").primaryKey(),
+  businessId: integer("business_id").notNull().references(() => businesses.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  subTypeKey: varchar("sub_type_key", { length: 100 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 100 }).default("e_wallet"),
+  color: varchar("color", { length: 50 }).default("#4CAF50"),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
