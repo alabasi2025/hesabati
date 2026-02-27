@@ -651,3 +651,46 @@ export const journalEntryLines = pgTable('journal_entry_lines', {
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ===================== SIDEBAR SECTIONS (أقسام التبويب الجانبي) =====================
+
+export const sidebarSections = pgTable('sidebar_sections', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  icon: varchar('icon', { length: 50 }).default('folder'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== SIDEBAR ITEMS (عناصر التبويب الجانبي) =====================
+
+export const sidebarItems = pgTable('sidebar_items', {
+  id: serial('id').primaryKey(),
+  sectionId: integer('section_id').notNull().references(() => sidebarSections.id),
+  screenKey: varchar('screen_key', { length: 100 }).notNull(),
+  label: varchar('label', { length: 200 }).notNull(),
+  icon: varchar('icon', { length: 50 }).notNull(),
+  route: varchar('route', { length: 300 }).notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  badge: integer('badge'),
+  badgeColor: varchar('badge_color', { length: 20 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== USER SIDEBAR CONFIG (تخصيص التبويب لكل مستخدم) =====================
+
+export const userSidebarConfig = pgTable('user_sidebar_config', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  sidebarItemId: integer('sidebar_item_id').notNull().references(() => sidebarItems.id),
+  isVisible: boolean('is_visible').notNull().default(true),
+  customSortOrder: integer('custom_sort_order'),
+  customSectionName: varchar('custom_section_name', { length: 200 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
