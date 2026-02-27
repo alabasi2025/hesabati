@@ -22,6 +22,16 @@ function getTypeMeta(type: string) {
   return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
 }
 
+interface AccountGroup {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  accounts: any[];
+  count: number;
+  collapsed: boolean;
+}
+
 @Component({
   selector: 'app-accounts',
   standalone: true,
@@ -45,6 +55,12 @@ export class AccountsComponent implements OnInit {
   activeType = signal('all');
   searchQuery = signal('');
 
+  // فلاتر فرعية - تعمل فقط عند اختيار نوع معين
+  activeSubFilters = signal<Record<string, string[]>>({});
+
+  // حالة طي/فتح المجموعات
+  collapsedGroups = signal<Set<string>>(new Set());
+
   form = signal<any>({
     name: '', accountType: 'fund', accountNumber: '', provider: '',
     subType: '', responsiblePerson: '', notes: '', isActive: true,
@@ -54,12 +70,9 @@ export class AccountsComponent implements OnInit {
   knownAccountTypes = Object.entries(ACCOUNT_TYPE_META).map(([value, meta]) => ({ value, ...meta }));
 
   // ===== فلاتر ديناميكية: تُحسب من البيانات الفعلية =====
-  // تقرأ الأنواع الموجودة فعلاً في الحسابات وتعرضها تلقائياً
   dynamicFilters = computed(() => {
     const all = this.accounts();
-    // استخراج الأنواع الفريدة الموجودة فعلاً
     const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
-    // ترتيب: billing أولاً، ثم الباقي أبجدياً حسب الـ label
     const sorted = typesInDB.sort((a, b) => {
       if (a === 'billing') return -1;
       if (b === 'billing') return 1;
@@ -68,16 +81,128 @@ export class AccountsComponent implements OnInit {
     return sorted.map(type => ({ value: type, ...getTypeMeta(type) }));
   });
 
+  // ===== فلاتر فرعية ديناميكية حسب النوع المختار =====
+  subFilterOptions = computed(() => {
+    const type = this.activeType();
+    if (type === 'all') return [];
+    const typeAccounts = this.accounts().filter(a => a.accountType === type);
+
+    const filters: { key: string; label: string; icon: string; values: { value: string; count: number }[] }[] = [];
+
+    // استخراج providers الفريدة
+    const providers = this.extractUniqueValues(typeAccounts, 'provider');
+    if (providers.length > 1) {
+      let providerLabel = 'الجهة';
+      let providerIcon = 'business';
+      if (type === 'billing') { providerLabel = 'النظام'; providerIcon = 'receipt'; }
+      else if (type === 'exchange') { providerLabel = 'الصراف'; providerIcon = 'currency_exchange'; }
+      else if (type === 'bank') { providerLabel = 'البنك'; providerIcon = 'account_balance'; }
+      else if (type === 'e_wallet') { providerLabel = 'المحفظة'; providerIcon = 'account_balance_wallet'; }
+      else if (type === 'service') { providerLabel = 'الخدمة'; providerIcon = 'miscellaneous_services'; }
+      filters.push({ key: 'provider', label: providerLabel, icon: providerIcon, values: providers });
+    }
+
+    // استخراج subTypes الفريدة
+    const subTypes = this.extractUniqueValues(typeAccounts, 'subType');
+    if (subTypes.length > 1) {
+      let subLabel = 'التصنيف';
+      let subIcon = 'label';
+      if (type === 'billing') { subLabel = 'نوع الحساب'; subIcon = 'category'; }
+      else if (type === 'bank') { subLabel = 'نوع الحساب'; subIcon = 'category'; }
+      else if (type === 'e_wallet') { subLabel = 'النوع'; subIcon = 'category'; }
+      filters.push({ key: 'subType', label: subLabel, icon: subIcon, values: subTypes });
+    }
+
+    // استخراج responsiblePerson الفريدة (فقط للفوترة)
+    if (type === 'billing') {
+      const persons = this.extractUniqueValues(typeAccounts, 'responsiblePerson');
+      if (persons.length > 1) {
+        filters.push({ key: 'responsiblePerson', label: 'الموظف', icon: 'person', values: persons });
+      }
+    }
+
+    return filters;
+  });
+
+  // ===== الحسابات المفلترة =====
   filteredAccounts = computed(() => {
     const type = this.activeType();
     const q = this.searchQuery().toLowerCase();
+    const subs = this.activeSubFilters();
+
     return this.accounts().filter(a => {
       const matchType = type === 'all' || a.accountType === type;
       const matchQ = !q || a.name.toLowerCase().includes(q) ||
         (a.provider || '').toLowerCase().includes(q) ||
         (a.responsiblePerson || '').toLowerCase().includes(q);
-      return matchType && matchQ;
+
+      // فلاتر فرعية
+      let matchSub = true;
+      if (type !== 'all') {
+        for (const [key, vals] of Object.entries(subs)) {
+          if (vals.length > 0) {
+            const fieldVal = a[key] || '';
+            if (!vals.includes(fieldVal)) { matchSub = false; break; }
+          }
+        }
+      }
+
+      return matchType && matchQ && matchSub;
     });
+  });
+
+  // ===== التجميع حسب التصنيف الفرعي =====
+  groupedAccounts = computed<AccountGroup[]>(() => {
+    const type = this.activeType();
+    const accs = this.filteredAccounts();
+    const collapsed = this.collapsedGroups();
+
+    if (type === 'all' || accs.length === 0) {
+      // في وضع "الكل" نجمع حسب النوع
+      const typeMap = new Map<string, any[]>();
+      for (const a of accs) {
+        const t = a.accountType || 'other';
+        if (!typeMap.has(t)) typeMap.set(t, []);
+        typeMap.get(t)!.push(a);
+      }
+      // ترتيب: billing أولاً
+      const sortedKeys = [...typeMap.keys()].sort((a, b) => {
+        if (a === 'billing') return -1;
+        if (b === 'billing') return 1;
+        return getTypeMeta(a).label.localeCompare(getTypeMeta(b).label, 'ar');
+      });
+      return sortedKeys.map(key => {
+        const meta = getTypeMeta(key);
+        return {
+          key,
+          label: meta.label,
+          icon: meta.icon,
+          color: meta.color,
+          accounts: typeMap.get(key)!,
+          count: typeMap.get(key)!.length,
+          collapsed: collapsed.has(key),
+        };
+      });
+    }
+
+    // في وضع نوع محدد: نجمع حسب provider
+    const providerMap = new Map<string, any[]>();
+    for (const a of accs) {
+      const p = a.provider || 'بدون تصنيف';
+      if (!providerMap.has(p)) providerMap.set(p, []);
+      providerMap.get(p)!.push(a);
+    }
+
+    const meta = getTypeMeta(type);
+    return [...providerMap.entries()].map(([provider, items]) => ({
+      key: `${type}_${provider}`,
+      label: provider,
+      icon: meta.icon,
+      color: meta.color,
+      accounts: items.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ar')),
+      count: items.length,
+      collapsed: collapsed.has(`${type}_${provider}`),
+    }));
   });
 
   stats = computed(() => {
@@ -109,6 +234,65 @@ export class AccountsComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  // ===== فلاتر فرعية =====
+  toggleSubFilter(key: string, value: string) {
+    this.activeSubFilters.update(subs => {
+      const current = subs[key] || [];
+      const idx = current.indexOf(value);
+      const newVals = idx >= 0 ? current.filter(v => v !== value) : [...current, value];
+      return { ...subs, [key]: newVals };
+    });
+  }
+
+  isSubFilterActive(key: string, value: string): boolean {
+    return (this.activeSubFilters()[key] || []).includes(value);
+  }
+
+  clearSubFilters() {
+    this.activeSubFilters.set({});
+  }
+
+  hasActiveSubFilters(): boolean {
+    return Object.values(this.activeSubFilters()).some(v => v.length > 0);
+  }
+
+  setActiveType(type: string) {
+    this.activeType.set(type);
+    this.activeSubFilters.set({});
+    this.collapsedGroups.set(new Set());
+  }
+
+  // ===== طي/فتح المجموعات =====
+  toggleGroup(key: string) {
+    this.collapsedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
+      return newSet;
+    });
+  }
+
+  collapseAll() {
+    const keys = this.groupedAccounts().map(g => g.key);
+    this.collapsedGroups.set(new Set(keys));
+  }
+
+  expandAll() {
+    this.collapsedGroups.set(new Set());
+  }
+
+  // ===== مساعدات =====
+  private extractUniqueValues(accs: any[], field: string): { value: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const a of accs) {
+      const val = a[field] || '';
+      if (val) map.set(val, (map.get(val) || 0) + 1);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([value, count]) => ({ value, count }));
   }
 
   openCreate() {
@@ -167,4 +351,5 @@ export class AccountsComponent implements OnInit {
   }
 
   trackById(_: number, item: any) { return item.id; }
+  trackByKey(_: number, item: AccountGroup) { return item.key; }
 }
