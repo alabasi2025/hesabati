@@ -9,6 +9,7 @@ import {
   dailyCollections, collectionDetails, deliveryRecords,
   operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines,
+  billingSystemsConfig, billingAccountTypes,
 } from '../db/schema/index.ts';
 
 const api = new Hono();
@@ -815,6 +816,64 @@ api.delete('/journal-entries/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
   await db.delete(journalEntries).where(eq(journalEntries.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== إعدادات أنظمة الفوترة =====================
+api.get('/businesses/:bizId/billing-systems-config', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const rows = await db.select().from(billingSystemsConfig)
+    .where(eq(billingSystemsConfig.businessId, bizId))
+    .orderBy(billingSystemsConfig.sortOrder);
+  return c.json(rows);
+});
+
+api.post('/businesses/:bizId/billing-systems-config', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+  const [created] = await db.insert(billingSystemsConfig).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/billing-systems-config/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(billingSystemsConfig).set({ ...body, updatedAt: new Date() }).where(eq(billingSystemsConfig.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete('/billing-systems-config/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  await db.delete(billingSystemsConfig).where(eq(billingSystemsConfig.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع حسابات الفوترة =====================
+api.get('/businesses/:bizId/billing-account-types', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const rows = await db.select().from(billingAccountTypes)
+    .where(eq(billingAccountTypes.businessId, bizId))
+    .orderBy(billingAccountTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post('/businesses/:bizId/billing-account-types', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+  const [created] = await db.insert(billingAccountTypes).values({ ...body, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put('/billing-account-types/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [updated] = await db.update(billingAccountTypes).set(body).where(eq(billingAccountTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete('/billing-account-types/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  await db.delete(billingAccountTypes).where(eq(billingAccountTypes.id, id));
   return c.json({ success: true });
 });
 
