@@ -1,18 +1,28 @@
 .sidebar {
   width: 280px;
+  min-width: 280px;
   height: 100vh;
-  position: fixed;
-  right: 0;
+  position: sticky;
   top: 0;
+  right: 0;
   z-index: 50;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   background: var(--bg-sidebar);
   border-left: 1px solid var(--border-color);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
-  &.collapsed { width: 76px; }
+  &.collapsed {
+    width: 76px;
+    min-width: 76px;
+  }
+}
+
+:host {
+  display: contents;
 }
 
 /* ===================== Header ===================== */

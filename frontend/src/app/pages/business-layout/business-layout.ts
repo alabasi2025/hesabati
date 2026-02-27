@@ -22,21 +22,29 @@ import { ApiService } from '../../services/api.service';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      height: 100vh;
+      overflow: hidden;
+    }
     .app-layout {
       display: flex;
-      min-height: 100vh;
+      height: 100vh;
       direction: rtl;
+      overflow: hidden;
     }
     .main-area {
       flex: 1;
       display: flex;
       flex-direction: column;
       min-width: 0;
+      overflow: hidden;
     }
     .content-area {
       flex: 1;
       padding: 24px;
       overflow-y: auto;
+      height: 100%;
     }
   `]
 })

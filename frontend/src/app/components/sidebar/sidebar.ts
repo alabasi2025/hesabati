@@ -23,6 +23,10 @@ interface MenuSection {
   imports: [RouterLink, RouterLinkActive],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
+  host: {
+    '[style.display]': '"flex"',
+    '[style.flex-shrink]': '"0"',
+  }
 })
 export class SidebarComponent {
   private auth = inject(AuthService);
