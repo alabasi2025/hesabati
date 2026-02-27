@@ -25,6 +25,8 @@ app.use('*', cors({
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
     // في بيئة التطوير، السماح بـ localhost
     if (origin.startsWith('http://localhost:')) return origin;
+    // السماح بنطاقات sandbox
+    if (origin.includes('.manus.computer')) return origin;
     return ALLOWED_ORIGINS[0];
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],

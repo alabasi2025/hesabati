@@ -89,7 +89,11 @@
               "buildTarget": "frontend:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "allowedHosts": [".manus.computer"],
+            "proxyConfig": "proxy.conf.json"
+          }
         }
       }
     }

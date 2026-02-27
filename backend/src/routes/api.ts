@@ -1556,7 +1556,23 @@ api.post('/businesses/:bizId/settlements', bizAuthMiddleware(), async (c) => {
   const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const difference = body.expectedAmount && body.actualAmount ? String(Number(body.expectedAmount) - Number(body.actualAmount)) : null;
-  const [created] = await db.insert(reconciliations).values({ ...body, businessId: bizId, difference }).returning();
+  const values: any = {
+    businessId: bizId,
+    title: body.title,
+    reconciliationType: body.reconciliationType || body.type || 'manager',
+    status: body.status || 'open',
+    withPerson: body.withPerson || null,
+    accountId: body.accountId || null,
+    fundId: body.fundId || null,
+    stationId: body.stationId || null,
+    periodStart: body.periodStart || null,
+    periodEnd: body.periodEnd || null,
+    expectedAmount: body.expectedAmount || null,
+    actualAmount: body.actualAmount || null,
+    difference,
+    notes: body.notes || null,
+  };
+  const [created] = await db.insert(reconciliations).values(values).returning();
   return c.json(created, 201);
 });
 
@@ -1564,7 +1580,23 @@ api.put('/settlements/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const body = await c.req.json();
   const difference = body.expectedAmount && body.actualAmount ? String(Number(body.expectedAmount) - Number(body.actualAmount)) : null;
-  const [updated] = await db.update(reconciliations).set({ ...body, difference, updatedAt: new Date() }).where(eq(reconciliations.id, id)).returning();
+  const setValues: any = {
+    title: body.title,
+    reconciliationType: body.reconciliationType || body.type,
+    status: body.status,
+    withPerson: body.withPerson || null,
+    accountId: body.accountId || null,
+    fundId: body.fundId || null,
+    stationId: body.stationId || null,
+    periodStart: body.periodStart || null,
+    periodEnd: body.periodEnd || null,
+    expectedAmount: body.expectedAmount || null,
+    actualAmount: body.actualAmount || null,
+    difference,
+    notes: body.notes || null,
+    updatedAt: new Date(),
+  };
+  const [updated] = await db.update(reconciliations).set(setValues).where(eq(reconciliations.id, id)).returning();
   if (!updated) return c.json({ error: 'تصفية غير موجودة' }, 404);
   return c.json(updated);
 });
