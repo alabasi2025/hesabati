@@ -4,6 +4,24 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 
+// خريطة ثابتة لأيقونات وألوان أنواع الحسابات المعروفة
+const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
+  billing:      { label: 'فوترة',    icon: 'receipt',                  color: '#a855f7' },
+  fund:         { label: 'صندوق',    icon: 'savings',                  color: '#22c55e' },
+  bank:         { label: 'بنك',      icon: 'account_balance',          color: '#3b82f6' },
+  e_wallet:     { label: 'محفظة',    icon: 'account_balance_wallet',   color: '#8b5cf6' },
+  exchange:     { label: 'صراف',     icon: 'currency_exchange',        color: '#f59e0b' },
+  accounting:   { label: 'محاسبي',   icon: 'book',                     color: '#14b8a6' },
+  intermediary: { label: 'وسيط',     icon: 'swap_horiz',               color: '#f97316' },
+  cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
+  custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
+  service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
+};
+
+function getTypeMeta(type: string) {
+  return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
+}
+
 @Component({
   selector: 'app-accounts',
   standalone: true,
@@ -32,25 +50,32 @@ export class AccountsComponent implements OnInit {
     subType: '', responsiblePerson: '', notes: '', isActive: true,
   });
 
-  accountTypes = [
-    { value: 'all', label: 'الكل', icon: 'apps', color: '#64748b' },
-    { value: 'fund', label: 'صندوق', icon: 'savings', color: '#22c55e' },
-    { value: 'bank', label: 'بنك', icon: 'account_balance', color: '#3b82f6' },
-    { value: 'e_wallet', label: 'محفظة', icon: 'account_balance_wallet', color: '#8b5cf6' },
-    { value: 'exchange', label: 'صراف', icon: 'currency_exchange', color: '#f59e0b' },
-    { value: 'accounting', label: 'محاسبي', icon: 'book', color: '#14b8a6' },
-    { value: 'intermediary', label: 'وسيط', icon: 'swap_horiz', color: '#f97316' },
-    { value: 'cash', label: 'نقد', icon: 'payments', color: '#84cc16' },
-    { value: 'custody', label: 'عهدة', icon: 'lock', color: '#ec4899' },
-    { value: 'service', label: 'خدمة', icon: 'miscellaneous_services', color: '#06b6d4' },
-  ];
+  // قائمة ثابتة لأنواع الحسابات المعروفة - تُستخدم في نموذج الإضافة فقط
+  knownAccountTypes = Object.entries(ACCOUNT_TYPE_META).map(([value, meta]) => ({ value, ...meta }));
+
+  // ===== فلاتر ديناميكية: تُحسب من البيانات الفعلية =====
+  // تقرأ الأنواع الموجودة فعلاً في الحسابات وتعرضها تلقائياً
+  dynamicFilters = computed(() => {
+    const all = this.accounts();
+    // استخراج الأنواع الفريدة الموجودة فعلاً
+    const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
+    // ترتيب: billing أولاً، ثم الباقي أبجدياً حسب الـ label
+    const sorted = typesInDB.sort((a, b) => {
+      if (a === 'billing') return -1;
+      if (b === 'billing') return 1;
+      return getTypeMeta(a).label.localeCompare(getTypeMeta(b).label, 'ar');
+    });
+    return sorted.map(type => ({ value: type, ...getTypeMeta(type) }));
+  });
 
   filteredAccounts = computed(() => {
     const type = this.activeType();
     const q = this.searchQuery().toLowerCase();
     return this.accounts().filter(a => {
       const matchType = type === 'all' || a.accountType === type;
-      const matchQ = !q || a.name.toLowerCase().includes(q) || (a.provider || '').toLowerCase().includes(q);
+      const matchQ = !q || a.name.toLowerCase().includes(q) ||
+        (a.provider || '').toLowerCase().includes(q) ||
+        (a.responsiblePerson || '').toLowerCase().includes(q);
       return matchType && matchQ;
     });
   });
@@ -60,9 +85,9 @@ export class AccountsComponent implements OnInit {
     return {
       total: all.length,
       active: all.filter(a => a.isActive).length,
-      byType: this.accountTypes.slice(1).map(t => ({
+      byType: this.dynamicFilters().map(t => ({
         ...t,
-        count: all.filter(a => a.accountType === t.value).length
+        count: all.filter(a => a.accountType === t.value).length,
       })).filter(t => t.count > 0),
     };
   });
@@ -138,7 +163,7 @@ export class AccountsComponent implements OnInit {
   }
 
   getTypeInfo(type: string) {
-    return this.accountTypes.find(t => t.value === type) || { value: type, label: type, icon: 'account_balance_wallet', color: '#64748b' };
+    return { value: type, ...getTypeMeta(type) };
   }
 
   trackById(_: number, item: any) { return item.id; }

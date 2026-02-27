@@ -8,7 +8,7 @@
       </div>
       <div>
         <h1 class="page-title">الحسابات</h1>
-        <p class="page-subtitle">إدارة كل حسابات العمل (صناديق، بنوك، محافظ، صرافين...)</p>
+        <p class="page-subtitle">إدارة كل حسابات العمل (صناديق، بنوك، محافظ، فوترة...)</p>
       </div>
     </div>
     <div class="header-right">
@@ -49,8 +49,11 @@
         </div>
       </div>
       @for (t of stats().byType; track t.value) {
-        <div class="stat-card type-stat">
-          <div class="stat-icon" [style.background]="t.color">
+        <div class="stat-card type-stat clickable"
+             [class.active-stat]="activeType() === t.value"
+             [style.--card-color]="t.color"
+             (click)="activeType.set(activeType() === t.value ? 'all' : t.value)">
+          <div class="stat-icon" [style.background]="t.color + '25'" [style.color]="t.color">
             <span class="material-icons-round">{{ t.icon }}</span>
           </div>
           <div>
@@ -69,8 +72,15 @@
       <input type="text" placeholder="ابحث عن حساب..." class="search-input"
              [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
     </div>
+    <!-- فلاتر ديناميكية: تظهر تلقائياً حسب الأنواع الموجودة في قاعدة البيانات -->
     <div class="type-tabs">
-      @for (t of accountTypes; track t.value) {
+      <button class="type-tab" [class.active]="activeType() === 'all'"
+              [style.--tab-color]="'#64748b'"
+              (click)="activeType.set('all')">
+        <span class="material-icons-round">apps</span>
+        الكل
+      </button>
+      @for (t of dynamicFilters(); track t.value) {
         <button class="type-tab" [class.active]="activeType() === t.value"
                 [style.--tab-color]="t.color"
                 (click)="activeType.set(t.value)">
@@ -98,11 +108,19 @@
           <span class="material-icons-round">account_balance_wallet</span>
         </div>
         <h3>لا توجد حسابات</h3>
-        <p>أضف حسابات العمل (صناديق، بنوك، محافظ...) لتبدأ في تسجيل العمليات</p>
-        <button class="btn-3d btn-primary" (click)="openCreate()">
-          <span class="material-icons-round">add</span>
-          أضف أول حساب
-        </button>
+        @if (activeType() !== 'all') {
+          <p>لا توجد حسابات من نوع "{{ getTypeInfo(activeType()).label }}"</p>
+          <button class="btn-3d btn-ghost" (click)="activeType.set('all')">
+            <span class="material-icons-round">clear</span>
+            إلغاء الفلتر
+          </button>
+        } @else {
+          <p>أضف حسابات العمل (صناديق، بنوك، محافظ...) لتبدأ في تسجيل العمليات</p>
+          <button class="btn-3d btn-primary" (click)="openCreate()">
+            <span class="material-icons-round">add</span>
+            أضف أول حساب
+          </button>
+        }
       </div>
     } @else {
       <div class="accounts-grid">
@@ -193,8 +211,9 @@
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">category</span> أنواع الحسابات</h3>
+            <p>الفلاتر أعلاه تظهر تلقائياً حسب الأنواع الموجودة في النظام. أي نوع جديد يُضاف يظهر تلقائياً.</p>
             <div class="hiw-types">
-              @for (t of accountTypes.slice(1); track t.value) {
+              @for (t of dynamicFilters(); track t.value) {
                 <div class="hiw-type-row">
                   <div class="hiw-type-icon" [style.background]="t.color">
                     <span class="material-icons-round">{{ t.icon }}</span>
@@ -205,7 +224,14 @@
             </div>
           </div>
           <div class="hiw-section">
-            <h3><span class="material-icons-round">auto_awesome</span> الصلاحيات الجديدة</h3>
+            <h3><span class="material-icons-round">receipt</span> حسابات الفوترة</h3>
+            <p>
+              حسابات الفوترة تُنشأ تلقائياً من شاشة <strong>أنظمة الفوترة</strong> وتظهر هنا بنوع "فوترة".
+              لا تحتاج لإضافتها يدوياً من هذه الصفحة.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">auto_awesome</span> أنواع العمليات</h3>
             <p>
               بدل تحديد صلاحيات لكل حساب، الآن تسوي "أنواع عمليات" جاهزة من صفحة
               <strong>أنواع العمليات</strong>. كل نوع يحدد الحسابات المرتبطة وكيف تتعامل معها.
@@ -240,7 +266,7 @@
           <div class="form-group">
             <label class="form-label">نوع الحساب</label>
             <div class="type-selector">
-              @for (t of accountTypes.slice(1); track t.value) {
+              @for (t of knownAccountTypes; track t.value) {
                 <button class="type-option" [class.selected]="form().accountType === t.value"
                         [style.--opt-color]="t.color"
                         (click)="setFormField('accountType', t.value)">
