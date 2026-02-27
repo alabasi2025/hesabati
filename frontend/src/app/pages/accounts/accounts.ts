@@ -185,23 +185,26 @@ export class AccountsComponent implements OnInit {
       });
     }
 
-    // في وضع نوع محدد: نجمع حسب provider
-    const providerMap = new Map<string, any[]>();
+    // في وضع نوع محدد: نجمع حسب الحقل الأنسب لكل نوع
+    const groupField = this.getBestGroupField(type, accs);
+    const groupMap = new Map<string, any[]>();
     for (const a of accs) {
-      const p = a.provider || 'بدون تصنيف';
-      if (!providerMap.has(p)) providerMap.set(p, []);
-      providerMap.get(p)!.push(a);
+      const groupVal = a[groupField] || 'بدون تصنيف';
+      if (!groupMap.has(groupVal)) groupMap.set(groupVal, []);
+      groupMap.get(groupVal)!.push(a);
     }
 
     const meta = getTypeMeta(type);
-    return [...providerMap.entries()].map(([provider, items]) => ({
-      key: `${type}_${provider}`,
-      label: provider,
+    // ترتيب المجموعات: الأكبر أولاً
+    const sortedEntries = [...groupMap.entries()].sort((a, b) => b[1].length - a[1].length);
+    return sortedEntries.map(([groupLabel, items]) => ({
+      key: `${type}_${groupLabel}`,
+      label: groupLabel,
       icon: meta.icon,
       color: meta.color,
       accounts: items.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ar')),
       count: items.length,
-      collapsed: collapsed.has(`${type}_${provider}`),
+      collapsed: collapsed.has(`${type}_${groupLabel}`),
     }));
   });
 
@@ -281,6 +284,48 @@ export class AccountsComponent implements OnInit {
 
   expandAll() {
     this.collapsedGroups.set(new Set());
+  }
+
+  // ===== تحديد حقل التجميع الأنسب لكل نوع حساب =====
+  private getBestGroupField(type: string, accs: any[]): string {
+    // قواعد التجميع حسب النوع:
+    // - billing (فوترة): حسب provider (النظام: المغربي، صندوق الدعم، الدفع المسبق)
+    // - fund (صندوق): حسب subType (تحصيل وتوريد، سلف، عهدة)
+    // - exchange (صراف): حسب provider (الصراف)
+    // - bank (بنك): حسب provider (البنك)
+    // - e_wallet (محفظة): حسب provider (المحفظة)
+    // - service (خدمة): حسب provider (الخدمة)
+    // - cash (نقد): حسب subType (كاش، خزنة)
+    // - custody (عهدة): حسب subType
+    // - غيره: نختار الحقل الأكثر تنوعاً
+
+    const typeToField: Record<string, string> = {
+      billing: 'provider',
+      fund: 'subType',
+      exchange: 'provider',
+      bank: 'provider',
+      e_wallet: 'provider',
+      service: 'provider',
+      cash: 'subType',
+      custody: 'subType',
+      accounting: 'subType',
+    };
+
+    const preferredField = typeToField[type];
+    if (preferredField) {
+      // نتحقق إن الحقل فيه قيم متنوعة
+      const uniqueVals = new Set(accs.map(a => a[preferredField]).filter(Boolean));
+      if (uniqueVals.size > 1) return preferredField;
+    }
+
+    // fallback: نختار الحقل الأكثر تنوعاً بين provider و subType
+    const providerUnique = new Set(accs.map(a => a.provider).filter(Boolean)).size;
+    const subTypeUnique = new Set(accs.map(a => a.subType).filter(Boolean)).size;
+
+    if (providerUnique > 1 && providerUnique >= subTypeUnique) return 'provider';
+    if (subTypeUnique > 1) return 'subType';
+    if (providerUnique > 0) return 'provider';
+    return 'subType';
   }
 
   // ===== مساعدات =====
