@@ -1,0 +1,345 @@
+<div class="billing-page">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d purple">
+        <span class="material-icons-round">receipt</span>
+      </div>
+      <div>
+        <h1 class="page-title">أنظمة الفوترة</h1>
+        <p class="page-subtitle">حسابات الموظفين في أنظمة التحصيل (المغربي، صندوق الدعم، الدفع المسبق)</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
+        <span class="material-icons-round">help_outline</span>
+      </button>
+      <button class="btn-3d btn-primary" (click)="openCreate()">
+        <span class="material-icons-round">add</span>
+        حساب فوترة جديد
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Success Message ===== -->
+  @if (successMsg()) {
+    <div class="alert-success">
+      <span class="material-icons-round">check_circle</span>
+      {{ successMsg() }}
+    </div>
+  }
+
+  <!-- ===== Error ===== -->
+  @if (error()) {
+    <div class="alert-error" (click)="error.set('')">
+      <span class="material-icons-round">error_outline</span>
+      {{ error() }}
+      <span class="close-x">✕</span>
+    </div>
+  }
+
+  <!-- ===== Stats Bar ===== -->
+  @if (!loading() && accounts().length > 0) {
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-icon purple"><span class="material-icons-round">receipt</span></div>
+        <div>
+          <div class="stat-num">{{ stats().total }}</div>
+          <div class="stat-label">إجمالي الحسابات</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue"><span class="material-icons-round">person</span></div>
+        <div>
+          <div class="stat-num">{{ stats().employees }}</div>
+          <div class="stat-label">موظفين</div>
+        </div>
+      </div>
+      @for (sys of stats().bySys; track sys.value) {
+        @if (sys.count > 0) {
+          <div class="stat-card clickable" [class.active]="activeSystem() === sys.value"
+               (click)="activeSystem.set(activeSystem() === sys.value ? 'all' : sys.value)">
+            <div class="stat-icon" [style.background]="sys.color + '20'" [style.color]="sys.color">
+              <span class="material-icons-round">{{ sys.icon }}</span>
+            </div>
+            <div>
+              <div class="stat-num">{{ sys.count }}</div>
+              <div class="stat-label">{{ sys.label }}</div>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- ===== Filter Bar ===== -->
+  <div class="filter-bar">
+    <div class="filter-tabs">
+      <button class="filter-tab" [class.active]="activeSystem() === 'all'" (click)="activeSystem.set('all')">
+        <span class="material-icons-round">apps</span> الكل
+      </button>
+      @for (sys of billingSystems; track sys.value) {
+        <button class="filter-tab" [class.active]="activeSystem() === sys.value"
+                (click)="activeSystem.set(sys.value)" [style.--tab-color]="sys.color">
+          <span class="material-icons-round">{{ sys.icon }}</span> {{ sys.label }}
+        </button>
+      }
+    </div>
+    <div class="search-box">
+      <span class="material-icons-round">search</span>
+      <input type="text" placeholder="بحث بالاسم أو الموظف..." [value]="searchQuery()"
+             (input)="searchQuery.set($any($event.target).value)" />
+    </div>
+  </div>
+
+  <!-- ===== Station Filter ===== -->
+  @if (stationNames().length > 0) {
+    <div class="station-filter">
+      <button class="station-chip" [class.active]="activeStation() === 'all'" (click)="activeStation.set('all')">
+        كل المحطات
+      </button>
+      @for (st of stationNames(); track st) {
+        <button class="station-chip" [class.active]="activeStation() === st" (click)="activeStation.set(st)">
+          {{ st }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ===== Loading ===== -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>جاري تحميل حسابات الفوترة...</p>
+    </div>
+  }
+
+  <!-- ===== Empty State ===== -->
+  @if (!loading() && accounts().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon"><span class="material-icons-round">receipt_long</span></div>
+      <h3>لا توجد حسابات فوترة</h3>
+      <p>أنشئ حسابات الفوترة للموظفين لتسجيل التحصيل اليومي</p>
+      <button class="btn-3d btn-primary" (click)="openCreate()">
+        <span class="material-icons-round">add</span>
+        إنشاء أول حساب
+      </button>
+    </div>
+  }
+
+  <!-- ===== Grouped View ===== -->
+  @if (!loading() && filteredAccounts().length > 0) {
+    @for (group of groupedBySystem(); track group.system) {
+      <div class="system-group">
+        <div class="system-header" [style.border-right-color]="group.info.color">
+          <div class="system-icon" [style.background]="group.info.color + '15'" [style.color]="group.info.color">
+            <span class="material-icons-round">{{ group.info.icon }}</span>
+          </div>
+          <div class="system-info">
+            <h2>{{ group.info.label }}</h2>
+            <span class="system-count">{{ group.employees.length }} موظف</span>
+          </div>
+        </div>
+
+        <div class="employees-grid">
+          @for (emp of group.employees; track emp.name) {
+            <div class="employee-card">
+              <div class="emp-header">
+                <div class="emp-avatar">
+                  <span class="material-icons-round">person</span>
+                </div>
+                <div class="emp-info">
+                  <h3>{{ emp.name }}</h3>
+                  <span class="emp-count">{{ emp.accounts.length }} حساب</span>
+                </div>
+              </div>
+              <div class="emp-accounts">
+                @for (acc of emp.accounts; track acc.id) {
+                  <div class="billing-acc-row" [class.inactive]="!acc.isActive">
+                    <div class="acc-type-badge">
+                      <span class="material-icons-round">
+                        {{ acc.subType === 'نقدي جوال' ? 'phone_android' :
+                           acc.subType === 'إسناد يدوي' || acc.subType === 'إسناد' ? 'edit_note' :
+                           acc.subType === 'إلكتروني' ? 'computer' : 'receipt' }}
+                      </span>
+                      {{ acc.subType }}
+                    </div>
+                    <div class="acc-actions">
+                      @if (!acc.isActive) {
+                        <span class="inactive-badge">موقوف</span>
+                      }
+                      <button class="icon-btn" (click)="openEdit(acc)" title="تعديل">
+                        <span class="material-icons-round">edit</span>
+                      </button>
+                      <button class="icon-btn" (click)="toggleActive(acc)"
+                              [title]="acc.isActive ? 'إيقاف' : 'تفعيل'">
+                        <span class="material-icons-round">{{ acc.isActive ? 'pause_circle' : 'play_circle' }}</span>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ===== How It Works Modal ===== -->
+  @if (showHowItWorks()) {
+    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
+      <div class="modal-3d how-it-works" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon purple">
+            <span class="material-icons-round">menu_book</span>
+          </div>
+          <h2>مبدأ العمل - أنظمة الفوترة</h2>
+          <button class="close-btn" (click)="showHowItWorks.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body how-content">
+          <div class="how-section">
+            <h3><span class="material-icons-round">info</span> ما هي أنظمة الفوترة؟</h3>
+            <p>هي الأنظمة التي يستخدمها الموظفون لتحصيل الأموال من العملاء. كل موظف عنده حساب أو أكثر في كل نظام.</p>
+          </div>
+          <div class="how-section">
+            <h3><span class="material-icons-round">receipt</span> الأنظمة المتاحة</h3>
+            <ul>
+              <li><strong>المغربي:</strong> نظام فوترة الكهرباء الرئيسي - فيه 3 أنواع: نقدي جوال، إسناد يدوي، إلكتروني</li>
+              <li><strong>صندوق الدعم:</strong> نظام دعم الكهرباء - فيه نوعين: نقدي جوال، إسناد</li>
+              <li><strong>الدفع المسبق:</strong> نظام العدادات المسبقة الدفع - فيه نوع واحد: نقدي جوال</li>
+            </ul>
+          </div>
+          <div class="how-section">
+            <h3><span class="material-icons-round">person_add</span> كيف تضيف حساب فوترة؟</h3>
+            <ol>
+              <li>اضغط "حساب فوترة جديد"</li>
+              <li>اختر اسم الموظف</li>
+              <li>اختر نظام الفوترة (المغربي، صندوق الدعم...)</li>
+              <li>اختر نوع التحصيل (نقدي جوال، إسناد يدوي...)</li>
+              <li>اختر المحطة</li>
+              <li>الحساب يتحفظ تلقائياً ويظهر في صفحة الحسابات</li>
+            </ol>
+          </div>
+          <div class="how-section">
+            <h3><span class="material-icons-round">link</span> الربط بالتحصيل</h3>
+            <p>حسابات الفوترة تظهر تلقائياً في قوالب التحصيل اليومي. لما تسجل تحصيل يومي، كل حساب فوترة يكون جاهز لتعبئة المبلغ.</p>
+          </div>
+          <div class="how-section">
+            <h3><span class="material-icons-round">pause_circle</span> إيقاف موظف</h3>
+            <p>لما موظف يطلع أو يتوقف، اضغط زر الإيقاف بجانب حسابه. الحساب الموقوف ما يظهر في العمليات الجديدة لكن يبقى في السجلات القديمة.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Add/Edit Form Modal ===== -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon purple">
+            <span class="material-icons-round">{{ editingId() ? 'edit' : 'add_circle' }}</span>
+          </div>
+          <h2>{{ editingId() ? 'تعديل حساب فوترة' : 'حساب فوترة جديد' }}</h2>
+          <button class="close-btn" (click)="showForm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <!-- اسم الموظف -->
+            <div class="form-group full-width">
+              <label>
+                <span class="material-icons-round">person</span>
+                اسم الموظف
+              </label>
+              <input type="text" [value]="form().responsiblePerson"
+                     (input)="setFormField('responsiblePerson', $any($event.target).value)"
+                     placeholder="مثال: رايد العباسي" />
+            </div>
+
+            <!-- نظام الفوترة -->
+            <div class="form-group">
+              <label>
+                <span class="material-icons-round">receipt</span>
+                نظام الفوترة
+              </label>
+              <div class="radio-cards">
+                @for (sys of billingSystems; track sys.value) {
+                  <button class="radio-card" [class.selected]="form().provider === sys.value"
+                          (click)="setFormField('provider', sys.value)" [style.--card-color]="sys.color">
+                    <span class="material-icons-round">{{ sys.icon }}</span>
+                    <span>{{ sys.label }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- نوع التحصيل -->
+            <div class="form-group">
+              <label>
+                <span class="material-icons-round">category</span>
+                نوع التحصيل
+              </label>
+              <select [value]="form().subType" (change)="setFormField('subType', $any($event.target).value)">
+                <option value="نقدي جوال">نقدي جوال</option>
+                <option value="إسناد يدوي">إسناد يدوي</option>
+                <option value="إلكتروني">إلكتروني</option>
+                <option value="إسناد">إسناد</option>
+              </select>
+            </div>
+
+            <!-- المحطة -->
+            @if (stations().length > 0) {
+              <div class="form-group">
+                <label>
+                  <span class="material-icons-round">bolt</span>
+                  المحطة
+                </label>
+                <select [value]="form().stationName" (change)="setFormField('stationName', $any($event.target).value)">
+                  <option value="">-- اختر المحطة --</option>
+                  @for (st of stations(); track st.id) {
+                    <option [value]="st.name">{{ st.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- ملاحظات -->
+            <div class="form-group full-width">
+              <label>
+                <span class="material-icons-round">notes</span>
+                ملاحظات (اختياري)
+              </label>
+              <input type="text" [value]="form().notes"
+                     (input)="setFormField('notes', $any($event.target).value)"
+                     placeholder="أي ملاحظات إضافية..." />
+            </div>
+          </div>
+
+          <!-- معاينة الاسم -->
+          @if (form().responsiblePerson && form().provider) {
+            <div class="name-preview">
+              <span class="material-icons-round">visibility</span>
+              <strong>اسم الحساب:</strong>
+              {{ form().responsiblePerson }} - {{ form().provider }} {{ form().subType }}
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-secondary" (click)="showForm.set(false)">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="saveForm()">
+            <span class="material-icons-round">{{ editingId() ? 'save' : 'add' }}</span>
+            {{ editingId() ? 'حفظ التعديلات' : 'إنشاء الحساب' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

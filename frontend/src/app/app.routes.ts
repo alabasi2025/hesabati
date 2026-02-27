@@ -28,6 +28,7 @@ export const routes: Routes = [
       { path: 'journal', loadComponent: () => import('./pages/journal/journal').then(m => m.JournalComponent) },
       { path: 'operation-types', loadComponent: () => import('./pages/operation-types/operation-types').then(m => m.OperationTypesComponent) },
       { path: 'collections', loadComponent: () => import('./pages/collections/collections').then(m => m.CollectionsComponent) },
+      { path: 'billing-systems', loadComponent: () => import('./pages/billing-systems/billing-systems').then(m => m.BillingSystemsComponent) },
       { path: 'summary', loadComponent: () => import('./pages/summary/summary').then(m => m.SummaryComponent) },
       { path: 'reports', loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent) },
       { path: 'exchangers', loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent) },

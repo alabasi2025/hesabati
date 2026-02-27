@@ -67,6 +67,7 @@ export class SidebarComponent {
           items: [
             { icon: 'bolt', label: 'المحطات', route: `${b}/stations` },
             { icon: 'receipt_long', label: 'التحصيل والتوريد', route: `${b}/collections` },
+            { icon: 'receipt', label: 'أنظمة الفوترة', route: `${b}/billing-systems` },
           ],
         },
         {
