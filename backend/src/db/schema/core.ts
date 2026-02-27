@@ -590,3 +590,33 @@ export const operationTypeAccounts = pgTable('operation_type_accounts', {
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ===================== JOURNAL ENTRIES (القيود المحاسبية) =====================
+
+export const journalEntries = pgTable('journal_entries', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  entryNumber: varchar('entry_number', { length: 50 }).notNull(),
+  description: text('description'),
+  entryDate: date('entry_date').notNull(),
+  reference: varchar('reference', { length: 100 }),
+  operationTypeId: integer('operation_type_id').references(() => operationTypes.id),
+  createdBy: integer('created_by').references(() => users.id),
+  isBalanced: boolean('is_balanced').notNull().default(false),
+  totalDebit: decimal('total_debit', { precision: 20, scale: 2 }).notNull().default('0'),
+  totalCredit: decimal('total_credit', { precision: 20, scale: 2 }).notNull().default('0'),
+  status: varchar('status', { length: 20 }).notNull().default('confirmed'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const journalEntryLines = pgTable('journal_entry_lines', {
+  id: serial('id').primaryKey(),
+  journalEntryId: integer('journal_entry_id').notNull().references(() => journalEntries.id),
+  accountId: integer('account_id').notNull().references(() => accounts.id),
+  lineType: varchar('line_type', { length: 10 }).notNull(), // 'debit' | 'credit'
+  amount: decimal('amount', { precision: 20, scale: 2 }).notNull(),
+  description: text('description'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});

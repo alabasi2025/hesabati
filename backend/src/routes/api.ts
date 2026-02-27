@@ -8,6 +8,7 @@ import {
   warehouses, pendingAccounts, reconciliations, attachments,
   dailyCollections, collectionDetails, deliveryRecords,
   operationTypes, operationTypeAccounts,
+  journalEntries, journalEntryLines,
 } from '../db/schema/index.ts';
 
 const api = new Hono();
@@ -349,11 +350,38 @@ api.get('/businesses/:bizId/vouchers', async (c) => {
 api.post('/businesses/:bizId/vouchers', async (c) => {
   const bizId = parseInt(c.req.param('bizId'));
   const body = await c.req.json();
-  const prefix = body.voucherType === 'receipt' ? 'QBD' : body.voucherType === 'payment' ? 'SRF' : 'TRN';
+  const prefix = body.voucherType === 'receipt' ? 'QBD' : body.voucherType === 'payment' ? 'SRF' : body.voucherType === 'journal' ? 'QYD' : 'TRN';
   const count = await db.select({ count: sql<number>`count(*)` }).from(vouchers);
   const num = (Number(count[0].count) || 0) + 1;
   const voucherNumber = `${prefix}-${String(num).padStart(5, '0')}`;
-  const [created] = await db.insert(vouchers).values({ ...body, businessId: bizId, voucherNumber }).returning();
+  
+  // Clean body - remove undefined fields and fix date
+  const cleanBody: any = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (v !== undefined && v !== null && v !== '') {
+      cleanBody[k] = v;
+    }
+  }
+  // Convert voucherDate string to Date object (Drizzle requires Date for timestamp)
+  if (cleanBody.voucherDate) {
+    if (typeof cleanBody.voucherDate === 'string') {
+      cleanBody.voucherDate = new Date(cleanBody.voucherDate + 'T00:00:00Z');
+    }
+  } else {
+    cleanBody.voucherDate = new Date();
+  }
+  // Remove timestamp fields - let DB handle them
+  delete cleanBody.createdAt;
+  delete cleanBody.updatedAt;
+  // Convert numeric strings to numbers
+  if (cleanBody.amount && typeof cleanBody.amount === 'string') {
+    cleanBody.amount = parseFloat(cleanBody.amount);
+  }
+  if (cleanBody.currencyId && typeof cleanBody.currencyId === 'string') {
+    cleanBody.currencyId = parseInt(cleanBody.currencyId);
+  }
+  
+  const [created] = await db.insert(vouchers).values({ ...cleanBody, businessId: bizId, voucherNumber }).returning();
   return c.json(created, 201);
 });
 
@@ -685,6 +713,108 @@ api.post('/operation-types/:id/accounts', async (c) => {
 api.delete('/operation-type-accounts/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   await db.delete(operationTypeAccounts).where(eq(operationTypeAccounts.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== القيود المحاسبية =====================
+api.get('/businesses/:bizId/journal-entries', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const rows = await db.select({
+    id: journalEntries.id,
+    entryNumber: journalEntries.entryNumber,
+    description: journalEntries.description,
+    entryDate: journalEntries.entryDate,
+    reference: journalEntries.reference,
+    isBalanced: journalEntries.isBalanced,
+    totalDebit: journalEntries.totalDebit,
+    totalCredit: journalEntries.totalCredit,
+    status: journalEntries.status,
+    createdAt: journalEntries.createdAt,
+  }).from(journalEntries)
+    .where(eq(journalEntries.businessId, bizId))
+    .orderBy(desc(journalEntries.createdAt));
+  
+  // Enrich with lines
+  const result = [];
+  for (const entry of rows) {
+    const lines = await db.select({
+      id: journalEntryLines.id,
+      accountId: journalEntryLines.accountId,
+      lineType: journalEntryLines.lineType,
+      amount: journalEntryLines.amount,
+      description: journalEntryLines.description,
+      sortOrder: journalEntryLines.sortOrder,
+      accountName: accounts.name,
+      accountType: accounts.accountType,
+    }).from(journalEntryLines)
+      .leftJoin(accounts, eq(journalEntryLines.accountId, accounts.id))
+      .where(eq(journalEntryLines.journalEntryId, entry.id))
+      .orderBy(journalEntryLines.sortOrder);
+    result.push({ ...entry, lines });
+  }
+  return c.json(result);
+});
+
+api.post('/businesses/:bizId/journal-entries', async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+  const { lines, ...entryData } = body;
+  
+  // Generate entry number
+  const count = await db.select({ count: sql<number>`count(*)` }).from(journalEntries);
+  const num = (Number(count[0].count) || 0) + 1;
+  const entryNumber = `QYD-${String(num).padStart(5, '0')}`;
+  
+  // Calculate totals
+  const totalDebit = (lines || []).filter((l: any) => l.lineType === 'debit').reduce((s: number, l: any) => s + Number(l.amount), 0);
+  const totalCredit = (lines || []).filter((l: any) => l.lineType === 'credit').reduce((s: number, l: any) => s + Number(l.amount), 0);
+  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+  
+  // Keep entryDate as string for DATE column type
+  const rawDate = entryData.date || entryData.entryDate;
+  const entryDate = rawDate ? String(rawDate).split('T')[0] : new Date().toISOString().split('T')[0];
+  
+  // Clean entryData - remove extra fields
+  const cleanEntry: any = {};
+  const allowedFields = ['description', 'reference', 'operationTypeId', 'createdBy'];
+  for (const f of allowedFields) {
+    if (entryData[f] !== undefined && entryData[f] !== null && entryData[f] !== '') {
+      cleanEntry[f] = entryData[f];
+    }
+  }
+  
+  const [created] = await db.insert(journalEntries).values({
+    ...cleanEntry,
+    businessId: bizId,
+    entryNumber,
+    totalDebit: String(totalDebit),
+    totalCredit: String(totalCredit),
+    isBalanced,
+    entryDate,
+  }).returning();
+  
+  // Insert lines
+  if (lines && lines.length > 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      await db.insert(journalEntryLines).values({
+        journalEntryId: created.id,
+        accountId: line.accountId,
+        lineType: line.type || line.lineType,
+        amount: String(line.amount),
+        description: line.description || '',
+        sortOrder: i,
+      });
+    }
+  }
+  
+  return c.json(created, 201);
+});
+
+api.delete('/journal-entries/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
+  await db.delete(journalEntries).where(eq(journalEntries.id, id));
   return c.json({ success: true });
 });
 

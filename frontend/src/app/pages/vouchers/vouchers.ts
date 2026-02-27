@@ -146,6 +146,7 @@ export class VouchersComponent implements OnInit {
         ...f,
         voucherType: this.voucherType(),
         amount: String(parseFloat(f.amount)),
+        currencyId: 1, // ريال يمني افتراضي
       });
       this.showForm.set(false);
       await this.loadVouchers();

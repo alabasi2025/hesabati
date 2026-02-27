@@ -152,6 +152,11 @@ export class ApiService {
   addOperationTypeAccount(otId: number, d: any)     { return this.request<any>(`/operation-types/${otId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   removeOperationTypeAccount(id: number)            { return this.request<any>(`/operation-type-accounts/${id}`, { method: 'DELETE' }); }
 
+  // ===================== القيود المحاسبية =====================
+  getJournalEntries(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/journal-entries`); }
+  createJournalEntry(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/journal-entries`, { method: 'POST', body: JSON.stringify(d) }); }
+  deleteJournalEntry(id: number)                { return this.request<any>(`/journal-entries/${id}`, { method: 'DELETE' }); }
+
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }
 
