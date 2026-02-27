@@ -161,7 +161,7 @@
                 </div>
                 <div class="sys-info">
                   <h2 class="sys-name">{{ group.system }}</h2>
-                  <span class="sys-count">{{ group.employees.length }} موظف · {{ filteredAccounts().filter(a => a.provider === group.system).length }} حساب</span>
+                  <span class="sys-count">{{ group.employees.length }} موظف · {{ group.employees.length }} حساب</span>
                 </div>
               </div>
 
@@ -181,7 +181,7 @@
                       @for (acc of emp.accounts; track acc.id) {
                         <div class="acc-chip" [class.inactive-chip]="!acc.isActive"
                              [style.--chip-color]="group.info.color">
-                          <span class="acc-chip-label">{{ acc.subType }}</span>
+                          <span class="acc-chip-label">{{ getMethodDisplayName(acc.collectionMethod) }}</span>
                           <div class="acc-chip-actions">
                             <button class="chip-btn" (click)="openEditAccount(acc)" title="تعديل">
                               <span class="material-icons-round">edit</span>
@@ -346,40 +346,7 @@
         <div class="modal-body">
 
           <div class="form-group">
-            <label class="form-label">اسم الموظف <span class="required">*</span></label>
-            <input class="form-input" type="text" placeholder="اسم الموظف المسؤول عن الحساب"
-                   [value]="accountForm().responsiblePerson"
-                   (input)="setFormField('account', 'responsiblePerson', $any($event.target).value)">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">نظام الفوترة <span class="required">*</span></label>
-            <div class="system-selector">
-              @for (sys of billingSystems(); track sys.name) {
-                <button class="sys-option" [class.selected]="accountForm().provider === sys.name"
-                        [style.--opt-color]="sys.color"
-                        (click)="setFormField('account', 'provider', sys.name)">
-                  <span class="material-icons-round">{{ sys.icon }}</span>
-                  {{ sys.name }}
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">نوع الحساب <span class="required">*</span></label>
-            <div class="type-selector-row">
-              @for (t of accountTypes(); track t.name) {
-                <button class="type-option-btn" [class.selected]="accountForm().subType === t.name"
-                        (click)="setFormField('account', 'subType', t.name)">
-                  {{ t.name }}
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">المحطة</label>
+            <label class="form-label">المحطة <span class="required">*</span></label>
             <select class="form-input" [value]="accountForm().stationId"
                     (change)="setFormField('account', 'stationId', $any($event.target).value)">
               <option value="">-- اختر المحطة --</option>
@@ -389,9 +356,50 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">الموظف <span class="required">*</span></label>
+            <select class="form-input" [value]="accountForm().employeeId"
+                    (change)="setFormField('account', 'employeeId', $any($event.target).value)">
+              <option value="">-- اختر الموظف --</option>
+              @for (e of employees(); track e.id) {
+                <option [value]="e.id">{{ e.fullName }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">نظام الفوترة <span class="required">*</span></label>
+            <select class="form-input" [value]="accountForm().billingSystem"
+                    (change)="setFormField('account', 'billingSystem', $any($event.target).value)">
+              <option value="">-- اختر النظام --</option>
+              @for (s of availableBillingSystems; track s.value) {
+                <option [value]="s.value">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">طريقة التحصيل <span class="required">*</span></label>
+            <div class="type-selector-row">
+              @for (m of availableCollectionMethods; track m.value) {
+                <button class="type-option-btn" [class.selected]="accountForm().collectionMethod === m.value"
+                        (click)="setFormField('account', 'collectionMethod', m.value)">
+                  {{ m.label }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">العنوان</label>
+            <input class="form-input" type="text" placeholder="عنوان الحساب (اختياري - يُنشأ تلقائياً)"
+                   [value]="accountForm().label"
+                   (input)="setFormField('account', 'label', $any($event.target).value)">
+          </div>
+
           <div class="form-info-box">
             <span class="material-icons-round">info</span>
-            سيُنشأ الحساب تلقائياً بنوع "فوترة" ويظهر في صفحة الحسابات.
+            سيُنشأ حساب فوترة للموظف في النظام المحدد.
           </div>
 
         </div>

@@ -251,6 +251,51 @@ async function seed() {
   ]);
   console.log('✅ الحسابات المعلقة');
 
+  // ===================== أنظمة الفوترة =====================
+  await db.insert(schema.billingSystemsConfig).values([
+    { businessId: b1.id, name: 'المغربي', icon: 'receipt', color: '#10b981', stationScope: 'per_station', supportedTypes: ['تحصيل نقدي بالجوال', 'تحصيل إسناد يدوي', 'سداد إلكتروني'] },
+    { businessId: b1.id, name: 'صندوق الدعم', icon: 'support', color: '#3b82f6', stationScope: 'per_station', supportedTypes: ['تحصيل نقدي بالجوال', 'تحصيل إسناد يدوي'] },
+    { businessId: b1.id, name: 'الدفع المسبق', icon: 'credit_card', color: '#8b5cf6', stationScope: 'multi_station', supportedTypes: ['تحصيل نقدي بالجوال'] },
+  ]);
+  console.log('✅ أنظمة الفوترة');
+
+  // ===================== أنواع حسابات الفوترة =====================
+  await db.insert(schema.billingAccountTypes).values([
+    { businessId: b1.id, name: 'تحصيل نقدي بالجوال', description: 'تحصيل الفواتير نقداً عبر الجوال' },
+    { businessId: b1.id, name: 'تحصيل إسناد يدوي', description: 'تحصيل الفواتير بالإسناد اليدوي' },
+    { businessId: b1.id, name: 'سداد إلكتروني', description: 'سداد الفواتير إلكترونياً' },
+  ]);
+  console.log('✅ أنواع حسابات الفوترة');
+
+  // ===================== حسابات الفوترة للموظفين =====================
+  // يتم إنشاؤها عبر SQL مباشرة لأنها تعتمد على IDs الموظفين
+  // تم إضافتها عبر SQL migration منفصل
+
+  // ===================== قوالب العمليات =====================
+  await db.insert(schema.operationTypes).values([
+    { businessId: b1.id, name: 'تحويل حق الديزل', category: 'voucher', voucherType: 'payment', icon: 'local_gas_station', color: '#ef4444', description: 'تحويل مبالغ لمورد الديزل - محمود الحجة', sortOrder: 1 },
+    { businessId: b1.id, name: 'تحويل حق مشتريات مباشرة', category: 'voucher', voucherType: 'payment', icon: 'shopping_cart', color: '#f97316', sortOrder: 2 },
+    { businessId: b1.id, name: 'تحويل عهد مشتريات', category: 'voucher', voucherType: 'payment', icon: 'shopping_bag', color: '#fb923c', sortOrder: 3 },
+    { businessId: b1.id, name: 'صرف سلف وعهد للمحطات', category: 'voucher', voucherType: 'payment', icon: 'request_quote', color: '#f472b6', sortOrder: 4 },
+    { businessId: b1.id, name: 'صرف عهدة معلقة لعمل خارجي', category: 'voucher', voucherType: 'payment', icon: 'pending_actions', color: '#a855f7', sortOrder: 5 },
+    { businessId: b1.id, name: 'تحويل حق الزيت', category: 'voucher', voucherType: 'payment', icon: 'oil_barrel', color: '#d946ef', sortOrder: 6 },
+    { businessId: b1.id, name: 'تحويل حق عدادات ومواد كهربائية', category: 'voucher', voucherType: 'payment', icon: 'electrical_services', color: '#eab308', sortOrder: 7 },
+    { businessId: b1.id, name: 'تحويل حق العائد الشهري', category: 'voucher', voucherType: 'payment', icon: 'account_balance', color: '#6366f1', sortOrder: 8 },
+    { businessId: b1.id, name: 'تحويل إيجار حوش الباشا', category: 'voucher', voucherType: 'payment', icon: 'home', color: '#0891b2', sortOrder: 9 },
+    { businessId: b1.id, name: 'تحويل إيجار حوش الضحوي', category: 'voucher', voucherType: 'payment', icon: 'home', color: '#14b8a6', sortOrder: 10 },
+    { businessId: b1.id, name: 'تحويل حق الضرائب', category: 'voucher', voucherType: 'payment', icon: 'receipt_long', color: '#64748b', sortOrder: 11 },
+    { businessId: b1.id, name: 'تحويل حق البطاريات', category: 'voucher', voucherType: 'payment', icon: 'battery_charging_full', color: '#22c55e', sortOrder: 12 },
+    { businessId: b1.id, name: 'تحويل حق قطع غيار المولدات', category: 'voucher', voucherType: 'payment', icon: 'build', color: '#f59e0b', sortOrder: 13 },
+    { businessId: b1.id, name: 'تحويل حق تكاليف التطوير والأصول', category: 'voucher', voucherType: 'payment', icon: 'engineering', color: '#7c3aed', sortOrder: 14 },
+    { businessId: b1.id, name: 'تحويل للمهندس محمد حسن', category: 'voucher', voucherType: 'payment', icon: 'person', color: '#0ea5e9', sortOrder: 15 },
+    { businessId: b1.id, name: 'مصروفات شخصية', category: 'voucher', voucherType: 'payment', icon: 'wallet', color: '#6b7280', sortOrder: 16 },
+  ]);
+  console.log('✅ قوالب العمليات');
+
+  // ===================== أرصدة الموردين =====================
+  // يتم إنشاؤها عبر SQL مباشرة لأنها تعتمد على IDs الموردين
+  // تم إضافتها عبر SQL migration منفصل
+
   console.log('\n🎉 تم تهيئة جميع البيانات بنجاح!');
   process.exit(0);
 }

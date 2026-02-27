@@ -21,10 +21,28 @@ export class BillingSystemsComponent implements OnInit {
   successMsg = signal('');
 
   // ===== البيانات =====
-  billingAccounts = signal<any[]>([]);   // حسابات الفوترة من accounts
+  billingAccounts = signal<any[]>([]);   // حسابات الفوترة من employee_billing_accounts
   billingSystems = signal<any[]>([]);    // أنظمة الفوترة من billing_systems_config
   accountTypes = signal<any[]>([]);      // أنواع حسابات الفوترة من billing_account_types
   stations = signal<any[]>([]);          // المحطات
+  employees = signal<any[]>([]);         // الموظفين
+
+  // ===== خريطة أسماء الأنظمة =====
+  systemNameMap: Record<string, string> = {
+    'moghrabi_v1': 'المغربي',
+    'moghrabi_v2': 'المغربي',
+    'moghrabi_v3': 'المغربي',
+    'support_fund': 'صندوق الدعم',
+    'support_fund_west': 'صندوق الدعم',
+    'prepaid': 'الدفع المسبق',
+  };
+
+  methodNameMap: Record<string, string> = {
+    'cash_mobile': 'تحصيل نقدي بالجوال',
+    'manual_assign': 'تحصيل إسناد يدوي',
+    'electronic': 'سداد إلكتروني',
+    'haseb_deposit': 'إيداع حاسب',
+  };
 
   // ===== حالة الواجهة =====
   activeTab = signal<'accounts' | 'systems' | 'types'>('accounts');
@@ -37,10 +55,11 @@ export class BillingSystemsComponent implements OnInit {
   showAccountForm = signal(false);
   editingAccountId = signal<number | null>(null);
   accountForm = signal<any>({
-    responsiblePerson: '',
-    provider: '',
-    subType: '',
+    employeeId: '',
     stationId: '',
+    billingSystem: '',
+    collectionMethod: '',
+    label: '',
     notes: '',
   });
 
@@ -67,10 +86,11 @@ export class BillingSystemsComponent implements OnInit {
     const station = this.activeStation();
     const q = this.searchQuery().toLowerCase();
     return this.billingAccounts().filter(a => {
-      const matchSys = sys === 'all' || a.provider === sys;
-      const matchStation = station === 'all' || (a.notes || '').includes(station);
-      const matchQ = !q || a.name.toLowerCase().includes(q) ||
-        (a.responsiblePerson || '').toLowerCase().includes(q);
+      const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
+      const matchSys = sys === 'all' || sysDisplayName === sys;
+      const matchStation = station === 'all' || a.stationName === station;
+      const matchQ = !q || (a.label || '').toLowerCase().includes(q) ||
+        (a.employeeName || '').toLowerCase().includes(q);
       return matchSys && matchStation && matchQ;
     });
   });
@@ -82,19 +102,22 @@ export class BillingSystemsComponent implements OnInit {
     const groups: any[] = [];
 
     for (const sys of systems) {
-      const sysAccounts = filtered.filter(a => a.provider === sys.name);
+      const sysAccounts = filtered.filter(a => {
+        const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
+        return sysDisplayName === sys.name;
+      });
       if (sysAccounts.length === 0) continue;
 
       const empMap = new Map<string, any[]>();
       for (const acc of sysAccounts) {
-        const emp = acc.responsiblePerson || 'غير محدد';
+        const emp = acc.employeeName || 'غير محدد';
         if (!empMap.has(emp)) empMap.set(emp, []);
         empMap.get(emp)!.push(acc);
       }
 
       const employees = Array.from(empMap.entries()).map(([name, accs]) => ({
         name,
-        accounts: accs.sort((a: any, b: any) => (a.subType || '').localeCompare(b.subType || '', 'ar')),
+        accounts: accs.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0)),
       }));
 
       groups.push({ system: sys.name, info: sys, employees });
@@ -108,9 +131,12 @@ export class BillingSystemsComponent implements OnInit {
     const systems = this.billingSystems();
     const bySys = systems.map(s => ({
       ...s,
-      count: all.filter(a => a.provider === s.name).length,
+      count: all.filter(a => {
+        const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
+        return sysDisplayName === s.name;
+      }).length,
     }));
-    const employees = new Set(all.map((a: any) => a.responsiblePerson).filter(Boolean)).size;
+    const employees = new Set(all.map((a: any) => a.employeeName).filter(Boolean)).size;
     return { total: all.length, employees, bySys };
   });
 
@@ -128,6 +154,23 @@ export class BillingSystemsComponent implements OnInit {
     '#14b8a6', '#f97316', '#ec4899', '#06b6d4', '#84cc16',
   ];
 
+  // ===== أنظمة الفوترة المتاحة (enums) =====
+  availableBillingSystems = [
+    { value: 'moghrabi_v1', label: 'المغربي (نسخة 1 - الدهمية)' },
+    { value: 'moghrabi_v2', label: 'المغربي (نسخة 2 - الصبالية وجمال)' },
+    { value: 'moghrabi_v3', label: 'المغربي (نسخة 3 - غليل)' },
+    { value: 'support_fund', label: 'صندوق الدعم' },
+    { value: 'support_fund_west', label: 'صندوق الدعم - الساحل الغربي' },
+    { value: 'prepaid', label: 'الدفع المسبق' },
+  ];
+
+  availableCollectionMethods = [
+    { value: 'cash_mobile', label: 'تحصيل نقدي بالجوال' },
+    { value: 'manual_assign', label: 'تحصيل إسناد يدوي' },
+    { value: 'electronic', label: 'سداد إلكتروني' },
+    { value: 'haseb_deposit', label: 'إيداع حاسب' },
+  ];
+
   async ngOnInit() {
     this.route.parent?.params.subscribe(async (params) => {
       this.bizId = parseInt(params['bizId']);
@@ -138,17 +181,18 @@ export class BillingSystemsComponent implements OnInit {
   async loadAll() {
     this.loading.set(true);
     try {
-      const [allAccounts, systems, types, stations] = await Promise.all([
-        this.api.getAccounts(this.bizId),
+      const [billingAccounts, systems, types, stations, emps] = await Promise.all([
+        this.api.getEmployeeBillingAccounts(this.bizId),
         this.api.getBillingSystemsConfig(this.bizId).catch(() => []),
         this.api.getBillingAccountTypes(this.bizId).catch(() => []),
         this.api.getStations(this.bizId).catch(() => []),
+        this.api.getEmployees(this.bizId).catch(() => []),
       ]);
-      const billingAccounts = allAccounts.filter((a: any) => a.accountType === 'billing');
       this.billingAccounts.set(billingAccounts);
       this.billingSystems.set(systems);
       this.accountTypes.set(types);
       this.stations.set(stations);
+      this.employees.set(emps);
     } catch (e: any) {
       this.error.set(e.message);
     } finally {
@@ -160,10 +204,11 @@ export class BillingSystemsComponent implements OnInit {
   openCreateAccount() {
     this.editingAccountId.set(null);
     this.accountForm.set({
-      responsiblePerson: '',
-      provider: this.activeSystem() !== 'all' ? this.activeSystem() : (this.billingSystems()[0]?.name || ''),
-      subType: this.accountTypes()[0]?.name || '',
+      employeeId: '',
       stationId: this.stations()[0]?.id || '',
+      billingSystem: this.availableBillingSystems[0]?.value || '',
+      collectionMethod: 'cash_mobile',
+      label: '',
       notes: '',
     });
     this.showAccountForm.set(true);
@@ -171,48 +216,57 @@ export class BillingSystemsComponent implements OnInit {
 
   openEditAccount(acc: any) {
     this.editingAccountId.set(acc.id);
-    let stationId = '';
-    if (acc.notes) {
-      const match = acc.notes.match(/station_id:(\d+)/);
-      if (match) stationId = match[1];
-    }
     this.accountForm.set({
-      responsiblePerson: acc.responsiblePerson || '',
-      provider: acc.provider || '',
-      subType: acc.subType || '',
-      stationId,
+      employeeId: acc.employeeId || '',
+      stationId: acc.stationId || '',
+      billingSystem: acc.billingSystem || '',
+      collectionMethod: acc.collectionMethod || '',
+      label: acc.label || '',
       notes: acc.notes || '',
     });
     this.showAccountForm.set(true);
   }
 
+  updateAccountLabel() {
+    const f = this.accountForm();
+    const emp = this.employees().find((e: any) => e.id == f.employeeId);
+    const sys = this.availableBillingSystems.find(s => s.value === f.billingSystem);
+    const method = this.availableCollectionMethods.find(m => m.value === f.collectionMethod);
+    if (emp && sys && method) {
+      const sysShort = this.systemNameMap[f.billingSystem] || sys.label;
+      const label = `${emp.fullName} - ${sysShort} - ${method.label}`;
+      this.accountForm.update(form => ({ ...form, label }));
+    }
+  }
+
   async saveAccountForm() {
     const f = this.accountForm();
-    if (!f.responsiblePerson.trim()) { this.error.set('اسم الموظف مطلوب'); return; }
-    if (!f.provider.trim()) { this.error.set('نظام الفوترة مطلوب'); return; }
-    if (!f.subType.trim()) { this.error.set('نوع الحساب مطلوب'); return; }
+    if (!f.employeeId) { this.error.set('الموظف مطلوب'); return; }
+    if (!f.stationId) { this.error.set('المحطة مطلوبة'); return; }
+    if (!f.billingSystem) { this.error.set('نظام الفوترة مطلوب'); return; }
+    if (!f.collectionMethod) { this.error.set('طريقة التحصيل مطلوبة'); return; }
 
-    const stationName = this.stations().find((s: any) => s.id == f.stationId)?.name || '';
-    const name = `${f.responsiblePerson} - ${f.provider} ${f.subType}`.trim();
-    const notesValue = f.stationId ? `station_id:${f.stationId} محطة ${stationName}` : (f.notes || '');
+    // إنشاء label تلقائي إذا فارغ
+    if (!f.label.trim()) {
+      this.updateAccountLabel();
+    }
 
     const accountData: any = {
-      name,
-      accountType: 'billing',
-      provider: f.provider,
-      subType: f.subType,
-      responsiblePerson: f.responsiblePerson,
-      notes: notesValue,
-      isActive: true,
+      employeeId: parseInt(f.employeeId),
+      stationId: parseInt(f.stationId),
+      billingSystem: f.billingSystem,
+      collectionMethod: f.collectionMethod,
+      label: this.accountForm().label || f.label,
+      notes: f.notes || '',
     };
 
     try {
       if (this.editingAccountId()) {
-        await this.api.updateAccount(this.editingAccountId()!, accountData);
+        await this.api.updateEmployeeBillingAccount(this.editingAccountId()!, accountData);
         this.successMsg.set('تم تحديث حساب الفوترة');
       } else {
-        await this.api.createAccount(this.bizId, accountData);
-        this.successMsg.set('تم إنشاء حساب الفوترة - يظهر تلقائياً في صفحة الحسابات');
+        await this.api.createEmployeeBillingAccount(accountData);
+        this.successMsg.set('تم إنشاء حساب الفوترة');
       }
       this.showAccountForm.set(false);
       await this.loadAll();
@@ -224,7 +278,7 @@ export class BillingSystemsComponent implements OnInit {
 
   async toggleAccountActive(acc: any) {
     try {
-      await this.api.updateAccount(acc.id, { isActive: !acc.isActive });
+      await this.api.updateEmployeeBillingAccount(acc.id, { isActive: !acc.isActive });
       await this.loadAll();
       this.successMsg.set(acc.isActive ? 'تم إيقاف الحساب' : 'تم تفعيل الحساب');
       setTimeout(() => this.successMsg.set(''), 3000);
@@ -234,9 +288,9 @@ export class BillingSystemsComponent implements OnInit {
   }
 
   async deleteAccount(acc: any) {
-    if (!confirm(`هل تريد حذف حساب "${acc.name}"؟`)) return;
+    if (!confirm(`هل تريد حذف حساب "${acc.label}"؟`)) return;
     try {
-      await this.api.deleteAccount(acc.id);
+      await this.api.deleteEmployeeBillingAccount(acc.id);
       await this.loadAll();
       this.successMsg.set('تم حذف الحساب');
       setTimeout(() => this.successMsg.set(''), 3000);
@@ -371,8 +425,14 @@ export class BillingSystemsComponent implements OnInit {
   }
 
   setFormField(form: 'account' | 'type', field: string, value: any) {
-    if (form === 'account') this.accountForm.update(f => ({ ...f, [field]: value }));
-    else this.typeForm.update(f => ({ ...f, [field]: value }));
+    if (form === 'account') {
+      this.accountForm.update(f => ({ ...f, [field]: value }));
+      if (['employeeId', 'billingSystem', 'collectionMethod'].includes(field)) {
+        this.updateAccountLabel();
+      }
+    } else {
+      this.typeForm.update(f => ({ ...f, [field]: value }));
+    }
   }
 
   setSystemFormField(field: string, value: any) {
@@ -384,8 +444,19 @@ export class BillingSystemsComponent implements OnInit {
       { name, color: '#64748b', icon: 'receipt' };
   }
 
+  getSystemDisplayName(billingSystem: string): string {
+    return this.systemNameMap[billingSystem] || billingSystem;
+  }
+
+  getMethodDisplayName(method: string): string {
+    return this.methodNameMap[method] || method;
+  }
+
   getSysCount(sysName: string): number {
-    return this.billingAccounts().filter((a: any) => a.provider === sysName).length;
+    return this.billingAccounts().filter((a: any) => {
+      const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
+      return sysDisplayName === sysName;
+    }).length;
   }
 
   trackById(_: number, item: any) { return item.id; }
