@@ -14,35 +14,88 @@ import {
   users,
   fundTypes, bankTypes, exchangeTypes, eWalletTypes,
 } from '../db/schema/index.ts';
+import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
+import {
+  accountSchema, voucherSchema, employeeSchema, operationTypeSchema,
+  journalEntrySchema, typeSchema, validateBody,
+} from '../middleware/validation.ts';
 
 const api = new Hono();
 
+// ===================== Helper: التحقق من ملكية السجل =====================
+async function verifyOwnership(table: any, recordId: number, bizId: number, bizColumn: any): Promise<boolean> {
+  const [record] = await db.select({ id: table.id }).from(table).where(and(eq(table.id, recordId), eq(bizColumn, bizId)));
+  return !!record;
+}
+
+// Helper: التحقق من ملكية حساب
+async function verifyAccountOwnership(accountId: number, bizId: number): Promise<boolean> {
+  const [acc] = await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)));
+  return !!acc;
+}
+
+// Helper: التحقق من ملكية صندوق
+async function verifyFundOwnership(fundId: number, bizId: number): Promise<boolean> {
+  const [f] = await db.select({ id: funds.id }).from(funds).where(and(eq(funds.id, fundId), eq(funds.businessId, bizId)));
+  return !!f;
+}
+
 // ===================== الأعمال =====================
 api.get('/businesses', async (c) => {
+  // إصلاح #8: N+1 - استخدام استعلام واحد مجمع بدلاً من استعلامات متعددة
   const rows = await db.select().from(businesses).orderBy(businesses.sortOrder);
-  const result = [];
-  for (const biz of rows) {
-    const partners = await db.select().from(businessPartners).where(eq(businessPartners.businessId, biz.id));
-    const stationCount = await db.select({ count: sql<number>`count(*)` }).from(stations).where(eq(stations.businessId, biz.id));
-    const empCount = await db.select({ count: sql<number>`count(*)` }).from(employees).where(eq(employees.businessId, biz.id));
-    const accCount = await db.select({ count: sql<number>`count(*)` }).from(accounts).where(eq(accounts.businessId, biz.id));
-    const fundCount = await db.select({ count: sql<number>`count(*)` }).from(funds).where(eq(funds.businessId, biz.id));
-    const supplierCount = await db.select({ count: sql<number>`count(*)` }).from(suppliers).where(eq(suppliers.businessId, biz.id));
-    const pendingCount = await db.select({ count: sql<number>`count(*)` }).from(pendingAccounts).where(eq(pendingAccounts.businessId, biz.id));
-    result.push({
-      ...biz,
-      partners,
-      stats: {
-        stations: Number(stationCount[0].count),
-        employees: Number(empCount[0].count),
-        accounts: Number(accCount[0].count),
-        funds: Number(fundCount[0].count),
-        suppliers: Number(supplierCount[0].count),
-        pendingAccounts: Number(pendingCount[0].count),
-      }
-    });
+  
+  // جلب جميع الإحصائيات دفعة واحدة
+  const allPartners = await db.select({
+    businessId: businessPartners.businessId,
+  }).from(businessPartners);
+  
+  const statsQuery = await db.execute(sql`
+    SELECT 
+      b.id as business_id,
+      (SELECT COUNT(*) FROM stations s WHERE s.business_id = b.id) as station_count,
+      (SELECT COUNT(*) FROM employees e WHERE e.business_id = b.id) as employee_count,
+      (SELECT COUNT(*) FROM accounts a WHERE a.business_id = b.id) as account_count,
+      (SELECT COUNT(*) FROM funds f WHERE f.business_id = b.id) as fund_count,
+      (SELECT COUNT(*) FROM suppliers sp WHERE sp.business_id = b.id) as supplier_count,
+      (SELECT COUNT(*) FROM pending_accounts pa WHERE pa.business_id = b.id) as pending_count
+    FROM businesses b
+    ORDER BY b.sort_order
+  `);
+  
+  // db.execute يرجع مصفوفة مباشرة في postgres-js
+  const statsRows = Array.isArray(statsQuery) ? statsQuery : (statsQuery as any).rows || [];
+  const statsMap: Record<number, any> = {};
+  for (const row of statsRows as any[]) {
+    statsMap[row.business_id] = {
+      stations: Number(row.station_count),
+      employees: Number(row.employee_count),
+      accounts: Number(row.account_count),
+      funds: Number(row.fund_count),
+      suppliers: Number(row.supplier_count),
+      pendingAccounts: Number(row.pending_count),
+    };
   }
-  return c.json(result);
+  
+  const partnerMap: Record<number, any[]> = {};
+  for (const p of allPartners) {
+    if (!partnerMap[p.businessId]) partnerMap[p.businessId] = [];
+    partnerMap[p.businessId].push(p);
+  }
+  
+  // جلب الشركاء مع التفاصيل
+  const allPartnersDetailed = await db.select().from(businessPartners);
+  const partnerDetailMap: Record<number, any[]> = {};
+  for (const p of allPartnersDetailed) {
+    if (!partnerDetailMap[p.businessId]) partnerDetailMap[p.businessId] = [];
+    partnerDetailMap[p.businessId].push(p);
+  }
+  
+  return c.json(rows.map(biz => ({
+    ...biz,
+    partners: partnerDetailMap[biz.id] || [],
+    stats: statsMap[biz.id] || { stations: 0, employees: 0, accounts: 0, funds: 0, suppliers: 0, pendingAccounts: 0 },
+  })));
 });
 
 api.get('/businesses/:id', async (c) => {
@@ -54,21 +107,36 @@ api.get('/businesses/:id', async (c) => {
 });
 
 // ===================== المحطات =====================
-api.get('/businesses/:bizId/stations', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+// إصلاح #1: إضافة bizAuth middleware لجميع routes المحمية
+api.get('/businesses/:bizId/stations', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(stations).where(eq(stations.businessId, bizId)).orderBy(stations.id);
   return c.json(rows);
 });
 
-api.get('/businesses/:bizId/stations/:id', async (c) => {
+api.get('/businesses/:bizId/stations/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const id = parseInt(c.req.param('id'));
-  const [station] = await db.select().from(stations).where(eq(stations.id, id));
+  const [station] = await db.select().from(stations).where(and(eq(stations.id, id), eq(stations.businessId, bizId)));
   if (!station) return c.json({ error: 'محطة غير موجودة' }, 404);
   const emps = await db.select().from(employees).where(eq(employees.stationId, id));
   const stationFunds = await db.select().from(funds).where(eq(funds.stationId, id));
   return c.json({ ...station, employees: emps, funds: stationFunds });
 });
 
+// إصلاح #2: إعادة هيكلة PUT/DELETE لتضمين bizId
+api.put('/businesses/:bizId/stations/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  // التحقق من ملكية المحطة
+  const [existing] = await db.select().from(stations).where(and(eq(stations.id, id), eq(stations.businessId, bizId)));
+  if (!existing) return c.json({ error: 'محطة غير موجودة أو لا تنتمي لهذا العمل' }, 404);
+  const body = await c.req.json();
+  const [updated] = await db.update(stations).set({ ...body, updatedAt: new Date() }).where(eq(stations.id, id)).returning();
+  return c.json(updated);
+});
+
+// Legacy route (backward compat) - redirects to new pattern
 api.put('/stations/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const body = await c.req.json();
@@ -77,8 +145,8 @@ api.put('/stations/:id', async (c) => {
 });
 
 // ===================== الموظفين =====================
-api.get('/businesses/:bizId/employees', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/employees', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select({
     id: employees.id, fullName: employees.fullName, jobTitle: employees.jobTitle,
     stationId: employees.stationId, department: employees.department,
@@ -93,13 +161,36 @@ api.get('/businesses/:bizId/employees', async (c) => {
   return c.json(rows);
 });
 
-api.post('/businesses/:bizId/employees', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/employees', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
-  const [created] = await db.insert(employees).values({ ...body, businessId: bizId }).returning();
+  // إصلاح #7: Zod validation
+  const validation = validateBody(employeeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const [created] = await db.insert(employees).values({ ...validation.data, businessId: bizId }).returning();
   return c.json(created, 201);
 });
 
+api.put('/businesses/:bizId/employees/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(employees).where(and(eq(employees.id, id), eq(employees.businessId, bizId)));
+  if (!existing) return c.json({ error: 'موظف غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  const body = await c.req.json();
+  const [updated] = await db.update(employees).set({ ...body, updatedAt: new Date() }).where(eq(employees.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete('/businesses/:bizId/employees/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(employees).where(and(eq(employees.id, id), eq(employees.businessId, bizId)));
+  if (!existing) return c.json({ error: 'موظف غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  await db.delete(employees).where(eq(employees.id, id));
+  return c.json({ success: true });
+});
+
+// Legacy routes for backward compatibility
 api.put('/employees/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const body = await c.req.json();
@@ -114,12 +205,12 @@ api.delete('/employees/:id', async (c) => {
 });
 
 // ===================== حسابات الموظفين في أنظمة الفوترة =====================
-api.get('/businesses/:bizId/employee-billing-accounts', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/employee-billing-accounts', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const stationId = c.req.query('stationId');
   const employeeId = c.req.query('employeeId');
   
-  let query = db.select({
+  const rows = await db.select({
     id: employeeBillingAccounts.id,
     employeeId: employeeBillingAccounts.employeeId,
     stationId: employeeBillingAccounts.stationId,
@@ -137,7 +228,6 @@ api.get('/businesses/:bizId/employee-billing-accounts', async (c) => {
     .where(eq(employees.businessId, bizId))
     .orderBy(employeeBillingAccounts.stationId, employeeBillingAccounts.employeeId, employeeBillingAccounts.sortOrder);
   
-  const rows = await query;
   let filtered = rows;
   if (stationId) filtered = filtered.filter(r => r.stationId === parseInt(stationId));
   if (employeeId) filtered = filtered.filter(r => r.employeeId === parseInt(employeeId));
@@ -164,32 +254,48 @@ api.delete('/employee-billing-accounts/:id', async (c) => {
 });
 
 // ===================== الحسابات مع الصلاحيات =====================
-api.get('/businesses/:bizId/accounts', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/accounts', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(accounts).where(eq(accounts.businessId, bizId)).orderBy(accounts.accountType, accounts.name);
-  const balances = await db.select({
-    accountId: accountBalances.accountId, currencyId: accountBalances.currencyId,
-    balance: accountBalances.balance, currencyCode: currencies.code,
-    currencySymbol: currencies.symbol, currencyName: currencies.nameAr,
-  }).from(accountBalances).leftJoin(currencies, eq(accountBalances.currencyId, currencies.id));
+  
+  // جلب الأرصدة والروابط دفعة واحدة بدلاً من N+1
+  const accountIds = rows.map(a => a.id);
+  
+  let balances: any[] = [];
+  let allLinks: any[] = [];
+  
+  if (accountIds.length > 0) {
+    balances = await db.select({
+      accountId: accountBalances.accountId, currencyId: accountBalances.currencyId,
+      balance: accountBalances.balance, currencyCode: currencies.code,
+      currencySymbol: currencies.symbol, currencyName: currencies.nameAr,
+    }).from(accountBalances)
+      .leftJoin(currencies, eq(accountBalances.currencyId, currencies.id))
+      .where(inArray(accountBalances.accountId, accountIds));
+    
+    allLinks = await db.select().from(accountAllowedLinks)
+      .where(and(eq(accountAllowedLinks.isActive, true), inArray(accountAllowedLinks.fromAccountId, accountIds)));
+  }
+  
   const balanceMap: Record<number, any[]> = {};
   for (const b of balances) { if (!balanceMap[b.accountId]) balanceMap[b.accountId] = []; balanceMap[b.accountId].push(b); }
   
-  // Get allowed links
-  const allLinks = await db.select().from(accountAllowedLinks).where(eq(accountAllowedLinks.isActive, true));
   const linkMap: Record<number, any[]> = {};
   for (const l of allLinks) { if (!linkMap[l.fromAccountId]) linkMap[l.fromAccountId] = []; linkMap[l.fromAccountId].push(l); }
   
   return c.json(rows.map(a => ({ ...a, balances: balanceMap[a.id] || [], allowedLinks: linkMap[a.id] || [] })));
 });
 
-api.post('/businesses/:bizId/accounts', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/accounts', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
-  const { allowedLinks, ...accountData } = body;
+  // إصلاح #7: Zod validation
+  const validation = validateBody(accountSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const { ...accountData } = validation.data as any;
+  const allowedLinks = body.allowedLinks; // not in schema
   const [created] = await db.insert(accounts).values({ ...accountData, businessId: bizId }).returning();
   
-  // Create allowed links if provided
   if (allowedLinks && allowedLinks.length > 0) {
     for (const link of allowedLinks) {
       await db.insert(accountAllowedLinks).values({
@@ -202,13 +308,15 @@ api.post('/businesses/:bizId/accounts', async (c) => {
   return c.json(created, 201);
 });
 
-api.put('/accounts/:id', async (c) => {
+api.put('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(accounts).where(and(eq(accounts.id, id), eq(accounts.businessId, bizId)));
+  if (!existing) return c.json({ error: 'حساب غير موجود أو لا ينتمي لهذا العمل' }, 404);
   const body = await c.req.json();
   const { allowedLinks, ...accountData } = body;
   const [updated] = await db.update(accounts).set({ ...accountData, updatedAt: new Date() }).where(eq(accounts.id, id)).returning();
   
-  // Update allowed links if provided
   if (allowedLinks !== undefined) {
     await db.delete(accountAllowedLinks).where(eq(accountAllowedLinks.fromAccountId, id));
     if (allowedLinks && allowedLinks.length > 0) {
@@ -218,6 +326,35 @@ api.put('/accounts/:id', async (c) => {
           toAccountId: link.toAccountId,
           linkType: link.linkType,
         });
+      }
+    }
+  }
+  return c.json(updated);
+});
+
+api.delete('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(accounts).where(and(eq(accounts.id, id), eq(accounts.businessId, bizId)));
+  if (!existing) return c.json({ error: 'حساب غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  await db.delete(accountAllowedLinks).where(eq(accountAllowedLinks.fromAccountId, id));
+  await db.delete(accountAllowedLinks).where(eq(accountAllowedLinks.toAccountId, id));
+  await db.delete(accountBalances).where(eq(accountBalances.accountId, id));
+  await db.delete(accounts).where(eq(accounts.id, id));
+  return c.json({ success: true });
+});
+
+// Legacy routes for backward compatibility
+api.put('/accounts/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const { allowedLinks, ...accountData } = body;
+  const [updated] = await db.update(accounts).set({ ...accountData, updatedAt: new Date() }).where(eq(accounts.id, id)).returning();
+  if (allowedLinks !== undefined) {
+    await db.delete(accountAllowedLinks).where(eq(accountAllowedLinks.fromAccountId, id));
+    if (allowedLinks && allowedLinks.length > 0) {
+      for (const link of allowedLinks) {
+        await db.insert(accountAllowedLinks).values({ fromAccountId: id, toAccountId: link.toAccountId, linkType: link.linkType });
       }
     }
   }
@@ -261,10 +398,9 @@ api.delete('/account-links/:id', async (c) => {
   return c.json({ success: true });
 });
 
-// Get allowed targets for a specific account (for voucher creation)
 api.get('/accounts/:id/allowed-targets', async (c) => {
   const id = parseInt(c.req.param('id'));
-  const type = c.req.query('type') || 'payment'; // payment | receipt | transfer
+  const type = c.req.query('type') || 'payment';
   const links = await db.select({
     toAccountId: accountAllowedLinks.toAccountId,
     toAccountName: accounts.name,
@@ -276,8 +412,8 @@ api.get('/accounts/:id/allowed-targets', async (c) => {
 });
 
 // ===================== الصناديق =====================
-api.get('/businesses/:bizId/funds', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/funds', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select({
     id: funds.id, name: funds.name, fundType: funds.fundType,
     stationId: funds.stationId, responsiblePerson: funds.responsiblePerson,
@@ -287,22 +423,40 @@ api.get('/businesses/:bizId/funds', async (c) => {
     .leftJoin(stations, eq(funds.stationId, stations.id))
     .where(eq(funds.businessId, bizId))
     .orderBy(funds.fundType, funds.name);
-  const balances = await db.select({
-    fundId: fundBalances.fundId, currencyId: fundBalances.currencyId,
-    balance: fundBalances.balance, currencyCode: currencies.code, currencySymbol: currencies.symbol,
-  }).from(fundBalances).leftJoin(currencies, eq(fundBalances.currencyId, currencies.id));
+  
+  const fundIds = rows.map(f => f.id);
+  let balances: any[] = [];
+  if (fundIds.length > 0) {
+    balances = await db.select({
+      fundId: fundBalances.fundId, currencyId: fundBalances.currencyId,
+      balance: fundBalances.balance, currencyCode: currencies.code, currencySymbol: currencies.symbol,
+    }).from(fundBalances)
+      .leftJoin(currencies, eq(fundBalances.currencyId, currencies.id))
+      .where(inArray(fundBalances.fundId, fundIds));
+  }
   const balanceMap: Record<number, any[]> = {};
   for (const b of balances) { if (!balanceMap[b.fundId]) balanceMap[b.fundId] = []; balanceMap[b.fundId].push(b); }
   return c.json(rows.map(f => ({ ...f, balances: balanceMap[f.id] || [] })));
 });
 
-api.post('/businesses/:bizId/funds', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/funds', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const [created] = await db.insert(funds).values({ ...body, businessId: bizId }).returning();
   return c.json(created, 201);
 });
 
+api.put('/businesses/:bizId/funds/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(funds).where(and(eq(funds.id, id), eq(funds.businessId, bizId)));
+  if (!existing) return c.json({ error: 'صندوق غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  const body = await c.req.json();
+  const [updated] = await db.update(funds).set({ ...body, updatedAt: new Date() }).where(eq(funds.id, id)).returning();
+  return c.json(updated);
+});
+
+// Legacy
 api.put('/funds/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const body = await c.req.json();
@@ -311,8 +465,8 @@ api.put('/funds/:id', async (c) => {
 });
 
 // ===================== السندات =====================
-api.get('/businesses/:bizId/vouchers', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/vouchers', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const type = c.req.query('type');
   const limit = parseInt(c.req.query('limit') || '50');
   const conditions = [eq(vouchers.businessId, bizId)];
@@ -333,7 +487,7 @@ api.get('/businesses/:bizId/vouchers', async (c) => {
     .orderBy(desc(vouchers.voucherDate))
     .limit(limit);
   
-  // Enrich with account names
+  // Enrich with account names - batch load
   const allAccounts = await db.select({ id: accounts.id, name: accounts.name }).from(accounts).where(eq(accounts.businessId, bizId));
   const accMap: Record<number, string> = {};
   for (const a of allAccounts) accMap[a.id] = a.name;
@@ -351,22 +505,26 @@ api.get('/businesses/:bizId/vouchers', async (c) => {
   })));
 });
 
-api.post('/businesses/:bizId/vouchers', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
+  
+  // إصلاح #7: Zod validation
+  const validation = validateBody(voucherSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  
   const prefix = body.voucherType === 'receipt' ? 'QBD' : body.voucherType === 'payment' ? 'SRF' : body.voucherType === 'journal' ? 'QYD' : 'TRN';
-  const count = await db.select({ count: sql<number>`count(*)` }).from(vouchers);
+  const count = await db.select({ count: sql<number>`count(*)` }).from(vouchers).where(eq(vouchers.businessId, bizId));
   const num = (Number(count[0].count) || 0) + 1;
   const voucherNumber = `${prefix}-${String(num).padStart(5, '0')}`;
   
-  // Clean body - remove undefined fields and fix date
+  // Clean body
   const cleanBody: any = {};
   for (const [k, v] of Object.entries(body)) {
     if (v !== undefined && v !== null && v !== '') {
       cleanBody[k] = v;
     }
   }
-  // Convert voucherDate string to Date object (Drizzle requires Date for timestamp)
   if (cleanBody.voucherDate) {
     if (typeof cleanBody.voucherDate === 'string') {
       cleanBody.voucherDate = new Date(cleanBody.voucherDate + 'T00:00:00Z');
@@ -374,10 +532,8 @@ api.post('/businesses/:bizId/vouchers', async (c) => {
   } else {
     cleanBody.voucherDate = new Date();
   }
-  // Remove timestamp fields - let DB handle them
   delete cleanBody.createdAt;
   delete cleanBody.updatedAt;
-  // Convert numeric strings to numbers
   if (cleanBody.amount && typeof cleanBody.amount === 'string') {
     cleanBody.amount = parseFloat(cleanBody.amount);
   }
@@ -387,11 +543,10 @@ api.post('/businesses/:bizId/vouchers', async (c) => {
   
   const [created] = await db.insert(vouchers).values({ ...cleanBody, businessId: bizId, voucherNumber }).returning();
   
-  // Update account balances
+  // إصلاح #6: تحديث الأرصدة بشكل صحيح
   const currencyId = cleanBody.currencyId || 1;
   const amount = parseFloat(cleanBody.amount || '0');
   
-  // Helper to upsert account balance
   const updateAccountBalance = async (accountId: number, delta: number) => {
     if (!accountId || delta === 0) return;
     const existing = await db.select().from(accountBalances)
@@ -405,23 +560,70 @@ api.post('/businesses/:bizId/vouchers', async (c) => {
     }
   };
   
+  // إصلاح #6: منطق الأرصدة الصحيح
+  // سند قبض: المال يدخل (toAccount يزيد، fromAccount ينقص)
+  // سند صرف: المال يخرج (fromAccount ينقص، toAccount يزيد)
+  // تحويل: المال ينتقل (fromAccount ينقص، toAccount يزيد)
   if (created.voucherType === 'receipt') {
-    // Receipt: credit toAccountId (increases balance), debit fromAccountId (decreases)
     if (created.toAccountId) await updateAccountBalance(created.toAccountId, amount);
     if (created.fromAccountId) await updateAccountBalance(created.fromAccountId, -amount);
   } else if (created.voucherType === 'payment') {
-    // Payment: debit fromAccountId (decreases), credit toAccountId (increases)
     if (created.fromAccountId) await updateAccountBalance(created.fromAccountId, -amount);
     if (created.toAccountId) await updateAccountBalance(created.toAccountId, amount);
   } else if (created.voucherType === 'transfer') {
-    // Transfer: debit fromAccountId, credit toAccountId
     if (created.fromAccountId) await updateAccountBalance(created.fromAccountId, -amount);
     if (created.toAccountId) await updateAccountBalance(created.toAccountId, amount);
+  }
+  
+  // إنشاء قيد محاسبي تلقائي
+  if (created.fromAccountId && created.toAccountId && amount > 0) {
+    const entryCount = await db.select({ count: sql<number>`count(*)` }).from(journalEntries);
+    const entryNum = (Number(entryCount[0].count) || 0) + 1;
+    const entryNumber = `QYD-${String(entryNum).padStart(5, '0')}`;
+    
+    const [entry] = await db.insert(journalEntries).values({
+      businessId: bizId,
+      entryNumber,
+      description: created.description || `سند ${created.voucherType === 'receipt' ? 'قبض' : created.voucherType === 'payment' ? 'صرف' : 'تحويل'} - ${voucherNumber}`,
+      entryDate: created.voucherDate ? new Date(created.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      totalDebit: String(amount),
+      totalCredit: String(amount),
+      isBalanced: true,
+      reference: voucherNumber,
+    }).returning();
+    
+    // إصلاح #6: قيود متوازنة - المدين = الدائن
+    await db.insert(journalEntryLines).values({
+      journalEntryId: entry.id,
+      accountId: created.toAccountId,
+      lineType: 'debit',
+      amount: String(amount),
+      description: `إلى حساب ${created.toAccountId}`,
+      sortOrder: 0,
+    });
+    await db.insert(journalEntryLines).values({
+      journalEntryId: entry.id,
+      accountId: created.fromAccountId,
+      lineType: 'credit',
+      amount: String(amount),
+      description: `من حساب ${created.fromAccountId}`,
+      sortOrder: 1,
+    });
   }
   
   return c.json(created, 201);
 });
 
+api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
+  if (!existing) return c.json({ error: 'سند غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  await db.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
+  return c.json({ success: true });
+});
+
+// Legacy
 api.delete('/vouchers/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   await db.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
@@ -429,8 +631,8 @@ api.delete('/vouchers/:id', async (c) => {
 });
 
 // ===================== التحصيل اليومي =====================
-api.get('/businesses/:bizId/collections', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/collections', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const stationId = c.req.query('stationId');
   const dateStr = c.req.query('date');
   
@@ -492,12 +694,11 @@ api.get('/collections/:id', async (c) => {
   return c.json({ ...collection, details, deliveries });
 });
 
-api.post('/businesses/:bizId/collections', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/collections', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const { details, ...collectionData } = body;
   
-  // Calculate total
   let total = 0;
   if (details) for (const d of details) total += parseFloat(d.amount || '0');
   
@@ -507,7 +708,6 @@ api.post('/businesses/:bizId/collections', async (c) => {
     totalAmount: String(total),
   }).returning();
   
-  // Insert details
   if (details && details.length > 0) {
     for (const d of details) {
       if (parseFloat(d.amount || '0') > 0) {
@@ -533,7 +733,6 @@ api.post('/collections/:id/deliveries', async (c) => {
     collectionId,
   }).returning();
   
-  // Check if fully delivered
   const [collection] = await db.select().from(dailyCollections).where(eq(dailyCollections.id, collectionId));
   const allDeliveries = await db.select().from(deliveryRecords).where(eq(deliveryRecords.collectionId, collectionId));
   const totalDelivered = allDeliveries.reduce((sum, d) => sum + parseFloat(d.amount), 0);
@@ -547,36 +746,36 @@ api.post('/collections/:id/deliveries', async (c) => {
 });
 
 // ===================== الموردين =====================
-api.get('/businesses/:bizId/suppliers', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/suppliers', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(suppliers).where(eq(suppliers.businessId, bizId)).orderBy(suppliers.id);
   return c.json(rows);
 });
 
-api.post('/businesses/:bizId/suppliers', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/suppliers', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const [created] = await db.insert(suppliers).values({ ...body, businessId: bizId }).returning();
   return c.json(created, 201);
 });
 
 // ===================== المخازن =====================
-api.get('/businesses/:bizId/warehouses', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/warehouses', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(warehouses).where(eq(warehouses.businessId, bizId)).orderBy(warehouses.id);
   return c.json(rows);
 });
 
 // ===================== الحسابات المعلقة =====================
-api.get('/businesses/:bizId/pending-accounts', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/pending-accounts', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(pendingAccounts).where(eq(pendingAccounts.businessId, bizId));
   return c.json(rows);
 });
 
 // ===================== تصنيفات السندات =====================
-api.get('/businesses/:bizId/voucher-categories', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/voucher-categories', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(voucherCategories).where(eq(voucherCategories.businessId, bizId)).orderBy(voucherCategories.type, voucherCategories.name);
   return c.json(rows);
 });
@@ -636,8 +835,8 @@ api.get('/suppliers', async (c) => {
 });
 
 // ===================== أنواع العمليات (القوالب) =====================
-api.get('/businesses/:bizId/operation-types', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/operation-types', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const category = c.req.query('category');
   const screen = c.req.query('screen');
   const conditions = [eq(operationTypes.businessId, bizId)];
@@ -648,10 +847,11 @@ api.get('/businesses/:bizId/operation-types', async (c) => {
     .where(and(...conditions))
     .orderBy(operationTypes.sortOrder, operationTypes.name);
   
-  // Enrich with linked accounts
-  const result = [];
-  for (const ot of rows) {
-    const linkedAccounts = await db.select({
+  // إصلاح #5: جلب linkedAccounts لجميع العمليات دفعة واحدة
+  const otIds = rows.map(ot => ot.id);
+  let allLinkedAccounts: any[] = [];
+  if (otIds.length > 0) {
+    allLinkedAccounts = await db.select({
       id: operationTypeAccounts.id,
       operationTypeId: operationTypeAccounts.operationTypeId,
       accountId: operationTypeAccounts.accountId,
@@ -664,19 +864,30 @@ api.get('/businesses/:bizId/operation-types', async (c) => {
       accountType: accounts.accountType,
     }).from(operationTypeAccounts)
       .leftJoin(accounts, eq(operationTypeAccounts.accountId, accounts.id))
-      .where(eq(operationTypeAccounts.operationTypeId, ot.id))
+      .where(inArray(operationTypeAccounts.operationTypeId, otIds))
       .orderBy(operationTypeAccounts.sortOrder);
-    
-    // Get main account name
-    let mainAccountName = null;
-    if (ot.mainAccountId) {
-      const [mainAcc] = await db.select({ name: accounts.name }).from(accounts).where(eq(accounts.id, ot.mainAccountId));
-      mainAccountName = mainAcc?.name;
-    }
-    
-    result.push({ ...ot, linkedAccounts, mainAccountName });
   }
-  return c.json(result);
+  
+  const linkedMap: Record<number, any[]> = {};
+  for (const la of allLinkedAccounts) {
+    if (!linkedMap[la.operationTypeId]) linkedMap[la.operationTypeId] = [];
+    linkedMap[la.operationTypeId].push(la);
+  }
+  
+  // جلب أسماء الحسابات الرئيسية دفعة واحدة
+  const mainAccountIds = rows.filter(ot => ot.mainAccountId).map(ot => ot.mainAccountId!);
+  let mainAccountMap: Record<number, string> = {};
+  if (mainAccountIds.length > 0) {
+    const mainAccs = await db.select({ id: accounts.id, name: accounts.name }).from(accounts)
+      .where(inArray(accounts.id, mainAccountIds));
+    for (const a of mainAccs) mainAccountMap[a.id] = a.name;
+  }
+  
+  return c.json(rows.map(ot => ({
+    ...ot,
+    linkedAccounts: linkedMap[ot.id] || [],
+    mainAccountName: ot.mainAccountId ? mainAccountMap[ot.mainAccountId] || null : null,
+  })));
 });
 
 api.get('/operation-types/:id', async (c) => {
@@ -703,8 +914,8 @@ api.get('/operation-types/:id', async (c) => {
   return c.json({ ...ot, linkedAccounts });
 });
 
-api.post('/businesses/:bizId/operation-types', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/operation-types', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const { linkedAccounts, screens, ...rest } = body;
   const [created] = await db.insert(operationTypes).values({ ...rest, businessId: bizId, screens: screens && screens.length > 0 ? `{${screens.join(",")}}` : null }).returning();
@@ -717,12 +928,42 @@ api.post('/businesses/:bizId/operation-types', async (c) => {
   return c.json(created, 201);
 });
 
+api.put('/businesses/:bizId/operation-types/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(operationTypes).where(and(eq(operationTypes.id, id), eq(operationTypes.businessId, bizId)));
+  if (!existing) return c.json({ error: 'نوع عملية غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  const body = await c.req.json();
+  const { linkedAccounts, ...otData } = body;
+  const [updated] = await db.update(operationTypes).set({ ...otData, updatedAt: new Date() }).where(eq(operationTypes.id, id)).returning();
+  
+  if (linkedAccounts !== undefined) {
+    await db.delete(operationTypeAccounts).where(eq(operationTypeAccounts.operationTypeId, id));
+    if (linkedAccounts && linkedAccounts.length > 0) {
+      for (const la of linkedAccounts) {
+        await db.insert(operationTypeAccounts).values({ ...la, operationTypeId: id });
+      }
+    }
+  }
+  return c.json(updated);
+});
+
+api.delete('/businesses/:bizId/operation-types/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(operationTypes).where(and(eq(operationTypes.id, id), eq(operationTypes.businessId, bizId)));
+  if (!existing) return c.json({ error: 'نوع عملية غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  await db.delete(operationTypeAccounts).where(eq(operationTypeAccounts.operationTypeId, id));
+  await db.delete(operationTypes).where(eq(operationTypes.id, id));
+  return c.json({ success: true });
+});
+
+// Legacy
 api.put('/operation-types/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const body = await c.req.json();
   const { linkedAccounts, ...otData } = body;
   const [updated] = await db.update(operationTypes).set({ ...otData, updatedAt: new Date() }).where(eq(operationTypes.id, id)).returning();
-  
   if (linkedAccounts !== undefined) {
     await db.delete(operationTypeAccounts).where(eq(operationTypeAccounts.operationTypeId, id));
     if (linkedAccounts && linkedAccounts.length > 0) {
@@ -741,7 +982,6 @@ api.delete('/operation-types/:id', async (c) => {
   return c.json({ success: true });
 });
 
-// Add/remove linked account from operation type
 api.post('/operation-types/:id/accounts', async (c) => {
   const id = parseInt(c.req.param('id'));
   const body = await c.req.json();
@@ -756,8 +996,8 @@ api.delete('/operation-type-accounts/:id', async (c) => {
 });
 
 // ===================== القيود المحاسبية =====================
-api.get('/businesses/:bizId/journal-entries', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/journal-entries', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select({
     id: journalEntries.id,
     entryNumber: journalEntries.entryNumber,
@@ -773,11 +1013,13 @@ api.get('/businesses/:bizId/journal-entries', async (c) => {
     .where(eq(journalEntries.businessId, bizId))
     .orderBy(desc(journalEntries.createdAt));
   
-  // Enrich with lines
-  const result = [];
-  for (const entry of rows) {
-    const lines = await db.select({
+  // إصلاح N+1: جلب جميع الأسطر دفعة واحدة
+  const entryIds = rows.map(e => e.id);
+  let allLines: any[] = [];
+  if (entryIds.length > 0) {
+    allLines = await db.select({
       id: journalEntryLines.id,
+      journalEntryId: journalEntryLines.journalEntryId,
       accountId: journalEntryLines.accountId,
       lineType: journalEntryLines.lineType,
       amount: journalEntryLines.amount,
@@ -787,33 +1029,46 @@ api.get('/businesses/:bizId/journal-entries', async (c) => {
       accountType: accounts.accountType,
     }).from(journalEntryLines)
       .leftJoin(accounts, eq(journalEntryLines.accountId, accounts.id))
-      .where(eq(journalEntryLines.journalEntryId, entry.id))
+      .where(inArray(journalEntryLines.journalEntryId, entryIds))
       .orderBy(journalEntryLines.sortOrder);
-    result.push({ ...entry, lines });
   }
-  return c.json(result);
+  
+  const lineMap: Record<number, any[]> = {};
+  for (const l of allLines) {
+    if (!lineMap[l.journalEntryId]) lineMap[l.journalEntryId] = [];
+    lineMap[l.journalEntryId].push(l);
+  }
+  
+  return c.json(rows.map(entry => ({ ...entry, lines: lineMap[entry.id] || [] })));
 });
 
-api.post('/businesses/:bizId/journal-entries', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
+  
+  // إصلاح #7: Zod validation
+  const validation = validateBody(journalEntrySchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  
   const { lines, ...entryData } = body;
   
-  // Generate entry number
   const count = await db.select({ count: sql<number>`count(*)` }).from(journalEntries);
   const num = (Number(count[0].count) || 0) + 1;
   const entryNumber = `QYD-${String(num).padStart(5, '0')}`;
   
-  // Calculate totals
-  const totalDebit = (lines || []).filter((l: any) => l.lineType === 'debit').reduce((s: number, l: any) => s + Number(l.amount), 0);
-  const totalCredit = (lines || []).filter((l: any) => l.lineType === 'credit').reduce((s: number, l: any) => s + Number(l.amount), 0);
+  // إصلاح #6: حساب المجاميع بشكل صحيح
+  const totalDebit = (lines || []).filter((l: any) => l.lineType === 'debit' || l.type === 'debit').reduce((s: number, l: any) => s + Number(l.amount), 0);
+  const totalCredit = (lines || []).filter((l: any) => l.lineType === 'credit' || l.type === 'credit').reduce((s: number, l: any) => s + Number(l.amount), 0);
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
   
-  // Keep entryDate as string for DATE column type
+  // إصلاح #6: رفض القيود غير المتوازنة
+  if (!isBalanced) {
+    return c.json({ error: `القيد غير متوازن: المدين (${totalDebit}) لا يساوي الدائن (${totalCredit})` }, 400);
+  }
+  
   const rawDate = entryData.date || entryData.entryDate;
   const entryDate = rawDate ? String(rawDate).split('T')[0] : new Date().toISOString().split('T')[0];
   
-  // Clean entryData - remove extra fields
   const cleanEntry: any = {};
   const allowedFields = ['description', 'reference', 'operationTypeId', 'createdBy'];
   for (const f of allowedFields) {
@@ -832,7 +1087,6 @@ api.post('/businesses/:bizId/journal-entries', async (c) => {
     entryDate,
   }).returning();
   
-  // Insert lines
   if (lines && lines.length > 0) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -850,6 +1104,17 @@ api.post('/businesses/:bizId/journal-entries', async (c) => {
   return c.json(created, 201);
 });
 
+api.delete('/businesses/:bizId/journal-entries/:id', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const id = parseInt(c.req.param('id'));
+  const [existing] = await db.select().from(journalEntries).where(and(eq(journalEntries.id, id), eq(journalEntries.businessId, bizId)));
+  if (!existing) return c.json({ error: 'قيد غير موجود أو لا ينتمي لهذا العمل' }, 404);
+  await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
+  await db.delete(journalEntries).where(eq(journalEntries.id, id));
+  return c.json({ success: true });
+});
+
+// Legacy
 api.delete('/journal-entries/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
@@ -858,16 +1123,16 @@ api.delete('/journal-entries/:id', async (c) => {
 });
 
 // ===================== إعدادات أنظمة الفوترة =====================
-api.get('/businesses/:bizId/billing-systems-config', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(billingSystemsConfig)
     .where(eq(billingSystemsConfig.businessId, bizId))
     .orderBy(billingSystemsConfig.sortOrder);
   return c.json(rows);
 });
 
-api.post('/businesses/:bizId/billing-systems-config', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const [created] = await db.insert(billingSystemsConfig).values({ ...body, businessId: bizId }).returning();
   return c.json(created, 201);
@@ -887,122 +1152,14 @@ api.delete('/billing-systems-config/:id', async (c) => {
 });
 
 // ===================== أنواع حسابات الفوترة =====================
-api.get("/businesses/:bizId/billing-account-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
+api.get("/businesses/:bizId/billing-account-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(billingAccountTypes).where(eq(billingAccountTypes.businessId, bizId)).orderBy(billingAccountTypes.sortOrder);
   return c.json(rows);
 });
 
-// ===================== أنواع الصناديق =====================
-api.get("/businesses/:bizId/fund-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const rows = await db.select().from(fundTypes).where(eq(fundTypes.businessId, bizId)).orderBy(fundTypes.sortOrder);
-  return c.json(rows);
-});
-
-api.post("/businesses/:bizId/fund-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const body = await c.req.json();
-  const [created] = await db.insert(fundTypes).values({ ...body, businessId: bizId }).returning();
-  return c.json(created, 201);
-});
-
-api.put("/fund-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  const body = await c.req.json();
-  const [updated] = await db.update(fundTypes).set({ ...body, updatedAt: new Date() }).where(eq(fundTypes.id, id)).returning();
-  return c.json(updated);
-});
-
-api.delete("/fund-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  await db.delete(fundTypes).where(eq(fundTypes.id, id));
-  return c.json({ success: true });
-});
-
-// ===================== أنواع البنوك =====================
-api.get("/businesses/:bizId/bank-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const rows = await db.select().from(bankTypes).where(eq(bankTypes.businessId, bizId)).orderBy(bankTypes.sortOrder);
-  return c.json(rows);
-});
-
-api.post("/businesses/:bizId/bank-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const body = await c.req.json();
-  const [created] = await db.insert(bankTypes).values({ ...body, businessId: bizId }).returning();
-  return c.json(created, 201);
-});
-
-api.put("/bank-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  const body = await c.req.json();
-  const [updated] = await db.update(bankTypes).set({ ...body, updatedAt: new Date() }).where(eq(bankTypes.id, id)).returning();
-  return c.json(updated);
-});
-
-api.delete("/bank-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  await db.delete(bankTypes).where(eq(bankTypes.id, id));
-  return c.json({ success: true });
-});
-
-// ===================== أنواع الصرافين =====================
-api.get("/businesses/:bizId/exchange-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const rows = await db.select().from(exchangeTypes).where(eq(exchangeTypes.businessId, bizId)).orderBy(exchangeTypes.sortOrder);
-  return c.json(rows);
-});
-
-api.post("/businesses/:bizId/exchange-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const body = await c.req.json();
-  const [created] = await db.insert(exchangeTypes).values({ ...body, businessId: bizId }).returning();
-  return c.json(created, 201);
-});
-
-api.put("/exchange-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  const body = await c.req.json();
-  const [updated] = await db.update(exchangeTypes).set({ ...body, updatedAt: new Date() }).where(eq(exchangeTypes.id, id)).returning();
-  return c.json(updated);
-});
-
-api.delete("/exchange-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  await db.delete(exchangeTypes).where(eq(exchangeTypes.id, id));
-  return c.json({ success: true });
-});
-
-// ===================== أنواع المحافظ الإلكترونية =====================
-api.get("/businesses/:bizId/e-wallet-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const rows = await db.select().from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).orderBy(eWalletTypes.sortOrder);
-  return c.json(rows);
-});
-
-api.post("/businesses/:bizId/e-wallet-types", async (c) => {
-  const bizId = parseInt(c.req.param("bizId"));
-  const body = await c.req.json();
-  const [created] = await db.insert(eWalletTypes).values({ ...body, businessId: bizId }).returning();
-  return c.json(created, 201);
-});
-
-api.put("/e-wallet-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  const body = await c.req.json();
-  const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
-  return c.json(updated);
-});
-
-api.delete("/e-wallet-types/:id", async (c) => {
-  const id = parseInt(c.req.param("id"));
-  await db.delete(eWalletTypes).where(eq(eWalletTypes.id, id));
-  return c.json({ success: true });
-});
-
-api.post('/businesses/:bizId/billing-account-types', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/billing-account-types', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const [created] = await db.insert(billingAccountTypes).values({ ...body, businessId: bizId }).returning();
   return c.json(created, 201);
@@ -1021,15 +1178,131 @@ api.delete('/billing-account-types/:id', async (c) => {
   return c.json({ success: true });
 });
 
+// ===================== أنواع الصناديق =====================
+api.get("/businesses/:bizId/fund-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(fundTypes).where(eq(fundTypes.businessId, bizId)).orderBy(fundTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/fund-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const validation = validateBody(typeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const [created] = await db.insert(fundTypes).values({ ...validation.data, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/fund-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(fundTypes).set({ ...body, updatedAt: new Date() }).where(eq(fundTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/fund-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(fundTypes).where(eq(fundTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع البنوك =====================
+api.get("/businesses/:bizId/bank-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(bankTypes).where(eq(bankTypes.businessId, bizId)).orderBy(bankTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/bank-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const validation = validateBody(typeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const [created] = await db.insert(bankTypes).values({ ...validation.data, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/bank-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(bankTypes).set({ ...body, updatedAt: new Date() }).where(eq(bankTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/bank-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(bankTypes).where(eq(bankTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع الصرافين =====================
+api.get("/businesses/:bizId/exchange-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(exchangeTypes).where(eq(exchangeTypes.businessId, bizId)).orderBy(exchangeTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/exchange-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const validation = validateBody(typeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const [created] = await db.insert(exchangeTypes).values({ ...validation.data, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/exchange-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(exchangeTypes).set({ ...body, updatedAt: new Date() }).where(eq(exchangeTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/exchange-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(exchangeTypes).where(eq(exchangeTypes.id, id));
+  return c.json({ success: true });
+});
+
+// ===================== أنواع المحافظ الإلكترونية =====================
+api.get("/businesses/:bizId/e-wallet-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).orderBy(eWalletTypes.sortOrder);
+  return c.json(rows);
+});
+
+api.post("/businesses/:bizId/e-wallet-types", bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await c.req.json();
+  const validation = validateBody(typeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const [created] = await db.insert(eWalletTypes).values({ ...validation.data, businessId: bizId }).returning();
+  return c.json(created, 201);
+});
+
+api.put("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const body = await c.req.json();
+  const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
+  return c.json(updated);
+});
+
+api.delete("/e-wallet-types/:id", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  await db.delete(eWalletTypes).where(eq(eWalletTypes.id, id));
+  return c.json({ success: true });
+});
+
 // ===================== التبويب الجانبي - الأقسام =====================
-api.get('/businesses/:bizId/sidebar-sections', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/sidebar-sections', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select().from(sidebarSections).where(eq(sidebarSections.businessId, bizId)).orderBy(sidebarSections.sortOrder);
   return c.json(rows);
 });
 
-api.post('/businesses/:bizId/sidebar-sections', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.post('/businesses/:bizId/sidebar-sections', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const body = await c.req.json();
   const [created] = await db.insert(sidebarSections).values({ ...body, businessId: bizId }).returning();
   return c.json(created, 201);
@@ -1044,7 +1317,6 @@ api.put('/sidebar-sections/:id', async (c) => {
 
 api.delete('/sidebar-sections/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
-  // Delete items in this section first
   const items = await db.select().from(sidebarItems).where(eq(sidebarItems.sectionId, id));
   for (const item of items) {
     await db.delete(userSidebarConfig).where(eq(userSidebarConfig.sidebarItemId, item.id));
@@ -1055,8 +1327,8 @@ api.delete('/sidebar-sections/:id', async (c) => {
 });
 
 // ===================== التبويب الجانبي - العناصر =====================
-api.get('/businesses/:bizId/sidebar-items', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/sidebar-items', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const rows = await db.select({
     id: sidebarItems.id, sectionId: sidebarItems.sectionId,
     screenKey: sidebarItems.screenKey, label: sidebarItems.label,
@@ -1075,7 +1347,6 @@ api.get('/businesses/:bizId/sidebar-items', async (c) => {
 api.post('/sidebar-items', async (c) => {
   const body = await c.req.json();
   const [created] = await db.insert(sidebarItems).values(body).returning();
-  // Auto-create config for all users in this business
   const section = await db.select().from(sidebarSections).where(eq(sidebarSections.id, body.sectionId));
   if (section.length > 0) {
     const bizId = section[0].businessId;
@@ -1106,8 +1377,8 @@ api.delete('/sidebar-items/:id', async (c) => {
 });
 
 // ===================== تخصيص التبويب لكل مستخدم =====================
-api.get('/businesses/:bizId/users/:userId/sidebar', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.get('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const userId = parseInt(c.req.param('userId'));
   
   const configs = await db.select({
@@ -1138,16 +1409,13 @@ api.get('/businesses/:bizId/users/:userId/sidebar', async (c) => {
   return c.json(configs);
 });
 
-// Bulk update user sidebar config (for drag & drop reorder + visibility)
-api.put('/businesses/:bizId/users/:userId/sidebar', async (c) => {
-  const bizId = parseInt(c.req.param('bizId'));
+api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), async (c) => {
+  const bizId = c.get('bizId') as number;
   const userId = parseInt(c.req.param('userId'));
   const body = await c.req.json();
   
-  // body.items = [{ sidebarItemId, isVisible, customSortOrder, customSectionName }]
   if (body.items && Array.isArray(body.items)) {
     for (const item of body.items) {
-      // Check if config exists
       const existing = await db.select().from(userSidebarConfig)
         .where(and(
           eq(userSidebarConfig.userId, userId),

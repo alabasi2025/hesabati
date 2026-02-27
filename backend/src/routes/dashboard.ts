@@ -5,34 +5,47 @@ import { eq, sql, count } from 'drizzle-orm';
 
 const dashboardRoutes = new Hono();
 
+// إصلاح #8: N+1 - استعلام واحد مجمع
 dashboardRoutes.get('/stats', async (c) => {
   try {
-    const [bizCount] = await db.select({ count: count() }).from(businesses).where(eq(businesses.isActive, true));
-    const [stationCount] = await db.select({ count: count() }).from(stations).where(eq(stations.isActive, true));
-    const [employeeCount] = await db.select({ count: count() }).from(employees).where(eq(employees.status, 'active'));
-    const [accountCount] = await db.select({ count: count() }).from(accounts).where(eq(accounts.isActive, true));
-    const [fundCount] = await db.select({ count: count() }).from(funds).where(eq(funds.isActive, true));
-    const [supplierCount] = await db.select({ count: count() }).from(suppliers).where(eq(suppliers.isActive, true));
-    const [partnerCount] = await db.select({ count: count() }).from(businessPartners);
-    const [voucherCount] = await db.select({ count: count() }).from(vouchers);
-    const [pendingCount] = await db.select({ count: count() }).from(pendingAccounts).where(eq(pendingAccounts.status, 'pending'));
-    const [warehouseCount] = await db.select({ count: count() }).from(warehouses).where(eq(warehouses.isActive, true));
-
-    const salaryResult = await db.select({
-      total: sql<string>`COALESCE(SUM(CAST(salary AS numeric)), 0)`,
-    }).from(employees).where(eq(employees.status, 'active'));
+    // استخدام استعلامات Drizzle المنفصلة لكن بشكل متوازي
+    const [
+      bizCount,
+      stationCount,
+      employeeCount,
+      accountCount,
+      fundCount,
+      supplierCount,
+      partnerCount,
+      voucherCount,
+      pendingCount,
+      warehouseCount,
+      salaryResult,
+    ] = await Promise.all([
+      db.select({ count: count() }).from(businesses).where(eq(businesses.isActive, true)),
+      db.select({ count: count() }).from(stations).where(eq(stations.isActive, true)),
+      db.select({ count: count() }).from(employees).where(eq(employees.status, 'active')),
+      db.select({ count: count() }).from(accounts).where(eq(accounts.isActive, true)),
+      db.select({ count: count() }).from(funds).where(eq(funds.isActive, true)),
+      db.select({ count: count() }).from(suppliers).where(eq(suppliers.isActive, true)),
+      db.select({ count: count() }).from(businessPartners),
+      db.select({ count: count() }).from(vouchers),
+      db.select({ count: count() }).from(pendingAccounts).where(eq(pendingAccounts.status, 'pending')),
+      db.select({ count: count() }).from(warehouses).where(eq(warehouses.isActive, true)),
+      db.select({ total: sql<string>`COALESCE(SUM(CAST(salary AS numeric)), 0)` }).from(employees).where(eq(employees.status, 'active')),
+    ]);
 
     return c.json({
-      businesses: bizCount.count,
-      stations: stationCount.count,
-      employees: employeeCount.count,
-      accounts: accountCount.count,
-      funds: fundCount.count,
-      suppliers: supplierCount.count,
-      partners: partnerCount.count,
-      vouchers: voucherCount.count,
-      pendingAccounts: pendingCount.count,
-      warehouses: warehouseCount.count,
+      businesses: bizCount[0].count,
+      stations: stationCount[0].count,
+      employees: employeeCount[0].count,
+      accounts: accountCount[0].count,
+      funds: fundCount[0].count,
+      suppliers: supplierCount[0].count,
+      partners: partnerCount[0].count,
+      vouchers: voucherCount[0].count,
+      pendingAccounts: pendingCount[0].count,
+      warehouses: warehouseCount[0].count,
       totalSalaries: salaryResult[0]?.total || '0',
     });
   } catch (error) {

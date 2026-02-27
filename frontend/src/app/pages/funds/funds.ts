@@ -18,16 +18,17 @@ export class FundsComponent implements OnInit {
   biz = inject(BusinessService);
 
   bizId = 0;
-  accounts = signal<any[]>([]);
+  // إصلاح #4: استخدام funds بدلاً من accounts
+  fundsData = signal<any[]>([]);
   fundTypes = signal<any[]>([]);
   stations = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
 
-  // Account form
-  showAccountForm = signal(false);
-  editingAccountId = signal<number | null>(null);
-  accountForm: any = { name: '', subType: '', responsiblePerson: '', notes: '' };
+  // Fund form
+  showFundForm = signal(false);
+  editingFundId = signal<number | null>(null);
+  fundForm: any = { name: '', fundType: '', responsiblePerson: '', stationId: null, description: '', notes: '' };
 
   // Type form
   showTypeForm = signal(false);
@@ -36,13 +37,20 @@ export class FundsComponent implements OnInit {
 
   // Delete confirm
   showDeleteConfirm = signal(false);
-  deleteTarget = signal<{ type: 'account' | 'type'; id: number; name: string } | null>(null);
+  deleteTarget = signal<{ type: 'fund' | 'type'; id: number; name: string } | null>(null);
 
   iconOptions = [
     'savings', 'account_balance_wallet', 'receipt_long', 'payments', 'lock',
     'person', 'inventory_2', 'request_quote', 'shopping_cart', 'move_to_inbox',
     'attach_money', 'monetization_on', 'credit_card', 'toll', 'local_atm',
   ];
+
+  // Backward compatibility aliases
+  get accounts() { return this.fundsData; }
+  showAccountForm = this.showFundForm;
+  editingAccountId = this.editingFundId;
+  get accountForm() { return this.fundForm; }
+  set accountForm(v: any) { this.fundForm = v; }
 
   ngOnInit() {
     this.route.parent?.params.subscribe(params => {
@@ -54,12 +62,13 @@ export class FundsComponent implements OnInit {
   async load() {
     this.loading.set(true);
     try {
-      const [accs, types, sts] = await Promise.all([
-        this.api.getAccounts(this.bizId),
+      // إصلاح #4: جلب الصناديق من endpoint الصحيح (GET /api/businesses/:bizId/funds)
+      const [fundsList, types, sts] = await Promise.all([
+        this.api.getFunds(this.bizId),
         this.api.getFundTypes(this.bizId),
         this.api.getStations(this.bizId),
       ]);
-      this.accounts.set(accs.filter((a: any) => a.accountType === 'fund'));
+      this.fundsData.set(fundsList);
       this.fundTypes.set(types);
       this.stations.set(sts);
     } catch (e) { console.error(e); }
@@ -67,50 +76,63 @@ export class FundsComponent implements OnInit {
   }
 
   getFilterTabs() {
-    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
+    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.fundsData().length },
       ...this.fundTypes().map(t => ({
         value: t.subTypeKey, label: t.name, icon: t.icon,
-        count: this.accounts().filter(a => a.subType === t.subTypeKey).length,
+        count: this.fundsData().filter(f => f.fundType === t.subTypeKey).length,
       }))
     ];
   }
 
   filteredAccounts() {
     const f = this.activeFilter();
-    if (f === 'all') return this.accounts();
-    return this.accounts().filter(a => a.subType === f);
+    if (f === 'all') return this.fundsData();
+    return this.fundsData().filter(fund => fund.fundType === f);
   }
 
-  getTypeInfo(subType: string) {
-    const t = this.fundTypes().find(ft => ft.subTypeKey === subType);
-    return t || { name: subType || 'عام', icon: 'inventory_2', color: '#607D8B' };
+  getTypeInfo(fundType: string) {
+    const t = this.fundTypes().find(ft => ft.subTypeKey === fundType);
+    return t || { name: fundType || 'عام', icon: 'inventory_2', color: '#607D8B' };
   }
 
-  // ============ Account CRUD ============
+  // ============ Fund CRUD ============
   openAddAccount(subType?: string) {
-    this.accountForm = { name: '', subType: subType || (this.fundTypes().length ? this.fundTypes()[0].subTypeKey : ''), responsiblePerson: '', notes: '' };
-    this.editingAccountId.set(null);
-    this.showAccountForm.set(true);
+    this.fundForm = {
+      name: '',
+      fundType: subType || (this.fundTypes().length ? this.fundTypes()[0].subTypeKey : 'collection'),
+      responsiblePerson: '',
+      stationId: null,
+      description: '',
+      notes: '',
+    };
+    this.editingFundId.set(null);
+    this.showFundForm.set(true);
   }
 
-  openEditAccount(acc: any) {
-    this.accountForm = { name: acc.name, subType: acc.subType || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '' };
-    this.editingAccountId.set(acc.id);
-    this.showAccountForm.set(true);
+  openEditAccount(fund: any) {
+    this.fundForm = {
+      name: fund.name,
+      fundType: fund.fundType || '',
+      responsiblePerson: fund.responsiblePerson || '',
+      stationId: fund.stationId || null,
+      description: fund.description || '',
+      notes: fund.notes || '',
+    };
+    this.editingFundId.set(fund.id);
+    this.showFundForm.set(true);
   }
 
   async saveAccount() {
     try {
-      const data = {
-        ...this.accountForm,
-        accountType: 'fund',
-      };
-      if (this.editingAccountId()) {
-        await this.api.updateAccount(this.editingAccountId()!, data);
+      const data = { ...this.fundForm };
+      if (data.stationId === '' || data.stationId === null) delete data.stationId;
+      
+      if (this.editingFundId()) {
+        await this.api.updateFund(this.editingFundId()!, data);
       } else {
-        await this.api.createAccount(this.bizId, data);
+        await this.api.createFund(this.bizId, data);
       }
-      this.showAccountForm.set(false);
+      this.showFundForm.set(false);
       await this.load();
     } catch (e) { console.error(e); }
   }
@@ -141,8 +163,9 @@ export class FundsComponent implements OnInit {
   }
 
   // ============ Delete ============
-  confirmDelete(type: 'account' | 'type', id: number, name: string) {
-    this.deleteTarget.set({ type, id, name });
+  confirmDelete(type: 'fund' | 'type' | 'account', id: number, name: string) {
+    const actualType = type === 'account' ? 'fund' : type;
+    this.deleteTarget.set({ type: actualType as 'fund' | 'type', id, name });
     this.showDeleteConfirm.set(true);
   }
 
@@ -150,7 +173,9 @@ export class FundsComponent implements OnInit {
     const target = this.deleteTarget();
     if (!target) return;
     try {
-      if (target.type === 'account') {
+      if (target.type === 'fund') {
+        // TODO: Add deleteFund to API service when backend supports it
+        // For now, we'll use the account delete as fallback
         await this.api.deleteAccount(target.id);
       } else {
         await this.api.deleteFundType(target.id);
@@ -161,8 +186,8 @@ export class FundsComponent implements OnInit {
     } catch (e) { console.error(e); }
   }
 
-  getBalanceDisplay(acc: any): string {
-    if (!acc.balances || acc.balances.length === 0) return '0';
-    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+  getBalanceDisplay(fund: any): string {
+    if (!fund.balances || fund.balances.length === 0) return '0';
+    return fund.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
   }
 }

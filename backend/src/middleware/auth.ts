@@ -1,7 +1,14 @@
 import { Context, Next } from 'hono';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'hesabati-secret-key-2026';
+// إصلاح #14: إزالة مفتاح JWT الاحتياطي الثابت واستبداله بمفتاح عشوائي
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  const generated = crypto.randomBytes(64).toString('hex');
+  console.warn('⚠️ تحذير: لم يتم تعيين JWT_SECRET في متغيرات البيئة. تم توليد مفتاح عشوائي مؤقت.');
+  console.warn('⚠️ سيتم إبطال جميع الجلسات عند إعادة تشغيل الخادم.');
+  return generated;
+})();
 
 export interface JwtPayload {
   userId: number;
