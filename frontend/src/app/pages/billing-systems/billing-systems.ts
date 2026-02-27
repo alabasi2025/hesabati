@@ -29,9 +29,9 @@ export class BillingSystemsComponent implements OnInit {
 
   // ===== خريطة أسماء الأنظمة =====
   systemNameMap: Record<string, string> = {
-    'moghrabi_v1': 'المغربي',
-    'moghrabi_v2': 'المغربي',
-    'moghrabi_v3': 'المغربي',
+    'moghrabi_v1': 'المغربي نسخة 1 (الدهمية)',
+    'moghrabi_v2': 'المغربي نسخة 2 (الصبالية وجمال)',
+    'moghrabi_v3': 'المغربي نسخة 3 (غليل)',
     'support_fund': 'صندوق الدعم',
     'support_fund_west': 'صندوق الدعم',
     'prepaid': 'الدفع المسبق',
