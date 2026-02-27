@@ -11,6 +11,7 @@ import {
   journalEntries, journalEntryLines,
   billingSystemsConfig, billingAccountTypes,
   sidebarSections, sidebarItems, userSidebarConfig,
+  users,
 } from '../db/schema/index.ts';
 
 const api = new Hono();
