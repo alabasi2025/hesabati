@@ -159,6 +159,7 @@ export class SidebarComponent {
           { icon: 'currency_exchange', label: 'إدارة الصرافين', route: `${b}/exchangers` },
           { icon: 'wallet', label: 'إدارة المحافظ', route: `${b}/wallets` },
           { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
+          { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
         ]},
         { title: 'العمليات المالية', items: [
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
@@ -190,6 +191,8 @@ export class SidebarComponent {
         { title: 'الإعداد', items: [
           { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
           { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
+          { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
+          { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
         ]},
         { title: 'العمليات المالية', items: [
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
@@ -218,6 +221,8 @@ export class SidebarComponent {
         { title: 'الإعداد', items: [
           { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
           { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
+          { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
+          { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
         ]},
         { title: 'المالية الشخصية', items: [
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
