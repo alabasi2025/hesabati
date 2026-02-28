@@ -137,6 +137,81 @@ export class SidebarComponent {
     }
   }
 
+  /**
+   * استخراج الـ path والـ query params من الـ route string
+   * مثال: /biz/1/custom-screens?screen=3 -> { path: '/biz/1/custom-screens', queryParams: { screen: '3' } }
+   */
+  parseRoute(route: string): { path: string; queryParams: Record<string, string> } {
+    if (!route) return { path: '/', queryParams: {} };
+    const [path, queryString] = route.split('?');
+    const queryParams: Record<string, string> = {};
+    if (queryString) {
+      queryString.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key) queryParams[decodeURIComponent(key)] = decodeURIComponent(value || '');
+      });
+    }
+    return { path, queryParams };
+  }
+
+  /**
+   * التحقق إذا كان الـ route يحتوي على query params
+   */
+  hasQueryParams(route: string | undefined): boolean {
+    return !!(route && route.includes('?'));
+  }
+
+  /**
+   * الحصول على الـ path فقط بدون query params (لـ routerLink)
+   */
+  getRoutePath(route: string | undefined): string {
+    if (!route) return '/';
+    return route.split('?')[0];
+  }
+
+  /**
+   * الحصول على الـ query params كـ object (لـ [queryParams])
+   */
+  getQueryParams(route: string | undefined): Record<string, string> {
+    if (!route || !route.includes('?')) return {};
+    const { queryParams } = this.parseRoute(route);
+    return queryParams;
+  }
+
+  /**
+   * التنقل لعنصر القائمة مع دعم query params
+   */
+  navigateTo(item: MenuItem): void {
+    if (!item.route) return;
+    const { path, queryParams } = this.parseRoute(item.route);
+    if (Object.keys(queryParams).length > 0) {
+      this.router.navigate([path], { queryParams });
+    } else {
+      this.router.navigate([path]);
+    }
+  }
+
+  /**
+   * التحقق من أن العنصر نشط (للـ routerLinkActive البديل)
+   */
+  isItemActive(route: string | undefined): boolean {
+    if (!route) return false;
+    const { path, queryParams } = this.parseRoute(route);
+    const currentUrl = this.router.url;
+    const [currentPath, currentQuery] = currentUrl.split('?');
+    if (currentPath !== path) return false;
+    if (Object.keys(queryParams).length === 0) return true;
+    // التحقق من الـ query params
+    const currentParams: Record<string, string> = {};
+    if (currentQuery) {
+      currentQuery.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key) currentParams[decodeURIComponent(key)] = decodeURIComponent(value || '');
+      });
+    }
+    return Object.entries(queryParams).every(([k, v]) => currentParams[k] === v);
+  }
+
   private buildFallbackMenu(bizId: number, type: BusinessType) {
     const b = `/biz/${bizId}`;
 

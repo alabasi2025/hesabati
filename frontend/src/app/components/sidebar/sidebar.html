@@ -45,23 +45,55 @@
               }
             </div>
           } @else {
-            <a
-              class="nav-item"
-              [routerLink]="item.route"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{exact: !item.route?.includes('/')}"
-              [title]="item.label"
-            >
-              <div class="nav-icon">
-                <span class="material-icons-round">{{ item.icon }}</span>
-              </div>
-              @if (!isCollapsed()) {
-                <span class="nav-label">{{ item.label }}</span>
-                @if (item.badge) {
-                  <span class="nav-badge" [style.background-color]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+            @if (hasQueryParams(item.route)) {
+              <!-- عنصر يحتوي على query params - نستخدم routerLink مع queryParams -->
+              <a
+                class="nav-item"
+                [class.active]="isItemActive(item.route)"
+                [routerLink]="getRoutePath(item.route)"
+                [queryParams]="getQueryParams(item.route)"
+                [title]="item.label"
+                [attr.hint]="item.label"
+              >
+                <div class="nav-icon">
+                  @if (item.icon && item.icon.startsWith('pi ')) {
+                    <i [class]="item.icon"></i>
+                  } @else {
+                    <span class="material-icons-round">{{ item.icon }}</span>
+                  }
+                </div>
+                @if (!isCollapsed()) {
+                  <span class="nav-label">{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span class="nav-badge" [style.background-color]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                  }
                 }
-              }
-            </a>
+              </a>
+            } @else {
+              <!-- عنصر عادي بدون query params -->
+              <a
+                class="nav-item"
+                [routerLink]="item.route"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{exact: item.route === '/biz/' + biz.currentBusinessId()}"
+                [title]="item.label"
+                [attr.hint]="item.label"
+              >
+                <div class="nav-icon">
+                  @if (item.icon && item.icon.startsWith('pi ')) {
+                    <i [class]="item.icon"></i>
+                  } @else {
+                    <span class="material-icons-round">{{ item.icon }}</span>
+                  }
+                </div>
+                @if (!isCollapsed()) {
+                  <span class="nav-label">{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span class="nav-badge" [style.background-color]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                  }
+                }
+              </a>
+            }
           }
         }
       </div>
