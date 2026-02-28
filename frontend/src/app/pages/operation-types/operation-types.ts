@@ -142,7 +142,20 @@ export class OperationTypesComponent implements OnInit {
   accountTypeLabels: Record<string, string> = {
     billing: 'فوترة', fund: 'صندوق', bank: 'بنك', exchange: 'صراف',
     wallet: 'محفظة', cash: 'نقد', service: 'خدمة', custody: 'عهدة',
-    accounting: 'محاسبي', intermediary: 'وسيط',
+    accounting: 'محاسبي', intermediary: 'وسيط', e_wallet: 'محفظة إلكترونية',
+    client: 'عميل', supplier: 'مورد', expense: 'مصاريف', revenue: 'إيرادات',
+    loan: 'قرض', partner: 'شريك', employee: 'موظف', other: 'أخرى',
+  };
+
+  // أيقونات أنواع الحسابات
+  accountTypeIcons: Record<string, string> = {
+    bank: 'account_balance', cash: 'payments', exchange: 'currency_exchange',
+    e_wallet: 'phone_android', wallet: 'wallet', service: 'build',
+    custody: 'lock', fund: 'savings', billing: 'receipt',
+    client: 'person', supplier: 'local_shipping', expense: 'trending_down',
+    revenue: 'trending_up', loan: 'credit_card', partner: 'handshake',
+    employee: 'badge', accounting: 'book', intermediary: 'swap_horiz',
+    other: 'more_horiz',
   };
 
   // ===================== Computed: حسابات المصدر (الطرف الأول) =====================
@@ -178,26 +191,11 @@ export class OperationTypesComponent implements OnInit {
   });
 
   // ===================== Computed: الحسابات المرتبطة (الطرف الثاني) =====================
+  // نعرض كل الحسابات من API الحسابات - المستخدم يختار الطرف الثاني
   availableAccounts = computed(() => {
-    const w = this.wiz();
     const all = this.accounts();
-
-    if (w.voucherType === 'journal') {
-      // قيد محاسبي → كل الحسابات ما عدا الصناديق والبنوك والصرافين والمحافظ
-      return all.filter(a => !['fund', 'bank', 'exchange', 'wallet', 'cash'].includes(a.accountType));
-    }
-
-    // سند قبض/صرف → نعرض حسابات الطرف الثاني
-    // الطرف الثاني هو الحسابات المقابلة (مثلاً: موردين، فوترة، خدمات...)
-    // نستبعد حسابات نفس نوع المصدر
-    if (w.paymentMethod) {
-      const pm = this.paymentMethods.find(p => p.value === w.paymentMethod);
-      if (pm) {
-        // نستبعد حسابات نفس نوع الوسيلة (لأنها الطرف الأول)
-        return all.filter(a => a.accountType !== pm.accountType && a.accountType !== 'fund' && a.accountType !== 'cash');
-      }
-    }
-    return [];
+    // نعرض كل الحسابات الموجودة في صفحة الحسابات
+    return all;
   });
 
   availableAccountTypes = computed(() => {
@@ -757,6 +755,10 @@ export class OperationTypesComponent implements OnInit {
 
   countByCategory(category: string): number {
     return this.operationTypes().filter(ot => ot.category === category).length;
+  }
+
+  countAccountsByType(accountType: string): number {
+    return this.availableAccounts().filter(a => a.accountType === accountType).length;
   }
 
   trackById(_: number, item: any) { return item.id; }

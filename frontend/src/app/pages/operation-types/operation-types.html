@@ -516,20 +516,22 @@
               }
 
               <!-- Account Type Filter -->
-              @if (availableAccountTypes().length > 1) {
+              @if (availableAccountTypes().length > 0) {
                 <div class="acc-type-selector">
-                  <label class="form-label">فلتر حسب النوع:</label>
+                  <label class="form-label">فلتر حسب نوع الحساب:</label>
                   <div class="acc-type-chips">
                     <button class="acc-type-chip" [class.active]="selectedAccountType() === ''"
                             (click)="selectedAccountType.set('')">
+                      <span class="material-icons-round">apps</span>
                       الكل
                       <span class="atc-count">{{ availableAccounts().length }}</span>
                     </button>
                     @for (at of availableAccountTypes(); track at) {
                       <button class="acc-type-chip" [class.active]="selectedAccountType() === at"
                               (click)="selectedAccountType.set(at)">
+                        <span class="material-icons-round">{{ accountTypeIcons[at] || 'label' }}</span>
                         {{ getAccountTypeLabel(at) }}
-                        <span class="atc-count">{{ availableAccounts().filter(a => a.accountType === at).length }}</span>
+                        <span class="atc-count">{{ countAccountsByType(at) }}</span>
                       </button>
                     }
                   </div>
@@ -552,14 +554,22 @@
                       <span class="material-icons-round cai-icon">
                         {{ linkedAccountIds().has(acc.id) ? 'check_box' : 'check_box_outline_blank' }}
                       </span>
-                      <span class="cai-name">{{ acc.name }}</span>
-                      <span class="cai-type">{{ getAccountTypeLabel(acc.accountType) }}</span>
+                      <div class="cai-details">
+                        <span class="cai-name">{{ acc.name }}</span>
+                        @if (acc.provider || acc.accountNumber) {
+                          <span class="cai-sub-info">{{ acc.provider || acc.accountNumber }}</span>
+                        }
+                      </div>
+                      <span class="cai-type">
+                        <span class="material-icons-round">{{ accountTypeIcons[acc.accountType] || 'label' }}</span>
+                        {{ getAccountTypeLabel(acc.accountType) }}
+                      </span>
                     </div>
                   }
                   @if (filteredAccountsByType().length === 0) {
                     <div class="no-accounts-msg" style="grid-column: 1 / -1">
                       <span class="material-icons-round">info</span>
-                      لا توجد حسابات متاحة. أضف حسابات أولاً من الصفحات المناسبة.
+                      لا توجد حسابات متاحة. أضف حسابات أولاً من صفحة الحسابات.
                     </div>
                   }
                 </div>
