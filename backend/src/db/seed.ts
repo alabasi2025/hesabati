@@ -273,26 +273,51 @@ async function seed() {
   // يتم إنشاؤها عبر SQL مباشرة لأنها تعتمد على IDs الموظفين
   // تم إضافتها عبر SQL migration منفصل
 
-  // ===================== قوالب العمليات =====================
-  await db.insert(schema.operationTypes).values([
-    { businessId: b1.id, name: 'تحويل حق الديزل', category: 'voucher', voucherType: 'payment', icon: 'local_gas_station', color: '#ef4444', description: 'تحويل مبالغ لمورد الديزل - محمود الحجة', sortOrder: 1 },
-    { businessId: b1.id, name: 'تحويل حق مشتريات مباشرة', category: 'voucher', voucherType: 'payment', icon: 'shopping_cart', color: '#f97316', sortOrder: 2 },
-    { businessId: b1.id, name: 'تحويل عهد مشتريات', category: 'voucher', voucherType: 'payment', icon: 'shopping_bag', color: '#fb923c', sortOrder: 3 },
-    { businessId: b1.id, name: 'صرف سلف وعهد للمحطات', category: 'voucher', voucherType: 'payment', icon: 'request_quote', color: '#f472b6', sortOrder: 4 },
-    { businessId: b1.id, name: 'صرف عهدة معلقة لعمل خارجي', category: 'voucher', voucherType: 'payment', icon: 'pending_actions', color: '#a855f7', sortOrder: 5 },
-    { businessId: b1.id, name: 'تحويل حق الزيت', category: 'voucher', voucherType: 'payment', icon: 'oil_barrel', color: '#d946ef', sortOrder: 6 },
-    { businessId: b1.id, name: 'تحويل حق عدادات ومواد كهربائية', category: 'voucher', voucherType: 'payment', icon: 'electrical_services', color: '#eab308', sortOrder: 7 },
-    { businessId: b1.id, name: 'تحويل حق العائد الشهري', category: 'voucher', voucherType: 'payment', icon: 'account_balance', color: '#6366f1', sortOrder: 8 },
-    { businessId: b1.id, name: 'تحويل إيجار حوش الباشا', category: 'voucher', voucherType: 'payment', icon: 'home', color: '#0891b2', sortOrder: 9 },
-    { businessId: b1.id, name: 'تحويل إيجار حوش الضحوي', category: 'voucher', voucherType: 'payment', icon: 'home', color: '#14b8a6', sortOrder: 10 },
-    { businessId: b1.id, name: 'تحويل حق الضرائب', category: 'voucher', voucherType: 'payment', icon: 'receipt_long', color: '#64748b', sortOrder: 11 },
-    { businessId: b1.id, name: 'تحويل حق البطاريات', category: 'voucher', voucherType: 'payment', icon: 'battery_charging_full', color: '#22c55e', sortOrder: 12 },
-    { businessId: b1.id, name: 'تحويل حق قطع غيار المولدات', category: 'voucher', voucherType: 'payment', icon: 'build', color: '#f59e0b', sortOrder: 13 },
-    { businessId: b1.id, name: 'تحويل حق تكاليف التطوير والأصول', category: 'voucher', voucherType: 'payment', icon: 'engineering', color: '#7c3aed', sortOrder: 14 },
-    { businessId: b1.id, name: 'تحويل للمهندس محمد حسن', category: 'voucher', voucherType: 'payment', icon: 'person', color: '#0ea5e9', sortOrder: 15 },
-    { businessId: b1.id, name: 'مصروفات شخصية', category: 'voucher', voucherType: 'payment', icon: 'wallet', color: '#6b7280', sortOrder: 16 },
+  // ===================== أنواع المخروجات (expense_categories) =====================
+  await db.insert(schema.expenseCategories).values([
+    { businessId: b1.id, name: 'تحويل حق الديزل', icon: 'local_gas_station', color: '#ef4444', sortOrder: 1 },
+    { businessId: b1.id, name: 'تحويل حق مشتريات مباشرة', icon: 'shopping_cart', color: '#f97316', sortOrder: 2 },
+    { businessId: b1.id, name: 'تحويل عهد مشتريات', icon: 'shopping_bag', color: '#fb923c', sortOrder: 3 },
+    { businessId: b1.id, name: 'صرف سلف وعهد للمحطات', icon: 'request_quote', color: '#f472b6', sortOrder: 4 },
+    { businessId: b1.id, name: 'صرف عهدة معلقة لعمل خارجي', icon: 'pending_actions', color: '#a855f7', sortOrder: 5 },
+    { businessId: b1.id, name: 'تحويل حق الزيت', icon: 'oil_barrel', color: '#d946ef', sortOrder: 6 },
+    { businessId: b1.id, name: 'تحويل حق عدادات ومواد كهربائية', icon: 'electrical_services', color: '#eab308', sortOrder: 7 },
+    { businessId: b1.id, name: 'تحويل حق العائد الشهري', icon: 'account_balance', color: '#6366f1', sortOrder: 8 },
+    { businessId: b1.id, name: 'تحويل إيجار حوش الباشا', icon: 'home', color: '#0891b2', sortOrder: 9 },
+    { businessId: b1.id, name: 'تحويل إيجار حوش الضحوي', icon: 'home', color: '#14b8a6', sortOrder: 10 },
+    { businessId: b1.id, name: 'تحويل حق الضرائب', icon: 'receipt_long', color: '#64748b', sortOrder: 11 },
+    { businessId: b1.id, name: 'تحويل حق البطاريات', icon: 'battery_charging_full', color: '#22c55e', sortOrder: 12 },
+    { businessId: b1.id, name: 'تحويل حق قطع غيار المولدات', icon: 'build', color: '#f59e0b', sortOrder: 13 },
+    { businessId: b1.id, name: 'تحويل حق تكاليف التطوير والأصول', icon: 'engineering', color: '#7c3aed', sortOrder: 14 },
+    { businessId: b1.id, name: 'تحويل للمهندس محمد حسن', icon: 'person', color: '#0ea5e9', sortOrder: 15 },
+    { businessId: b1.id, name: 'مصروفات شخصية', icon: 'wallet', color: '#6b7280', sortOrder: 16 },
   ]);
-  console.log('✅ قوالب العمليات');
+  console.log('✅ أنواع المخروجات (16 تصنيف)');
+
+  // ===================== قوالب العمليات (حسب الشاشات) =====================
+  await db.insert(schema.operationTypes).values([
+    // فئة التحصيل (collection) - 3 قوالب
+    { businessId: b1.id, name: 'تحصيل يومي - الدهمية', category: 'collection', voucherType: 'receipt', icon: 'point_of_sale', color: '#10b981', description: 'تحصيل يومي لمحطة الدهمية - 18 حساب فوترة مرتبط', sortOrder: 1 },
+    { businessId: b1.id, name: 'تحصيل يومي - الصبالية وجمال', category: 'collection', voucherType: 'receipt', icon: 'point_of_sale', color: '#059669', description: 'تحصيل يومي لمحطة الصبالية وجمال - 30 حساب فوترة مرتبط', sortOrder: 2 },
+    { businessId: b1.id, name: 'تحصيل يومي - غليل', category: 'collection', voucherType: 'receipt', icon: 'point_of_sale', color: '#047857', description: 'تحصيل يومي لمحطة غليل - 25 حساب فوترة مرتبط', sortOrder: 3 },
+    // فئة التوريد (delivery) - 6 قوالب
+    { businessId: b1.id, name: 'توريد للحوشبي', category: 'delivery', voucherType: 'payment', icon: 'account_balance', color: '#3b82f6', description: 'إيداع نقدي - الحوشبي باسم المحطات والمالك', sortOrder: 4 },
+    { businessId: b1.id, name: 'توريد لجوالي', category: 'delivery', voucherType: 'payment', icon: 'phone_android', color: '#2563eb', description: 'تحويل إلكتروني - جوالي 1 و 2 و 3 وكيل', sortOrder: 5 },
+    { businessId: b1.id, name: 'توريد لون كاش', category: 'delivery', voucherType: 'payment', icon: 'payments', color: '#1d4ed8', description: 'تحويل إلكتروني - ون كاش', sortOrder: 6 },
+    { businessId: b1.id, name: 'توريد لجيب', category: 'delivery', voucherType: 'payment', icon: 'wallet', color: '#1e40af', description: 'تحويل إلكتروني - جيب', sortOrder: 7 },
+    { businessId: b1.id, name: 'توريد للنجم', category: 'delivery', voucherType: 'payment', icon: 'currency_exchange', color: '#6366f1', description: 'حوالات عبر واتساب مع علي صعدي - النجم', sortOrder: 8 },
+    { businessId: b1.id, name: 'توريد لكريمي الحديدة', category: 'delivery', voucherType: 'payment', icon: 'account_balance', color: '#4f46e5', description: 'إيداع بنكي - كريمي الحديدة جاري وتوفير', sortOrder: 9 },
+    // فئة السندات (voucher) - 5 قوالب
+    { businessId: b1.id, name: 'صرف سلف موظف', category: 'voucher', voucherType: 'payment', icon: 'payments', color: '#f59e0b', description: 'صرف سلف من صناديق سلف الموظفين', sortOrder: 10 },
+    { businessId: b1.id, name: 'صرف عهدة', category: 'voucher', voucherType: 'payment', icon: 'request_quote', color: '#f97316', description: 'صرف عهدة من صناديق العهدة + عهد أكرم وكمال', sortOrder: 11 },
+    { businessId: b1.id, name: 'قبض تحصيل', category: 'voucher', voucherType: 'receipt', icon: 'savings', color: '#22c55e', description: 'قبض من صناديق التحصيل والتوريد', sortOrder: 12 },
+    { businessId: b1.id, name: 'صرف مصروفات تشغيلية', category: 'voucher', voucherType: 'payment', icon: 'receipt_long', color: '#ef4444', description: 'صرف من كل الحسابات (محافظ، بنوك، صرافين)', sortOrder: 13 },
+    { businessId: b1.id, name: 'صرف شخصي', category: 'voucher', voucherType: 'payment', icon: 'person', color: '#a855f7', description: 'صرف من خزنة المالك والنقد الشخصي وكل المحافظ', sortOrder: 14 },
+    // فئة القيود (journal) - 2 قالب
+    { businessId: b1.id, name: 'إقفال فاتورة المغربي', category: 'journal', icon: 'menu_book', color: '#8b5cf6', description: 'قيد من حساب نظام المغربي إلى حسابات المتحصلين بإجمالي تحصيلهم خلال فترة الفاتورة', sortOrder: 15 },
+    { businessId: b1.id, name: 'تسوية عامة', category: 'journal', icon: 'balance', color: '#64748b', description: 'قيد تسوية بين أي حسابات', sortOrder: 16 },
+  ]);
+  console.log('✅ قوالب العمليات (16 قالب: 3 تحصيل + 6 توريد + 5 سندات + 2 قيود)');
 
   // ===================== أرصدة الموردين =====================
   // يتم إنشاؤها عبر SQL مباشرة لأنها تعتمد على IDs الموردين

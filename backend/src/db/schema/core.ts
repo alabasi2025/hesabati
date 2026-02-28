@@ -585,6 +585,21 @@ export const auditLog = pgTable('audit_log', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// ===================== EXPENSE CATEGORIES (أنواع المخروجات / تصنيفات المصروفات) =====================
+
+export const expenseCategories = pgTable('expense_categories', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 50 }).default('receipt_long'),
+  color: varchar('color', { length: 20 }).default('#3b82f6'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ===================== OPERATION TYPES (أنواع العمليات - القوالب) =====================
 
 export const operationTypes = pgTable('operation_types', {
