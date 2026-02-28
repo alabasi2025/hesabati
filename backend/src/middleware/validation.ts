@@ -99,12 +99,14 @@ export const operationTypeSchema = z.object({
   description: z.string().optional().nullable(),
   icon: z.string().max(50).optional(),
   color: z.string().max(20).optional(),
-  category: z.enum(['voucher', 'journal', 'collection', 'delivery']).optional(),
-  voucherType: z.enum(['payment', 'receipt', 'transfer', 'journal']).optional().nullable(),
-  mainAccountId: z.number().int().positive().optional().nullable(),
-  paymentMethod: z.enum(['cash', 'bank', 'exchange', 'e_wallet']).optional().nullable(),
-  screens: z.string().optional(),
+  category: z.string().max(50).optional(), // تصنيف ديناميكي ينشئه المستخدم
+  voucherType: z.string().max(30).optional().nullable(),
+  paymentMethod: z.string().max(30).optional().nullable(),
+  screens: z.union([z.string(), z.array(z.string())]).optional(),
   mainFundId: z.number().int().positive().optional().nullable(),
+  mainAccountId: z.number().int().positive().optional().nullable(),
+  sourceAccountId: z.number().int().positive().optional().nullable(),
+  sourceFundId: z.number().int().positive().optional().nullable(),
   requiresAttachment: z.boolean().optional(),
   hasMultiLines: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
@@ -114,18 +116,20 @@ export const operationTypeSchema = z.object({
 
 export const journalEntrySchema = z.object({
   description: z.string().optional().nullable(),
-  entryDate: z.string().min(1, 'تاريخ القيد مطلوب'),
+  entryDate: z.union([z.string().min(1, 'تاريخ القيد مطلوب'), z.string().optional()]).optional(),
+  date: z.string().optional(), // بديل لـ entryDate (الفرونت قد يرسل date)
   reference: z.string().max(100).optional().nullable(),
   operationTypeId: z.number().int().positive().optional().nullable(),
   lines: z.array(z.object({
     accountId: z.number().int().positive('معرّف الحساب مطلوب'),
-    lineType: z.enum(['debit', 'credit']),
+    lineType: z.enum(['debit', 'credit']).optional(),
+    type: z.enum(['debit', 'credit']).optional(), // بديل لـ lineType
     amount: z.union([z.string(), z.number()]).refine(val => {
       const num = typeof val === 'string' ? parseFloat(val) : val;
       return !isNaN(num) && num > 0;
     }, 'المبلغ يجب أن يكون رقماً موجباً'),
     description: z.string().optional().nullable(),
-  })).min(2, 'القيد يجب أن يحتوي على سطرين على الأقل'),
+  })).min(2, 'القيد يجب أن يحتوي على سطرين على الأقل').optional(),
 });
 
 export const typeSchema = z.object({
@@ -136,6 +140,146 @@ export const typeSchema = z.object({
   color: z.string().max(50).optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
+});
+
+// ===================== Schemas إضافية =====================
+
+export const stationSchema = z.object({
+  name: z.string().min(1, 'اسم المحطة مطلوب').max(200),
+  code: z.string().min(1, 'رمز المحطة مطلوب').max(50),
+  location: z.string().max(300).optional().nullable(),
+  managerId: z.number().int().positive().optional().nullable(),
+  billingSystems: z.array(z.string()).optional(),
+  hasEmployees: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+});
+
+export const supplierSchema = z.object({
+  name: z.string().min(1, 'اسم المورد مطلوب').max(200),
+  category: z.string().max(100).optional().nullable(),
+  phone: z.string().max(20).optional().nullable(),
+  address: z.string().max(300).optional().nullable(),
+  contactPerson: z.string().max(200).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export const warehouseSchema = z.object({
+  name: z.string().min(1, 'اسم المخزن مطلوب').max(200),
+  warehouseType: z.enum(['main', 'station']),
+  stationId: z.number().int().positive().optional().nullable(),
+  responsiblePerson: z.string().max(200).optional().nullable(),
+  location: z.string().max(300).optional().nullable(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+});
+
+export const sidebarSectionSchema = z.object({
+  name: z.string().min(1, 'اسم القسم مطلوب').max(200),
+  icon: z.string().max(50).optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const sidebarItemSchema = z.object({
+  sectionId: z.number().int().positive('معرّف القسم مطلوب'),
+  screenKey: z.string().min(1, 'مفتاح الشاشة مطلوب').max(100),
+  label: z.string().min(1, 'التسمية مطلوبة').max(200),
+  icon: z.string().min(1, 'الأيقونة مطلوبة').max(50),
+  route: z.string().min(1, 'المسار مطلوب').max(300),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const screenSchema = z.object({
+  name: z.string().min(1, 'اسم الشاشة مطلوب').max(200),
+  description: z.string().optional().nullable(),
+  icon: z.string().max(50).optional(),
+  color: z.string().max(20).optional(),
+  layoutConfig: z.any().optional(),
+  templateKey: z.string().max(50).optional().nullable(),
+  widgets: z.array(z.any()).optional(),
+  addToSidebar: z.boolean().optional(),
+});
+
+export const widgetSchema = z.object({
+  widgetType: z.string().min(1, 'نوع العنصر مطلوب').max(50),
+  title: z.string().min(1, 'عنوان العنصر مطلوب').max(200),
+  config: z.any().optional(),
+  positionX: z.number().int().optional(),
+  positionY: z.number().int().optional(),
+  width: z.number().int().optional(),
+  height: z.number().int().optional(),
+  sortOrder: z.number().int().optional(),
+  isVisible: z.boolean().optional(),
+});
+
+export const fundSchema = z.object({
+  name: z.string().min(1, 'اسم الصندوق مطلوب').max(200),
+  fundType: z.enum(['collection', 'salary_advance', 'custody', 'safe', 'expense', 'deposit']),
+  stationId: z.number().int().positive().optional().nullable(),
+  responsiblePerson: z.string().max(200).optional().nullable(),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+});
+
+export const partnerSchema = z.object({
+  fullName: z.string().min(1, 'اسم الشريك مطلوب').max(200),
+  sharePercentage: z.union([z.string(), z.number()]).optional().nullable(),
+  phone: z.string().max(20).optional().nullable(),
+  role: z.string().max(100).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export const settlementSchema = z.object({
+  title: z.string().min(1, 'عنوان التصفية مطلوب').max(300),
+  reconciliationType: z.string().optional(),
+  type: z.string().optional(), // بديل لـ reconciliationType
+  status: z.string().optional(),
+  withPerson: z.string().max(200).optional().nullable(),
+  accountId: z.number().int().positive().optional().nullable(),
+  fundId: z.number().int().positive().optional().nullable(),
+  stationId: z.number().int().positive().optional().nullable(),
+  periodStart: z.string().optional().nullable(),
+  periodEnd: z.string().optional().nullable(),
+  expectedAmount: z.union([z.string(), z.number()]).optional().nullable(),
+  actualAmount: z.union([z.string(), z.number()]).optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const pendingAccountSchema = z.object({
+  personOrEntity: z.string().min(1, 'اسم الشخص أو الجهة مطلوب').max(200),
+  description: z.string().min(1, 'الوصف مطلوب'),
+  status: z.enum(['pending', 'in_progress', 'resolved', 'written_off']).optional(),
+  estimatedAmount: z.union([z.string(), z.number()]).optional().nullable(),
+  currencyId: z.number().int().positive().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const billingSystemConfigSchema = z.object({
+  name: z.string().min(1, 'اسم نظام الفوترة مطلوب').max(200),
+  icon: z.string().max(50).optional(),
+  color: z.string().max(20).optional(),
+  stationMode: z.string().max(20).optional(),
+  stationIds: z.array(z.number()).optional(),
+  supportedMethodIds: z.array(z.number()).optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+});
+
+export const employeeBillingAccountSchema = z.object({
+  employeeId: z.number().int().positive('معرّف الموظف مطلوب'),
+  stationId: z.number().int().positive('معرّف المحطة مطلوب'),
+  billingSystem: z.string().min(1, 'نظام الفوترة مطلوب'),
+  collectionMethod: z.string().min(1, 'طريقة التحصيل مطلوبة'),
+  label: z.string().min(1, 'التسمية مطلوبة').max(200),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
 });
 
 /**

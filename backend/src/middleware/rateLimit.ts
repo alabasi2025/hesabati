@@ -3,6 +3,10 @@ import { Context, Next } from 'hono';
 /**
  * Rate Limiter بسيط يعتمد على الذاكرة
  * يحد من عدد الطلبات لكل IP خلال فترة زمنية محددة
+ * 
+ * تم تعديل الإعدادات لتكون مناسبة للاستخدام العادي:
+ * - API عام: 1000 طلب/دقيقة (بدلاً من 500)
+ * - تسجيل الدخول: 20 محاولة/15 دقيقة (بدلاً من 10)
  */
 interface RateLimitEntry {
   count: number;
@@ -23,14 +27,13 @@ setInterval(() => {
 
 export function rateLimitMiddleware(options: {
   windowMs?: number;  // نافذة الوقت بالملي ثانية (افتراضي: دقيقة)
-  maxRequests?: number; // أقصى عدد طلبات (افتراضي: 100)
+  maxRequests?: number; // أقصى عدد طلبات (افتراضي: 1000)
 } = {}) {
   const windowMs = options.windowMs || 60 * 1000;
-  const maxRequests = options.maxRequests || 100;
+  const maxRequests = options.maxRequests || 1000;
 
   return async (c: Context, next: Next) => {
     const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
-    const path = c.req.path;
     const key = `${ip}:${windowMs}:${maxRequests}`;
     const now = Date.now();
 
@@ -48,7 +51,12 @@ export function rateLimitMiddleware(options: {
     c.header('X-RateLimit-Reset', String(Math.ceil(entry.resetAt / 1000)));
 
     if (entry.count > maxRequests) {
-      return c.json({ error: 'تم تجاوز الحد الأقصى للطلبات - حاول مرة أخرى لاحقاً' }, 429);
+      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+      c.header('Retry-After', String(retryAfter));
+      return c.json({ 
+        error: 'تم تجاوز الحد الأقصى للطلبات - حاول مرة أخرى لاحقاً',
+        retryAfter: retryAfter,
+      }, 429);
     }
 
     await next();
@@ -57,10 +65,11 @@ export function rateLimitMiddleware(options: {
 
 /**
  * Rate Limiter مشدد لنقاط تسجيل الدخول
+ * 20 محاولة خلال 15 دقيقة
  */
 export function loginRateLimitMiddleware() {
   return rateLimitMiddleware({
     windowMs: 15 * 60 * 1000, // 15 دقيقة
-    maxRequests: 10, // 10 محاولات فقط
+    maxRequests: 20, // 20 محاولة (بدلاً من 10)
   });
 }

@@ -253,11 +253,11 @@ async function seed() {
 
   // ===================== أنظمة الفوترة (5 أنظمة) =====================
   await db.insert(schema.billingSystemsConfig).values([
-    { businessId: b1.id, name: 'المغربي نسخة 1 (الدهمية)', icon: 'receipt', color: '#10b981', stationScope: 'per_station', supportedTypes: ['تحصيل نقدي بالجوال', 'تحصيل إسناد يدوي', 'سداد إلكتروني'], sortOrder: 1 },
-    { businessId: b1.id, name: 'المغربي نسخة 2 (الصبالية وجمال)', icon: 'receipt', color: '#059669', stationScope: 'per_station', supportedTypes: ['تحصيل نقدي بالجوال', 'تحصيل إسناد يدوي', 'سداد إلكتروني'], sortOrder: 2 },
-    { businessId: b1.id, name: 'المغربي نسخة 3 (غليل)', icon: 'receipt', color: '#047857', stationScope: 'per_station', supportedTypes: ['تحصيل نقدي بالجوال', 'تحصيل إسناد يدوي', 'سداد إلكتروني'], sortOrder: 3 },
-    { businessId: b1.id, name: 'صندوق الدعم', icon: 'support', color: '#3b82f6', stationScope: 'per_station', supportedTypes: ['تحصيل نقدي بالجوال', 'تحصيل إسناد يدوي'], sortOrder: 4 },
-    { businessId: b1.id, name: 'الدفع المسبق', icon: 'credit_card', color: '#8b5cf6', stationScope: 'multi_station', supportedTypes: ['تحصيل نقدي بالجوال'], sortOrder: 5 },
+    { businessId: b1.id, name: 'المغربي نسخة 1 (الدهمية)', icon: 'receipt', color: '#10b981', stationMode: 'per_station', sortOrder: 1 },
+    { businessId: b1.id, name: 'المغربي نسخة 2 (الصبالية وجمال)', icon: 'receipt', color: '#059669', stationMode: 'per_station', sortOrder: 2 },
+    { businessId: b1.id, name: 'المغربي نسخة 3 (غليل)', icon: 'receipt', color: '#047857', stationMode: 'per_station', sortOrder: 3 },
+    { businessId: b1.id, name: 'صندوق الدعم', icon: 'support', color: '#3b82f6', stationMode: 'per_station', sortOrder: 4 },
+    { businessId: b1.id, name: 'الدفع المسبق', icon: 'credit_card', color: '#8b5cf6', stationMode: 'multi_station', sortOrder: 5 },
   ]);
   console.log('✅ أنظمة الفوترة (5 أنظمة: 3 مغربي + صندوق الدعم + الدفع المسبق)');
 

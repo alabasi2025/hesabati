@@ -36,9 +36,11 @@ app.use('*', cors({
 
 app.use('*', logger());
 
-// ===================== Rate Limiting =====================
+// ===================== Rate Limiting (إعدادات مناسبة للاستخدام العادي) =====================
+// تسجيل الدخول: 20 محاولة / 15 دقيقة
 app.use('/api/auth/login', loginRateLimitMiddleware());
-app.use('/api/*', rateLimitMiddleware({ windowMs: 60000, maxRequests: 500 }));
+// API عام: 1000 طلب / دقيقة (مناسب للاستخدام العادي مع SPA)
+app.use('/api/*', rateLimitMiddleware({ windowMs: 60000, maxRequests: 1000 }));
 
 // ===================== XSS Sanitization =====================
 app.use('/api/*', xssSanitizeMiddleware());
@@ -51,13 +53,27 @@ app.use('/api/*', authMiddleware());
 app.route('/api/dashboard', dashboardRoutes);
 app.route('/api', apiRoutes);
 
+// ===================== Global Error Handler =====================
+app.onError((err, c) => {
+  console.error('خطأ غير متوقع:', err);
+  return c.json({ 
+    error: 'حدث خطأ غير متوقع في الخادم - حاول مرة أخرى',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  }, 500);
+});
+
+// ===================== 404 Handler =====================
+app.notFound((c) => {
+  return c.json({ error: 'المسار المطلوب غير موجود' }, 404);
+});
+
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', message: 'حساباتي - النظام يعمل بنجاح' }));
 
 // Root
 app.get('/', (c) => c.json({
   name: 'حساباتي API',
-  version: '1.1.0',
+  version: '1.2.0',
   description: 'نظام إدارة مالية شخصية شاملة',
 }));
 
