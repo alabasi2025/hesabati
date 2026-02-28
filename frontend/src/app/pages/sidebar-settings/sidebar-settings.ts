@@ -1,5 +1,5 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
@@ -33,7 +33,6 @@ interface UserConfig {
   sectionId: number;
   isVisible: boolean;
   customSortOrder: number;
-  permission: string;
 }
 
 interface AppUser {
@@ -56,14 +55,8 @@ export class SidebarSettingsComponent implements OnInit {
   private auth = inject(AuthService);
   private toast = inject(ToastService);
 
-  private router = inject(Router);
-
   bizId = 0;
-  activeTab = signal<'users' | 'sections' | 'items' | 'screens'>('sections');
-
-  // Screens tab
-  customScreens = signal<any[]>([]);
-  screensLoading = signal(false);
+  activeTab = signal<'users' | 'sections' | 'items'>('users');
 
   // Users tab
   users = signal<AppUser[]>([]);
@@ -107,39 +100,10 @@ export class SidebarSettingsComponent implements OnInit {
       this.users.set(users);
       this.sections.set(sections);
       this.allItems.set(items);
-      this.loadCustomScreens();
     } catch (err) {
       console.error(err);
     } finally {
       this.loading.set(false);
-    }
-  }
-
-  async loadCustomScreens() {
-    this.screensLoading.set(true);
-    try {
-      const screens = await this.api.getScreens(this.bizId);
-      this.customScreens.set(screens);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      this.screensLoading.set(false);
-    }
-  }
-
-  navigateToCustomScreens() {
-    this.router.navigate(['/biz', this.bizId, 'custom-screens']);
-  }
-
-  async deleteCustomScreen(screen: any) {
-    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف الشاشة "${screen.name}"؟`, type: 'danger' });
-    if (!confirmed) return;
-    try {
-      await this.api.deleteScreen(screen.id);
-      this.showMessage('تم حذف الشاشة', 'success');
-      await this.loadCustomScreens();
-    } catch (err) {
-      this.showMessage('حدث خطأ أثناء الحذف', 'error');
     }
   }
 
@@ -158,7 +122,6 @@ export class SidebarSettingsComponent implements OnInit {
         sectionId: c.sectionId,
         isVisible: c.isVisible,
         customSortOrder: c.customSortOrder || 0,
-        permission: c.permission || 'view',
       })));
     } catch (err) {
       console.error(err);
@@ -271,7 +234,6 @@ export class SidebarSettingsComponent implements OnInit {
         sidebarItemId: c.itemId,
         isVisible: c.isVisible,
         customSortOrder: c.customSortOrder,
-        permission: c.permission || 'view',
       }));
       await this.api.updateUserSidebar(this.bizId, user.id, { items });
       this.showMessage('تم حفظ إعدادات التبويب بنجاح', 'success');
@@ -427,31 +389,6 @@ export class SidebarSettingsComponent implements OnInit {
     'warning', 'tune', 'settings', 'home', 'folder', 'circle',
     'payments', 'people', 'summarize', 'arrow_forward',
   ];
-
-  setPermission(itemId: number, permission: string) {
-    const configs = this.userConfigs().map(c =>
-      c.itemId === itemId ? { ...c, permission } : c
-    );
-    this.userConfigs.set(configs);
-  }
-
-  getPermissionLabel(permission: string): string {
-    switch (permission) {
-      case 'execute': return 'تنفيذ عمليات';
-      case 'view': return 'عرض فقط';
-      default: return 'عرض فقط';
-    }
-  }
-
-  async toggleScreenActive(screen: any) {
-    try {
-      await this.api.updateScreen(screen.id, { isActive: !screen.isActive });
-      this.showMessage(screen.isActive ? 'تم تعطيل الشاشة' : 'تم تفعيل الشاشة', 'success');
-    await this.loadCustomScreens();
-    } catch (err) {
-      this.showMessage('حدث خطأ', 'error');
-    }
-  }
 
   private showMessage(text: string, type: 'success' | 'error') {
     this.message.set(text);
