@@ -56,6 +56,8 @@ export class OperationTypesComponent implements OnInit {
     category: '',
     voucherType: '',
     paymentMethod: '',
+    sourceAccountId: null as number | null,
+    sourceFundId: null as number | null,
     linkedAccounts: [] as { accountId: number; accountName: string; accountType: string; permission: string }[],
     screens: [] as string[],
     requiresAttachment: false,
@@ -80,7 +82,6 @@ export class OperationTypesComponent implements OnInit {
     const cats = this.dynamicCategories();
     return cats.map(cat => {
       const templates = this.operationTypes().filter(ot => ot.category === cat);
-      // نأخذ أيقونة ولون أول قالب في التصنيف كافتراضي
       const firstOT = templates[0];
       return {
         name: cat,
@@ -144,22 +145,56 @@ export class OperationTypesComponent implements OnInit {
     accounting: 'محاسبي', intermediary: 'وسيط',
   };
 
-  // الحسابات المتاحة حسب طريقة الدفع أو نوع السند
+  // ===================== Computed: حسابات المصدر (الطرف الأول) =====================
+  // حسب وسيلة الدفع المختارة - تعرض الحسابات أو الصناديق المتاحة
+  sourceAccounts = computed(() => {
+    const w = this.wiz();
+    if (!w.paymentMethod) return [];
+
+    if (w.paymentMethod === 'cash') {
+      // نقداً → نعرض الصناديق
+      return this.funds().map(f => ({
+        id: f.id,
+        name: f.name,
+        type: 'fund',
+        icon: 'account_balance_wallet',
+        subInfo: f.fundType || '',
+        stationName: f.stationName || '',
+      }));
+    }
+
+    // بنك/صراف/محفظة → نعرض الحسابات من نوع معين
+    const pm = this.paymentMethods.find(p => p.value === w.paymentMethod);
+    if (!pm) return [];
+
+    return this.accounts().filter(a => a.accountType === pm.accountType).map(a => ({
+      id: a.id,
+      name: a.name,
+      type: 'account',
+      icon: pm.icon,
+      subInfo: a.provider || a.accountNumber || '',
+      stationName: '',
+    }));
+  });
+
+  // ===================== Computed: الحسابات المرتبطة (الطرف الثاني) =====================
   availableAccounts = computed(() => {
     const w = this.wiz();
     const all = this.accounts();
 
     if (w.voucherType === 'journal') {
+      // قيد محاسبي → كل الحسابات ما عدا الصناديق والبنوك والصرافين والمحافظ
       return all.filter(a => !['fund', 'bank', 'exchange', 'wallet', 'cash'].includes(a.accountType));
     }
 
+    // سند قبض/صرف → نعرض حسابات الطرف الثاني
+    // الطرف الثاني هو الحسابات المقابلة (مثلاً: موردين، فوترة، خدمات...)
+    // نستبعد حسابات نفس نوع المصدر
     if (w.paymentMethod) {
       const pm = this.paymentMethods.find(p => p.value === w.paymentMethod);
       if (pm) {
-        if (pm.accountType === 'fund') {
-          return all.filter(a => a.accountType === 'fund' || a.accountType === 'cash');
-        }
-        return all.filter(a => a.accountType === pm.accountType);
+        // نستبعد حسابات نفس نوع الوسيلة (لأنها الطرف الأول)
+        return all.filter(a => a.accountType !== pm.accountType && a.accountType !== 'fund' && a.accountType !== 'cash');
       }
     }
     return [];
@@ -201,6 +236,29 @@ export class OperationTypesComponent implements OnInit {
       groups.push({ category: cat, items });
     }
     return groups;
+  });
+
+  // ===================== Computed: عدد خطوات الـ wizard =====================
+  totalSteps = computed(() => {
+    const w = this.wiz();
+    // قيد محاسبي: 4 خطوات (تصنيف → نوع → حسابات → تفاصيل)
+    if (w.voucherType === 'journal') return 4;
+    // سند قبض/صرف: 6 خطوات (تصنيف → نوع → وسيلة → مصدر → حسابات → تفاصيل)
+    return 6;
+  });
+
+  // ===================== Computed: اسم المصدر المختار =====================
+  selectedSourceName = computed(() => {
+    const w = this.wiz();
+    if (w.paymentMethod === 'cash' && w.sourceFundId) {
+      const fund = this.funds().find(f => f.id === w.sourceFundId);
+      return fund?.name || '';
+    }
+    if (w.sourceAccountId) {
+      const acc = this.accounts().find(a => a.id === w.sourceAccountId);
+      return acc?.name || '';
+    }
+    return '';
   });
 
   async ngOnInit() {
@@ -247,7 +305,6 @@ export class OperationTypesComponent implements OnInit {
       'تحصيل': '#22c55e', 'توريد': '#3b82f6', 'سندات': '#f59e0b',
       'قيود': '#8b5cf6', 'عام': '#64748b',
     };
-    // إذا ما في لون محدد، نأخذ لون أول قالب في التصنيف
     if (colorMap[cat]) return colorMap[cat];
     const firstOT = this.operationTypes().find(ot => ot.category === cat);
     return firstOT?.color || '#3b82f6';
@@ -281,7 +338,6 @@ export class OperationTypesComponent implements OnInit {
     this.saving.set(true);
     try {
       if (this.editingCategoryOld()) {
-        // تعديل اسم تصنيف - نعدل كل القوالب اللي تحته
         const oldName = this.editingCategoryOld()!;
         if (oldName !== name) {
           const otsToUpdate = this.operationTypes().filter(ot => ot.category === oldName);
@@ -291,13 +347,9 @@ export class OperationTypesComponent implements OnInit {
           this.showSuccess(`تم تعديل التصنيف من "${oldName}" إلى "${name}"`);
         }
       } else {
-        // تصنيف جديد - ننشئ قالب مؤقت فارغ لحفظ التصنيف (أو نحفظه محلياً)
-        // التصنيف يظهر فقط عندما يكون فيه قوالب
-        // لذلك ننشئ قالب placeholder
         await this.api.createOperationType(this.bizId, {
           name: `قالب ${name} الافتراضي`,
           description: `قالب افتراضي لتصنيف ${name}`,
-          icon: this.newCategoryIcon(),
           color: this.newCategoryColor(),
           category: name,
           voucherType: 'receipt',
@@ -305,7 +357,7 @@ export class OperationTypesComponent implements OnInit {
           screens: [name],
           requiresAttachment: false,
           hasMultiLines: true,
-          isActive: false, // غير فعال - مجرد placeholder
+          isActive: false,
           sortOrder: 999,
           linkedAccounts: [],
         });
@@ -351,6 +403,8 @@ export class OperationTypesComponent implements OnInit {
       name: '', description: '', icon: 'receipt_long', color: '#3b82f6',
       category: '',
       voucherType: '', paymentMethod: '',
+      sourceAccountId: null,
+      sourceFundId: null,
       linkedAccounts: [], screens: [],
       requiresAttachment: false, hasMultiLines: true,
       isActive: true, sortOrder: 0,
@@ -376,6 +430,8 @@ export class OperationTypesComponent implements OnInit {
       category: ot.category || '',
       voucherType: ot.voucherType || '',
       paymentMethod: ot.paymentMethod || '',
+      sourceAccountId: ot.sourceAccountId || null,
+      sourceFundId: ot.sourceFundId || null,
       linkedAccounts: linked,
       screens: ot.screens ? (typeof ot.screens === 'string' ? (() => { try { return JSON.parse(ot.screens); } catch { return []; } })() : ot.screens) : [],
       requiresAttachment: ot.requiresAttachment || false,
@@ -401,6 +457,8 @@ export class OperationTypesComponent implements OnInit {
       ...w,
       voucherType: vt,
       paymentMethod: vt === 'journal' ? '' : w.paymentMethod,
+      sourceAccountId: null,
+      sourceFundId: null,
       linkedAccounts: [],
     }));
     this.selectedAccountType.set('');
@@ -410,9 +468,33 @@ export class OperationTypesComponent implements OnInit {
     this.wiz.update(w => ({
       ...w,
       paymentMethod: pm,
+      sourceAccountId: null,
+      sourceFundId: null,
       linkedAccounts: [],
     }));
     this.selectedAccountType.set('');
+  }
+
+  selectSource(source: any) {
+    if (source.type === 'fund') {
+      this.wiz.update(w => ({
+        ...w,
+        sourceFundId: w.sourceFundId === source.id ? null : source.id,
+        sourceAccountId: null,
+      }));
+    } else {
+      this.wiz.update(w => ({
+        ...w,
+        sourceAccountId: w.sourceAccountId === source.id ? null : source.id,
+        sourceFundId: null,
+      }));
+    }
+  }
+
+  isSourceSelected(source: any): boolean {
+    const w = this.wiz();
+    if (source.type === 'fund') return w.sourceFundId === source.id;
+    return w.sourceAccountId === source.id;
   }
 
   toggleLinkedAccount(acc: any) {
@@ -456,22 +538,52 @@ export class OperationTypesComponent implements OnInit {
     }));
   }
 
-  // Wizard navigation - 4 خطوات
-  // Step 1: اختيار التصنيف (من القائمة الموجودة)
-  // Step 2: نوع السند
-  // Step 3: طريقة الدفع + الحسابات
-  // Step 4: الاسم والتفاصيل
+  // ===================== Wizard Navigation - 6 خطوات (أو 4 للقيود) =====================
+  // سند قبض/صرف:
+  //   Step 1: اختيار التصنيف
+  //   Step 2: نوع السند (قبض/صرف/قيد)
+  //   Step 3: وسيلة الدفع (نقد/بنك/صراف/محفظة)
+  //   Step 4: المصدر - الطرف الأول (أي صندوق/بنك/صراف/محفظة بالتحديد)
+  //   Step 5: الحسابات المرتبطة - الطرف الثاني
+  //   Step 6: الاسم والتفاصيل
+  //
+  // قيد محاسبي:
+  //   Step 1: اختيار التصنيف
+  //   Step 2: نوع السند (قيد)
+  //   Step 3: الحسابات المرتبطة (دليل الحسابات)
+  //   Step 4: الاسم والتفاصيل
+
+  // تحويل رقم الخطوة الحقيقي إلى رقم العرض
+  getDisplayStep(): number {
+    return this.wizardStep();
+  }
+
   canGoNext(): boolean {
     const w = this.wiz();
     const step = this.wizardStep();
+
     if (step === 1) return !!w.category.trim();
     if (step === 2) return !!w.voucherType;
-    if (step === 3) {
-      if (w.voucherType === 'journal') return w.linkedAccounts.length > 0;
-      return !!w.paymentMethod && w.linkedAccounts.length > 0;
+
+    if (w.voucherType === 'journal') {
+      // قيد: الخطوة 3 = حسابات، الخطوة 4 = تفاصيل
+      if (step === 3) return w.linkedAccounts.length > 0;
+      if (step === 4) return !!w.name.trim();
+    } else {
+      // سند قبض/صرف
+      if (step === 3) return !!w.paymentMethod;
+      if (step === 4) return !!(w.sourceAccountId || w.sourceFundId);
+      if (step === 5) return w.linkedAccounts.length > 0;
+      if (step === 6) return !!w.name.trim();
     }
-    if (step === 4) return !!w.name.trim();
     return true;
+  }
+
+  isLastStep(): boolean {
+    const w = this.wiz();
+    const step = this.wizardStep();
+    if (w.voucherType === 'journal') return step === 4;
+    return step === 6;
   }
 
   nextStep() {
@@ -480,6 +592,59 @@ export class OperationTypesComponent implements OnInit {
 
   prevStep() {
     this.wizardStep.update(s => s - 1);
+  }
+
+  // تحديد أي خطوة wizard يعرض المحتوى الحالي
+  // للقيود: step 3 = حسابات، step 4 = تفاصيل
+  // للسندات: step 3 = وسيلة، step 4 = مصدر، step 5 = حسابات، step 6 = تفاصيل
+  getContentType(): 'category' | 'voucherType' | 'paymentMethod' | 'source' | 'accounts' | 'details' {
+    const w = this.wiz();
+    const step = this.wizardStep();
+
+    if (step === 1) return 'category';
+    if (step === 2) return 'voucherType';
+
+    if (w.voucherType === 'journal') {
+      if (step === 3) return 'accounts';
+      if (step === 4) return 'details';
+    } else {
+      if (step === 3) return 'paymentMethod';
+      if (step === 4) return 'source';
+      if (step === 5) return 'accounts';
+      if (step === 6) return 'details';
+    }
+    return 'category';
+  }
+
+  // ===================== Step Labels for wizard header =====================
+  getStepLabels(): { num: number; label: string }[] {
+    const w = this.wiz();
+    if (w.voucherType === 'journal') {
+      return [
+        { num: 1, label: 'التصنيف' },
+        { num: 2, label: 'نوع السند' },
+        { num: 3, label: 'الحسابات' },
+        { num: 4, label: 'التفاصيل' },
+      ];
+    }
+    return [
+      { num: 1, label: 'التصنيف' },
+      { num: 2, label: 'نوع السند' },
+      { num: 3, label: 'الوسيلة' },
+      { num: 4, label: 'المصدر' },
+      { num: 5, label: 'الحسابات' },
+      { num: 6, label: 'التفاصيل' },
+    ];
+  }
+
+  getPaymentMethodIcon(): string {
+    const pm = this.paymentMethods.find(p => p.value === this.wiz().paymentMethod);
+    return pm?.icon || 'payments';
+  }
+
+  getPaymentMethodName(): string {
+    const pm = this.paymentMethods.find(p => p.value === this.wiz().paymentMethod);
+    return pm?.label || '';
   }
 
   async saveWizard() {
@@ -497,6 +662,8 @@ export class OperationTypesComponent implements OnInit {
         category: w.category,
         voucherType: w.voucherType,
         paymentMethod: w.paymentMethod || null,
+        sourceAccountId: w.sourceAccountId || null,
+        sourceFundId: w.sourceFundId || null,
         screens: w.screens.length > 0 ? w.screens : [w.category],
         requiresAttachment: w.requiresAttachment,
         hasMultiLines: w.hasMultiLines,
@@ -557,6 +724,10 @@ export class OperationTypesComponent implements OnInit {
     return this.accounts().find(a => a.id === id)?.name || '—';
   }
 
+  getFundName(id: number): string {
+    return this.funds().find(f => f.id === id)?.name || '—';
+  }
+
   getAccountTypeLabel(t: string): string {
     return this.accountTypeLabels[t] || t;
   }
@@ -572,6 +743,16 @@ export class OperationTypesComponent implements OnInit {
 
   getPermissionLabel(p: string): string {
     return this.permissions.find(x => x.value === p)?.label || p;
+  }
+
+  getSourceLabel(ot: any): string {
+    if (ot.sourceFundId) {
+      return this.getFundName(ot.sourceFundId);
+    }
+    if (ot.sourceAccountId) {
+      return this.getAccountName(ot.sourceAccountId);
+    }
+    return '—';
   }
 
   countByCategory(category: string): number {

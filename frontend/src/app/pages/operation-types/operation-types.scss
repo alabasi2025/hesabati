@@ -997,7 +997,181 @@
   color: #22c55e;
 }
 
-/* ===== Step 3: Main Account List ===== */
+/* ===== Step 4: Source Account (الطرف الأول - المصدر) ===== */
+.source-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(99,102,241,0.04));
+  border: 1px solid rgba(59,130,246,0.15);
+  margin-bottom: 20px;
+  
+  > .material-icons-round {
+    font-size: 22px;
+    color: #f59e0b;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  
+  strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-primary, #1e293b);
+    margin-bottom: 4px;
+  }
+  
+  p {
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.7;
+  }
+}
+
+.source-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.source-acc-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 2px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card, white);
+  cursor: pointer;
+  transition: all 0.25s;
+  
+  &:hover {
+    border-color: #3b82f6;
+    background: rgba(59,130,246,0.02);
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  
+  &.selected {
+    border-color: #22c55e;
+    background: rgba(34,197,94,0.04);
+    box-shadow: 0 4px 16px rgba(34,197,94,0.15);
+  }
+}
+
+.sai-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.25s;
+  
+  .material-icons-round { font-size: 22px; color: #3b82f6; }
+}
+
+.source-acc-item.selected .sai-icon {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+  .material-icons-round { color: white; }
+}
+
+.sai-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  
+  strong {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-primary, #1e293b);
+  }
+}
+
+.sai-sub {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 600;
+}
+
+.sai-station {
+  font-size: 11px;
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.sai-check {
+  font-size: 24px !important;
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+/* ===== Source Summary Chip ===== */
+.source-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(16,185,129,0.06));
+  border: 1px solid rgba(34,197,94,0.2);
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  
+  .material-icons-round { font-size: 18px; }
+  strong { font-weight: 800; color: #15803d; }
+}
+
+/* ===== Source Chip in Card ===== */
+.source-chip {
+  background: rgba(34,197,94,0.08) !important;
+  border-color: rgba(34,197,94,0.2) !important;
+  color: #16a34a !important;
+  
+  .material-icons-round { color: #16a34a !important; }
+}
+
+/* ===== Wizard Summary (خطوة التفاصيل) ===== */
+.wizard-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--bg-surface, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  margin-bottom: 20px;
+}
+
+.ws-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--bg-card, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  
+  .material-icons-round { font-size: 16px; color: #3b82f6; }
+  strong { font-weight: 800; color: var(--text-primary, #1e293b); }
+}
+
+/* ===== Step 3 (legacy): Main Account List ===== */
 .main-account-list {
   display: flex;
   flex-direction: column;

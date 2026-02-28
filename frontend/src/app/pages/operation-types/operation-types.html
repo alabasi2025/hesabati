@@ -202,6 +202,12 @@
                         {{ getPaymentMethodLabel(ot.paymentMethod) }}
                       </div>
                     }
+                    @if (ot.sourceAccountId || ot.sourceFundId) {
+                      <div class="ot-info-chip source-chip">
+                        <span class="material-icons-round">account_balance_wallet</span>
+                        {{ getSourceLabel(ot) }}
+                      </div>
+                    }
                   </div>
 
                   <!-- Flags -->
@@ -304,7 +310,7 @@
   }
 
   <!-- ============================================================ -->
-  <!-- ========= WIZARD إنشاء/تعديل قالب (4 خطوات) =============== -->
+  <!-- ========= WIZARD إنشاء/تعديل قالب (6 خطوات) =============== -->
   <!-- ============================================================ -->
   @if (showWizard()) {
     <div class="modal-overlay" (click)="showWizard.set(false)">
@@ -319,38 +325,28 @@
             </button>
           </div>
 
-          <!-- Step Indicators -->
+          <!-- Step Indicators - Dynamic -->
           <div class="wizard-steps-bar">
-            <div class="wstep" [class.active]="wizardStep() === 1" [class.done]="wizardStep() > 1"
-                 (click)="wizardStep.set(1)">
-              <div class="wstep-num">1</div>
-              <span>التصنيف</span>
-            </div>
-            <div class="wstep-line" [class.done]="wizardStep() > 1"></div>
-            <div class="wstep" [class.active]="wizardStep() === 2" [class.done]="wizardStep() > 2"
-                 (click)="wiz().category ? wizardStep.set(2) : null">
-              <div class="wstep-num">2</div>
-              <span>نوع السند</span>
-            </div>
-            <div class="wstep-line" [class.done]="wizardStep() > 2"></div>
-            <div class="wstep" [class.active]="wizardStep() === 3" [class.done]="wizardStep() > 3"
-                 (click)="wiz().voucherType ? wizardStep.set(3) : null">
-              <div class="wstep-num">3</div>
-              <span>{{ wiz().voucherType === 'journal' ? 'الحسابات' : 'الدفع والحسابات' }}</span>
-            </div>
-            <div class="wstep-line" [class.done]="wizardStep() > 3"></div>
-            <div class="wstep" [class.active]="wizardStep() === 4" [class.done]="wizardStep() > 4">
-              <div class="wstep-num">4</div>
-              <span>الاسم والتفاصيل</span>
-            </div>
+            @for (step of getStepLabels(); track step.num; let last = $last) {
+              <div class="wstep"
+                   [class.active]="wizardStep() === step.num"
+                   [class.done]="wizardStep() > step.num"
+                   (click)="step.num < wizardStep() ? wizardStep.set(step.num) : null">
+                <div class="wstep-num">{{ step.num }}</div>
+                <span>{{ step.label }}</span>
+              </div>
+              @if (!last) {
+                <div class="wstep-line" [class.done]="wizardStep() > step.num"></div>
+              }
+            }
           </div>
         </div>
 
         <!-- Wizard Body -->
         <div class="wizard-body">
 
-          <!-- ===== STEP 1: اختيار التصنيف (من القائمة الموجودة فقط) ===== -->
-          @if (wizardStep() === 1) {
+          <!-- ===== محتوى: اختيار التصنيف ===== -->
+          @if (getContentType() === 'category') {
             <div class="wizard-step">
               <h3 class="step-title">
                 <span class="material-icons-round">folder</span>
@@ -385,8 +381,8 @@
             </div>
           }
 
-          <!-- ===== STEP 2: نوع السند ===== -->
-          @if (wizardStep() === 2) {
+          <!-- ===== محتوى: نوع السند ===== -->
+          @if (getContentType() === 'voucherType') {
             <div class="wizard-step">
               <h3 class="step-title">
                 <span class="material-icons-round">description</span>
@@ -415,130 +411,219 @@
             </div>
           }
 
-          <!-- ===== STEP 3: طريقة الدفع + الحسابات المرتبطة ===== -->
-          @if (wizardStep() === 3) {
+          <!-- ===== محتوى: وسيلة الدفع (فقط للقبض والصرف) ===== -->
+          @if (getContentType() === 'paymentMethod') {
             <div class="wizard-step">
+              <h3 class="step-title">
+                <span class="material-icons-round">payments</span>
+                وسيلة {{ wiz().voucherType === 'receipt' ? 'القبض' : 'الصرف' }}
+              </h3>
+              <p class="step-desc">كيف يتم {{ wiz().voucherType === 'receipt' ? 'استلام' : 'صرف' }} الأموال؟</p>
 
-              <!-- طريقة الدفع (فقط للقبض والصرف) -->
-              @if (wiz().voucherType !== 'journal') {
-                <h3 class="step-title">
-                  <span class="material-icons-round">payments</span>
-                  طريقة {{ wiz().voucherType === 'receipt' ? 'القبض' : 'الصرف' }}
-                </h3>
-                <p class="step-desc">كيف يتم {{ wiz().voucherType === 'receipt' ? 'استلام' : 'صرف' }} الأموال؟</p>
+              <div class="method-cards">
+                @for (pm of paymentMethods; track pm.value) {
+                  <div class="method-card" [class.selected]="wiz().paymentMethod === pm.value"
+                       (click)="selectPaymentMethod(pm.value)">
+                    <div class="mc-icon">
+                      <span class="material-icons-round">{{ pm.icon }}</span>
+                    </div>
+                    <strong>{{ pm.label }}</strong>
+                    <p>{{ pm.desc }}</p>
+                    @if (wiz().paymentMethod === pm.value) {
+                      <span class="material-icons-round mc-check">check_circle</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
 
-                <div class="method-cards">
-                  @for (pm of paymentMethods; track pm.value) {
-                    <div class="method-card" [class.selected]="wiz().paymentMethod === pm.value"
-                         (click)="selectPaymentMethod(pm.value)">
-                      <div class="mc-icon">
-                        <span class="material-icons-round">{{ pm.icon }}</span>
+          <!-- ===== محتوى: المصدر - الطرف الأول (فقط للقبض والصرف) ===== -->
+          @if (getContentType() === 'source') {
+            <div class="wizard-step">
+              <h3 class="step-title">
+                <span class="material-icons-round">{{ getPaymentMethodIcon() }}</span>
+                الطرف الأول (المصدر)
+              </h3>
+              <p class="step-desc">
+                اختر {{ wiz().paymentMethod === 'cash' ? 'الصندوق' : (wiz().paymentMethod === 'bank' ? 'البنك' : (wiz().paymentMethod === 'exchange' ? 'الصراف' : 'المحفظة')) }}
+                الذي {{ wiz().voucherType === 'receipt' ? 'يستقبل' : 'يصرف من' }}ه المبلغ
+              </p>
+
+              <!-- بطاقة توضيحية -->
+              <div class="source-info-banner">
+                <span class="material-icons-round">lightbulb</span>
+                <div>
+                  <strong>ما هو الطرف الأول؟</strong>
+                  <p>هو {{ wiz().paymentMethod === 'cash' ? 'الصندوق' : (wiz().paymentMethod === 'bank' ? 'الحساب البنكي' : (wiz().paymentMethod === 'exchange' ? 'حساب الصراف' : 'المحفظة الإلكترونية')) }}
+                  الذي ينفذ العملية. مثلاً: "صندوق محطة الدهمية" أو "بنك الأهلي".</p>
+                </div>
+              </div>
+
+              @if (sourceAccounts().length === 0) {
+                <div class="no-accounts-msg">
+                  <span class="material-icons-round">info</span>
+                  لا توجد {{ wiz().paymentMethod === 'cash' ? 'صناديق' : 'حسابات' }} متاحة. أضفها أولاً من الصفحة المناسبة.
+                </div>
+              } @else {
+                <div class="source-accounts-list">
+                  @for (src of sourceAccounts(); track src.id) {
+                    <div class="source-acc-item" [class.selected]="isSourceSelected(src)"
+                         (click)="selectSource(src)">
+                      <div class="sai-icon">
+                        <span class="material-icons-round">{{ src.icon }}</span>
                       </div>
-                      <strong>{{ pm.label }}</strong>
-                      <p>{{ pm.desc }}</p>
-                      @if (wiz().paymentMethod === pm.value) {
-                        <span class="material-icons-round mc-check">check_circle</span>
+                      <div class="sai-info">
+                        <strong>{{ src.name }}</strong>
+                        @if (src.subInfo) {
+                          <span class="sai-sub">{{ src.subInfo }}</span>
+                        }
+                        @if (src.stationName) {
+                          <span class="sai-station">{{ src.stationName }}</span>
+                        }
+                      </div>
+                      @if (isSourceSelected(src)) {
+                        <span class="material-icons-round sai-check">check_circle</span>
                       }
                     </div>
                   }
                 </div>
-              } @else {
-                <h3 class="step-title">
-                  <span class="material-icons-round">book</span>
-                  حسابات القيد
-                </h3>
-                <p class="step-desc">اختر الحسابات المدينة والدائنة من دليل الحسابات</p>
-              }
-
-              <!-- الحسابات المرتبطة -->
-              @if (wiz().voucherType === 'journal' || wiz().paymentMethod) {
-                <div class="accounts-section-divider">
-                  <span class="material-icons-round">group</span>
-                  <h3>الحسابات المرتبطة</h3>
-                </div>
-
-                <!-- Account Type Filter -->
-                @if (availableAccountTypes().length > 1) {
-                  <div class="acc-type-selector">
-                    <label class="form-label">فلتر حسب النوع:</label>
-                    <div class="acc-type-chips">
-                      <button class="acc-type-chip" [class.active]="selectedAccountType() === ''"
-                              (click)="selectedAccountType.set('')">
-                        الكل
-                        <span class="atc-count">{{ availableAccounts().length }}</span>
-                      </button>
-                      @for (at of availableAccountTypes(); track at) {
-                        <button class="acc-type-chip" [class.active]="selectedAccountType() === at"
-                                (click)="selectedAccountType.set(at)">
-                          {{ getAccountTypeLabel(at) }}
-                          <span class="atc-count">{{ availableAccounts().filter(a => a.accountType === at).length }}</span>
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
-
-                <!-- Available Accounts -->
-                <div class="counter-accounts-section">
-                  <div class="cas-header">
-                    <span>الحسابات المتاحة ({{ filteredAccountsByType().length }})</span>
-                    <button class="btn-select-all" (click)="selectAllAccounts()">
-                      <span class="material-icons-round">select_all</span>
-                      تحديد الكل
-                    </button>
-                  </div>
-                  <div class="counter-accounts-grid">
-                    @for (acc of filteredAccountsByType(); track acc.id) {
-                      <div class="counter-acc-item" [class.selected]="linkedAccountIds().has(acc.id)"
-                           (click)="toggleLinkedAccount(acc)">
-                        <span class="material-icons-round cai-icon">
-                          {{ linkedAccountIds().has(acc.id) ? 'check_box' : 'check_box_outline_blank' }}
-                        </span>
-                        <span class="cai-name">{{ acc.name }}</span>
-                        <span class="cai-type">{{ getAccountTypeLabel(acc.accountType) }}</span>
-                      </div>
-                    }
-                    @if (filteredAccountsByType().length === 0) {
-                      <div class="no-accounts-msg">
-                        <span class="material-icons-round">info</span>
-                        لا توجد حسابات متاحة. أضف حسابات أولاً من الصفحات المناسبة.
-                      </div>
-                    }
-                  </div>
-                </div>
-
-                <!-- Selected Accounts Summary -->
-                @if (wiz().linkedAccounts.length > 0) {
-                  <div class="selected-accounts-summary">
-                    <h4>
-                      <span class="material-icons-round">link</span>
-                      الحسابات المختارة ({{ wiz().linkedAccounts.length }})
-                    </h4>
-                    <div class="selected-accounts-list">
-                      @for (la of wiz().linkedAccounts; track la.accountId) {
-                        <div class="sel-acc-chip">
-                          <span class="sac-type">{{ getAccountTypeLabel(la.accountType) }}</span>
-                          <span class="sac-name">{{ la.accountName }}</span>
-                          <button class="sac-remove" (click)="removeLinkedAccount(la.accountId)">
-                            <span class="material-icons-round">close</span>
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
               }
             </div>
           }
 
-          <!-- ===== STEP 4: الاسم والتفاصيل ===== -->
-          @if (wizardStep() === 4) {
+          <!-- ===== محتوى: الحسابات المرتبطة (الطرف الثاني) ===== -->
+          @if (getContentType() === 'accounts') {
+            <div class="wizard-step">
+              <h3 class="step-title">
+                <span class="material-icons-round">group</span>
+                {{ wiz().voucherType === 'journal' ? 'حسابات القيد' : 'الطرف الثاني (الحسابات المرتبطة)' }}
+              </h3>
+              <p class="step-desc">
+                @if (wiz().voucherType === 'journal') {
+                  اختر الحسابات المدينة والدائنة من دليل الحسابات
+                } @else {
+                  اختر الحسابات المقابلة التي {{ wiz().voucherType === 'receipt' ? 'يُقبض منها' : 'يُصرف لها' }}
+                }
+              </p>
+
+              <!-- ملخص المصدر المختار (فقط للقبض والصرف) -->
+              @if (wiz().voucherType !== 'journal' && selectedSourceName()) {
+                <div class="source-summary-chip">
+                  <span class="material-icons-round">{{ getPaymentMethodIcon() }}</span>
+                  <span>المصدر: <strong>{{ selectedSourceName() }}</strong></span>
+                </div>
+              }
+
+              <!-- Account Type Filter -->
+              @if (availableAccountTypes().length > 1) {
+                <div class="acc-type-selector">
+                  <label class="form-label">فلتر حسب النوع:</label>
+                  <div class="acc-type-chips">
+                    <button class="acc-type-chip" [class.active]="selectedAccountType() === ''"
+                            (click)="selectedAccountType.set('')">
+                      الكل
+                      <span class="atc-count">{{ availableAccounts().length }}</span>
+                    </button>
+                    @for (at of availableAccountTypes(); track at) {
+                      <button class="acc-type-chip" [class.active]="selectedAccountType() === at"
+                              (click)="selectedAccountType.set(at)">
+                        {{ getAccountTypeLabel(at) }}
+                        <span class="atc-count">{{ availableAccounts().filter(a => a.accountType === at).length }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Available Accounts -->
+              <div class="counter-accounts-section">
+                <div class="cas-header">
+                  <span>الحسابات المتاحة ({{ filteredAccountsByType().length }})</span>
+                  <button class="btn-select-all" (click)="selectAllAccounts()">
+                    <span class="material-icons-round">select_all</span>
+                    تحديد الكل
+                  </button>
+                </div>
+                <div class="counter-accounts-grid">
+                  @for (acc of filteredAccountsByType(); track acc.id) {
+                    <div class="counter-acc-item" [class.selected]="linkedAccountIds().has(acc.id)"
+                         (click)="toggleLinkedAccount(acc)">
+                      <span class="material-icons-round cai-icon">
+                        {{ linkedAccountIds().has(acc.id) ? 'check_box' : 'check_box_outline_blank' }}
+                      </span>
+                      <span class="cai-name">{{ acc.name }}</span>
+                      <span class="cai-type">{{ getAccountTypeLabel(acc.accountType) }}</span>
+                    </div>
+                  }
+                  @if (filteredAccountsByType().length === 0) {
+                    <div class="no-accounts-msg" style="grid-column: 1 / -1">
+                      <span class="material-icons-round">info</span>
+                      لا توجد حسابات متاحة. أضف حسابات أولاً من الصفحات المناسبة.
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Selected Accounts Summary -->
+              @if (wiz().linkedAccounts.length > 0) {
+                <div class="selected-accounts-summary">
+                  <h4>
+                    <span class="material-icons-round">link</span>
+                    الحسابات المختارة ({{ wiz().linkedAccounts.length }})
+                  </h4>
+                  <div class="selected-accounts-list">
+                    @for (la of wiz().linkedAccounts; track la.accountId) {
+                      <div class="sel-acc-chip">
+                        <span class="sac-type">{{ getAccountTypeLabel(la.accountType) }}</span>
+                        <span class="sac-name">{{ la.accountName }}</span>
+                        <button class="sac-remove" (click)="removeLinkedAccount(la.accountId)">
+                          <span class="material-icons-round">close</span>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ===== محتوى: الاسم والتفاصيل ===== -->
+          @if (getContentType() === 'details') {
             <div class="wizard-step">
               <h3 class="step-title">
                 <span class="material-icons-round">badge</span>
                 اسم القالب والتفاصيل
               </h3>
               <p class="step-desc">سمّي القالب واختر الأيقونة واللون</p>
+
+              <!-- ملخص الاختيارات السابقة -->
+              <div class="wizard-summary">
+                <div class="ws-item">
+                  <span class="material-icons-round">folder</span>
+                  <span>التصنيف: <strong>{{ wiz().category }}</strong></span>
+                </div>
+                <div class="ws-item">
+                  <span class="material-icons-round">description</span>
+                  <span>النوع: <strong>{{ getVoucherTypeLabel(wiz().voucherType) }}</strong></span>
+                </div>
+                @if (wiz().paymentMethod) {
+                  <div class="ws-item">
+                    <span class="material-icons-round">payments</span>
+                    <span>الوسيلة: <strong>{{ getPaymentMethodLabel(wiz().paymentMethod) }}</strong></span>
+                  </div>
+                }
+                @if (selectedSourceName()) {
+                  <div class="ws-item">
+                    <span class="material-icons-round">account_balance_wallet</span>
+                    <span>المصدر: <strong>{{ selectedSourceName() }}</strong></span>
+                  </div>
+                }
+                <div class="ws-item">
+                  <span class="material-icons-round">group</span>
+                  <span>الحسابات: <strong>{{ wiz().linkedAccounts.length }} حساب</strong></span>
+                </div>
+              </div>
 
               <!-- Name & Description -->
               <div class="form-group">
@@ -611,7 +696,7 @@
             <div></div>
           }
 
-          @if (wizardStep() < 4) {
+          @if (!isLastStep()) {
             <button class="btn-3d btn-primary" [disabled]="!canGoNext()" (click)="nextStep()">
               التالي
               <span class="material-icons-round">arrow_back</span>
@@ -645,6 +730,14 @@
           </button>
         </div>
         <div class="modal-body">
+          <!-- معلومات المصدر -->
+          @if (selectedOT().sourceAccountId || selectedOT().sourceFundId) {
+            <div class="source-summary-chip" style="margin-bottom: 16px">
+              <span class="material-icons-round">account_balance_wallet</span>
+              <span>المصدر (الطرف الأول): <strong>{{ getSourceLabel(selectedOT()) }}</strong></span>
+            </div>
+          }
+
           @if (!selectedOT().linkedAccounts || selectedOT().linkedAccounts.length === 0) {
             <div class="no-linked">
               <span class="material-icons-round">link_off</span>
@@ -696,23 +789,25 @@
             <h3><span class="material-icons-round">auto_awesome</span> القالب = عملية مقيدة بالكامل</h3>
             <p>
               المستخدم بس يختار القالب ويعبي المبلغ ويحفظ. كل شي محدد مسبقاً:
-              نوع العملية، طريقة الدفع، والحسابات المرتبطة.
+              نوع العملية، طريقة الدفع، المصدر، والحسابات المرتبطة.
             </p>
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">format_list_numbered</span> خطوات إنشاء القالب</h3>
             <div class="hiw-steps">
-              <div class="hiw-step"><span class="hs-num">1</span> <strong>التصنيف:</strong> اختر التصنيف من القائمة الموجودة (أنشئ التصنيفات من تبويب "التصنيفات")</div>
+              <div class="hiw-step"><span class="hs-num">1</span> <strong>التصنيف:</strong> اختر التصنيف من القائمة الموجودة</div>
               <div class="hiw-step"><span class="hs-num">2</span> <strong>نوع السند:</strong> سند قبض / سند صرف / قيد محاسبي</div>
-              <div class="hiw-step"><span class="hs-num">3</span> <strong>طريقة الدفع والحسابات:</strong> اختر طريقة الدفع ثم الحسابات المرتبطة</div>
-              <div class="hiw-step"><span class="hs-num">4</span> <strong>الاسم والتفاصيل:</strong> سمّي القالب واختر الأيقونة واللون</div>
+              <div class="hiw-step"><span class="hs-num">3</span> <strong>وسيلة الدفع:</strong> نقداً / بنك / صراف / محفظة إلكترونية</div>
+              <div class="hiw-step"><span class="hs-num">4</span> <strong>المصدر (الطرف الأول):</strong> أي صندوق أو بنك أو صراف أو محفظة بالتحديد</div>
+              <div class="hiw-step"><span class="hs-num">5</span> <strong>الحسابات (الطرف الثاني):</strong> الحسابات المقابلة المرتبطة</div>
+              <div class="hiw-step"><span class="hs-num">6</span> <strong>الاسم والتفاصيل:</strong> سمّي القالب واختر الأيقونة واللون</div>
             </div>
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">rule</span> قواعد مهمة</h3>
             <p>
               <strong>التصنيفات أولاً:</strong> أنشئ التصنيفات من تبويب "التصنيفات" قبل إنشاء القوالب.<br>
-              <strong>سند قبض/صرف:</strong> اختر طريقة الدفع أولاً → تظهر الحسابات المناسبة (صناديق/بنوك/صرافين/محافظ).<br>
+              <strong>سند قبض/صرف:</strong> اختر الوسيلة → المصدر (الطرف الأول) → الحسابات (الطرف الثاني).<br>
               <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو بنوك).
             </p>
           </div>

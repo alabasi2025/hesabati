@@ -612,6 +612,8 @@ export const operationTypes = pgTable('operation_types', {
   category: varchar('category', { length: 50 }).notNull().default('عام'), // تصنيف ديناميكي ينشئه المستخدم
   voucherType: varchar('voucher_type', { length: 30 }), // 'payment' | 'receipt' | 'journal'
   paymentMethod: varchar('payment_method', { length: 30 }), // 'cash' | 'bank' | 'exchange' | 'e_wallet'
+  sourceAccountId: integer('source_account_id').references(() => accounts.id), // الطرف الأول (المصدر) - حساب بنك/صراف/محفظة
+  sourceFundId: integer('source_fund_id').references(() => funds.id), // الطرف الأول (المصدر) - صندوق
   screens: text('screens').default('{}'), // PostgreSQL text[] stored as text for Drizzle compat
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),
