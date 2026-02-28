@@ -253,6 +253,19 @@ export class ApiService {
   addWidgetAccount(widgetId: number, d: any)            { return this.request<any>(`/widgets/${widgetId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   removeWidgetAccount(id: number)                       { return this.request<any>(`/widget-accounts/${id}`, { method: 'DELETE' }); }
 
+  // ===================== صلاحيات الشاشات =====================
+  getScreenPermissions(screenId: number)                 { return this.request<any[]>(`/screens/${screenId}/permissions`); }
+  addScreenPermission(screenId: number, d: any)          { return this.request<any>(`/screens/${screenId}/permissions`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateScreenPermission(id: number, d: any)             { return this.request<any>(`/screen-permissions/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteScreenPermission(id: number)                     { return this.request<any>(`/screen-permissions/${id}`, { method: 'DELETE' }); }
+  batchUpdateScreenPermissions(screenId: number, permissions: any[]) { return this.request<any[]>(`/screens/${screenId}/permissions/batch`, { method: 'PUT', body: JSON.stringify({ permissions }) }); }
+  getUserScreens(bizId: number, userId: number)          { return this.request<any[]>(`/businesses/${bizId}/users/${userId}/screens`); }
+
+  // ===================== نسخ عناصر وإنشاء من قالب =====================
+  copyWidgets(targetScreenId: number, widgetIds: number[]) { return this.request<any[]>(`/screens/${targetScreenId}/copy-widgets`, { method: 'POST', body: JSON.stringify({ widgetIds }) }); }
+  createScreenFromTemplate(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/screens/from-template`, { method: 'POST', body: JSON.stringify(d) }); }
+  addScreenToSidebar(bizId: number, screenId: number, d: any) { return this.request<any>(`/businesses/${bizId}/screens/${screenId}/add-to-sidebar`, { method: 'POST', body: JSON.stringify(d) }); }
+
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }
 

@@ -824,3 +824,15 @@ export const screenWidgetAccounts = pgTable('screen_widget_accounts', {
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ===================== SCREEN PERMISSIONS (صلاحيات الشاشات المخصصة) =====================
+
+export const screenPermissions = pgTable('screen_permissions', {
+  id: serial('id').primaryKey(),
+  screenId: integer('screen_id').notNull().references(() => screenTemplates.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  permission: varchar('permission', { length: 20 }).notNull().default('view'), // view | execute
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});

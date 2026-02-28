@@ -13,7 +13,7 @@ import {
   sidebarSections, sidebarItems, userSidebarConfig,
   users,
   fundTypes, bankTypes, exchangeTypes, eWalletTypes,
-  screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts,
+  screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import {
@@ -1933,6 +1933,220 @@ api.delete('/widget-accounts/:id', async (c) => {
   const [deleted] = await db.delete(screenWidgetAccounts).where(eq(screenWidgetAccounts.id, id)).returning();
   if (!deleted) return c.json({ error: 'غير موجود' }, 404);
   return c.json({ success: true });
+});
+
+// ===================== صلاحيات الشاشات المخصصة =====================
+
+// جلب صلاحيات شاشة معينة
+api.get('/screens/:id/permissions', async (c) => {
+  const screenId = parseInt(c.req.param('id'));
+  const rows = await db.select({
+    id: screenPermissions.id,
+    screenId: screenPermissions.screenId,
+    userId: screenPermissions.userId,
+    permission: screenPermissions.permission,
+    sortOrder: screenPermissions.sortOrder,
+    username: users.username,
+    fullName: users.fullName,
+    role: users.role,
+  }).from(screenPermissions)
+    .leftJoin(users, eq(screenPermissions.userId, users.id))
+    .where(eq(screenPermissions.screenId, screenId))
+    .orderBy(screenPermissions.sortOrder);
+  return c.json(rows);
+});
+
+// إضافة صلاحية لمستخدم
+api.post('/screens/:id/permissions', async (c) => {
+  const screenId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  // تحقق من عدم وجود صلاحية مسبقة
+  const existing = await db.select().from(screenPermissions)
+    .where(and(eq(screenPermissions.screenId, screenId), eq(screenPermissions.userId, body.userId)));
+  if (existing.length > 0) {
+    // تحديث الصلاحية الموجودة
+    const [updated] = await db.update(screenPermissions).set({
+      permission: body.permission || 'view',
+      updatedAt: new Date(),
+    }).where(eq(screenPermissions.id, existing[0].id)).returning();
+    return c.json(updated);
+  }
+  const [created] = await db.insert(screenPermissions).values({
+    screenId,
+    userId: body.userId,
+    permission: body.permission || 'view',
+    sortOrder: body.sortOrder || 0,
+  }).returning();
+  return c.json(created, 201);
+});
+
+// تحديث صلاحية
+api.put('/screen-permissions/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const setValues: any = { updatedAt: new Date() };
+  if (body.permission !== undefined) setValues.permission = body.permission;
+  if (body.sortOrder !== undefined) setValues.sortOrder = body.sortOrder;
+  const [updated] = await db.update(screenPermissions).set(setValues).where(eq(screenPermissions.id, id)).returning();
+  if (!updated) return c.json({ error: 'غير موجود' }, 404);
+  return c.json(updated);
+});
+
+// حذف صلاحية
+api.delete('/screen-permissions/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(screenPermissions).where(eq(screenPermissions.id, id)).returning();
+  if (!deleted) return c.json({ error: 'غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
+// تحديث صلاحيات شاشة دفعة واحدة
+api.put('/screens/:id/permissions/batch', async (c) => {
+  const screenId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const permissions = body.permissions || [];
+  // حذف الصلاحيات القديمة
+  await db.delete(screenPermissions).where(eq(screenPermissions.screenId, screenId));
+  // إضافة الجديدة
+  const results = [];
+  for (const p of permissions) {
+    const [created] = await db.insert(screenPermissions).values({
+      screenId,
+      userId: p.userId,
+      permission: p.permission || 'view',
+      sortOrder: p.sortOrder || 0,
+    }).returning();
+    results.push(created);
+  }
+  return c.json(results);
+});
+
+// ===================== نسخ عناصر من شاشة لأخرى =====================
+
+api.post('/screens/:id/copy-widgets', async (c) => {
+  const targetScreenId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const sourceWidgetIds: number[] = body.widgetIds || [];
+  const results = [];
+  for (const wId of sourceWidgetIds) {
+    const [source] = await db.select().from(screenWidgets).where(eq(screenWidgets.id, wId));
+    if (!source) continue;
+    const [copied] = await db.insert(screenWidgets).values({
+      screenId: targetScreenId,
+      widgetType: source.widgetType,
+      title: source.title,
+      config: source.config,
+      positionX: source.positionX,
+      positionY: source.positionY + 10, // offset to avoid overlap
+      width: source.width,
+      height: source.height,
+      sortOrder: source.sortOrder,
+      isVisible: true,
+    }).returning();
+    // نسخ الربط بالقوالب
+    const tpls = await db.select().from(screenWidgetTemplates).where(eq(screenWidgetTemplates.widgetId, wId));
+    for (const t of tpls) {
+      await db.insert(screenWidgetTemplates).values({ widgetId: copied.id, operationTypeId: t.operationTypeId, sortOrder: t.sortOrder });
+    }
+    // نسخ الربط بالحسابات
+    const accs = await db.select().from(screenWidgetAccounts).where(eq(screenWidgetAccounts.widgetId, wId));
+    for (const a of accs) {
+      await db.insert(screenWidgetAccounts).values({ widgetId: copied.id, accountId: a.accountId, sortOrder: a.sortOrder });
+    }
+    results.push(copied);
+  }
+  return c.json(results, 201);
+});
+
+// ===================== إنشاء شاشة من قالب جاهز =====================
+
+api.post('/businesses/:bizId/screens/from-template', bizAuthMiddleware(), async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+  // إنشاء الشاشة
+  const [screen] = await db.insert(screenTemplates).values({
+    businessId: bizId,
+    name: body.name,
+    description: body.description || null,
+    icon: body.icon || 'dashboard',
+    color: body.color || '#3b82f6',
+    layoutConfig: body.layoutConfig || {},
+    isSystem: false,
+    isActive: true,
+  }).returning();
+  // إضافة العناصر حسب القالب
+  const templateWidgets: any[] = body.widgets || [];
+  for (const w of templateWidgets) {
+    await db.insert(screenWidgets).values({
+      screenId: screen.id,
+      widgetType: w.widgetType,
+      title: w.title,
+      config: w.config || {},
+      positionX: w.positionX || 0,
+      positionY: w.positionY || 0,
+      width: w.width || 4,
+      height: w.height || 3,
+      sortOrder: w.sortOrder || 0,
+      isVisible: true,
+    });
+  }
+  return c.json(screen, 201);
+});
+
+// ===================== إضافة شاشة مخصصة كعنصر في القائمة الجانبية =====================
+
+api.post('/businesses/:bizId/screens/:screenId/add-to-sidebar', bizAuthMiddleware(), async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const screenId = parseInt(c.req.param('screenId'));
+  const body = await c.req.json();
+  // جلب بيانات الشاشة
+  const [screen] = await db.select().from(screenTemplates).where(eq(screenTemplates.id, screenId));
+  if (!screen) return c.json({ error: 'شاشة غير موجودة' }, 404);
+  // إنشاء عنصر في القائمة الجانبية
+  const [item] = await db.insert(sidebarItems).values({
+    sectionId: body.sectionId,
+    screenKey: `custom_screen_${screenId}`,
+    label: screen.name,
+    icon: screen.icon || 'space_dashboard',
+    route: `/biz/{bizId}/custom-screens?screen=${screenId}`,
+    sortOrder: body.sortOrder || 99,
+    isActive: true,
+  }).returning();
+  // إضافة للمستخدمين
+  const allUsers = await db.select({ id: users.id }).from(users);
+  for (const u of allUsers) {
+    await db.insert(userSidebarConfig).values({
+      userId: u.id,
+      businessId: bizId,
+      sidebarItemId: item.id,
+      isVisible: true,
+    }).catch(() => {});
+  }
+  return c.json(item, 201);
+});
+
+// جلب الشاشات المتاحة لمستخدم معين (حسب الصلاحيات)
+api.get('/businesses/:bizId/users/:userId/screens', bizAuthMiddleware(), async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const userId = parseInt(c.req.param('userId'));
+  // جلب الشاشات التي لها صلاحية
+  const rows = await db.select({
+    id: screenTemplates.id,
+    name: screenTemplates.name,
+    description: screenTemplates.description,
+    icon: screenTemplates.icon,
+    color: screenTemplates.color,
+    isActive: screenTemplates.isActive,
+    permission: screenPermissions.permission,
+  }).from(screenPermissions)
+    .innerJoin(screenTemplates, eq(screenPermissions.screenId, screenTemplates.id))
+    .where(and(
+      eq(screenPermissions.userId, userId),
+      eq(screenTemplates.businessId, bizId),
+      eq(screenTemplates.isActive, true),
+    ))
+    .orderBy(screenPermissions.sortOrder);
+  return c.json(rows);
 });
 
 export default api;
