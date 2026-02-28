@@ -2005,7 +2005,7 @@ api.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('ج�
     AND EXISTS (
       SELECT 1 FROM operation_types ot
       WHERE ot.id = journal_entries.operation_type_id
-      AND (ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%')
+      AND (ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%')
     )
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
@@ -2019,7 +2019,7 @@ api.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('ج�
     AND EXISTS (
       SELECT 1 FROM operation_types ot
       WHERE ot.id = journal_entries.operation_type_id
-      AND (ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%')
+      AND (ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' OR ot.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%')
     )
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
@@ -2164,8 +2164,8 @@ api.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeHandler('ج�
       TO_CHAR(je.entry_date, 'YYYY-MM') as period,
       TO_CHAR(je.entry_date, 'Mon') as period_label,
       EXTRACT(MONTH FROM je.entry_date) as month_num,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' OR ot.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
