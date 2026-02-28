@@ -609,12 +609,10 @@ export const operationTypes = pgTable('operation_types', {
   description: text('description'),
   icon: varchar('icon', { length: 50 }).default('receipt_long'),
   color: varchar('color', { length: 20 }).default('#3b82f6'),
-  category: varchar('category', { length: 50 }).notNull().default('voucher'), // 'voucher' | 'journal' | 'collection' | 'delivery'
-  voucherType: varchar('voucher_type', { length: 30 }), // 'payment' | 'receipt' | 'transfer' | 'journal'
-  mainAccountId: integer('main_account_id').references(() => accounts.id),
+  category: varchar('category', { length: 50 }).notNull().default('عام'), // تصنيف ديناميكي ينشئه المستخدم
+  voucherType: varchar('voucher_type', { length: 30 }), // 'payment' | 'receipt' | 'journal'
   paymentMethod: varchar('payment_method', { length: 30 }), // 'cash' | 'bank' | 'exchange' | 'e_wallet'
   screens: text('screens').default('{}'), // PostgreSQL text[] stored as text for Drizzle compat
-  mainFundId: integer('main_fund_id').references(() => funds.id),
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),
   sortOrder: integer('sort_order').default(0),

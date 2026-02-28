@@ -1007,19 +1007,9 @@ api.get('/businesses/:bizId/operation-types', bizAuthMiddleware(), async (c) => 
     linkedMap[la.operationTypeId].push(la);
   }
   
-  // جلب أسماء الحسابات الرئيسية دفعة واحدة
-  const mainAccountIds = rows.filter(ot => ot.mainAccountId).map(ot => ot.mainAccountId!);
-  let mainAccountMap: Record<number, string> = {};
-  if (mainAccountIds.length > 0) {
-    const mainAccs = await db.select({ id: accounts.id, name: accounts.name }).from(accounts)
-      .where(inArray(accounts.id, mainAccountIds));
-    for (const a of mainAccs) mainAccountMap[a.id] = a.name;
-  }
-  
   return c.json(rows.map(ot => ({
     ...ot,
     linkedAccounts: linkedMap[ot.id] || [],
-    mainAccountName: ot.mainAccountId ? mainAccountMap[ot.mainAccountId] || null : null,
   })));
 });
 

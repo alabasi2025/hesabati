@@ -34,27 +34,31 @@ export class OperationTypesComponent implements OnInit {
   selectedOT = signal<any>(null);
   showAccountsModal = signal(false);
 
+  // Category management
+  showCategoryForm = signal(false);
+  newCategoryName = signal('');
+  editingCategoryOld = signal<string | null>(null);
+  editingCategoryNew = signal('');
+
   // Wizard state
   wizardStep = signal(1);
 
-  // Wizard form
+  // Wizard form - بدون mainAccountId
   wiz = signal<any>({
     name: '',
     description: '',
     icon: 'receipt_long',
     color: '#3b82f6',
-    // Step 1: نوع العملية
+    // Step 1: نوع القالب (التصنيف الديناميكي)
+    category: '',
+    // Step 2: نوع السند
     voucherType: '', // receipt | payment | journal
-    // Step 2: طريقة القبض/الصرف
+    // Step 3: طريقة الدفع (للقبض والصرف فقط)
     paymentMethod: '', // cash | bank | exchange | e_wallet
-    // Step 3: الحساب الرئيسي
-    mainAccountId: null,
-    // Step 4: الحسابات المقابلة
+    // Step 4: الحسابات المرتبطة
     linkedAccounts: [] as { accountId: number; accountName: string; accountType: string; permission: string }[],
-    // Step 5: الشاشات
-    screens: [] as string[],
     // Other
-    category: 'voucher',
+    screens: [] as string[],
     requiresAttachment: false,
     hasMultiLines: true,
     isActive: true,
@@ -64,32 +68,36 @@ export class OperationTypesComponent implements OnInit {
   // Step 4: filter by account type
   selectedAccountType = signal('');
 
-  categories = [
-    { value: 'all', label: 'الكل', icon: 'apps' },
-    { value: 'collection', label: 'تحصيل', icon: 'payments' },
-    { value: 'delivery', label: 'توريد', icon: 'local_shipping' },
-    { value: 'voucher', label: 'سندات', icon: 'receipt_long' },
-    { value: 'journal', label: 'قيود', icon: 'book' },
-  ];
+  // الفئات الديناميكية - تُحسب من القوالب الموجودة
+  dynamicCategories = computed(() => {
+    const cats = new Set<string>();
+    this.operationTypes().forEach(ot => {
+      if (ot.category) cats.add(ot.category);
+    });
+    return Array.from(cats).sort();
+  });
+
+  // فلتر الفئات مع "الكل"
+  categoryFilters = computed(() => {
+    const cats = this.dynamicCategories();
+    const filters = [{ value: 'all', label: 'الكل', icon: 'apps' }];
+    for (const cat of cats) {
+      filters.push({ value: cat, label: cat, icon: this.getCategoryIcon(cat) });
+    }
+    return filters;
+  });
 
   operationTypeOptions = [
-    { value: 'receipt', label: 'سند قبض', icon: 'call_received', desc: 'استلام أموال من حساب إلى صندوق/بنك/صراف/محفظة', color: '#10b981' },
-    { value: 'payment', label: 'سند صرف', icon: 'call_made', desc: 'صرف أموال من صندوق/بنك/صراف/محفظة إلى حساب', color: '#ef4444' },
-    { value: 'journal', label: 'قيد محاسبي', icon: 'book', desc: 'تحويل بين حسابات بدون صندوق (مثل إقفال فواتير)', color: '#f59e0b' },
+    { value: 'receipt', label: 'سند قبض', icon: 'call_received', desc: 'استلام أموال', color: '#10b981' },
+    { value: 'payment', label: 'سند صرف', icon: 'call_made', desc: 'صرف أموال', color: '#ef4444' },
+    { value: 'journal', label: 'قيد محاسبي', icon: 'book', desc: 'تحويل بين حسابات بدون صندوق', color: '#f59e0b' },
   ];
 
   paymentMethods = [
-    { value: 'cash', label: 'نقداً', icon: 'payments', desc: 'تحصيل أو صرف نقدي مباشر' },
-    { value: 'bank', label: 'بنك', icon: 'account_balance', desc: 'إيداع أو سحب بنكي' },
-    { value: 'exchange', label: 'صراف', icon: 'currency_exchange', desc: 'عبر صراف أو حوالة' },
-    { value: 'e_wallet', label: 'محفظة إلكترونية', icon: 'phone_android', desc: 'تحويل عبر محفظة إلكترونية (جوالي، ون كاش، جيب...)' },
-  ];
-
-  screenOptions = [
-    { value: 'collection', label: 'تسجيل التحصيل', icon: 'payments', desc: 'صفحة التحصيل والتوريد → تبويب التحصيل' },
-    { value: 'delivery', label: 'توريد الأموال', icon: 'local_shipping', desc: 'صفحة التحصيل والتوريد → تبويب التوريد' },
-    { value: 'voucher', label: 'السندات', icon: 'receipt_long', desc: 'صفحة السندات (قبض/صرف)' },
-    { value: 'journal', label: 'القيود المحاسبية', icon: 'book', desc: 'صفحة القيود المحاسبية' },
+    { value: 'cash', label: 'نقداً', icon: 'payments', desc: 'تحصيل أو صرف نقدي مباشر', accountType: 'fund' },
+    { value: 'bank', label: 'بنك', icon: 'account_balance', desc: 'إيداع أو سحب بنكي', accountType: 'bank' },
+    { value: 'exchange', label: 'صراف', icon: 'currency_exchange', desc: 'عبر صراف أو حوالة', accountType: 'exchange' },
+    { value: 'e_wallet', label: 'محفظة إلكترونية', icon: 'phone_android', desc: 'تحويل عبر محفظة إلكترونية', accountType: 'wallet' },
   ];
 
   icons = [
@@ -110,39 +118,50 @@ export class OperationTypesComponent implements OnInit {
     { value: 'pay_only', label: 'يدفع فقط' },
   ];
 
-  // Computed: account types available in accounts
-  accountTypes = computed(() => {
-    const types = new Set<string>();
-    this.accounts().forEach(a => { if (a.accountType) types.add(a.accountType); });
-    return Array.from(types);
-  });
-
   accountTypeLabels: Record<string, string> = {
     billing: 'فوترة', fund: 'صندوق', bank: 'بنك', exchange: 'صراف',
     wallet: 'محفظة', cash: 'نقد', service: 'خدمة', custody: 'عهدة',
     accounting: 'محاسبي', intermediary: 'وسيط',
   };
 
-  // Computed: main account options (step 3) - filtered by voucher type
-  mainAccountOptions = computed(() => {
-    const vt = this.wiz().voucherType;
+  // الحسابات المتاحة حسب طريقة الدفع أو نوع السند
+  availableAccounts = computed(() => {
+    const w = this.wiz();
     const all = this.accounts();
-    if (vt === 'receipt' || vt === 'payment') {
-      // سند قبض/صرف → صندوق/بنك/صراف/محفظة فقط
-      return all.filter(a => ['fund', 'bank', 'exchange', 'wallet', 'cash'].includes(a.accountType));
+
+    if (w.voucherType === 'journal') {
+      // قيد → حسابات دليل الحسابات (ليس صناديق ولا بنوك)
+      return all.filter(a => !['fund', 'bank', 'exchange', 'wallet', 'cash'].includes(a.accountType));
     }
-    // قيد → كل الحسابات
-    return all;
+
+    // قبض أو صرف → حسب طريقة الدفع
+    if (w.paymentMethod) {
+      const pm = this.paymentMethods.find(p => p.value === w.paymentMethod);
+      if (pm) {
+        if (pm.accountType === 'fund') {
+          return all.filter(a => a.accountType === 'fund' || a.accountType === 'cash');
+        }
+        return all.filter(a => a.accountType === pm.accountType);
+      }
+    }
+    return [];
   });
 
-  // Computed: counter accounts (step 4) - filtered by selected type
-  counterAccountOptions = computed(() => {
+  // أنواع الحسابات المتاحة للخطوة 4
+  availableAccountTypes = computed(() => {
+    const types = new Set<string>();
+    this.availableAccounts().forEach(a => { if (a.accountType) types.add(a.accountType); });
+    return Array.from(types);
+  });
+
+  // الحسابات المفلترة حسب النوع المختار
+  filteredAccountsByType = computed(() => {
     const selType = this.selectedAccountType();
-    if (!selType) return [];
-    return this.accounts().filter(a => a.accountType === selType);
+    if (!selType) return this.availableAccounts();
+    return this.availableAccounts().filter(a => a.accountType === selType);
   });
 
-  // Computed: already linked account IDs
+  // IDs الحسابات المرتبطة حالياً
   linkedAccountIds = computed(() => {
     return new Set(this.wiz().linkedAccounts.map((la: any) => la.accountId));
   });
@@ -152,6 +171,22 @@ export class OperationTypesComponent implements OnInit {
     const all = this.operationTypes();
     if (cat === 'all') return all;
     return all.filter(ot => ot.category === cat);
+  });
+
+  // تجميع القوالب حسب الفئة
+  groupedByCategory = computed(() => {
+    const all = this.filteredTypes();
+    const groups: { category: string; items: any[] }[] = [];
+    const catMap = new Map<string, any[]>();
+    for (const ot of all) {
+      const cat = ot.category || 'عام';
+      if (!catMap.has(cat)) catMap.set(cat, []);
+      catMap.get(cat)!.push(ot);
+    }
+    for (const [cat, items] of catMap) {
+      groups.push({ category: cat, items });
+    }
+    return groups;
   });
 
   async ngOnInit() {
@@ -179,14 +214,56 @@ export class OperationTypesComponent implements OnInit {
     }
   }
 
+  // ===================== Category Management =====================
+  getCategoryIcon(cat: string): string {
+    const iconMap: Record<string, string> = {
+      'تحصيل': 'payments', 'توريد': 'local_shipping', 'سندات': 'receipt_long',
+      'قيود': 'book', 'عام': 'folder',
+    };
+    return iconMap[cat] || 'label';
+  }
+
+  openCategoryForm() {
+    this.newCategoryName.set('');
+    this.editingCategoryOld.set(null);
+    this.showCategoryForm.set(true);
+  }
+
+  async saveCategory() {
+    const name = this.newCategoryName().trim();
+    if (!name) { this.showError('اسم التصنيف مطلوب'); return; }
+
+    if (this.editingCategoryOld()) {
+      // تعديل اسم تصنيف - نعدل كل القوالب اللي تحته
+      const oldName = this.editingCategoryOld()!;
+      const otsToUpdate = this.operationTypes().filter(ot => ot.category === oldName);
+      for (const ot of otsToUpdate) {
+        await this.api.updateOperationType(ot.id, { category: name });
+      }
+      this.showSuccess(`تم تعديل التصنيف من "${oldName}" إلى "${name}"`);
+    }
+    // إذا تصنيف جديد - ما نحتاج نسوي شي، بس يظهر في القائمة لما ينشئ قالب تحته
+    this.showCategoryForm.set(false);
+    this.editingCategoryOld.set(null);
+    await this.loadAll();
+  }
+
+  startEditCategory(cat: string) {
+    this.editingCategoryOld.set(cat);
+    this.editingCategoryNew.set(cat);
+    this.newCategoryName.set(cat);
+    this.showCategoryForm.set(true);
+  }
+
   // ===================== Wizard =====================
   openWizard() {
     this.editingId.set(null);
     this.wiz.set({
       name: '', description: '', icon: 'receipt_long', color: '#3b82f6',
-      voucherType: '', paymentMethod: '', mainAccountId: null,
+      category: '',
+      voucherType: '', paymentMethod: '',
       linkedAccounts: [], screens: [],
-      category: 'voucher', requiresAttachment: false, hasMultiLines: true,
+      requiresAttachment: false, hasMultiLines: true,
       isActive: true, sortOrder: 0,
     });
     this.wizardStep.set(1);
@@ -196,7 +273,6 @@ export class OperationTypesComponent implements OnInit {
 
   openEditWizard(ot: any) {
     this.editingId.set(ot.id);
-    const screens = ot.screens ? (typeof ot.screens === 'string' ? JSON.parse(ot.screens) : ot.screens) : [ot.category];
     const linked = (ot.linkedAccounts || []).map((la: any) => ({
       accountId: la.accountId || la.id,
       accountName: la.label || la.accountName || '',
@@ -208,12 +284,11 @@ export class OperationTypesComponent implements OnInit {
       description: ot.description || '',
       icon: ot.icon || 'receipt_long',
       color: ot.color || '#3b82f6',
+      category: ot.category || '',
       voucherType: ot.voucherType || '',
       paymentMethod: ot.paymentMethod || '',
-      mainAccountId: ot.mainAccountId || null,
       linkedAccounts: linked,
-      screens: screens,
-      category: ot.category || 'voucher',
+      screens: ot.screens ? (typeof ot.screens === 'string' ? (() => { try { return JSON.parse(ot.screens); } catch { return []; } })() : ot.screens) : [],
       requiresAttachment: ot.requiresAttachment || false,
       hasMultiLines: ot.hasMultiLines || false,
       isActive: ot.isActive !== false,
@@ -228,25 +303,31 @@ export class OperationTypesComponent implements OnInit {
     this.wiz.update(w => ({ ...w, [field]: value }));
   }
 
+  selectCategory(cat: string) {
+    this.setWizField('category', cat);
+  }
+
+  setCustomCategory(name: string) {
+    this.setWizField('category', name);
+  }
+
   selectVoucherType(vt: string) {
     this.wiz.update(w => ({
       ...w,
       voucherType: vt,
-      // Auto-set category based on voucher type
-      category: vt === 'journal' ? 'journal' : 'voucher',
-      // Reset payment method if journal
       paymentMethod: vt === 'journal' ? '' : w.paymentMethod,
-      // Reset main account
-      mainAccountId: null,
+      linkedAccounts: [], // reset linked accounts when type changes
     }));
+    this.selectedAccountType.set('');
   }
 
   selectPaymentMethod(pm: string) {
-    this.setWizField('paymentMethod', pm);
-  }
-
-  selectMainAccount(accId: number) {
-    this.setWizField('mainAccountId', accId);
+    this.wiz.update(w => ({
+      ...w,
+      paymentMethod: pm,
+      linkedAccounts: [], // reset linked accounts when payment method changes
+    }));
+    this.selectedAccountType.set('');
   }
 
   // Step 4: Toggle linked account
@@ -269,9 +350,8 @@ export class OperationTypesComponent implements OnInit {
     });
   }
 
-  // Select all accounts of a type
-  selectAllOfType() {
-    const opts = this.counterAccountOptions();
+  selectAllAccounts() {
+    const opts = this.filteredAccountsByType();
     const currentIds = this.linkedAccountIds();
     const newAccounts = opts.filter(a => !currentIds.has(a.id)).map(a => ({
       accountId: a.id,
@@ -292,76 +372,36 @@ export class OperationTypesComponent implements OnInit {
     }));
   }
 
-  // Step 5: Toggle screen
-  toggleScreen(screen: string) {
-    this.wiz.update(w => {
-      const screens = [...w.screens];
-      const idx = screens.indexOf(screen);
-      if (idx >= 0) {
-        screens.splice(idx, 1);
-      } else {
-        screens.push(screen);
-      }
-      // Auto-update category based on first screen
-      let category = w.category;
-      if (screens.length > 0) {
-        category = screens[0];
-      }
-      return { ...w, screens, category };
-    });
-  }
-
-  // Wizard navigation
+  // Wizard navigation - 4 خطوات بدلاً من 5
+  // Step 1: نوع القالب (التصنيف)
+  // Step 2: نوع السند
+  // Step 3: طريقة الدفع + الحسابات المرتبطة
+  // Step 4: الاسم والتفاصيل
   canGoNext(): boolean {
     const w = this.wiz();
     const step = this.wizardStep();
-    if (step === 1) return !!w.voucherType;
-    if (step === 2) return w.voucherType === 'journal' || !!w.paymentMethod;
-    if (step === 3) return w.voucherType === 'journal' || !!w.mainAccountId;
-    if (step === 4) return w.linkedAccounts.length > 0;
-    if (step === 5) return w.screens.length > 0 && !!w.name.trim();
+    if (step === 1) return !!w.category.trim();
+    if (step === 2) return !!w.voucherType;
+    if (step === 3) {
+      if (w.voucherType === 'journal') return w.linkedAccounts.length > 0;
+      return !!w.paymentMethod && w.linkedAccounts.length > 0;
+    }
+    if (step === 4) return !!w.name.trim();
     return true;
   }
 
   nextStep() {
-    const step = this.wizardStep();
-    const w = this.wiz();
-    // Skip step 2 (payment method) if journal
-    if (step === 1 && w.voucherType === 'journal') {
-      this.wizardStep.set(3);
-      return;
-    }
-    // Skip step 3 (main account) if journal
-    if (step === 2) {
-      this.wizardStep.set(3);
-      return;
-    }
-    if (step === 3 && w.voucherType === 'journal') {
-      this.wizardStep.set(4);
-      return;
-    }
-    this.wizardStep.set(step + 1);
+    this.wizardStep.update(s => s + 1);
   }
 
   prevStep() {
-    const step = this.wizardStep();
-    const w = this.wiz();
-    // Skip back over step 2/3 if journal
-    if (step === 4 && w.voucherType === 'journal') {
-      this.wizardStep.set(1);
-      return;
-    }
-    if (step === 3 && w.voucherType === 'journal') {
-      this.wizardStep.set(1);
-      return;
-    }
-    this.wizardStep.set(step - 1);
+    this.wizardStep.update(s => s - 1);
   }
 
   async saveWizard() {
     const w = this.wiz();
     if (!w.name.trim()) { this.showError('اسم القالب مطلوب'); return; }
-    if (w.screens.length === 0) { this.showError('اختر شاشة واحدة على الأقل'); return; }
+    if (!w.category.trim()) { this.showError('نوع القالب مطلوب'); return; }
 
     this.saving.set(true);
     try {
@@ -370,47 +410,30 @@ export class OperationTypesComponent implements OnInit {
         description: w.description,
         icon: w.icon,
         color: w.color,
-        category: w.screens[0], // Primary category from first screen
+        category: w.category,
         voucherType: w.voucherType,
         paymentMethod: w.paymentMethod || null,
-        mainAccountId: w.mainAccountId || null,
-        screens: JSON.stringify(w.screens),
+        screens: w.screens.length > 0 ? w.screens : [w.category],
         requiresAttachment: w.requiresAttachment,
         hasMultiLines: w.hasMultiLines,
         isActive: w.isActive,
         sortOrder: w.sortOrder,
-      };
-
-      let otId: number;
-      if (this.editingId()) {
-        await this.api.updateOperationType(this.editingId()!, payload);
-        otId = this.editingId()!;
-      } else {
-        const created = await this.api.createOperationType(this.bizId, payload);
-        otId = created.id;
-      }
-
-      // Sync linked accounts: remove all existing, then add new ones
-      if (this.editingId()) {
-        const existingOT = this.operationTypes().find(ot => ot.id === otId);
-        if (existingOT?.linkedAccounts) {
-          for (const la of existingOT.linkedAccounts) {
-            await this.api.removeOperationTypeAccount(la.id);
-          }
-        }
-      }
-      for (const la of w.linkedAccounts) {
-        await this.api.addOperationTypeAccount(otId, {
+        linkedAccounts: w.linkedAccounts.map((la: any) => ({
           accountId: la.accountId,
           label: la.accountName,
           permission: la.permission,
           sortOrder: 0,
-        });
+        })),
+      };
+
+      if (this.editingId()) {
+        await this.api.updateOperationType(this.editingId()!, payload);
+      } else {
+        await this.api.createOperationType(this.bizId, payload);
       }
 
       this.showWizard.set(false);
-      this.success.set(this.editingId() ? 'تم تعديل القالب بنجاح' : 'تم إنشاء القالب بنجاح');
-      setTimeout(() => this.success.set(''), 4000);
+      this.showSuccess(this.editingId() ? 'تم تعديل القالب بنجاح' : 'تم إنشاء القالب بنجاح');
       await this.loadAll();
     } catch (e: any) {
       this.showError(e.message || 'خطأ في الحفظ');
@@ -429,7 +452,7 @@ export class OperationTypesComponent implements OnInit {
     }
   }
 
-  // ===================== Accounts Modal (view only) =====================
+  // ===================== Accounts Modal =====================
   openAccountsView(ot: any) {
     this.selectedOT.set(ot);
     this.showAccountsModal.set(true);
@@ -441,16 +464,17 @@ export class OperationTypesComponent implements OnInit {
     setTimeout(() => this.error.set(''), 5000);
   }
 
+  showSuccess(msg: string) {
+    this.success.set(msg);
+    setTimeout(() => this.success.set(''), 4000);
+  }
+
   getAccountName(id: number): string {
     return this.accounts().find(a => a.id === id)?.name || '—';
   }
 
   getAccountTypeLabel(t: string): string {
     return this.accountTypeLabels[t] || t;
-  }
-
-  getCategoryLabel(c: string): string {
-    return this.categories.find(x => x.value === c)?.label || c;
   }
 
   getVoucherTypeLabel(t: string): string {
@@ -460,11 +484,6 @@ export class OperationTypesComponent implements OnInit {
 
   getPaymentMethodLabel(pm: string): string {
     return this.paymentMethods.find(x => x.value === pm)?.label || pm || '—';
-  }
-
-  getScreenLabels(ot: any): string {
-    const screens = ot.screens ? (typeof ot.screens === 'string' ? JSON.parse(ot.screens) : ot.screens) : [ot.category];
-    return screens.map((s: string) => this.screenOptions.find(x => x.value === s)?.label || s).join('، ');
   }
 
   getPermissionLabel(p: string): string {
