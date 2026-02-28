@@ -234,6 +234,16 @@ export class ApiService {
 
   getUsers()                                             { return this.request<any[]>('/users'); }
 
+  // ===================== الشاشات المخصصة =====================
+  getScreens(bizId: number)                          { return this.request<any[]>(`/businesses/${bizId}/screens`); }
+  createScreen(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateScreen(id: number, d: any)                   { return this.request<any>(`/screens/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteScreen(id: number)                           { return this.request<any>(`/screens/${id}`, { method: 'DELETE' }); }
+  getScreenWidgets(screenId: number)                  { return this.request<any[]>(`/screens/${screenId}/widgets`); }
+  createScreenWidget(screenId: number, d: any)        { return this.request<any>(`/screens/${screenId}/widgets`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateWidget(id: number, d: any)                   { return this.request<any>(`/widgets/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteWidget(id: number)                           { return this.request<any>(`/widgets/${id}`, { method: 'DELETE' }); }
+
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }
 

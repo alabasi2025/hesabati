@@ -1,0 +1,323 @@
+<div class="page-container">
+
+  <!-- ==================== LIST VIEW ==================== -->
+  @if (viewMode() === 'list') {
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-right">
+        <div class="header-icon">
+          <span class="material-icons-round">space_dashboard</span>
+        </div>
+        <div>
+          <h1>الشاشات المخصصة</h1>
+          <p>إنشاء وإدارة لوحات العمل المخصصة</p>
+        </div>
+      </div>
+      <button class="add-btn" (click)="openScreenForm()">
+        <span class="material-icons-round">add</span>
+        شاشة جديدة
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <span class="material-icons-round spin">sync</span>
+        <p>جاري التحميل...</p>
+      </div>
+    } @else {
+
+      @if (screens().length === 0) {
+        <div class="empty-state-card">
+          <div class="empty-icon">
+            <span class="material-icons-round">space_dashboard</span>
+          </div>
+          <h3>لا توجد شاشات مخصصة</h3>
+          <p>أنشئ شاشتك الأولى لبناء لوحة عمل مخصصة تناسب طبيعة عملك</p>
+          <button class="add-btn" (click)="openScreenForm()">
+            <span class="material-icons-round">add</span>
+            إنشاء شاشة جديدة
+          </button>
+        </div>
+      } @else {
+        <div class="screens-grid">
+          @for (screen of screens(); track screen.id) {
+            <div class="screen-card" (click)="openScreen(screen)">
+              <div class="screen-card-header">
+                <div class="screen-card-icon" [style.background]="'linear-gradient(135deg, ' + screen.color + ', ' + screen.color + '99)'">
+                  <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
+                </div>
+                <div class="screen-card-actions" (click)="$event.stopPropagation()">
+                  <button class="action-btn edit" (click)="openScreenForm(screen)" title="تعديل">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="action-btn delete" (click)="deleteScreen(screen)" title="حذف">
+                    <span class="material-icons-round">delete</span>
+                  </button>
+                </div>
+              </div>
+              <div class="screen-card-body">
+                <h3>{{ screen.name }}</h3>
+                <p class="screen-desc">{{ screen.description || 'بدون وصف' }}</p>
+              </div>
+              <div class="screen-card-footer">
+                <span class="screen-date">
+                  <span class="material-icons-round">calendar_today</span>
+                  {{ formatDate(screen.createdAt) }}
+                </span>
+                <span class="screen-status" [class.active]="screen.isActive" [class.inactive]="!screen.isActive">
+                  {{ screen.isActive ? 'نشطة' : 'معطلة' }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- ==================== DETAIL VIEW ==================== -->
+  @if (viewMode() === 'detail' && activeScreen()) {
+    <div class="detail-view">
+      <!-- Detail Header -->
+      <div class="detail-header">
+        <div class="detail-header-right">
+          <button class="back-btn" (click)="backToList()">
+            <span class="material-icons-round">arrow_forward</span>
+          </button>
+          <div class="detail-icon" [style.background]="'linear-gradient(135deg, ' + activeScreen()!.color + ', ' + activeScreen()!.color + '99)'">
+            <span class="material-icons-round">{{ activeScreen()!.icon || 'dashboard' }}</span>
+          </div>
+          <div>
+            <h1>{{ activeScreen()!.name }}</h1>
+            <p>{{ activeScreen()!.description || 'بدون وصف' }}</p>
+          </div>
+        </div>
+        <div class="detail-header-actions">
+          <button class="mode-btn" [class.active]="editMode()" (click)="toggleEditMode()">
+            <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
+            {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
+          </button>
+          @if (editMode()) {
+            <button class="add-btn" (click)="openWidgetForm()">
+              <span class="material-icons-round">add</span>
+              إضافة عنصر
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (widgetsLoading()) {
+        <div class="loading-state">
+          <span class="material-icons-round spin">sync</span>
+          <p>جاري تحميل العناصر...</p>
+        </div>
+      } @else {
+
+        @if (widgets().length === 0) {
+          <div class="empty-state-card">
+            <div class="empty-icon">
+              <span class="material-icons-round">widgets</span>
+            </div>
+            <h3>لا توجد عناصر في هذه الشاشة</h3>
+            <p>أضف عناصر لبناء لوحة العمل الخاصة بك</p>
+            <button class="add-btn" (click)="openWidgetForm()">
+              <span class="material-icons-round">add</span>
+              إضافة عنصر
+            </button>
+          </div>
+        } @else {
+          <div class="widgets-grid">
+            @for (widget of widgets(); track widget.id) {
+              <div class="widget-card" [style]="getGridStyle(widget)" [class.edit-mode]="editMode()">
+                <div class="widget-header">
+                  <div class="widget-title">
+                    <span class="material-icons-round widget-type-icon" [style.color]="getWidgetTypeInfo(widget.widgetType).color">
+                      {{ getWidgetTypeInfo(widget.widgetType).icon }}
+                    </span>
+                    <span>{{ widget.title }}</span>
+                  </div>
+                  @if (editMode()) {
+                    <div class="widget-actions">
+                      <button class="action-btn edit" (click)="openWidgetForm(widget)" title="تعديل">
+                        <span class="material-icons-round">edit</span>
+                      </button>
+                      <button class="action-btn delete" (click)="deleteWidget(widget)" title="حذف">
+                        <span class="material-icons-round">delete</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+                <div class="widget-body">
+                  <div class="widget-placeholder">
+                    <span class="material-icons-round">{{ getWidgetTypeInfo(widget.widgetType).icon }}</span>
+                    <p>{{ getWidgetTypeInfo(widget.widgetType).desc }}</p>
+                    <span class="widget-type-badge" [style.background]="getWidgetTypeInfo(widget.widgetType).color + '22'" [style.color]="getWidgetTypeInfo(widget.widgetType).color">
+                      {{ getWidgetTypeInfo(widget.widgetType).label }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- ==================== SCREEN FORM MODAL ==================== -->
+  @if (showScreenForm()) {
+    <div class="modal-overlay" (click)="closeScreenForm()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon blue">
+              <span class="material-icons-round">space_dashboard</span>
+            </div>
+            <div>
+              <h2>{{ editingScreen() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h2>
+              <p>{{ editingScreen() ? 'تعديل بيانات الشاشة المخصصة' : 'إنشاء لوحة عمل مخصصة جديدة' }}</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="closeScreenForm()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>اسم الشاشة</label>
+            <input type="text" [ngModel]="screenForm().name" (ngModelChange)="screenForm.set({...screenForm(), name: $event})" placeholder="مثال: شاشة التحصيل اليومي" />
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea rows="3" [ngModel]="screenForm().description" (ngModelChange)="screenForm.set({...screenForm(), description: $event})" placeholder="وصف مختصر للشاشة..."></textarea>
+          </div>
+
+          <!-- Icon Selection -->
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <div class="icon-grid">
+              @for (icon of icons; track icon) {
+                <button class="icon-option" [class.selected]="screenForm().icon === icon" (click)="screenForm.set({...screenForm(), icon: icon})">
+                  <span class="material-icons-round">{{ icon }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Color Selection -->
+          <div class="form-group">
+            <label>اللون</label>
+            <div class="color-grid">
+              @for (color of colors; track color) {
+                <button class="color-option" [style.background]="color" [class.selected]="screenForm().color === color" (click)="screenForm.set({...screenForm(), color: color})">
+                  @if (screenForm().color === color) {
+                    <span class="material-icons-round">check</span>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveScreen()" [disabled]="saving()">
+            {{ saving() ? 'جاري الحفظ...' : (editingScreen() ? 'تحديث' : 'إنشاء') }}
+          </button>
+          <button class="btn-cancel" (click)="closeScreenForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== WIDGET FORM MODAL ==================== -->
+  @if (showWidgetForm()) {
+    <div class="modal-overlay" (click)="closeWidgetForm()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon green">
+              <span class="material-icons-round">widgets</span>
+            </div>
+            <div>
+              <h2>{{ editingWidget() ? 'تعديل العنصر' : 'إضافة عنصر' }}</h2>
+              <p>{{ editingWidget() ? 'تعديل إعدادات العنصر' : 'اختر نوع العنصر وأضفه للشاشة' }}</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="closeWidgetForm()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Widget Type Selection -->
+          <div class="form-group">
+            <label>نوع العنصر</label>
+            <div class="widget-type-grid">
+              @for (wt of widgetTypes; track wt.value) {
+                <button class="widget-type-option" [class.selected]="widgetForm().widgetType === wt.value" (click)="widgetForm.set({...widgetForm(), widgetType: wt.value, title: wt.label})">
+                  <span class="material-icons-round" [style.color]="wt.color">{{ wt.icon }}</span>
+                  <span class="wt-label">{{ wt.label }}</span>
+                  <span class="wt-desc">{{ wt.desc }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>عنوان العنصر</label>
+            <input type="text" [ngModel]="widgetForm().title" (ngModelChange)="widgetForm.set({...widgetForm(), title: $event})" placeholder="عنوان العنصر" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>العرض (أعمدة)</label>
+              <select [ngModel]="widgetForm().width" (ngModelChange)="widgetForm.set({...widgetForm(), width: +$event})">
+                <option [value]="2">2 أعمدة</option>
+                <option [value]="3">3 أعمدة</option>
+                <option [value]="4">4 أعمدة</option>
+                <option [value]="6">6 أعمدة</option>
+                <option [value]="8">8 أعمدة</option>
+                <option [value]="12">12 عمود (كامل)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الارتفاع (صفوف)</label>
+              <select [ngModel]="widgetForm().height" (ngModelChange)="widgetForm.set({...widgetForm(), height: +$event})">
+                <option [value]="2">2 صفوف</option>
+                <option [value]="3">3 صفوف</option>
+                <option [value]="4">4 صفوف</option>
+                <option [value]="5">5 صفوف</option>
+                <option [value]="6">6 صفوف</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>الموضع الأفقي (عمود)</label>
+              <select [ngModel]="widgetForm().positionX" (ngModelChange)="widgetForm.set({...widgetForm(), positionX: +$event})">
+                @for (i of [0,1,2,3,4,5,6,7,8,9,10,11]; track i) {
+                  <option [value]="i">{{ i + 1 }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>الموضع العمودي (صف)</label>
+              <select [ngModel]="widgetForm().positionY" (ngModelChange)="widgetForm.set({...widgetForm(), positionY: +$event})">
+                @for (i of [0,1,2,3,4,5,6,7,8,9]; track i) {
+                  <option [value]="i">{{ i + 1 }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveWidget()" [disabled]="saving()">
+            {{ saving() ? 'جاري الحفظ...' : (editingWidget() ? 'تحديث' : 'إضافة') }}
+          </button>
+          <button class="btn-cancel" (click)="closeWidgetForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

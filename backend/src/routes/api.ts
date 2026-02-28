@@ -13,6 +13,7 @@ import {
   sidebarSections, sidebarItems, userSidebarConfig,
   users,
   fundTypes, bankTypes, exchangeTypes, eWalletTypes,
+  screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import {
@@ -1728,6 +1729,126 @@ api.delete('/settlements/:id', async (c) => {
   const id = parseInt(c.req.param('id'));
   const [deleted] = await db.delete(reconciliations).where(eq(reconciliations.id, id)).returning();
   if (!deleted) return c.json({ error: 'تصفية غير موجودة' }, 404);
+  return c.json({ success: true });
+});
+
+// ===================== الشاشات المخصصة (Custom Screens) =====================
+
+// جلب كل الشاشات لعمل معين
+api.get('/businesses/:bizId/screens', bizAuthMiddleware(), async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const rows = await db.select().from(screenTemplates)
+    .where(eq(screenTemplates.businessId, bizId))
+    .orderBy(screenTemplates.createdAt);
+  return c.json(rows);
+});
+
+// إنشاء شاشة جديدة
+api.post('/businesses/:bizId/screens', bizAuthMiddleware(), async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const body = await c.req.json();
+  const [created] = await db.insert(screenTemplates).values({
+    businessId: bizId,
+    name: body.name,
+    description: body.description || null,
+    icon: body.icon || 'dashboard',
+    color: body.color || '#3b82f6',
+    layoutConfig: body.layoutConfig || {},
+    isSystem: false,
+    isActive: true,
+  }).returning();
+  return c.json(created, 201);
+});
+
+// تعديل شاشة
+api.put('/screens/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const setValues: any = {
+    updatedAt: new Date(),
+  };
+  if (body.name !== undefined) setValues.name = body.name;
+  if (body.description !== undefined) setValues.description = body.description;
+  if (body.icon !== undefined) setValues.icon = body.icon;
+  if (body.color !== undefined) setValues.color = body.color;
+  if (body.layoutConfig !== undefined) setValues.layoutConfig = body.layoutConfig;
+  if (body.isActive !== undefined) setValues.isActive = body.isActive;
+  const [updated] = await db.update(screenTemplates).set(setValues).where(eq(screenTemplates.id, id)).returning();
+  if (!updated) return c.json({ error: 'شاشة غير موجودة' }, 404);
+  return c.json(updated);
+});
+
+// حذف شاشة
+api.delete('/screens/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  // حذف العناصر المرتبطة أولاً
+  const widgets = await db.select({ id: screenWidgets.id }).from(screenWidgets).where(eq(screenWidgets.screenId, id));
+  const widgetIds = widgets.map(w => w.id);
+  if (widgetIds.length > 0) {
+    await db.delete(screenWidgetTemplates).where(inArray(screenWidgetTemplates.widgetId, widgetIds));
+    await db.delete(screenWidgetAccounts).where(inArray(screenWidgetAccounts.widgetId, widgetIds));
+    await db.delete(screenWidgets).where(eq(screenWidgets.screenId, id));
+  }
+  const [deleted] = await db.delete(screenTemplates).where(eq(screenTemplates.id, id)).returning();
+  if (!deleted) return c.json({ error: 'شاشة غير موجودة' }, 404);
+  return c.json({ success: true });
+});
+
+// جلب عناصر شاشة
+api.get('/screens/:id/widgets', async (c) => {
+  const screenId = parseInt(c.req.param('id'));
+  const rows = await db.select().from(screenWidgets)
+    .where(eq(screenWidgets.screenId, screenId))
+    .orderBy(screenWidgets.sortOrder);
+  return c.json(rows);
+});
+
+// إضافة عنصر لشاشة
+api.post('/screens/:id/widgets', async (c) => {
+  const screenId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [created] = await db.insert(screenWidgets).values({
+    screenId,
+    widgetType: body.widgetType,
+    title: body.title,
+    config: body.config || {},
+    positionX: body.positionX || 0,
+    positionY: body.positionY || 0,
+    width: body.width || 4,
+    height: body.height || 3,
+    sortOrder: body.sortOrder || 0,
+    isVisible: body.isVisible !== false,
+  }).returning();
+  return c.json(created, 201);
+});
+
+// تعديل عنصر
+api.put('/widgets/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const setValues: any = {};
+  if (body.title !== undefined) setValues.title = body.title;
+  if (body.widgetType !== undefined) setValues.widgetType = body.widgetType;
+  if (body.config !== undefined) setValues.config = body.config;
+  if (body.positionX !== undefined) setValues.positionX = body.positionX;
+  if (body.positionY !== undefined) setValues.positionY = body.positionY;
+  if (body.width !== undefined) setValues.width = body.width;
+  if (body.height !== undefined) setValues.height = body.height;
+  if (body.sortOrder !== undefined) setValues.sortOrder = body.sortOrder;
+  if (body.isVisible !== undefined) setValues.isVisible = body.isVisible;
+  const [updated] = await db.update(screenWidgets).set(setValues).where(eq(screenWidgets.id, id)).returning();
+  if (!updated) return c.json({ error: 'عنصر غير موجود' }, 404);
+  return c.json(updated);
+});
+
+// حذف عنصر
+api.delete('/widgets/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  // حذف الربط أولاً
+  await db.delete(screenWidgetTemplates).where(eq(screenWidgetTemplates.widgetId, id));
+  await db.delete(screenWidgetAccounts).where(eq(screenWidgetAccounts.widgetId, id));
+  const [deleted] = await db.delete(screenWidgets).where(eq(screenWidgets.id, id)).returning();
+  if (!deleted) return c.json({ error: 'عنصر غير موجود' }, 404);
   return c.json({ success: true });
 });
 

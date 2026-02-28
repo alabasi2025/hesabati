@@ -771,3 +771,56 @@ export const eWalletTypes = pgTable("e_wallet_types", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ===================== SCREEN TEMPLATES (قوالب الشاشات المخصصة) =====================
+
+export const screenTemplates = pgTable('screen_templates', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 50 }).default('dashboard'),
+  color: varchar('color', { length: 20 }).default('#3b82f6'),
+  layoutConfig: jsonb('layout_config').$type<any>().default({}),
+  isSystem: boolean('is_system').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== SCREEN WIDGETS (عناصر الشاشة) =====================
+
+export const screenWidgets = pgTable('screen_widgets', {
+  id: serial('id').primaryKey(),
+  screenId: integer('screen_id').notNull().references(() => screenTemplates.id),
+  widgetType: varchar('widget_type', { length: 50 }).notNull(), // templates | log | accounts | stats | chart | notes
+  title: varchar('title', { length: 200 }).notNull(),
+  config: jsonb('config').$type<any>().default({}),
+  positionX: integer('position_x').notNull().default(0),
+  positionY: integer('position_y').notNull().default(0),
+  width: integer('width').notNull().default(4),
+  height: integer('height').notNull().default(3),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== SCREEN WIDGET TEMPLATES (ربط عنصر القوالب بقوالب العمليات) =====================
+
+export const screenWidgetTemplates = pgTable('screen_widget_templates', {
+  id: serial('id').primaryKey(),
+  widgetId: integer('widget_id').notNull().references(() => screenWidgets.id),
+  operationTypeId: integer('operation_type_id').notNull().references(() => operationTypes.id),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== SCREEN WIDGET ACCOUNTS (ربط عنصر المراقبة بالحسابات) =====================
+
+export const screenWidgetAccounts = pgTable('screen_widget_accounts', {
+  id: serial('id').primaryKey(),
+  widgetId: integer('widget_id').notNull().references(() => screenWidgets.id),
+  accountId: integer('account_id').notNull().references(() => accounts.id),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});

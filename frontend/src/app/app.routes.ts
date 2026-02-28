@@ -40,6 +40,7 @@ export const routes: Routes = [
       { path: 'suppliers', loadComponent: () => import('./pages/suppliers/suppliers').then(m => m.SuppliersComponent) },
       { path: 'settlements', loadComponent: () => import('./pages/settlements/settlements').then(m => m.SettlementsComponent) },
       { path: 'pending', loadComponent: () => import('./pages/pending-accounts/pending-accounts').then(m => m.PendingAccountsComponent) },
+      { path: 'custom-screens', loadComponent: () => import('./pages/custom-screens/custom-screens').then(m => m.CustomScreensComponent) },
     ],
   },
   { path: '', redirectTo: 'login', pathMatch: 'full' },
