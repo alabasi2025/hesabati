@@ -249,7 +249,7 @@ export class ApiService {
   getWidgetTemplates(widgetId: number)                  { return this.request<any[]>(`/widgets/${widgetId}/templates`); }
   addWidgetTemplate(widgetId: number, d: any)           { return this.request<any>(`/widgets/${widgetId}/templates`, { method: 'POST', body: JSON.stringify(d) }); }
   removeWidgetTemplate(id: number)                      { return this.request<any>(`/widget-templates/${id}`, { method: 'DELETE' }); }
-  getWidgetAccounts(widgetId: number)                   { return this.request<any[]>(`/widgets/${widgetId}/accounts`); }
+  getWidgetAccountLinks(widgetId: number)               { return this.request<any[]>(`/widgets/${widgetId}/accounts`); }
   addWidgetAccount(widgetId: number, d: any)            { return this.request<any>(`/widgets/${widgetId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   removeWidgetAccount(id: number)                       { return this.request<any>(`/widget-accounts/${id}`, { method: 'DELETE' }); }
 
@@ -269,6 +269,44 @@ export class ApiService {
   createScreenFromTemplate(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }
   addScreenToSidebar(bizId: number, screenId: number, d: any) { return this.request<any>(`/businesses/${bizId}/screens/${screenId}/add-to-sidebar`, { method: 'POST', body: JSON.stringify(d) }); }
   getUserScreens(bizId: number, userId: number)         { return this.request<any[]>(`/businesses/${bizId}/users/${userId}/screens`); }
+
+  // ===================== بيانات العناصر الحقيقية =====================
+  getWidgetStats(bizId: number, dateFrom?: string, dateTo?: string) {
+    let url = `/businesses/${bizId}/widget-stats`;
+    const params: string[] = [];
+    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
+    if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  getWidgetLog(bizId: number, filters?: { dateFrom?: string; dateTo?: string; operationTypeId?: number; limit?: number; offset?: number }) {
+    let url = `/businesses/${bizId}/widget-log`;
+    const params: string[] = [];
+    if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
+    if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
+    if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
+    if (filters?.limit) params.push(`limit=${filters.limit}`);
+    if (filters?.offset) params.push(`offset=${filters.offset}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  getWidgetAccounts(bizId: number, accountIds?: number[]) {
+    let url = `/businesses/${bizId}/widget-accounts`;
+    if (accountIds?.length) url += `?accountIds=${accountIds.join(',')}`;
+    return this.request<any[]>(url);
+  }
+  getWidgetChart(bizId: number, months?: number) {
+    let url = `/businesses/${bizId}/widget-chart`;
+    if (months) url += `?months=${months}`;
+    return this.request<any>(url);
+  }
+  getWidgetNotes(widgetId: number)                    { return this.request<any>(`/widgets/${widgetId}/notes`); }
+  saveWidgetNotes(widgetId: number, text: string)     { return this.request<any>(`/widgets/${widgetId}/notes`, { method: 'PUT', body: JSON.stringify({ text }) }); }
+  getWidgetOperationTypes(bizId: number, ids?: number[]) {
+    let url = `/businesses/${bizId}/widget-operation-types`;
+    if (ids?.length) url += `?ids=${ids.join(',')}`;
+    return this.request<any[]>(url);
+  }
 
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }

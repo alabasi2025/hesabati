@@ -1,12 +1,15 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { trigger, transition, style, animate, query, stagger, state } from '@angular/animations';
 import { Gridster, GridsterItem, GridsterConfig, GridsterItemConfig, GridType, CompactType, DisplayGrid } from 'angular-gridster2';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
+import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import gsap from 'gsap';
 
 interface ScreenTemplate {
   id: number;
@@ -19,6 +22,7 @@ interface ScreenTemplate {
   templateKey: string;
   isSystem: boolean;
   isActive: boolean;
+  createdBy?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,17 +66,93 @@ interface ScreenWithWidgets {
   widgets: ScreenWidget[];
 }
 
+// Real data interfaces
+interface WidgetStats {
+  totalReceipts: number;
+  totalPayments: number;
+  operationsCount: number;
+  netBalance: number;
+}
+
+interface LogEntry {
+  id: number;
+  entry_number: string;
+  description: string;
+  entry_date: string;
+  reference: string;
+  total_debit: string;
+  total_credit: string;
+  status: string;
+  created_at: string;
+  operation_type_name: string;
+  operation_type_icon: string;
+  operation_type_color: string;
+  voucher_type: string;
+  operation_category: string;
+}
+
+interface AccountData {
+  id: number;
+  name: string;
+  account_type: string;
+  is_active: boolean;
+  total_balance: number;
+  balances: any[];
+  last_movements: any[];
+}
+
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
-  imports: [CommonModule, FormsModule, Gridster, GridsterItem, BaseChartDirective],
+  imports: [CommonModule, FormsModule, Gridster, GridsterItem, BaseChartDirective, ColorPickerDirective],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
+  animations: [
+    trigger('fadeIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(12px)' }),
+        animate('350ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
+      ]),
+    ]),
+    trigger('fadeInStagger', [
+      transition(':enter', [
+        query(':enter', [
+          style({ opacity: 0, transform: 'translateY(16px)' }),
+          stagger(60, [animate('350ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))]),
+        ], { optional: true }),
+      ]),
+    ]),
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateX(-20px)' }),
+        animate('300ms ease-out', style({ opacity: 1, transform: 'translateX(0)' })),
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ opacity: 0, transform: 'translateX(-20px)' })),
+      ]),
+    ]),
+    trigger('modalAnim', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'scale(0.92)' }),
+        animate('250ms ease-out', style({ opacity: 1, transform: 'scale(1)' })),
+      ]),
+      transition(':leave', [
+        animate('180ms ease-in', style({ opacity: 0, transform: 'scale(0.92)' })),
+      ]),
+    ]),
+    trigger('cardFlip', [
+      state('front', style({ transform: 'perspective(800px) rotateY(0deg)' })),
+      state('back', style({ transform: 'perspective(800px) rotateY(180deg)' })),
+      transition('front <=> back', animate('500ms ease-in-out')),
+    ]),
+  ],
 })
-export class CustomScreensComponent implements OnInit {
+export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  private elRef = inject(ElementRef);
 
   bizId = 0;
   loading = signal(true);
@@ -83,6 +163,19 @@ export class CustomScreensComponent implements OnInit {
   activeScreen = signal<ScreenTemplate | null>(null);
   widgets = signal<ScreenWidget[]>([]);
   widgetsLoading = signal(false);
+
+  // ===================== Real Widget Data =====================
+  widgetStats = signal<WidgetStats>({ totalReceipts: 0, totalPayments: 0, operationsCount: 0, netBalance: 0 });
+  widgetLogEntries = signal<LogEntry[]>([]);
+  widgetLogTotal = signal(0);
+  widgetAccounts = signal<AccountData[]>([]);
+  widgetChartData = signal<any>(null);
+  widgetOperationTypes = signal<any[]>([]);
+
+  // Log filters
+  logFilterDateFrom = signal('');
+  logFilterDateTo = signal('');
+  logFilterOpType = signal('');
 
   // ===================== Gridster =====================
   gridsterOptions: GridsterConfig = {};
@@ -138,6 +231,7 @@ export class CustomScreensComponent implements OnInit {
 
   // ===================== Notes Widget =====================
   notesText: { [key: number]: string } = {};
+  private notesSaveTimeout: { [key: number]: any } = {};
 
   // ===================== Permissions Modal =====================
   showPermissionsModal = signal(false);
@@ -152,6 +246,13 @@ export class CustomScreensComponent implements OnInit {
   sidebarSections = signal<any[]>([]);
   selectedSidebarSection = signal(0);
   sidebarSortOrder = signal(99);
+
+  // ===================== Operation Execution Modal =====================
+  showOperationModal = signal(false);
+  selectedOperationType = signal<any>(null);
+  operationEntries = signal<any[]>([]);
+  operationDescription = signal('');
+  operationDate = signal(new Date().toISOString().split('T')[0]);
 
   // ===================== Options =====================
   icons = [
@@ -236,42 +337,12 @@ export class CustomScreensComponent implements OnInit {
     },
   ];
 
-  // ===================== Demo Data =====================
-  demoLogEntries = [
-    { id: 1, type: 'تحصيل', amount: '5,000', date: '2026/02/28', account: 'الصندوق الرئيسي' },
-    { id: 2, type: 'توريد', amount: '3,200', date: '2026/02/27', account: 'حساب البنك' },
-    { id: 3, type: 'صرف', amount: '1,500', date: '2026/02/27', account: 'مصروفات' },
-    { id: 4, type: 'تحصيل', amount: '8,000', date: '2026/02/26', account: 'الصندوق الرئيسي' },
-    { id: 5, type: 'تحويل', amount: '2,000', date: '2026/02/26', account: 'حساب التوفير' },
-  ];
-
-  demoAccounts = [
-    { name: 'الصندوق الرئيسي', balance: '25,430', trend: 'up', icon: 'account_balance_wallet' },
-    { name: 'حساب البنك', balance: '142,800', trend: 'up', icon: 'account_balance' },
-    { name: 'المصروفات', balance: '8,650', trend: 'down', icon: 'payments' },
-    { name: 'حساب التوفير', balance: '50,000', trend: 'stable', icon: 'savings' },
-  ];
-
-  demoStats = [
-    { label: 'إجمالي التحصيل', value: '156,200', icon: 'trending_up', color: '#22c55e', change: '+12%' },
-    { label: 'إجمالي الصرف', value: '43,800', icon: 'trending_down', color: '#ef4444', change: '-5%' },
-    { label: 'عدد العمليات', value: '284', icon: 'receipt_long', color: '#3b82f6', change: '+8%' },
-    { label: 'صافي الرصيد', value: '112,400', icon: 'account_balance', color: '#8b5cf6', change: '+18%' },
-  ];
-
-  demoTemplates = [
-    { name: 'تحصيل يومي', icon: 'payments', color: '#22c55e' },
-    { name: 'توريد بنكي', icon: 'account_balance', color: '#3b82f6' },
-    { name: 'صرف مصروفات', icon: 'receipt', color: '#ef4444' },
-    { name: 'تحويل داخلي', icon: 'swap_horiz', color: '#f59e0b' },
-  ];
-
-  // Chart data
+  // Chart data (real data)
   barChartData: ChartConfiguration<'bar'>['data'] = {
-    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+    labels: [],
     datasets: [
       {
-        data: [65000, 59000, 80000, 81000, 56000, 95000],
+        data: [],
         label: 'التحصيل',
         backgroundColor: 'rgba(59, 130, 246, 0.6)',
         borderColor: 'rgba(59, 130, 246, 1)',
@@ -279,7 +350,7 @@ export class CustomScreensComponent implements OnInit {
         borderRadius: 6,
       },
       {
-        data: [28000, 48000, 40000, 19000, 36000, 27000],
+        data: [],
         label: 'الصرف',
         backgroundColor: 'rgba(239, 68, 68, 0.6)',
         borderColor: 'rgba(239, 68, 68, 1)',
@@ -332,6 +403,88 @@ export class CustomScreensComponent implements OnInit {
         }
       });
     });
+  }
+
+  ngAfterViewInit() {
+    // GSAP entrance animation for page
+    this.animatePageEntrance();
+  }
+
+  ngOnDestroy() {
+    // Clear notes save timeouts
+    Object.values(this.notesSaveTimeout).forEach(t => clearTimeout(t));
+  }
+
+  // ===================== GSAP Animations =====================
+  private animatePageEntrance() {
+    const container = this.elRef.nativeElement.querySelector('.page-container');
+    if (container) {
+      gsap.from(container, {
+        opacity: 0,
+        y: 20,
+        duration: 0.5,
+        ease: 'power2.out',
+      });
+    }
+  }
+
+  private animateScreenCards() {
+    setTimeout(() => {
+      const cards = this.elRef.nativeElement.querySelectorAll('.screen-card');
+      if (cards.length) {
+        gsap.from(cards, {
+          opacity: 0,
+          y: 30,
+          scale: 0.95,
+          duration: 0.4,
+          stagger: 0.08,
+          ease: 'back.out(1.2)',
+        });
+      }
+    }, 50);
+  }
+
+  private animateWidgetEntrance() {
+    setTimeout(() => {
+      const widgets = this.elRef.nativeElement.querySelectorAll('.widget-card');
+      if (widgets.length) {
+        gsap.from(widgets, {
+          opacity: 0,
+          y: 20,
+          scale: 0.96,
+          duration: 0.35,
+          stagger: 0.06,
+          ease: 'power2.out',
+        });
+      }
+    }, 100);
+  }
+
+  private animateModalOpen(selector: string) {
+    setTimeout(() => {
+      const modal = this.elRef.nativeElement.querySelector(selector);
+      if (modal) {
+        gsap.from(modal, {
+          opacity: 0,
+          scale: 0.9,
+          duration: 0.3,
+          ease: 'back.out(1.4)',
+        });
+      }
+    }, 10);
+  }
+
+  private animateViewTransition() {
+    const container = this.elRef.nativeElement.querySelector('.page-container');
+    if (container) {
+      gsap.from(container.children, {
+        opacity: 0,
+        y: 15,
+        duration: 0.35,
+        stagger: 0.05,
+        ease: 'power2.out',
+      });
+    }
   }
 
   initGridsterOptions() {
@@ -401,6 +554,7 @@ export class CustomScreensComponent implements OnInit {
     try {
       const data = await this.api.getScreens(this.bizId);
       this.screens.set(data);
+      this.animateScreenCards();
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الشاشات');
     } finally {
@@ -414,6 +568,9 @@ export class CustomScreensComponent implements OnInit {
       const data = await this.api.getScreenWidgets(screenId);
       this.widgets.set(data);
       this.buildGridItems(data);
+      // Load real data for all widget types
+      await this.loadAllWidgetData(data);
+      this.animateWidgetEntrance();
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل العناصر');
     } finally {
@@ -440,6 +597,230 @@ export class CustomScreensComponent implements OnInit {
     });
   }
 
+  // ===================== Load Real Widget Data =====================
+  async loadAllWidgetData(widgets: ScreenWidget[]) {
+    const types = new Set(widgets.map(w => w.widgetType));
+    const promises: Promise<void>[] = [];
+
+    if (types.has('stats')) promises.push(this.loadWidgetStats());
+    if (types.has('log')) promises.push(this.loadWidgetLog());
+    if (types.has('chart')) promises.push(this.loadWidgetChart());
+    if (types.has('templates')) promises.push(this.loadWidgetTemplates(widgets));
+    if (types.has('accounts')) promises.push(this.loadWidgetAccounts(widgets));
+    if (types.has('notes')) {
+      for (const w of widgets.filter(w => w.widgetType === 'notes')) {
+        promises.push(this.loadWidgetNotes(w));
+      }
+    }
+
+    await Promise.allSettled(promises);
+  }
+
+  async loadWidgetStats() {
+    try {
+      const stats = await this.api.getWidgetStats(this.bizId);
+      this.widgetStats.set(stats);
+    } catch (e) {
+      console.error('Error loading widget stats:', e);
+    }
+  }
+
+  async loadWidgetLog() {
+    try {
+      const filters: any = { limit: 50 };
+      if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
+      if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
+      if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
+      const result = await this.api.getWidgetLog(this.bizId, filters);
+      this.widgetLogEntries.set(result.entries || []);
+      this.widgetLogTotal.set(result.total || 0);
+    } catch (e) {
+      console.error('Error loading widget log:', e);
+    }
+  }
+
+  async loadWidgetChart() {
+    try {
+      const chartData = await this.api.getWidgetChart(this.bizId, 6);
+      this.widgetChartData.set(chartData);
+      // Update chart data
+      this.barChartData = {
+        labels: chartData.labels || [],
+        datasets: [
+          {
+            data: chartData.receipts || [],
+            label: 'التحصيل',
+            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          },
+          {
+            data: chartData.payments || [],
+            label: 'الصرف',
+            backgroundColor: 'rgba(239, 68, 68, 0.6)',
+            borderColor: 'rgba(239, 68, 68, 1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          },
+        ],
+      };
+    } catch (e) {
+      console.error('Error loading widget chart:', e);
+    }
+  }
+
+  async loadWidgetTemplates(widgets: ScreenWidget[]) {
+    try {
+      // Collect all operation type IDs from all template widgets
+      const allOpTypeIds = new Set<number>();
+      widgets.filter(w => w.widgetType === 'templates').forEach(w => {
+        (w.config?.operationTypeIds || []).forEach((id: number) => allOpTypeIds.add(id));
+      });
+
+      let opTypes: any[];
+      if (allOpTypeIds.size > 0) {
+        opTypes = await this.api.getWidgetOperationTypes(this.bizId, Array.from(allOpTypeIds));
+      } else {
+        opTypes = await this.api.getWidgetOperationTypes(this.bizId);
+      }
+      this.widgetOperationTypes.set(opTypes);
+    } catch (e) {
+      console.error('Error loading widget templates:', e);
+    }
+  }
+
+  async loadWidgetAccounts(widgets: ScreenWidget[]) {
+    try {
+      const allAccountIds = new Set<number>();
+      widgets.filter(w => w.widgetType === 'accounts').forEach(w => {
+        (w.config?.accountIds || []).forEach((id: number) => allAccountIds.add(id));
+      });
+
+      let accounts: any[];
+      if (allAccountIds.size > 0) {
+        accounts = await this.api.getWidgetAccounts(this.bizId, Array.from(allAccountIds));
+      } else {
+        accounts = await this.api.getWidgetAccounts(this.bizId);
+      }
+      this.widgetAccounts.set(accounts);
+    } catch (e) {
+      console.error('Error loading widget accounts:', e);
+    }
+  }
+
+  async loadWidgetNotes(widget: ScreenWidget) {
+    try {
+      const result = await this.api.getWidgetNotes(widget.id);
+      this.notesText[widget.id] = result.text || '';
+    } catch (e) {
+      console.error('Error loading widget notes:', e);
+    }
+  }
+
+  // ===================== Widget Data Getters =====================
+  getTemplatesForWidget(widget: ScreenWidget): any[] {
+    const opTypeIds = widget.config?.operationTypeIds || [];
+    if (opTypeIds.length === 0) return this.widgetOperationTypes();
+    return this.widgetOperationTypes().filter((ot: any) => opTypeIds.includes(ot.id));
+  }
+
+  getAccountsForWidget(widget: ScreenWidget): AccountData[] {
+    const accountIds = widget.config?.accountIds || [];
+    if (accountIds.length === 0) return this.widgetAccounts();
+    return this.widgetAccounts().filter((a: any) => accountIds.includes(a.id));
+  }
+
+  getStatsData(): { label: string; value: string; icon: string; color: string }[] {
+    const stats = this.widgetStats();
+    return [
+      { label: 'إجمالي التحصيل', value: this.formatNumber(stats.totalReceipts), icon: 'trending_up', color: '#22c55e' },
+      { label: 'إجمالي الصرف', value: this.formatNumber(stats.totalPayments), icon: 'trending_down', color: '#ef4444' },
+      { label: 'عدد العمليات', value: String(stats.operationsCount), icon: 'receipt_long', color: '#3b82f6' },
+      { label: 'صافي الرصيد', value: this.formatNumber(stats.netBalance), icon: 'account_balance', color: '#8b5cf6' },
+    ];
+  }
+
+  // ===================== Log Filter Actions =====================
+  async applyLogFilters() {
+    await this.loadWidgetLog();
+  }
+
+  async clearLogFilters() {
+    this.logFilterDateFrom.set('');
+    this.logFilterDateTo.set('');
+    this.logFilterOpType.set('');
+    await this.loadWidgetLog();
+  }
+
+  // ===================== Operation Execution =====================
+  openOperationExecution(opType: any) {
+    this.selectedOperationType.set(opType);
+    const accounts = opType.accounts || [];
+    this.operationEntries.set(
+      accounts.map((acc: any) => ({
+        accountId: acc.accountId,
+        accountName: acc.label || acc.accountName || '',
+        amount: '',
+        notes: '',
+      }))
+    );
+    if (accounts.length === 0) {
+      this.operationEntries.set([{ accountId: null, accountName: '', amount: '', notes: '' }]);
+    }
+    this.operationDescription.set('');
+    this.operationDate.set(new Date().toISOString().split('T')[0]);
+    this.showOperationModal.set(true);
+    this.animateModalOpen('.modal-card');
+  }
+
+  closeOperationModal() {
+    this.showOperationModal.set(false);
+    this.selectedOperationType.set(null);
+  }
+
+  updateOperationEntry(index: number, field: string, value: string) {
+    this.operationEntries.update(entries => {
+      const updated = [...entries];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }
+
+  async executeOperation() {
+    const opType = this.selectedOperationType();
+    if (!opType) return;
+
+    const entries = this.operationEntries().filter(e => parseFloat(e.amount) > 0);
+    if (!entries.length) {
+      this.toast.warning('أدخل مبلغاً واحداً على الأقل');
+      return;
+    }
+
+    this.saving.set(true);
+    try {
+      for (const entry of entries) {
+        await this.api.createVoucher(this.bizId, {
+          voucherType: opType.voucherType || 'receipt',
+          operationTypeId: opType.id,
+          toAccountId: entry.accountId,
+          amount: parseFloat(entry.amount),
+          currencyId: 1,
+          description: this.operationDescription() || `${opType.name} - ${entry.accountName}`,
+          voucherDate: this.operationDate(),
+        });
+      }
+      this.toast.success(`تم تنفيذ ${entries.length} عملية بنجاح`);
+      this.closeOperationModal();
+      // Refresh widget data
+      await this.loadAllWidgetData(this.widgets());
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تنفيذ العملية');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   // ===================== WIZARD =====================
   startWizard() {
     this.viewMode.set('wizard');
@@ -452,10 +833,12 @@ export class CustomScreensComponent implements OnInit {
     this.wizardWidgets.set([]);
     this.customizingWidgetIdx.set(null);
     this.bindingWidgetIdx.set(null);
+    this.animateViewTransition();
   }
 
   cancelWizard() {
     this.viewMode.set('list');
+    this.animateViewTransition();
   }
 
   selectTemplate(key: string) {
@@ -476,7 +859,6 @@ export class CustomScreensComponent implements OnInit {
   nextWizardStep() {
     const step = this.wizardStep();
     if (step === 1) {
-      // Validate template selection
       this.wizardStep.set(2);
     } else if (step === 2) {
       this.wizardStep.set(3);
@@ -484,6 +866,7 @@ export class CustomScreensComponent implements OnInit {
       this.wizardStep.set(4);
       this.loadContentBindingData();
     }
+    this.animateViewTransition();
   }
 
   prevWizardStep() {
@@ -492,6 +875,7 @@ export class CustomScreensComponent implements OnInit {
       this.wizardStep.set(step - 1);
       this.customizingWidgetIdx.set(null);
       this.bindingWidgetIdx.set(null);
+      this.animateViewTransition();
     }
   }
 
@@ -633,8 +1017,8 @@ export class CustomScreensComponent implements OnInit {
         color: screen.color || '#3b82f6',
       });
       this.showScreenForm.set(true);
+      this.animateModalOpen('.modal-card');
     } else {
-      // New screen -> go to wizard
       this.startWizard();
     }
   }
@@ -708,7 +1092,13 @@ export class CustomScreensComponent implements OnInit {
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.updateGridsterEditMode(false);
+    // Load operation types for log filter dropdown
+    try {
+      const opTypes = await this.api.getOperationTypes(this.bizId);
+      this.operationTypes.set(opTypes);
+    } catch (e) {}
     await this.loadWidgets(screen.id);
+    this.animateViewTransition();
   }
 
   backToList() {
@@ -718,6 +1108,7 @@ export class CustomScreensComponent implements OnInit {
     this.gridItems = [];
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
+    this.animateViewTransition();
   }
 
   toggleEditMode() {
@@ -764,6 +1155,7 @@ export class CustomScreensComponent implements OnInit {
       this.otherScreens.set(data.filter((s: any) => s.id !== currentScreenId && s.widgets?.length > 0));
       this.selectedCopyScreen.set(null);
       this.showCopyWidgetModal.set(true);
+      this.animateModalOpen('.modal-card');
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الشاشات');
     }
@@ -814,6 +1206,7 @@ export class CustomScreensComponent implements OnInit {
       });
     }
     this.showWidgetForm.set(true);
+    this.animateModalOpen('.modal-card');
   }
 
   closeWidgetForm() {
@@ -906,9 +1299,7 @@ export class CustomScreensComponent implements OnInit {
       // Save notes text
       for (const item of this.gridItems) {
         if (item.widgetData.widgetType === 'notes' && this.notesText[item.widgetData.id] !== undefined) {
-          await this.api.updateWidget(item.widgetData.id, {
-            config: { text: this.notesText[item.widgetData.id] },
-          });
+          await this.api.saveWidgetNotes(item.widgetData.id, this.notesText[item.widgetData.id]);
         }
       }
 
@@ -925,6 +1316,16 @@ export class CustomScreensComponent implements OnInit {
   onNotesChange(widgetId: number, text: string) {
     this.notesText[widgetId] = text;
     this.hasUnsavedChanges.set(true);
+
+    // Auto-save notes after 2 seconds of inactivity
+    if (this.notesSaveTimeout[widgetId]) clearTimeout(this.notesSaveTimeout[widgetId]);
+    this.notesSaveTimeout[widgetId] = setTimeout(async () => {
+      try {
+        await this.api.saveWidgetNotes(widgetId, text);
+      } catch (e) {
+        console.error('Error auto-saving notes:', e);
+      }
+    }, 2000);
   }
 
   // ===================== Helpers =====================
@@ -932,6 +1333,52 @@ export class CustomScreensComponent implements OnInit {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  formatNumber(num: number): string {
+    if (!num && num !== 0) return '0';
+    return num.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  formatAmount(amount: string | number): string {
+    const n = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(n)) return '0';
+    return n.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  getVoucherTypeLabel(type: string): string {
+    switch (type) {
+      case 'receipt': return 'تحصيل';
+      case 'payment': return 'صرف';
+      case 'journal': return 'قيد';
+      default: return type || 'عملية';
+    }
+  }
+
+  getVoucherTypeClass(type: string): string {
+    switch (type) {
+      case 'receipt': return 'collection';
+      case 'payment': return 'expense';
+      case 'journal': return 'transfer';
+      default: return 'collection';
+    }
+  }
+
+  getAccountIcon(type: string): string {
+    switch (type) {
+      case 'fund': return 'account_balance_wallet';
+      case 'bank': return 'account_balance';
+      case 'exchange': return 'currency_exchange';
+      case 'e_wallet': return 'smartphone';
+      default: return 'account_balance_wallet';
+    }
+  }
+
+  getBalanceTrend(account: AccountData): string {
+    const movements = account.last_movements || [];
+    if (movements.length < 2) return 'stable';
+    const lastType = movements[0]?.line_type;
+    return lastType === 'debit' ? 'up' : 'down';
   }
 
   getTrendIcon(trend: string): string {
@@ -972,6 +1419,7 @@ export class CustomScreensComponent implements OnInit {
     this.permissionsScreen.set(screen);
     this.permissionsLoading.set(true);
     this.showPermissionsModal.set(true);
+    this.animateModalOpen('.modal-card');
     try {
       const [users, perms] = await Promise.all([
         this.api.getUsers(),
@@ -1042,6 +1490,7 @@ export class CustomScreensComponent implements OnInit {
         this.selectedSidebarSection.set(sections[0].id);
       }
       this.showSidebarModal.set(true);
+      this.animateModalOpen('.modal-card');
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الأقسام');
     }
@@ -1072,6 +1521,24 @@ export class CustomScreensComponent implements OnInit {
       this.toast.error(e.message || 'خطأ أثناء الإضافة');
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  // ===================== Color Picker Helper =====================
+  onColorPickerChange(color: string, target: 'screen' | 'wizard' | 'widget' | 'wizardWidget', idx?: number) {
+    switch (target) {
+      case 'screen':
+        this.screenForm.set({ ...this.screenForm(), color });
+        break;
+      case 'wizard':
+        this.wizardScreenColor.set(color);
+        break;
+      case 'widget':
+        this.widgetForm.set({ ...this.widgetForm(), config: { ...this.widgetForm().config, color } });
+        break;
+      case 'wizardWidget':
+        if (idx !== undefined) this.updateWizardWidgetColor(idx, color);
+        break;
     }
   }
 }

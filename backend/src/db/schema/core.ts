@@ -786,6 +786,7 @@ export const screenTemplates = pgTable('screen_templates', {
   templateKey: varchar('template_key', { length: 50 }), // collection | delivery | monitoring | reports | blank
   isSystem: boolean('is_system').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
+  createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -805,6 +806,7 @@ export const screenWidgets = pgTable('screen_widgets', {
   sortOrder: integer('sort_order').notNull().default(0),
   isVisible: boolean('is_visible').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 // ===================== SCREEN WIDGET TEMPLATES (ربط عنصر القوالب بقوالب العمليات) =====================

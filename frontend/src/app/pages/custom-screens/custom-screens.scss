@@ -434,6 +434,60 @@
   padding: 0;
   overflow: auto;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-filters {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; gap: 10px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  flex-wrap: wrap;
+}
+
+.log-filter-group {
+  display: flex; gap: 8px; flex-wrap: wrap; flex: 1;
+}
+
+.log-filter-input {
+  padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border-color); background: var(--bg-primary);
+  color: var(--text-primary); font-family: 'Tajawal', sans-serif;
+  font-size: 12px; outline: none; min-width: 100px;
+  transition: border-color 0.2s;
+  &:focus { border-color: var(--accent-blue); }
+}
+
+.log-filter-actions {
+  display: flex; gap: 4px;
+}
+
+.filter-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border-color); background: var(--bg-surface);
+  color: var(--text-secondary); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  .material-icons-round { font-size: 16px; }
+  &.apply:hover { background: rgba(59,130,246,0.1); color: var(--accent-blue); border-color: rgba(59,130,246,0.3); }
+  &.clear:hover { background: rgba(239,68,68,0.1); color: var(--accent-red); border-color: rgba(239,68,68,0.3); }
+}
+
+.log-desc {
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+}
+
+.log-empty {
+  text-align: center !important; padding: 30px !important;
+  color: var(--text-muted) !important;
+  .material-icons-round { font-size: 24px; display: block; margin-bottom: 8px; }
+}
+
+.log-total {
+  padding: 8px 14px; font-size: 12px; font-weight: 700;
+  color: var(--text-muted); border-top: 1px solid var(--border-color);
+  background: var(--bg-surface); text-align: center;
 }
 
 .log-table {
@@ -459,10 +513,11 @@
 
 .log-type-badge {
   font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 6px;
-  &.collection { background: rgba(34,197,94,0.15); color: #22c55e; }
-  &.delivery { background: rgba(59,130,246,0.15); color: #3b82f6; }
+  &.collection, &.receipt { background: rgba(34,197,94,0.15); color: #22c55e; }
+  &.delivery, &.payment { background: rgba(59,130,246,0.15); color: #3b82f6; }
   &.expense { background: rgba(239,68,68,0.15); color: #ef4444; }
-  &.transfer { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  &.transfer, &.journal { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  &.default-type { background: rgba(148,163,184,0.15); color: var(--text-muted); }
 }
 
 .log-amount {
@@ -499,6 +554,14 @@
 
 .account-name {
   font-size: 13px; font-weight: 700; color: var(--text-primary);
+}
+
+.account-details {
+  display: flex; flex-direction: column;
+}
+
+.account-last-movement {
+  font-size: 11px; color: var(--text-muted);
 }
 
 .account-balance-area {
@@ -580,6 +643,20 @@
 .notes-widget {
   height: 100%;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-footer {
+  padding: 6px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.notes-autosave-hint {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-muted);
+  .material-icons-round { font-size: 14px; color: #22c55e; }
 }
 
 .notes-textarea {
@@ -919,6 +996,16 @@
   background: transparent; overflow: hidden;
   &::-webkit-color-swatch-wrapper { padding: 0; }
   &::-webkit-color-swatch { border: none; border-radius: 50%; }
+}
+
+.color-picker-trigger {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: 2px solid rgba(255,255,255,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s;
+  .material-icons-round { font-size: 18px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+  &:hover { transform: scale(1.1); box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
 }
 
 .icon-picker-compact {
@@ -1366,6 +1453,252 @@
     .material-icons-round { color: var(--text-secondary); }
     background: rgba(0,0,0,0.03);
   }
+}
+
+/* ===================== Widget Empty State ===================== */
+.widget-empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 30px 20px; color: var(--text-muted); text-align: center;
+  height: 100%;
+  .material-icons-round { font-size: 36px; margin-bottom: 8px; opacity: 0.5; }
+  p { font-size: 13px; margin: 0; }
+}
+
+/* ===================== CSS 3D Transforms ===================== */
+.card-3d {
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+  &:hover {
+    transform: translateY(-4px) perspective(800px) rotateX(1deg);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+  }
+}
+
+.card-3d-subtle {
+  transition: all 0.25s ease;
+  transform-style: preserve-3d;
+  &:hover {
+    transform: translateY(-2px) perspective(600px) rotateX(0.5deg);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+}
+
+/* ===================== Wizard Steps (New) ===================== */
+.wizard-steps {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; margin-bottom: 32px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.wizard-step {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  min-width: 80px;
+
+  .step-number {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800;
+    background: var(--bg-surface); border: 2px solid var(--border-color);
+    color: var(--text-muted); transition: all 0.3s;
+  }
+
+  .step-label {
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    text-align: center; transition: color 0.3s;
+  }
+
+  &.active {
+    .step-number {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border-color: #3b82f6; color: white;
+      box-shadow: 0 4px 15px rgba(59,130,246,0.4);
+    }
+    .step-label { color: var(--accent-blue); }
+  }
+
+  &.completed {
+    .step-number {
+      background: linear-gradient(135deg, #22c55e, #14b8a6);
+      border-color: #22c55e; color: white;
+    }
+    .step-label { color: #22c55e; }
+  }
+}
+
+.step-connector {
+  flex: 1; height: 3px; max-width: 80px;
+  background: var(--border-color); border-radius: 2px;
+  margin: 0 8px; margin-bottom: 28px;
+  transition: background 0.3s;
+
+  &.active { background: linear-gradient(90deg, #22c55e, #14b8a6); }
+}
+
+/* ===================== Wizard Widget Item (New) ===================== */
+.wizard-widget-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; border-radius: 12px;
+  border: 1px solid var(--border-color); background: var(--bg-surface);
+  transition: all 0.2s;
+  margin-bottom: 8px;
+
+  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+}
+
+.wizard-widget-name {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+}
+
+.wizard-widget-type {
+  font-size: 12px; color: var(--text-muted);
+}
+
+.wizard-widget-info {
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+
+.wizard-widget-actions {
+  display: flex; gap: 4px;
+}
+
+.wizard-widget-icon {
+  width: 42px; height: 42px; min-width: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  .material-icons-round { font-size: 22px; }
+}
+
+/* ===================== Section Title ===================== */
+.section-title {
+  font-size: 16px; font-weight: 800; color: var(--text-primary);
+  margin: 20px 0 12px;
+}
+
+/* ===================== Customize List (Step 3) ===================== */
+.customize-list {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.customize-card {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: 14px; overflow: hidden;
+  transition: all 0.2s;
+
+  &.expanded { border-color: var(--accent-blue); box-shadow: 0 4px 16px rgba(59,130,246,0.1); }
+}
+
+.customize-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover { background: var(--bg-card-hover); }
+}
+
+.customize-card-icon {
+  width: 38px; height: 38px; min-width: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  .material-icons-round { font-size: 20px; }
+}
+
+.customize-card-info {
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+
+.customize-card-title {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+}
+
+.customize-card-type {
+  font-size: 12px; color: var(--text-muted);
+}
+
+.customize-card-body {
+  padding: 0 18px 18px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+/* ===================== Binding Label ===================== */
+.binding-card-label {
+  font-size: 12px; color: var(--accent-blue); font-weight: 600;
+}
+
+.binding-card-title {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+}
+
+.binding-card-info {
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+
+/* ===================== Operation Execution Modal ===================== */
+.operation-entries {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.operation-entry-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  background: var(--bg-surface); border: 1px solid var(--border-color);
+}
+
+.entry-account {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 160px;
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+  .material-icons-round { font-size: 18px; color: var(--accent-blue); }
+}
+
+.entry-amount {
+  flex: 1;
+  input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--bg-primary);
+    color: var(--text-primary); font-family: 'Tajawal', sans-serif;
+    font-size: 14px; font-weight: 700; outline: none;
+    &:focus { border-color: var(--accent-blue); }
+  }
+}
+
+.entry-notes {
+  flex: 1;
+  input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--bg-primary);
+    color: var(--text-primary); font-family: 'Tajawal', sans-serif;
+    font-size: 13px; outline: none;
+    &:focus { border-color: var(--accent-blue); }
+  }
+}
+
+/* ===================== Add Icon in Widget Type ===================== */
+.add-icon {
+  font-size: 18px; color: var(--text-muted); margin-right: auto;
+  transition: color 0.2s;
+}
+
+.widget-type-option:hover .add-icon {
+  color: var(--accent-blue);
+}
+
+/* ===================== Template Selected Badge ===================== */
+.template-selected-badge {
+  position: absolute; top: 10px; left: 10px;
+  .material-icons-round { font-size: 24px; color: var(--accent-blue); }
+}
+
+/* ===================== Icon Grid Compact ===================== */
+.icon-grid.compact {
+  max-height: 100px; overflow-y: auto;
+  padding: 4px; border: 1px solid var(--border-color);
+  border-radius: 10px; background: var(--bg-surface);
 }
 
 /* ===================== Responsive ===================== */
