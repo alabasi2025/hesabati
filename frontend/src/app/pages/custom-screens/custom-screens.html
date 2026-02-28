@@ -48,6 +48,12 @@
                   <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
                 </div>
                 <div class="screen-card-actions" (click)="$event.stopPropagation()">
+                  <button class="action-btn edit" (click)="openPermissionsModal(screen)" title="صلاحيات">
+                    <span class="material-icons-round">admin_panel_settings</span>
+                  </button>
+                  <button class="action-btn edit" (click)="openSidebarModal(screen)" title="إضافة للقائمة">
+                    <span class="material-icons-round">add_to_queue</span>
+                  </button>
                   <button class="action-btn edit" (click)="openScreenForm(screen)" title="تعديل">
                     <span class="material-icons-round">edit</span>
                   </button>
@@ -276,7 +282,12 @@
                       <h5>{{ w.title }}</h5>
                       <span>{{ getWidgetTypeInfo(w.widgetType).label }} | {{ w.isVisible ? 'ظاهر' : 'مخفي' }}</span>
                     </div>
-                    <span class="material-icons-round expand-icon">{{ customizingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
+                    <div class="customization-header-actions">
+                      <button class="eye-btn" [class.hidden-state]="!w.isVisible" (click)="$event.stopPropagation(); toggleWizardWidgetVisibility(i)" [title]="w.isVisible ? 'إخفاء' : 'إظهار'">
+                        <span class="material-icons-round">{{ w.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                      </button>
+                      <span class="material-icons-round expand-icon">{{ customizingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
+                    </div>
                   </div>
 
                   @if (customizingWidgetIdx() === i) {
@@ -880,6 +891,112 @@
               </div>
             </div>
           }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== PERMISSIONS MODAL ==================== -->
+  @if (showPermissionsModal()) {
+    <div class="modal-overlay" (click)="closePermissionsModal()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon purple">
+              <span class="material-icons-round">admin_panel_settings</span>
+            </div>
+            <div>
+              <h2>صلاحيات الشاشة</h2>
+              <p>تحديد صلاحيات كل مستخدم لشاشة "{{ permissionsScreen()?.name }}"</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="closePermissionsModal()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (permissionsLoading()) {
+            <div class="loading-state">
+              <span class="material-icons-round spin">sync</span>
+              <p>جاري تحميل الصلاحيات...</p>
+            </div>
+          } @else {
+            <div class="permissions-hint">
+              <span class="material-icons-round">info</span>
+              حدد لكل مستخدم مستوى الصلاحية: عرض فقط، تنفيذ عمليات، أو بدون صلاحية.
+            </div>
+            <div class="permissions-list">
+              @for (user of permissionsUsers(); track user.id) {
+                <div class="permission-row">
+                  <div class="permission-user">
+                    <div class="permission-user-icon">
+                      <span class="material-icons-round">person</span>
+                    </div>
+                    <div class="permission-user-info">
+                      <span class="permission-user-name">{{ user.fullName || user.username }}</span>
+                      <span class="permission-user-role">{{ user.role }}</span>
+                    </div>
+                  </div>
+                  <select class="permission-dropdown" [value]="getUserPermission(user.id)" (change)="setUserPermission(user.id, $any($event.target).value)">
+                    <option value="none">بدون صلاحية</option>
+                    <option value="view">عرض فقط</option>
+                    <option value="execute">تنفيذ عمليات</option>
+                  </select>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="savePermissions()" [disabled]="saving() || permissionsLoading()">
+            {{ saving() ? 'جاري الحفظ...' : 'حفظ الصلاحيات' }}
+          </button>
+          <button class="btn-cancel" (click)="closePermissionsModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== ADD TO SIDEBAR MODAL ==================== -->
+  @if (showSidebarModal()) {
+    <div class="modal-overlay" (click)="closeSidebarModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon green">
+              <span class="material-icons-round">add_to_queue</span>
+            </div>
+            <div>
+              <h2>إضافة للقائمة الجانبية</h2>
+              <p>إضافة شاشة "{{ sidebarScreen()?.name }}" للقائمة الجانبية</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="closeSidebarModal()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>القسم في القائمة الجانبية</label>
+            <select [ngModel]="selectedSidebarSection()" (ngModelChange)="selectedSidebarSection.set($event)">
+              @for (sec of sidebarSections(); track sec.id) {
+                <option [ngValue]="sec.id">{{ sec.name }}</option>
+              }
+            </select>
+            @if (sidebarSections().length === 0) {
+              <p class="no-data-msg">لا توجد أقسام. أنشئ قسماً من إعدادات التبويب الجانبي.</p>
+            }
+          </div>
+          <div class="form-group">
+            <label>الترتيب</label>
+            <input type="number" [ngModel]="sidebarSortOrder()" (ngModelChange)="sidebarSortOrder.set($event)" min="1" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="addToSidebar()" [disabled]="saving() || sidebarSections().length === 0">
+            {{ saving() ? 'جاري الإضافة...' : 'إضافة للقائمة' }}
+          </button>
+          <button class="btn-cancel" (click)="closeSidebarModal()">إلغاء</button>
         </div>
       </div>
     </div>

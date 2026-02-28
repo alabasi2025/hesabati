@@ -345,6 +345,16 @@
   p { font-size: 15px; font-weight: 600; }
 }
 
+/* ===================== Screens Tab ===================== */
+.inactive-card {
+  opacity: 0.55;
+  &:hover { opacity: 0.8; }
+}
+
+.header-actions-group {
+  display: flex; gap: 8px;
+}
+
 /* ===================== Responsive ===================== */
 @media (max-width: 768px) {
   .users-layout { grid-template-columns: 1fr; }

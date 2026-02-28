@@ -22,17 +22,21 @@
 
   <!-- Tabs -->
   <div class="tabs-bar">
-    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
-      <span class="material-icons-round">people</span>
-      صلاحيات المستخدمين
-    </button>
     <button class="tab-btn" [class.active]="activeTab() === 'sections'" (click)="activeTab.set('sections')">
       <span class="material-icons-round">folder</span>
       الأقسام
     </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'screens'" (click)="activeTab.set('screens')">
+      <span class="material-icons-round">space_dashboard</span>
+      الشاشات
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
+      <span class="material-icons-round">people</span>
+      صلاحيات المستخدمين
+    </button>
     <button class="tab-btn" [class.active]="activeTab() === 'items'" (click)="activeTab.set('items')">
       <span class="material-icons-round">list</span>
-      الشاشات
+      عناصر القائمة
     </button>
   </div>
 
@@ -42,6 +46,59 @@
       <p>جاري التحميل...</p>
     </div>
   } @else {
+
+    <!-- ==================== Screens Tab ==================== -->
+    @if (activeTab() === 'screens') {
+      <div class="management-panel">
+        <div class="panel-header">
+          <h3>الشاشات المخصصة</h3>
+          <div class="header-actions-group">
+            <button class="add-btn" (click)="navigateToCustomScreens()">
+              <span class="material-icons-round">open_in_new</span>
+              فتح صفحة الشاشات
+            </button>
+          </div>
+        </div>
+
+        @if (screensLoading()) {
+          <div class="loading-state">
+            <span class="material-icons-round spin">sync</span>
+            <p>جاري تحميل الشاشات...</p>
+          </div>
+        } @else if (customScreens().length === 0) {
+          <div class="empty-state">
+            <span class="material-icons-round">space_dashboard</span>
+            <p>لا توجد شاشات مخصصة بعد</p>
+            <button class="add-btn" (click)="navigateToCustomScreens()">
+              <span class="material-icons-round">add</span>
+              إنشاء شاشة جديدة
+            </button>
+          </div>
+        } @else {
+          <div class="items-grid">
+            @for (screen of customScreens(); track screen.id) {
+              <div class="management-card" [class.inactive-card]="!screen.isActive">
+                <div class="card-icon" [style.background]="screen.color + '18'" [style.color]="screen.color">
+                  <span class="material-icons-round">{{ screen.icon || 'space_dashboard' }}</span>
+                </div>
+                <div class="card-info">
+                  <h4>{{ screen.name }}</h4>
+                  <span class="card-meta">{{ screen.description || 'بدون وصف' }} | {{ screen.isActive ? 'نشط' : 'معطل' }}</span>
+                </div>
+                <div class="card-actions">
+                  <button class="icon-btn" (click)="toggleScreenActive(screen)" [title]="screen.isActive ? 'تعطيل' : 'تفعيل'">
+                    <span class="material-icons-round">{{ screen.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                  </button>
+                  <button class="icon-btn danger" (click)="deleteCustomScreen(screen)" title="حذف">
+                    <span class="material-icons-round">delete</span>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
 
     <!-- ==================== Users Tab ==================== -->
     @if (activeTab() === 'users') {

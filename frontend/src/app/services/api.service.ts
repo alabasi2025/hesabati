@@ -258,6 +258,18 @@ export class ApiService {
   copyWidgetToScreen(widgetId: number, targetScreenId: number) { return this.request<any>(`/widgets/${widgetId}/copy-to/${targetScreenId}`, { method: 'POST', body: JSON.stringify({}) }); }
   getScreensWithWidgets(bizId: number)                  { return this.request<any[]>(`/businesses/${bizId}/screens-with-widgets`); }
 
+  // ===================== صلاحيات الشاشات =====================
+  getScreenPermissions(screenId: number)                { return this.request<any[]>(`/screens/${screenId}/permissions`); }
+  setScreenPermissions(screenId: number, d: any)        { return this.request<any>(`/screens/${screenId}/permissions`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateScreenPermission(id: number, d: any)            { return this.request<any>(`/screen-permissions/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteScreenPermission(id: number)                    { return this.request<any>(`/screen-permissions/${id}`, { method: 'DELETE' }); }
+  batchUpdateScreenPermissions(screenId: number, permissions: any[]) { return this.request<any>(`/screens/${screenId}/permissions/batch`, { method: 'PUT', body: JSON.stringify({ permissions }) }); }
+
+  // ===================== إنشاء شاشة من قالب وربط بالقائمة الجانبية =====================
+  createScreenFromTemplate(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }
+  addScreenToSidebar(bizId: number, screenId: number, d: any) { return this.request<any>(`/businesses/${bizId}/screens/${screenId}/add-to-sidebar`, { method: 'POST', body: JSON.stringify(d) }); }
+  getUserScreens(bizId: number, userId: number)         { return this.request<any[]>(`/businesses/${bizId}/users/${userId}/screens`); }
+
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }
 

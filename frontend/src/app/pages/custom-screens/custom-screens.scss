@@ -1281,6 +1281,93 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
+/* ===================== Permissions Modal ===================== */
+.modal-icon.purple {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  box-shadow: 0 4px 12px rgba(139,92,246,0.3);
+}
+
+.permissions-hint {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-radius: 10px;
+  background: rgba(59,130,246,0.06); color: var(--text-secondary);
+  font-size: 13px; margin-bottom: 16px;
+  .material-icons-round { font-size: 18px; color: var(--accent-blue); }
+}
+
+.permissions-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 400px; overflow-y: auto;
+}
+
+.permission-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-radius: 10px;
+  background: var(--bg-surface); border: 1px solid var(--border-color);
+  transition: all 0.2s;
+  &:hover { border-color: rgba(59,130,246,0.3); }
+}
+
+.permission-user {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.permission-user-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(59,130,246,0.1); display: flex;
+  align-items: center; justify-content: center;
+  .material-icons-round { font-size: 18px; color: var(--accent-blue); }
+}
+
+.permission-user-info {
+  display: flex; flex-direction: column;
+}
+
+.permission-user-name {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+}
+
+.permission-user-role {
+  font-size: 12px; color: var(--text-secondary);
+}
+
+.permission-dropdown {
+  padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--border-color); background: var(--bg-primary);
+  color: var(--text-primary); font-family: 'Tajawal', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+  &:focus { border-color: var(--accent-blue); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+}
+
+/* ===================== Sidebar Modal ===================== */
+.no-data-msg {
+  font-size: 13px; color: var(--text-secondary);
+  margin-top: 8px; font-style: italic;
+}
+
+/* ===================== Eye Button (Visibility Toggle) ===================== */
+.customization-header-actions {
+  display: flex; align-items: center; gap: 8px; margin-right: auto;
+}
+
+.eye-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--border-color); background: var(--bg-surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s;
+  .material-icons-round { font-size: 18px; color: var(--accent-blue); }
+
+  &:hover {
+    background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.3);
+  }
+
+  &.hidden-state {
+    .material-icons-round { color: var(--text-secondary); }
+    background: rgba(0,0,0,0.03);
+  }
+}
+
 /* ===================== Responsive ===================== */
 @media (max-width: 1024px) {
   .screens-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }

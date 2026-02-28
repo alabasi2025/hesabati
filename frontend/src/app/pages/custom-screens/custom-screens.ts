@@ -139,6 +139,20 @@ export class CustomScreensComponent implements OnInit {
   // ===================== Notes Widget =====================
   notesText: { [key: number]: string } = {};
 
+  // ===================== Permissions Modal =====================
+  showPermissionsModal = signal(false);
+  permissionsScreen = signal<ScreenTemplate | null>(null);
+  permissionsUsers = signal<any[]>([]);
+  permissionsMap = signal<{ [userId: number]: string }>({});
+  permissionsLoading = signal(false);
+
+  // ===================== Add to Sidebar Modal =====================
+  showSidebarModal = signal(false);
+  sidebarScreen = signal<ScreenTemplate | null>(null);
+  sidebarSections = signal<any[]>([]);
+  selectedSidebarSection = signal(0);
+  sidebarSortOrder = signal(99);
+
   // ===================== Options =====================
   icons = [
     'dashboard', 'bolt', 'receipt_long', 'receipt', 'account_balance_wallet',
@@ -950,6 +964,114 @@ export class CustomScreensComponent implements OnInit {
       case 'accounts': return `${(w.config?.accountIds || []).length} حساب مرتبط`;
       case 'log': return w.config?.filters ? 'فلاتر محددة' : 'بدون فلاتر';
       default: return '';
+    }
+  }
+
+  // ===================== Permissions Modal =====================
+  async openPermissionsModal(screen: ScreenTemplate) {
+    this.permissionsScreen.set(screen);
+    this.permissionsLoading.set(true);
+    this.showPermissionsModal.set(true);
+    try {
+      const [users, perms] = await Promise.all([
+        this.api.getUsers(),
+        this.api.getScreenPermissions(screen.id),
+      ]);
+      this.permissionsUsers.set(users);
+      const map: { [userId: number]: string } = {};
+      for (const p of perms) {
+        map[p.userId] = p.permission;
+      }
+      this.permissionsMap.set(map);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تحميل الصلاحيات');
+    } finally {
+      this.permissionsLoading.set(false);
+    }
+  }
+
+  closePermissionsModal() {
+    this.showPermissionsModal.set(false);
+    this.permissionsScreen.set(null);
+  }
+
+  setUserPermission(userId: number, permission: string) {
+    const map = { ...this.permissionsMap() };
+    if (permission === 'none') {
+      delete map[userId];
+    } else {
+      map[userId] = permission;
+    }
+    this.permissionsMap.set(map);
+  }
+
+  getUserPermission(userId: number): string {
+    return this.permissionsMap()[userId] || 'none';
+  }
+
+  async savePermissions() {
+    const screen = this.permissionsScreen();
+    if (!screen) return;
+
+    this.saving.set(true);
+    try {
+      const map = this.permissionsMap();
+      const permissions = Object.entries(map).map(([userId, permission]) => ({
+        userId: parseInt(userId),
+        permission,
+      }));
+      await this.api.batchUpdateScreenPermissions(screen.id, permissions);
+      this.toast.success('تم حفظ الصلاحيات بنجاح');
+      this.closePermissionsModal();
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ أثناء حفظ الصلاحيات');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  // ===================== Add to Sidebar Modal =====================
+  async openSidebarModal(screen: ScreenTemplate) {
+    this.sidebarScreen.set(screen);
+    this.selectedSidebarSection.set(0);
+    this.sidebarSortOrder.set(99);
+    try {
+      const sections = await this.api.getSidebarSections(this.bizId);
+      this.sidebarSections.set(sections);
+      if (sections.length > 0) {
+        this.selectedSidebarSection.set(sections[0].id);
+      }
+      this.showSidebarModal.set(true);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تحميل الأقسام');
+    }
+  }
+
+  closeSidebarModal() {
+    this.showSidebarModal.set(false);
+    this.sidebarScreen.set(null);
+  }
+
+  async addToSidebar() {
+    const screen = this.sidebarScreen();
+    const sectionId = this.selectedSidebarSection();
+    if (!screen || !sectionId) {
+      this.toast.warning('يرجى اختيار القسم');
+      return;
+    }
+
+    this.saving.set(true);
+    try {
+      await this.api.addScreenToSidebar(this.bizId, screen.id, {
+        sectionId,
+        sortOrder: this.sidebarSortOrder(),
+      });
+      this.toast.success('تم إضافة الشاشة للقائمة الجانبية');
+      this.closeSidebarModal();
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ أثناء الإضافة');
+    } finally {
+      this.saving.set(false);
     }
   }
 }
