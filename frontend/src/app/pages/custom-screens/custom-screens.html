@@ -11,7 +11,7 @@
         </div>
         <div>
           <h1>الشاشات المخصصة</h1>
-          <p>إنشاء وإدارة لوحات العمل المخصصة</p>
+          <p>إنشاء وإدارة لوحات العمل المخصصة بنظام السحب والإفلات</p>
         </div>
       </div>
       <button class="add-btn" (click)="openScreenForm()">
@@ -94,74 +94,226 @@
           </div>
         </div>
         <div class="detail-header-actions">
+          @if (editMode() && hasUnsavedChanges()) {
+            <button class="save-layout-btn" (click)="saveLayout()" [disabled]="saving()">
+              <span class="material-icons-round">save</span>
+              {{ saving() ? 'جاري الحفظ...' : 'حفظ التخطيط' }}
+            </button>
+          }
           <button class="mode-btn" [class.active]="editMode()" (click)="toggleEditMode()">
             <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
             {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
           </button>
           @if (editMode()) {
-            <button class="add-btn" (click)="openWidgetForm()">
-              <span class="material-icons-round">add</span>
-              إضافة عنصر
+            <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="toggleWidgetLibrary()">
+              <span class="material-icons-round">widgets</span>
+              مكتبة العناصر
             </button>
           }
         </div>
       </div>
 
-      @if (widgetsLoading()) {
-        <div class="loading-state">
-          <span class="material-icons-round spin">sync</span>
-          <p>جاري تحميل العناصر...</p>
-        </div>
-      } @else {
+      <div class="detail-content" [class.with-library]="editMode() && showWidgetLibrary()">
 
-        @if (widgets().length === 0) {
-          <div class="empty-state-card">
-            <div class="empty-icon">
-              <span class="material-icons-round">widgets</span>
+        <!-- Widget Library Sidebar -->
+        @if (editMode() && showWidgetLibrary()) {
+          <div class="widget-library">
+            <div class="library-header">
+              <h3>
+                <span class="material-icons-round">widgets</span>
+                مكتبة العناصر
+              </h3>
+              <button class="close-library-btn" (click)="toggleWidgetLibrary()">
+                <span class="material-icons-round">close</span>
+              </button>
             </div>
-            <h3>لا توجد عناصر في هذه الشاشة</h3>
-            <p>أضف عناصر لبناء لوحة العمل الخاصة بك</p>
-            <button class="add-btn" (click)="openWidgetForm()">
-              <span class="material-icons-round">add</span>
-              إضافة عنصر
-            </button>
-          </div>
-        } @else {
-          <div class="widgets-grid">
-            @for (widget of widgets(); track widget.id) {
-              <div class="widget-card" [style]="getGridStyle(widget)" [class.edit-mode]="editMode()">
-                <div class="widget-header">
-                  <div class="widget-title">
-                    <span class="material-icons-round widget-type-icon" [style.color]="getWidgetTypeInfo(widget.widgetType).color">
-                      {{ getWidgetTypeInfo(widget.widgetType).icon }}
-                    </span>
-                    <span>{{ widget.title }}</span>
+            <p class="library-desc">اضغط على العنصر لإضافته للشاشة</p>
+            <div class="library-items">
+              @for (wt of widgetTypes; track wt.value) {
+                <button class="library-item" (click)="addWidgetFromLibrary(wt)">
+                  <div class="library-item-icon" [style.background]="wt.color + '22'" [style.color]="wt.color">
+                    <span class="material-icons-round">{{ wt.icon }}</span>
                   </div>
-                  @if (editMode()) {
-                    <div class="widget-actions">
-                      <button class="action-btn edit" (click)="openWidgetForm(widget)" title="تعديل">
-                        <span class="material-icons-round">edit</span>
-                      </button>
-                      <button class="action-btn delete" (click)="deleteWidget(widget)" title="حذف">
-                        <span class="material-icons-round">delete</span>
-                      </button>
-                    </div>
-                  }
-                </div>
-                <div class="widget-body">
-                  <div class="widget-placeholder">
-                    <span class="material-icons-round">{{ getWidgetTypeInfo(widget.widgetType).icon }}</span>
-                    <p>{{ getWidgetTypeInfo(widget.widgetType).desc }}</p>
-                    <span class="widget-type-badge" [style.background]="getWidgetTypeInfo(widget.widgetType).color + '22'" [style.color]="getWidgetTypeInfo(widget.widgetType).color">
-                      {{ getWidgetTypeInfo(widget.widgetType).label }}
-                    </span>
+                  <div class="library-item-info">
+                    <span class="library-item-name">{{ wt.label }}</span>
+                    <span class="library-item-desc">{{ wt.desc }}</span>
                   </div>
-                </div>
-              </div>
-            }
+                  <span class="material-icons-round library-add-icon">add_circle</span>
+                </button>
+              }
+            </div>
           </div>
         }
-      }
+
+        <!-- Gridster Area -->
+        <div class="gridster-area">
+          @if (widgetsLoading()) {
+            <div class="loading-state">
+              <span class="material-icons-round spin">sync</span>
+              <p>جاري تحميل العناصر...</p>
+            </div>
+          } @else {
+
+            @if (gridItems.length === 0) {
+              <div class="empty-state-card">
+                <div class="empty-icon">
+                  <span class="material-icons-round">widgets</span>
+                </div>
+                <h3>لا توجد عناصر في هذه الشاشة</h3>
+                <p>فعّل وضع التعديل وأضف عناصر من مكتبة العناصر</p>
+                @if (!editMode()) {
+                  <button class="add-btn" (click)="toggleEditMode(); toggleWidgetLibrary()">
+                    <span class="material-icons-round">edit</span>
+                    بدء التخصيص
+                  </button>
+                }
+              </div>
+            } @else {
+              <gridster [options]="gridsterOptions">
+                @for (item of gridItems; track item.widgetData.id) {
+                  <gridster-item [item]="item">
+                    <div class="widget-card" [class.edit-mode]="editMode()">
+                      <!-- Widget Header -->
+                      <div class="widget-header" [style.border-bottom-color]="getWidgetTypeInfo(item.widgetData.widgetType).color + '33'">
+                        <div class="widget-title">
+                          <span class="material-icons-round widget-type-icon" [style.color]="getWidgetTypeInfo(item.widgetData.widgetType).color">
+                            {{ getWidgetTypeInfo(item.widgetData.widgetType).icon }}
+                          </span>
+                          <span>{{ item.widgetData.title }}</span>
+                        </div>
+                        @if (editMode()) {
+                          <div class="widget-actions">
+                            <button class="action-btn edit" (click)="openWidgetForm(item.widgetData)" title="تعديل">
+                              <span class="material-icons-round">edit</span>
+                            </button>
+                            <button class="action-btn delete" (click)="deleteWidget(item.widgetData)" title="حذف">
+                              <span class="material-icons-round">delete</span>
+                            </button>
+                          </div>
+                        }
+                      </div>
+
+                      <!-- Widget Body -->
+                      <div class="widget-body widget-body-content">
+
+                        <!-- ===== Templates Widget ===== -->
+                        @if (item.widgetData.widgetType === 'templates') {
+                          <div class="templates-widget">
+                            @for (tpl of demoTemplates; track tpl.name) {
+                              <button class="template-btn" [style.--tpl-color]="tpl.color">
+                                <div class="template-icon" [style.background]="tpl.color + '22'" [style.color]="tpl.color">
+                                  <span class="material-icons-round">{{ tpl.icon }}</span>
+                                </div>
+                                <span class="template-name">{{ tpl.name }}</span>
+                              </button>
+                            }
+                          </div>
+                        }
+
+                        <!-- ===== Log Widget ===== -->
+                        @if (item.widgetData.widgetType === 'log') {
+                          <div class="log-widget">
+                            <table class="log-table">
+                              <thead>
+                                <tr>
+                                  <th>النوع</th>
+                                  <th>المبلغ</th>
+                                  <th>الحساب</th>
+                                  <th>التاريخ</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (entry of demoLogEntries; track entry.id) {
+                                  <tr>
+                                    <td>
+                                      <span class="log-type-badge" [class.collection]="entry.type === 'تحصيل'" [class.delivery]="entry.type === 'توريد'" [class.expense]="entry.type === 'صرف'" [class.transfer]="entry.type === 'تحويل'">
+                                        {{ entry.type }}
+                                      </span>
+                                    </td>
+                                    <td class="log-amount">{{ entry.amount }}</td>
+                                    <td>{{ entry.account }}</td>
+                                    <td class="log-date">{{ entry.date }}</td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        }
+
+                        <!-- ===== Accounts Widget ===== -->
+                        @if (item.widgetData.widgetType === 'accounts') {
+                          <div class="accounts-widget">
+                            @for (acc of demoAccounts; track acc.name) {
+                              <div class="account-row">
+                                <div class="account-info">
+                                  <span class="material-icons-round account-icon">{{ acc.icon }}</span>
+                                  <span class="account-name">{{ acc.name }}</span>
+                                </div>
+                                <div class="account-balance-area">
+                                  <span class="account-balance">{{ acc.balance }}</span>
+                                  <span class="material-icons-round account-trend" [style.color]="getTrendColor(acc.trend)">
+                                    {{ getTrendIcon(acc.trend) }}
+                                  </span>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        <!-- ===== Stats Widget ===== -->
+                        @if (item.widgetData.widgetType === 'stats') {
+                          <div class="stats-widget">
+                            @for (stat of demoStats; track stat.label) {
+                              <div class="stat-card">
+                                <div class="stat-icon" [style.background]="stat.color + '18'" [style.color]="stat.color">
+                                  <span class="material-icons-round">{{ stat.icon }}</span>
+                                </div>
+                                <div class="stat-info">
+                                  <span class="stat-value">{{ stat.value }}</span>
+                                  <span class="stat-label">{{ stat.label }}</span>
+                                </div>
+                                <span class="stat-change" [style.color]="stat.change.startsWith('+') ? '#22c55e' : '#ef4444'">
+                                  {{ stat.change }}
+                                </span>
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        <!-- ===== Chart Widget ===== -->
+                        @if (item.widgetData.widgetType === 'chart') {
+                          <div class="chart-widget">
+                            <canvas baseChart
+                              [datasets]="barChartData.datasets"
+                              [labels]="barChartData.labels"
+                              [options]="barChartOptions"
+                              type="bar">
+                            </canvas>
+                          </div>
+                        }
+
+                        <!-- ===== Notes Widget ===== -->
+                        @if (item.widgetData.widgetType === 'notes') {
+                          <div class="notes-widget">
+                            <textarea
+                              class="notes-textarea"
+                              [value]="notesText[item.widgetData.id] || ''"
+                              (input)="onNotesChange(item.widgetData.id, $any($event.target).value)"
+                              placeholder="اكتب ملاحظاتك هنا..."
+                              [readonly]="!editMode()">
+                            </textarea>
+                          </div>
+                        }
+
+                      </div>
+                    </div>
+                  </gridster-item>
+                }
+              </gridster>
+            }
+          }
+        </div>
+      </div>
     </div>
   }
 
@@ -265,49 +417,6 @@
           <div class="form-group">
             <label>عنوان العنصر</label>
             <input type="text" [ngModel]="widgetForm().title" (ngModelChange)="widgetForm.set({...widgetForm(), title: $event})" placeholder="عنوان العنصر" />
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>العرض (أعمدة)</label>
-              <select [ngModel]="widgetForm().width" (ngModelChange)="widgetForm.set({...widgetForm(), width: +$event})">
-                <option [value]="2">2 أعمدة</option>
-                <option [value]="3">3 أعمدة</option>
-                <option [value]="4">4 أعمدة</option>
-                <option [value]="6">6 أعمدة</option>
-                <option [value]="8">8 أعمدة</option>
-                <option [value]="12">12 عمود (كامل)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>الارتفاع (صفوف)</label>
-              <select [ngModel]="widgetForm().height" (ngModelChange)="widgetForm.set({...widgetForm(), height: +$event})">
-                <option [value]="2">2 صفوف</option>
-                <option [value]="3">3 صفوف</option>
-                <option [value]="4">4 صفوف</option>
-                <option [value]="5">5 صفوف</option>
-                <option [value]="6">6 صفوف</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>الموضع الأفقي (عمود)</label>
-              <select [ngModel]="widgetForm().positionX" (ngModelChange)="widgetForm.set({...widgetForm(), positionX: +$event})">
-                @for (i of [0,1,2,3,4,5,6,7,8,9,10,11]; track i) {
-                  <option [value]="i">{{ i + 1 }}</option>
-                }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>الموضع العمودي (صف)</label>
-              <select [ngModel]="widgetForm().positionY" (ngModelChange)="widgetForm.set({...widgetForm(), positionY: +$event})">
-                @for (i of [0,1,2,3,4,5,6,7,8,9]; track i) {
-                  <option [value]="i">{{ i + 1 }}</option>
-                }
-              </select>
-            </div>
           </div>
         </div>
         <div class="modal-footer">

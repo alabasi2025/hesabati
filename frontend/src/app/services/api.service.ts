@@ -243,6 +243,15 @@ export class ApiService {
   createScreenWidget(screenId: number, d: any)        { return this.request<any>(`/screens/${screenId}/widgets`, { method: 'POST', body: JSON.stringify(d) }); }
   updateWidget(id: number, d: any)                   { return this.request<any>(`/widgets/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteWidget(id: number)                           { return this.request<any>(`/widgets/${id}`, { method: 'DELETE' }); }
+  batchUpdateWidgets(screenId: number, widgets: any[])  { return this.request<any[]>(`/screens/${screenId}/widgets/batch`, { method: 'PUT', body: JSON.stringify({ widgets }) }); }
+
+  // ===================== ربط القوالب والحسابات بالعناصر =====================
+  getWidgetTemplates(widgetId: number)                  { return this.request<any[]>(`/widgets/${widgetId}/templates`); }
+  addWidgetTemplate(widgetId: number, d: any)           { return this.request<any>(`/widgets/${widgetId}/templates`, { method: 'POST', body: JSON.stringify(d) }); }
+  removeWidgetTemplate(id: number)                      { return this.request<any>(`/widget-templates/${id}`, { method: 'DELETE' }); }
+  getWidgetAccounts(widgetId: number)                   { return this.request<any[]>(`/widgets/${widgetId}/accounts`); }
+  addWidgetAccount(widgetId: number, d: any)            { return this.request<any>(`/widgets/${widgetId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
+  removeWidgetAccount(id: number)                       { return this.request<any>(`/widget-accounts/${id}`, { method: 'DELETE' }); }
 
   // ===================== العملات =====================
   getCurrencies() { return this.request<any[]>('/currencies'); }

@@ -1852,4 +1852,87 @@ api.delete('/widgets/:id', async (c) => {
   return c.json({ success: true });
 });
 
+// تحديث مواضع وأحجام العناصر دفعة واحدة (batch update)
+api.put('/screens/:id/widgets/batch', async (c) => {
+  const screenId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const updates = body.widgets || [];
+  const results = [];
+  for (const w of updates) {
+    const setValues: any = {};
+    if (w.positionX !== undefined) setValues.positionX = w.positionX;
+    if (w.positionY !== undefined) setValues.positionY = w.positionY;
+    if (w.width !== undefined) setValues.width = w.width;
+    if (w.height !== undefined) setValues.height = w.height;
+    if (w.sortOrder !== undefined) setValues.sortOrder = w.sortOrder;
+    if (Object.keys(setValues).length > 0) {
+      const [updated] = await db.update(screenWidgets).set(setValues).where(eq(screenWidgets.id, w.id)).returning();
+      if (updated) results.push(updated);
+    }
+  }
+  return c.json(results);
+});
+
+// ===================== ربط عنصر القوالب بأنواع العمليات =====================
+
+// جلب قوالب العمليات المرتبطة بعنصر
+api.get('/widgets/:id/templates', async (c) => {
+  const widgetId = parseInt(c.req.param('id'));
+  const rows = await db.select().from(screenWidgetTemplates)
+    .where(eq(screenWidgetTemplates.widgetId, widgetId))
+    .orderBy(screenWidgetTemplates.sortOrder);
+  return c.json(rows);
+});
+
+// إضافة قالب عملية لعنصر
+api.post('/widgets/:id/templates', async (c) => {
+  const widgetId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [created] = await db.insert(screenWidgetTemplates).values({
+    widgetId,
+    operationTypeId: body.operationTypeId,
+    sortOrder: body.sortOrder || 0,
+  }).returning();
+  return c.json(created, 201);
+});
+
+// حذف ربط قالب عملية
+api.delete('/widget-templates/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(screenWidgetTemplates).where(eq(screenWidgetTemplates.id, id)).returning();
+  if (!deleted) return c.json({ error: 'غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
+// ===================== ربط عنصر المراقبة بالحسابات =====================
+
+// جلب الحسابات المرتبطة بعنصر
+api.get('/widgets/:id/accounts', async (c) => {
+  const widgetId = parseInt(c.req.param('id'));
+  const rows = await db.select().from(screenWidgetAccounts)
+    .where(eq(screenWidgetAccounts.widgetId, widgetId))
+    .orderBy(screenWidgetAccounts.sortOrder);
+  return c.json(rows);
+});
+
+// إضافة حساب لعنصر مراقبة
+api.post('/widgets/:id/accounts', async (c) => {
+  const widgetId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  const [created] = await db.insert(screenWidgetAccounts).values({
+    widgetId,
+    accountId: body.accountId,
+    sortOrder: body.sortOrder || 0,
+  }).returning();
+  return c.json(created, 201);
+});
+
+// حذف ربط حساب
+api.delete('/widget-accounts/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  const [deleted] = await db.delete(screenWidgetAccounts).where(eq(screenWidgetAccounts.id, id)).returning();
+  if (!deleted) return c.json({ error: 'غير موجود' }, 404);
+  return c.json({ success: true });
+});
+
 export default api;
