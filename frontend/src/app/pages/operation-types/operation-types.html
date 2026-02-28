@@ -15,10 +15,18 @@
       <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
         <span class="material-icons-round">help_outline</span>
       </button>
-      <button class="btn-3d btn-primary" (click)="openWizard()">
-        <span class="material-icons-round">add</span>
-        قالب جديد
-      </button>
+      @if (activeTab() === 'templates') {
+        <button class="btn-3d btn-primary" (click)="openWizard()">
+          <span class="material-icons-round">add</span>
+          قالب جديد
+        </button>
+      }
+      @if (activeTab() === 'categories') {
+        <button class="btn-3d btn-primary" (click)="openCategoryForm()">
+          <span class="material-icons-round">add</span>
+          تصنيف جديد
+        </button>
+      }
     </div>
   </div>
 
@@ -37,18 +45,18 @@
     </div>
   }
 
-  <!-- ===== Category Filter (Dynamic) ===== -->
-  <div class="category-tabs">
-    @for (cat of categoryFilters(); track cat.value) {
-      <button class="cat-tab" [class.active]="activeCategory() === cat.value"
-              (click)="activeCategory.set(cat.value)">
-        <span class="material-icons-round">{{ cat.icon }}</span>
-        {{ cat.label }}
-        @if (cat.value !== 'all') {
-          <span class="cat-count">{{ countByCategory(cat.value) }}</span>
-        }
-      </button>
-    }
+  <!-- ===== التبويبات الرئيسية: القوالب | التصنيفات ===== -->
+  <div class="main-tabs-bar">
+    <button class="main-tab" [class.active]="activeTab() === 'templates'" (click)="switchTab('templates')">
+      <span class="material-icons-round">receipt_long</span>
+      القوالب
+      <span class="cat-count">{{ operationTypes().length }}</span>
+    </button>
+    <button class="main-tab" [class.active]="activeTab() === 'categories'" (click)="switchTab('categories')">
+      <span class="material-icons-round">folder</span>
+      التصنيفات
+      <span class="cat-count">{{ dynamicCategories().length }}</span>
+    </button>
   </div>
 
   <!-- ===== Loading ===== -->
@@ -60,19 +68,90 @@
     </div>
   }
 
-  <!-- ===== Operation Types Grid ===== -->
-  @if (!loading()) {
+  <!-- ============================================================ -->
+  <!-- =================== تبويب التصنيفات ======================== -->
+  <!-- ============================================================ -->
+  @if (!loading() && activeTab() === 'categories') {
+    @if (categoryDetails().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-3d">
+          <span class="material-icons-round">folder_open</span>
+        </div>
+        <h3>لا توجد تصنيفات</h3>
+        <p>أنشئ تصنيفات لتنظيم قوالب العمليات المالية (مثل: تحصيل، توريد، سندات، قيود)</p>
+        <button class="btn-3d btn-primary" (click)="openCategoryForm()">
+          <span class="material-icons-round">add</span>
+          أنشئ أول تصنيف
+        </button>
+      </div>
+    } @else {
+      <div class="categories-grid">
+        @for (cat of categoryDetails(); track cat.name) {
+          <div class="ot-card-3d category-card-item" [style.--card-color]="cat.color">
+            <div class="card-glow"></div>
+            <div class="ot-card-header">
+              <div class="ot-icon-3d" [style.background]="cat.color">
+                <span class="material-icons-round">{{ cat.icon }}</span>
+              </div>
+              <div class="ot-meta"></div>
+              <div class="ot-actions-top">
+                <button class="icon-btn edit-btn" (click)="editCategory(cat.name)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="icon-btn delete-btn" (click)="deleteCategory(cat.name)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
+            </div>
+            <div class="ot-card-body">
+              <h3 class="ot-name">{{ cat.name }}</h3>
+              <p class="ot-desc">{{ cat.count }} قالب مرتبط</p>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ============================================================ -->
+  <!-- =================== تبويب القوالب ========================== -->
+  <!-- ============================================================ -->
+  @if (!loading() && activeTab() === 'templates') {
+    <!-- فلاتر الفئات -->
+    @if (categoryFilters().length > 1) {
+      <div class="category-tabs">
+        @for (cat of categoryFilters(); track cat.value) {
+          <button class="cat-tab" [class.active]="activeCategory() === cat.value"
+                  (click)="activeCategory.set(cat.value)">
+            <span class="material-icons-round">{{ cat.icon }}</span>
+            {{ cat.label }}
+            @if (cat.value !== 'all') {
+              <span class="cat-count">{{ countByCategory(cat.value) }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
     @if (filteredTypes().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-3d">
           <span class="material-icons-round">auto_awesome</span>
         </div>
         <h3>لا توجد قوالب بعد</h3>
-        <p>أنشئ قالب جديد بخطوات بسيطة لتنظيم عملياتك المالية</p>
-        <button class="btn-3d btn-primary" (click)="openWizard()">
-          <span class="material-icons-round">add</span>
-          أنشئ أول قالب
-        </button>
+        @if (dynamicCategories().length === 0) {
+          <p>أنشئ تصنيفاً أولاً من تبويب "التصنيفات" ثم أضف قوالب</p>
+          <button class="btn-3d btn-primary" (click)="switchTab('categories')">
+            <span class="material-icons-round">folder</span>
+            انتقل للتصنيفات
+          </button>
+        } @else {
+          <p>أنشئ قالب جديد بخطوات بسيطة لتنظيم عملياتك المالية</p>
+          <button class="btn-3d btn-primary" (click)="openWizard()">
+            <span class="material-icons-round">add</span>
+            أنشئ أول قالب
+          </button>
+        }
       </div>
     } @else {
       <!-- Group by category -->
@@ -171,7 +250,62 @@
     }
   }
 
-  <!-- ===== WIZARD MODAL (4 Steps) ===== -->
+  <!-- ============================================================ -->
+  <!-- ========= نموذج إضافة/تعديل تصنيف (Modal) ================= -->
+  <!-- ============================================================ -->
+  @if (showCategoryForm()) {
+    <div class="modal-overlay" (click)="closeCategoryForm()">
+      <div class="modal-3d" style="max-width: 480px" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon" style="background: #3b82f6">
+            <span class="material-icons-round">{{ editingCategoryOld() ? 'edit' : 'create_new_folder' }}</span>
+          </div>
+          <h2>{{ editingCategoryOld() ? 'تعديل تصنيف' : 'تصنيف جديد' }}</h2>
+          <button class="modal-close" (click)="closeCategoryForm()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">اسم التصنيف <span class="required">*</span></label>
+            <input class="form-input" type="text" placeholder="مثال: تحصيل، توريد، سندات، قيود"
+                   [value]="newCategoryName()" (input)="newCategoryName.set($any($event.target).value)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الأيقونة</label>
+            <div class="icon-picker">
+              @for (ic of categoryIcons; track ic) {
+                <button class="icon-option" [class.selected]="newCategoryIcon() === ic" (click)="newCategoryIcon.set(ic)">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">اللون</label>
+            <div class="color-picker">
+              @for (c of colors; track c) {
+                <button class="color-dot" [class.selected]="newCategoryColor() === c"
+                        [style.background]="c" (click)="newCategoryColor.set(c)">
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="closeCategoryForm()">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="saveCategory()" [disabled]="saving() || !newCategoryName().trim()">
+            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+            {{ saving() ? 'جاري الحفظ...' : (editingCategoryOld() ? 'حفظ التعديل' : 'إنشاء التصنيف') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ============================================================ -->
+  <!-- ========= WIZARD إنشاء/تعديل قالب (4 خطوات) =============== -->
+  <!-- ============================================================ -->
   @if (showWizard()) {
     <div class="modal-overlay" (click)="showWizard.set(false)">
       <div class="wizard-modal" (click)="$event.stopPropagation()">
@@ -185,12 +319,12 @@
             </button>
           </div>
 
-          <!-- Step Indicators - 4 Steps -->
+          <!-- Step Indicators -->
           <div class="wizard-steps-bar">
             <div class="wstep" [class.active]="wizardStep() === 1" [class.done]="wizardStep() > 1"
                  (click)="wizardStep.set(1)">
               <div class="wstep-num">1</div>
-              <span>نوع القالب</span>
+              <span>التصنيف</span>
             </div>
             <div class="wstep-line" [class.done]="wizardStep() > 1"></div>
             <div class="wstep" [class.active]="wizardStep() === 2" [class.done]="wizardStep() > 2"
@@ -215,22 +349,26 @@
         <!-- Wizard Body -->
         <div class="wizard-body">
 
-          <!-- ===== STEP 1: نوع القالب (التصنيف الديناميكي) ===== -->
+          <!-- ===== STEP 1: اختيار التصنيف (من القائمة الموجودة فقط) ===== -->
           @if (wizardStep() === 1) {
             <div class="wizard-step">
               <h3 class="step-title">
-                <span class="material-icons-round">category</span>
-                نوع القالب (التصنيف)
+                <span class="material-icons-round">folder</span>
+                اختر التصنيف
               </h3>
-              <p class="step-desc">اختر تصنيف القالب أو أنشئ تصنيف جديد</p>
+              <p class="step-desc">اختر التصنيف الذي ينتمي إليه هذا القالب</p>
 
-              <!-- Existing categories -->
-              @if (dynamicCategories().length > 0) {
+              @if (dynamicCategories().length === 0) {
+                <div class="no-accounts-msg">
+                  <span class="material-icons-round">info</span>
+                  لا توجد تصنيفات. أنشئ تصنيفاً أولاً من تبويب "التصنيفات".
+                </div>
+              } @else {
                 <div class="type-cards">
                   @for (cat of dynamicCategories(); track cat) {
                     <div class="type-card" [class.selected]="wiz().category === cat"
                          (click)="selectCategory(cat)">
-                      <div class="tc-icon" style="background: #3b82f6">
+                      <div class="tc-icon" [style.background]="getCategoryColor(cat)">
                         <span class="material-icons-round">{{ getCategoryIcon(cat) }}</span>
                       </div>
                       <div class="tc-body">
@@ -244,19 +382,6 @@
                   }
                 </div>
               }
-
-              <!-- New category input -->
-              <div class="new-category-section">
-                <h4>
-                  <span class="material-icons-round">add_circle_outline</span>
-                  أو أنشئ تصنيف جديد
-                </h4>
-                <div class="form-group">
-                  <input class="form-input" type="text" placeholder="اكتب اسم التصنيف الجديد (مثلاً: تحصيل، توريد، سندات...)"
-                         [value]="wiz().category"
-                         (input)="setCustomCategory($any($event.target).value)">
-                </div>
-              </div>
             </div>
           }
 
@@ -513,7 +638,7 @@
           </div>
           <div>
             <h2>الحسابات المرتبطة</h2>
-            <p class="modal-subtitle">{{ selectedOT().name }} ({{ selectedOT().linkedAccounts?.length || 0 }} حساب)</p>
+            <p class="modal-subtitle">{{ selectedOT().name }}</p>
           </div>
           <button class="modal-close" (click)="showAccountsModal.set(false)">
             <span class="material-icons-round">close</span>
@@ -577,7 +702,7 @@
           <div class="hiw-section">
             <h3><span class="material-icons-round">format_list_numbered</span> خطوات إنشاء القالب</h3>
             <div class="hiw-steps">
-              <div class="hiw-step"><span class="hs-num">1</span> <strong>نوع القالب:</strong> اختر أو أنشئ تصنيف (تحصيل، توريد، سندات، قيود...)</div>
+              <div class="hiw-step"><span class="hs-num">1</span> <strong>التصنيف:</strong> اختر التصنيف من القائمة الموجودة (أنشئ التصنيفات من تبويب "التصنيفات")</div>
               <div class="hiw-step"><span class="hs-num">2</span> <strong>نوع السند:</strong> سند قبض / سند صرف / قيد محاسبي</div>
               <div class="hiw-step"><span class="hs-num">3</span> <strong>طريقة الدفع والحسابات:</strong> اختر طريقة الدفع ثم الحسابات المرتبطة</div>
               <div class="hiw-step"><span class="hs-num">4</span> <strong>الاسم والتفاصيل:</strong> سمّي القالب واختر الأيقونة واللون</div>
@@ -586,9 +711,9 @@
           <div class="hiw-section">
             <h3><span class="material-icons-round">rule</span> قواعد مهمة</h3>
             <p>
+              <strong>التصنيفات أولاً:</strong> أنشئ التصنيفات من تبويب "التصنيفات" قبل إنشاء القوالب.<br>
               <strong>سند قبض/صرف:</strong> اختر طريقة الدفع أولاً → تظهر الحسابات المناسبة (صناديق/بنوك/صرافين/محافظ).<br>
-              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو بنوك).<br>
-              <strong>التصنيفات مرنة:</strong> أنشئ تصنيفات حسب طبيعة عملك.
+              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو بنوك).
             </p>
           </div>
         </div>

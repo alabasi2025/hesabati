@@ -21,12 +21,16 @@ export class OperationTypesComponent implements OnInit {
   error = signal('');
   success = signal('');
 
-  // Data
+  // ===================== التبويب الرئيسي =====================
+  // 'categories' = إدارة التصنيفات | 'templates' = القوالب
+  activeTab = signal<'categories' | 'templates'>('templates');
+
+  // ===================== Data =====================
   operationTypes = signal<any[]>([]);
   accounts = signal<any[]>([]);
   funds = signal<any[]>([]);
 
-  // UI State
+  // ===================== UI State =====================
   showHowItWorks = signal(false);
   showWizard = signal(false);
   editingId = signal<number | null>(null);
@@ -34,30 +38,25 @@ export class OperationTypesComponent implements OnInit {
   selectedOT = signal<any>(null);
   showAccountsModal = signal(false);
 
-  // Category management
+  // ===================== إدارة التصنيفات (تبويب مستقل) =====================
   showCategoryForm = signal(false);
   newCategoryName = signal('');
+  newCategoryIcon = signal('label');
+  newCategoryColor = signal('#3b82f6');
   editingCategoryOld = signal<string | null>(null);
-  editingCategoryNew = signal('');
 
-  // Wizard state
+  // ===================== Wizard State =====================
   wizardStep = signal(1);
 
-  // Wizard form - بدون mainAccountId
   wiz = signal<any>({
     name: '',
     description: '',
     icon: 'receipt_long',
     color: '#3b82f6',
-    // Step 1: نوع القالب (التصنيف الديناميكي)
     category: '',
-    // Step 2: نوع السند
-    voucherType: '', // receipt | payment | journal
-    // Step 3: طريقة الدفع (للقبض والصرف فقط)
-    paymentMethod: '', // cash | bank | exchange | e_wallet
-    // Step 4: الحسابات المرتبطة
+    voucherType: '',
+    paymentMethod: '',
     linkedAccounts: [] as { accountId: number; accountName: string; accountType: string; permission: string }[],
-    // Other
     screens: [] as string[],
     requiresAttachment: false,
     hasMultiLines: true,
@@ -65,10 +64,9 @@ export class OperationTypesComponent implements OnInit {
     sortOrder: 0,
   });
 
-  // Step 4: filter by account type
   selectedAccountType = signal('');
 
-  // الفئات الديناميكية - تُحسب من القوالب الموجودة
+  // ===================== Computed: التصنيفات =====================
   dynamicCategories = computed(() => {
     const cats = new Set<string>();
     this.operationTypes().forEach(ot => {
@@ -77,7 +75,23 @@ export class OperationTypesComponent implements OnInit {
     return Array.from(cats).sort();
   });
 
-  // فلتر الفئات مع "الكل"
+  // بيانات التصنيفات مع عدد القوالب والأيقونة واللون
+  categoryDetails = computed(() => {
+    const cats = this.dynamicCategories();
+    return cats.map(cat => {
+      const templates = this.operationTypes().filter(ot => ot.category === cat);
+      // نأخذ أيقونة ولون أول قالب في التصنيف كافتراضي
+      const firstOT = templates[0];
+      return {
+        name: cat,
+        count: templates.length,
+        icon: this.getCategoryIcon(cat),
+        color: firstOT?.color || '#3b82f6',
+      };
+    });
+  });
+
+  // فلتر الفئات في تبويب القوالب
   categoryFilters = computed(() => {
     const cats = this.dynamicCategories();
     const filters = [{ value: 'all', label: 'الكل', icon: 'apps' }];
@@ -112,6 +126,12 @@ export class OperationTypesComponent implements OnInit {
     '#14b8a6', '#f97316', '#ec4899', '#06b6d4', '#84cc16',
   ];
 
+  categoryIcons = [
+    'payments', 'local_shipping', 'receipt_long', 'book', 'folder',
+    'label', 'category', 'sell', 'style', 'bookmark',
+    'flag', 'star', 'bolt', 'diamond', 'workspace_premium',
+  ];
+
   permissions = [
     { value: 'both', label: 'يستقبل ويدفع' },
     { value: 'receive_only', label: 'يستقبل فقط' },
@@ -130,11 +150,9 @@ export class OperationTypesComponent implements OnInit {
     const all = this.accounts();
 
     if (w.voucherType === 'journal') {
-      // قيد → حسابات دليل الحسابات (ليس صناديق ولا بنوك)
       return all.filter(a => !['fund', 'bank', 'exchange', 'wallet', 'cash'].includes(a.accountType));
     }
 
-    // قبض أو صرف → حسب طريقة الدفع
     if (w.paymentMethod) {
       const pm = this.paymentMethods.find(p => p.value === w.paymentMethod);
       if (pm) {
@@ -147,21 +165,18 @@ export class OperationTypesComponent implements OnInit {
     return [];
   });
 
-  // أنواع الحسابات المتاحة للخطوة 4
   availableAccountTypes = computed(() => {
     const types = new Set<string>();
     this.availableAccounts().forEach(a => { if (a.accountType) types.add(a.accountType); });
     return Array.from(types);
   });
 
-  // الحسابات المفلترة حسب النوع المختار
   filteredAccountsByType = computed(() => {
     const selType = this.selectedAccountType();
     if (!selType) return this.availableAccounts();
     return this.availableAccounts().filter(a => a.accountType === selType);
   });
 
-  // IDs الحسابات المرتبطة حالياً
   linkedAccountIds = computed(() => {
     return new Set(this.wiz().linkedAccounts.map((la: any) => la.accountId));
   });
@@ -173,7 +188,6 @@ export class OperationTypesComponent implements OnInit {
     return all.filter(ot => ot.category === cat);
   });
 
-  // تجميع القوالب حسب الفئة
   groupedByCategory = computed(() => {
     const all = this.filteredTypes();
     const groups: { category: string; items: any[] }[] = [];
@@ -214,7 +228,12 @@ export class OperationTypesComponent implements OnInit {
     }
   }
 
-  // ===================== Category Management =====================
+  // ===================== Tab Navigation =====================
+  switchTab(tab: 'categories' | 'templates') {
+    this.activeTab.set(tab);
+  }
+
+  // ===================== Category Management (تبويب مستقل) =====================
   getCategoryIcon(cat: string): string {
     const iconMap: Record<string, string> = {
       'تحصيل': 'payments', 'توريد': 'local_shipping', 'سندات': 'receipt_long',
@@ -223,40 +242,110 @@ export class OperationTypesComponent implements OnInit {
     return iconMap[cat] || 'label';
   }
 
+  getCategoryColor(cat: string): string {
+    const colorMap: Record<string, string> = {
+      'تحصيل': '#22c55e', 'توريد': '#3b82f6', 'سندات': '#f59e0b',
+      'قيود': '#8b5cf6', 'عام': '#64748b',
+    };
+    // إذا ما في لون محدد، نأخذ لون أول قالب في التصنيف
+    if (colorMap[cat]) return colorMap[cat];
+    const firstOT = this.operationTypes().find(ot => ot.category === cat);
+    return firstOT?.color || '#3b82f6';
+  }
+
   openCategoryForm() {
     this.newCategoryName.set('');
+    this.newCategoryIcon.set('label');
+    this.newCategoryColor.set('#3b82f6');
     this.editingCategoryOld.set(null);
     this.showCategoryForm.set(true);
+  }
+
+  editCategory(cat: string) {
+    this.editingCategoryOld.set(cat);
+    this.newCategoryName.set(cat);
+    this.newCategoryIcon.set(this.getCategoryIcon(cat));
+    this.newCategoryColor.set('#3b82f6');
+    this.showCategoryForm.set(true);
+  }
+
+  closeCategoryForm() {
+    this.showCategoryForm.set(false);
+    this.editingCategoryOld.set(null);
   }
 
   async saveCategory() {
     const name = this.newCategoryName().trim();
     if (!name) { this.showError('اسم التصنيف مطلوب'); return; }
 
-    if (this.editingCategoryOld()) {
-      // تعديل اسم تصنيف - نعدل كل القوالب اللي تحته
-      const oldName = this.editingCategoryOld()!;
-      const otsToUpdate = this.operationTypes().filter(ot => ot.category === oldName);
-      for (const ot of otsToUpdate) {
-        await this.api.updateOperationType(ot.id, { category: name });
+    this.saving.set(true);
+    try {
+      if (this.editingCategoryOld()) {
+        // تعديل اسم تصنيف - نعدل كل القوالب اللي تحته
+        const oldName = this.editingCategoryOld()!;
+        if (oldName !== name) {
+          const otsToUpdate = this.operationTypes().filter(ot => ot.category === oldName);
+          for (const ot of otsToUpdate) {
+            await this.api.updateOperationType(ot.id, { category: name });
+          }
+          this.showSuccess(`تم تعديل التصنيف من "${oldName}" إلى "${name}"`);
+        }
+      } else {
+        // تصنيف جديد - ننشئ قالب مؤقت فارغ لحفظ التصنيف (أو نحفظه محلياً)
+        // التصنيف يظهر فقط عندما يكون فيه قوالب
+        // لذلك ننشئ قالب placeholder
+        await this.api.createOperationType(this.bizId, {
+          name: `قالب ${name} الافتراضي`,
+          description: `قالب افتراضي لتصنيف ${name}`,
+          icon: this.newCategoryIcon(),
+          color: this.newCategoryColor(),
+          category: name,
+          voucherType: 'receipt',
+          paymentMethod: 'cash',
+          screens: [name],
+          requiresAttachment: false,
+          hasMultiLines: true,
+          isActive: false, // غير فعال - مجرد placeholder
+          sortOrder: 999,
+          linkedAccounts: [],
+        });
+        this.showSuccess(`تم إنشاء التصنيف "${name}" بنجاح`);
       }
-      this.showSuccess(`تم تعديل التصنيف من "${oldName}" إلى "${name}"`);
+      this.closeCategoryForm();
+      await this.loadAll();
+    } catch (e: any) {
+      this.showError(e.message || 'خطأ في حفظ التصنيف');
     }
-    // إذا تصنيف جديد - ما نحتاج نسوي شي، بس يظهر في القائمة لما ينشئ قالب تحته
-    this.showCategoryForm.set(false);
-    this.editingCategoryOld.set(null);
-    await this.loadAll();
+    this.saving.set(false);
   }
 
-  startEditCategory(cat: string) {
-    this.editingCategoryOld.set(cat);
-    this.editingCategoryNew.set(cat);
-    this.newCategoryName.set(cat);
-    this.showCategoryForm.set(true);
+  async deleteCategory(cat: string) {
+    const count = this.countByCategory(cat);
+    const msg = count > 0
+      ? `هل تريد حذف التصنيف "${cat}" وجميع القوالب (${count}) المرتبطة به؟`
+      : `هل تريد حذف التصنيف "${cat}"؟`;
+    if (!confirm(msg)) return;
+
+    this.saving.set(true);
+    try {
+      const otsToDelete = this.operationTypes().filter(ot => ot.category === cat);
+      for (const ot of otsToDelete) {
+        await this.api.deleteOperationType(ot.id);
+      }
+      this.showSuccess(`تم حذف التصنيف "${cat}" بنجاح`);
+      await this.loadAll();
+    } catch (e: any) {
+      this.showError(e.message || 'خطأ في حذف التصنيف');
+    }
+    this.saving.set(false);
   }
 
-  // ===================== Wizard =====================
+  // ===================== Wizard (تبويب القوالب) =====================
   openWizard() {
+    if (this.dynamicCategories().length === 0) {
+      this.showError('أنشئ تصنيفاً أولاً من تبويب "التصنيفات" قبل إنشاء قالب');
+      return;
+    }
     this.editingId.set(null);
     this.wiz.set({
       name: '', description: '', icon: 'receipt_long', color: '#3b82f6',
@@ -307,16 +396,12 @@ export class OperationTypesComponent implements OnInit {
     this.setWizField('category', cat);
   }
 
-  setCustomCategory(name: string) {
-    this.setWizField('category', name);
-  }
-
   selectVoucherType(vt: string) {
     this.wiz.update(w => ({
       ...w,
       voucherType: vt,
       paymentMethod: vt === 'journal' ? '' : w.paymentMethod,
-      linkedAccounts: [], // reset linked accounts when type changes
+      linkedAccounts: [],
     }));
     this.selectedAccountType.set('');
   }
@@ -325,12 +410,11 @@ export class OperationTypesComponent implements OnInit {
     this.wiz.update(w => ({
       ...w,
       paymentMethod: pm,
-      linkedAccounts: [], // reset linked accounts when payment method changes
+      linkedAccounts: [],
     }));
     this.selectedAccountType.set('');
   }
 
-  // Step 4: Toggle linked account
   toggleLinkedAccount(acc: any) {
     this.wiz.update(w => {
       const existing = w.linkedAccounts.find((la: any) => la.accountId === acc.id);
@@ -372,10 +456,10 @@ export class OperationTypesComponent implements OnInit {
     }));
   }
 
-  // Wizard navigation - 4 خطوات بدلاً من 5
-  // Step 1: نوع القالب (التصنيف)
+  // Wizard navigation - 4 خطوات
+  // Step 1: اختيار التصنيف (من القائمة الموجودة)
   // Step 2: نوع السند
-  // Step 3: طريقة الدفع + الحسابات المرتبطة
+  // Step 3: طريقة الدفع + الحسابات
   // Step 4: الاسم والتفاصيل
   canGoNext(): boolean {
     const w = this.wiz();
@@ -441,7 +525,7 @@ export class OperationTypesComponent implements OnInit {
     this.saving.set(false);
   }
 
-  // ===================== Delete =====================
+  // ===================== Delete Template =====================
   async deleteOT(id: number) {
     if (!confirm('هل تريد حذف هذا القالب؟ سيتم حذف كل الحسابات المرتبطة به.')) return;
     try {
