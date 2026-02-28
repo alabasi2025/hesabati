@@ -269,13 +269,13 @@ export class OperationTypesComponent implements OnInit {
   async loadAll() {
     this.loading.set(true);
     try {
-      const [ots, accs, fnds] = await Promise.all([
+      const [ots, allAccs, fnds] = await Promise.all([
         this.api.getOperationTypes(this.bizId),
-        this.api.getAccounts(this.bizId),
+        this.api.getAllAccounts(this.bizId),
         this.api.getFunds(this.bizId),
       ]);
       this.operationTypes.set(ots);
-      this.accounts.set(accs);
+      this.accounts.set(allAccs.accounts);
       this.funds.set(fnds);
     } catch (e: any) {
       this.error.set(e.message);
