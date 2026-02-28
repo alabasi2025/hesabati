@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
 
 @Component({
@@ -16,6 +17,7 @@ export class PendingAccountsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   items = signal<any[]>([]);
@@ -81,7 +83,8 @@ export class PendingAccountsComponent implements OnInit {
   }
 
   async remove(item: any) {
-    if (confirm(`هل أنت متأكد من حذف "${item.personOrEntity}"؟`)) {
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل أنت متأكد من حذف "${item.personOrEntity}"؟`, type: 'danger' });
+    if (confirmed) {
       try {
         await this.api.deletePendingAccount(item.id);
         await this.load();

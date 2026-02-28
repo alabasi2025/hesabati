@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 
 interface SidebarSection {
@@ -52,6 +53,7 @@ export class SidebarSettingsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private auth = inject(AuthService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   activeTab = signal<'users' | 'sections' | 'items'>('users');
@@ -281,7 +283,8 @@ export class SidebarSettingsComponent implements OnInit {
   }
 
   async deleteSection(section: SidebarSection) {
-    if (!confirm(`هل تريد حذف القسم "${section.name}"؟ سيتم حذف جميع العناصر بداخله.`)) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف القسم "${section.name}"؟ سيتم حذف جميع العناصر بداخله.`, type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteSidebarSection(section.id);
       this.showMessage('تم حذف القسم', 'success');
@@ -339,7 +342,8 @@ export class SidebarSettingsComponent implements OnInit {
   }
 
   async deleteItem(item: SidebarItem) {
-    if (!confirm(`هل تريد حذف العنصر "${item.label}"؟`)) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف العنصر "${item.label}"؟`, type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteSidebarItem(item.id);
       this.showMessage('تم حذف العنصر', 'success');

@@ -1,0 +1,24 @@
+@if (toast.showConfirm()) {
+  <div class="confirm-overlay" (click)="onOverlayClick($event)">
+    <div class="confirm-card">
+      <div class="confirm-header">
+        <div class="confirm-icon-wrap" [class]="getIconClass()">
+          <span class="material-icons-round">{{ getIcon() }}</span>
+        </div>
+      </div>
+      <div class="confirm-body">
+        <h3 class="confirm-title">{{ toast.confirmOptions().title }}</h3>
+        <p class="confirm-message">{{ toast.confirmOptions().message }}</p>
+      </div>
+      <div class="confirm-footer">
+        <button class="confirm-btn" [class]="'btn-' + getIconClass()" (click)="onConfirm()">
+          <span class="material-icons-round">check</span>
+          {{ toast.confirmOptions().confirmText }}
+        </button>
+        <button class="cancel-btn" (click)="onCancel()">
+          {{ toast.confirmOptions().cancelText }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

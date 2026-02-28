@@ -1,0 +1,17 @@
+<div class="toast-container">
+  @for (t of toast.toasts(); track t.id) {
+    <div class="toast-item" [class]="'toast-' + t.type + (t.removing ? ' removing' : '')">
+      <div class="toast-icon-wrap" [class]="'icon-' + t.type">
+        <span class="material-icons-round">{{ getIcon(t.type) }}</span>
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">{{ t.title }}</div>
+        <div class="toast-message">{{ t.message }}</div>
+      </div>
+      <button class="toast-close" (click)="close(t.id)">
+        <span class="material-icons-round">close</span>
+      </button>
+      <div class="toast-progress" [class]="'progress-' + t.type" [style.animation-duration]="t.duration + 'ms'"></div>
+    </div>
+  }
+</div>

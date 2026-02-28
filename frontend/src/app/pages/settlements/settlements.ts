@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
 
 @Component({
@@ -16,6 +17,7 @@ export class SettlementsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   settlements = signal<any[]>([]);
@@ -112,7 +114,8 @@ export class SettlementsComponent implements OnInit {
   }
 
   async remove(r: any) {
-    if (confirm(`هل أنت متأكد من حذف التصفية "${r.title}"؟`)) {
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل أنت متأكد من حذف التصفية "${r.title}"؟`, type: 'danger' });
+    if (confirmed) {
       try {
         await this.api.deleteSettlement(r.id);
         await this.load();

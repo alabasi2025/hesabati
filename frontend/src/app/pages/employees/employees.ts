@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
 
 @Component({
@@ -16,6 +17,7 @@ export class EmployeesComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   employees = signal<any[]>([]);
@@ -71,7 +73,8 @@ export class EmployeesComponent implements OnInit {
   }
 
   async remove(id: number) {
-    if (confirm('هل أنت متأكد من حذف هذا الموظف؟')) { await this.api.deleteEmployee(id); await this.load(); }
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: 'هل أنت متأكد من حذف هذا الموظف؟', type: 'danger' });
+    if (confirmed) { await this.api.deleteEmployee(id); await this.load(); }
   }
 
   getStatusLabel(s: string) { return s === 'active' ? 'نشط' : s === 'suspended' ? 'موقوف' : 'غير نشط'; }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
 
 @Component({
@@ -16,6 +17,7 @@ export class WarehouseComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   warehouses = signal<any[]>([]);
@@ -90,7 +92,8 @@ export class WarehouseComponent implements OnInit {
   }
 
   async remove(w: any) {
-    if (confirm(`هل أنت متأكد من حذف المخزن "${w.name}"؟`)) {
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل أنت متأكد من حذف المخزن "${w.name}"؟`, type: 'danger' });
+    if (confirmed) {
       try {
         await this.api.deleteWarehouse(w.id);
         await this.load();

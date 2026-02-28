@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-billing-systems',
@@ -13,6 +14,7 @@ import { ApiService } from '../../services/api.service';
 })
 export class BillingSystemsComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private toast = inject(ToastService);
   private api = inject(ApiService);
 
   bizId = 0;
@@ -288,7 +290,8 @@ export class BillingSystemsComponent implements OnInit {
   }
 
   async deleteAccount(acc: any) {
-    if (!confirm(`هل تريد حذف حساب "${acc.label}"؟`)) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف حساب "${acc.label}"؟`, type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteEmployeeBillingAccount(acc.id);
       await this.loadAll();
@@ -369,7 +372,8 @@ export class BillingSystemsComponent implements OnInit {
   }
 
   async deleteSystem(sys: any) {
-    if (!confirm(`هل تريد حذف نظام "${sys.name}"؟`)) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف نظام "${sys.name}"؟`, type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteBillingSystemConfig(sys.id);
       await this.loadAll();
@@ -413,7 +417,8 @@ export class BillingSystemsComponent implements OnInit {
   }
 
   async deleteType(type: any) {
-    if (!confirm(`هل تريد حذف نوع "${type.name}"؟`)) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف نوع "${type.name}"؟`, type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteBillingAccountType(type.id);
       await this.loadAll();

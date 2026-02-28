@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-operation-types',
@@ -14,6 +15,7 @@ import { ApiService } from '../../services/api.service';
 export class OperationTypesComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   loading = signal(true);
@@ -374,7 +376,8 @@ export class OperationTypesComponent implements OnInit {
     const msg = count > 0
       ? `هل تريد حذف التصنيف "${cat}" وجميع القوالب (${count}) المرتبطة به؟`
       : `هل تريد حذف التصنيف "${cat}"؟`;
-    if (!confirm(msg)) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: msg, type: 'danger' });
+    if (!confirmed) return;
 
     this.saving.set(true);
     try {
@@ -692,7 +695,8 @@ export class OperationTypesComponent implements OnInit {
 
   // ===================== Delete Template =====================
   async deleteOT(id: number) {
-    if (!confirm('هل تريد حذف هذا القالب؟ سيتم حذف كل الحسابات المرتبطة به.')) return;
+    const cfm = await this.toast.confirm({ title: 'تأكيد الحذف', message: 'هل تريد حذف هذا القالب؟ سيتم حذف كل الحسابات المرتبطة به.', type: 'danger' });
+    if (!cfm) return;
     try {
       await this.api.deleteOperationType(id);
       await this.loadAll();

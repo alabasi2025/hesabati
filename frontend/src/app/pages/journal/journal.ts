@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 
 interface JournalLine {
   accountId: number | null;
@@ -21,6 +22,7 @@ interface JournalLine {
 export class JournalComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
+  private toast = inject(ToastService);
 
   bizId = 0;
   entries = signal<any[]>([]);
@@ -221,7 +223,8 @@ export class JournalComponent implements OnInit {
   }
 
   async deleteEntry(id: number) {
-    if (!confirm('هل أنت متأكد من حذف هذا القيد؟')) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: 'هل أنت متأكد من حذف هذا القيد؟', type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteJournalEntry(id);
       await this.load();

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
 
 // خريطة ثابتة لأيقونات وألوان أنواع الحسابات المعروفة
@@ -50,6 +51,7 @@ export class AccountsComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   loading = signal(true);
@@ -523,7 +525,8 @@ export class AccountsComponent implements OnInit {
   }
 
   async deleteAccount(acc: any) {
-    if (!confirm('هل تريد حذف هذا الحساب؟')) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: 'هل تريد حذف هذا الحساب؟', type: 'danger' });
+    if (!confirmed) return;
     try {
       const source = acc._source || 'accounts';
       if (source === 'funds') {

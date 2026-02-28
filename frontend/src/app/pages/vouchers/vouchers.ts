@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-vouchers',
@@ -14,6 +15,7 @@ import { ApiService } from '../../services/api.service';
 export class VouchersComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   loading = signal(true);
@@ -158,7 +160,8 @@ export class VouchersComponent implements OnInit {
   }
 
   async deleteVoucher(id: number) {
-    if (!confirm('هل تريد حذف هذا السند؟')) return;
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: 'هل تريد حذف هذا السند؟', type: 'danger' });
+    if (!confirmed) return;
     try {
       await this.api.deleteVoucher(id);
       await this.loadVouchers();

@@ -1,0 +1,209 @@
+/* ===================== Confirm Overlay ===================== */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: confirm-fade-in 0.2s ease forwards;
+  direction: rtl;
+  font-family: 'Tajawal', sans-serif;
+}
+
+/* ===================== Confirm Card ===================== */
+.confirm-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+  animation: confirm-scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  overflow: hidden;
+}
+
+/* ===================== Header ===================== */
+.confirm-header {
+  display: flex;
+  justify-content: center;
+  padding: 28px 24px 8px;
+}
+
+.confirm-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .material-icons-round {
+    font-size: 32px;
+    color: #fff;
+  }
+
+  &.red {
+    background: linear-gradient(135deg, #ef4444, #f97316);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+  }
+  &.amber {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+  }
+  &.blue {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* ===================== Body ===================== */
+.confirm-body {
+  text-align: center;
+  padding: 16px 28px 8px;
+}
+
+.confirm-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.confirm-message {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ===================== Footer ===================== */
+.confirm-footer {
+  display: flex;
+  gap: 10px;
+  padding: 20px 28px 24px;
+  justify-content: center;
+}
+
+.confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 28px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  .material-icons-round {
+    font-size: 18px;
+  }
+
+  &.btn-red {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+  }
+
+  &.btn-amber {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    }
+  }
+
+  &.btn-blue {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+  }
+}
+
+.cancel-btn {
+  padding: 10px 28px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  &:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-strong);
+  }
+}
+
+/* ===================== Animations ===================== */
+@keyframes confirm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes confirm-scale-in {
+  from {
+    transform: scale(0.85) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ===================== Responsive ===================== */
+@media (max-width: 480px) {
+  .confirm-card {
+    max-width: 340px;
+  }
+
+  .confirm-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+
+    .material-icons-round {
+      font-size: 26px;
+    }
+  }
+
+  .confirm-title {
+    font-size: 16px;
+  }
+
+  .confirm-message {
+    font-size: 13px;
+  }
+
+  .confirm-footer {
+    flex-direction: column;
+    padding: 16px 20px 20px;
+  }
+
+  .confirm-btn,
+  .cancel-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
