@@ -33,6 +33,7 @@ interface UserConfig {
   sectionId: number;
   isVisible: boolean;
   customSortOrder: number;
+  permission: string;
 }
 
 interface AppUser {
@@ -122,6 +123,7 @@ export class SidebarSettingsComponent implements OnInit {
         sectionId: c.sectionId,
         isVisible: c.isVisible,
         customSortOrder: c.customSortOrder || 0,
+        permission: c.permission || 'view',
       })));
     } catch (err) {
       console.error(err);
@@ -234,6 +236,7 @@ export class SidebarSettingsComponent implements OnInit {
         sidebarItemId: c.itemId,
         isVisible: c.isVisible,
         customSortOrder: c.customSortOrder,
+        permission: c.permission || 'view',
       }));
       await this.api.updateUserSidebar(this.bizId, user.id, { items });
       this.showMessage('تم حفظ إعدادات التبويب بنجاح', 'success');
@@ -389,6 +392,21 @@ export class SidebarSettingsComponent implements OnInit {
     'warning', 'tune', 'settings', 'home', 'folder', 'circle',
     'payments', 'people', 'summarize', 'arrow_forward',
   ];
+
+  setPermission(itemId: number, permission: string) {
+    const configs = this.userConfigs().map(c =>
+      c.itemId === itemId ? { ...c, permission } : c
+    );
+    this.userConfigs.set(configs);
+  }
+
+  getPermissionLabel(permission: string): string {
+    switch (permission) {
+      case 'execute': return 'تنفيذ عمليات';
+      case 'view': return 'عرض فقط';
+      default: return 'عرض فقط';
+    }
+  }
 
   private showMessage(text: string, type: 'success' | 'error') {
     this.message.set(text);

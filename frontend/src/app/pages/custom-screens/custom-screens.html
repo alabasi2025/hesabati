@@ -14,7 +14,7 @@
           <p>إنشاء وإدارة لوحات العمل المخصصة بنظام السحب والإفلات</p>
         </div>
       </div>
-      <button class="add-btn" (click)="openWizard()">
+      <button class="add-btn" (click)="startWizard()">
         <span class="material-icons-round">add</span>
         شاشة جديدة
       </button>
@@ -33,8 +33,8 @@
             <span class="material-icons-round">space_dashboard</span>
           </div>
           <h3>لا توجد شاشات مخصصة</h3>
-          <p>أنشئ شاشتك الأولى لبناء لوحة عمل مخصصة تناسب طبيعة عملك</p>
-          <button class="add-btn" (click)="openWizard()">
+          <p>أنشئ شاشتك الأولى باستخدام القوالب الجاهزة أو ابدأ من الصفر</p>
+          <button class="add-btn" (click)="startWizard()">
             <span class="material-icons-round">add</span>
             إنشاء شاشة جديدة
           </button>
@@ -48,14 +48,11 @@
                   <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
                 </div>
                 <div class="screen-card-actions" (click)="$event.stopPropagation()">
-                  <button class="action-btn" (click)="openSidebarModal(screen)" title="إضافة للقائمة الجانبية">
-                    <span class="material-icons-round">menu_open</span>
-                  </button>
-                  <button class="action-btn" (click)="openPermissionsModal(screen)" title="الصلاحيات">
-                    <span class="material-icons-round">security</span>
-                  </button>
-                  <button class="action-btn edit" (click)="openWizard(screen)" title="تعديل">
+                  <button class="action-btn edit" (click)="openScreenForm(screen)" title="تعديل">
                     <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="action-btn edit" (click)="cloneScreen(screen)" title="نسخ">
+                    <span class="material-icons-round">content_copy</span>
                   </button>
                   <button class="action-btn delete" (click)="deleteScreen(screen)" title="حذف">
                     <span class="material-icons-round">delete</span>
@@ -82,9 +79,375 @@
     }
   }
 
+  <!-- ==================== WIZARD VIEW ==================== -->
+  @if (viewMode() === 'wizard') {
+    <div class="wizard-container">
+      <!-- Wizard Header -->
+      <div class="wizard-header">
+        <button class="back-btn" (click)="cancelWizard()">
+          <span class="material-icons-round">arrow_forward</span>
+        </button>
+        <div>
+          <h1>إنشاء شاشة جديدة</h1>
+          <p>اتبع الخطوات لإنشاء شاشتك المخصصة</p>
+        </div>
+      </div>
+
+      <!-- Wizard Steps Indicator -->
+      <div class="wizard-steps-bar">
+        @for (step of [1, 2, 3, 4]; track step) {
+          <div class="wizard-step-indicator" [class.active]="wizardStep() === step" [class.completed]="wizardStep() > step">
+            <div class="step-circle">
+              @if (wizardStep() > step) {
+                <span class="material-icons-round">check</span>
+              } @else {
+                {{ step }}
+              }
+            </div>
+            <span class="step-label">
+              @switch (step) {
+                @case (1) { اختيار القالب }
+                @case (2) { التشكيل }
+                @case (3) { التخصيص }
+                @case (4) { ربط المحتوى }
+              }
+            </span>
+          </div>
+          @if (step < 4) {
+            <div class="step-connector" [class.completed]="wizardStep() > step"></div>
+          }
+        }
+      </div>
+
+      <!-- Step 1: Choose Template -->
+      @if (wizardStep() === 1) {
+        <div class="wizard-step-content">
+          <h2 class="step-title">
+            <span class="material-icons-round">view_module</span>
+            اختر قالب شاشة
+          </h2>
+          <p class="step-desc">اختر قالباً جاهزاً كقاعدة لشاشتك أو ابدأ من الصفر</p>
+
+          <div class="templates-grid">
+            @for (tpl of screenTemplateOptions; track tpl.key) {
+              <div class="template-card" [class.selected]="wizardSelectedTemplate() === tpl.key" (click)="selectTemplate(tpl.key)">
+                <div class="template-card-icon" [style.background]="'linear-gradient(135deg, ' + tpl.color + ', ' + tpl.color + '88)'">
+                  <span class="material-icons-round">{{ tpl.icon }}</span>
+                </div>
+                <h4>{{ tpl.name }}</h4>
+                <p>{{ tpl.desc }}</p>
+                <div class="template-widgets-preview">
+                  @for (w of tpl.widgets; track $index) {
+                    <span class="widget-badge" [title]="w.title">
+                      <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
+                    </span>
+                  }
+                  @if (tpl.widgets.length === 0) {
+                    <span class="widget-badge empty">
+                      <span class="material-icons-round">add</span>
+                    </span>
+                  }
+                </div>
+                @if (wizardSelectedTemplate() === tpl.key) {
+                  <div class="selected-check">
+                    <span class="material-icons-round">check_circle</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Screen Name & Info -->
+          <div class="wizard-screen-info">
+            <h3>معلومات الشاشة</h3>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>اسم الشاشة <span class="required">*</span></label>
+                <input type="text" [ngModel]="wizardScreenName()" (ngModelChange)="wizardScreenName.set($event)" placeholder="مثال: شاشة التحصيل اليومي" />
+              </div>
+              <div class="form-group flex-1">
+                <label>اللون</label>
+                <div class="color-picker-row">
+                  @for (c of colors; track c) {
+                    <button class="color-dot" [style.background]="c" [class.selected]="wizardScreenColor() === c" (click)="wizardScreenColor.set(c)"></button>
+                  }
+                  <input type="color" [ngModel]="wizardScreenColor()" (ngModelChange)="wizardScreenColor.set($event)" class="color-input-native" title="لون مخصص" />
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>الوصف</label>
+                <input type="text" [ngModel]="wizardScreenDesc()" (ngModelChange)="wizardScreenDesc.set($event)" placeholder="وصف اختياري للشاشة" />
+              </div>
+              <div class="form-group flex-1">
+                <label>الأيقونة</label>
+                <div class="icon-picker-compact">
+                  @for (ic of icons; track ic) {
+                    <button class="icon-option-sm" [class.selected]="wizardScreenIcon() === ic" (click)="wizardScreenIcon.set(ic)">
+                      <span class="material-icons-round">{{ ic }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Step 2: Design & Layout -->
+      @if (wizardStep() === 2) {
+        <div class="wizard-step-content">
+          <h2 class="step-title">
+            <span class="material-icons-round">dashboard_customize</span>
+            التشكيل والتصميم
+          </h2>
+          <p class="step-desc">أضف أو احذف عناصر من شاشتك</p>
+
+          <!-- Widget Library -->
+          <div class="wizard-widget-library">
+            <h4>مكتبة العناصر</h4>
+            <div class="widget-library-grid">
+              @for (type of widgetTypes; track type.value) {
+                <button class="widget-lib-item" (click)="addWizardWidget(type)">
+                  <span class="material-icons-round" [style.color]="type.color">{{ type.icon }}</span>
+                  <span>{{ type.label }}</span>
+                  <span class="material-icons-round add-icon">add_circle</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Current Widgets Preview -->
+          <div class="wizard-widgets-list">
+            <h4>عناصر الشاشة ({{ wizardWidgets().length }})</h4>
+            @if (wizardWidgets().length === 0) {
+              <div class="empty-widgets-msg">
+                <span class="material-icons-round">widgets</span>
+                <p>لم تتم إضافة عناصر بعد. اختر من المكتبة أعلاه.</p>
+              </div>
+            } @else {
+              <div class="wizard-widgets-grid">
+                @for (w of wizardWidgets(); track $index; let i = $index) {
+                  <div class="wizard-widget-card">
+                    <div class="wizard-widget-icon" [style.background]="'linear-gradient(135deg, ' + getWizardWidgetColor(w) + ', ' + getWizardWidgetColor(w) + '88)'">
+                      <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
+                    </div>
+                    <div class="wizard-widget-info">
+                      <h5>{{ w.title }}</h5>
+                      <span class="wizard-widget-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
+                    </div>
+                    <div class="wizard-widget-actions">
+                      <button class="action-btn delete" (click)="removeWizardWidget(i)" title="حذف">
+                        <span class="material-icons-round">close</span>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Step 3: Customization -->
+      @if (wizardStep() === 3) {
+        <div class="wizard-step-content">
+          <h2 class="step-title">
+            <span class="material-icons-round">palette</span>
+            التخصيص
+          </h2>
+          <p class="step-desc">غيّر ألوان ومسميات كل عنصر وتحكم في الإظهار/الإخفاء</p>
+
+          @if (wizardWidgets().length === 0) {
+            <div class="empty-widgets-msg">
+              <span class="material-icons-round">tune</span>
+              <p>لا توجد عناصر للتخصيص. ارجع للخطوة السابقة لإضافة عناصر.</p>
+            </div>
+          } @else {
+            <div class="customization-list">
+              @for (w of wizardWidgets(); track $index; let i = $index) {
+                <div class="customization-card" [class.expanded]="customizingWidgetIdx() === i" [class.hidden-widget]="!w.isVisible">
+                  <div class="customization-card-header" (click)="startCustomizing(customizingWidgetIdx() === i ? -1 : i)">
+                    <div class="customization-card-icon" [style.background]="'linear-gradient(135deg, ' + getWizardWidgetColor(w) + ', ' + getWizardWidgetColor(w) + '88)'">
+                      <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
+                    </div>
+                    <div class="customization-card-info">
+                      <h5>{{ w.title }}</h5>
+                      <span>{{ getWidgetTypeInfo(w.widgetType).label }} | {{ w.isVisible ? 'ظاهر' : 'مخفي' }}</span>
+                    </div>
+                    <span class="material-icons-round expand-icon">{{ customizingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
+                  </div>
+
+                  @if (customizingWidgetIdx() === i) {
+                    <div class="customization-card-body">
+                      <div class="form-group">
+                        <label>عنوان العنصر</label>
+                        <input type="text" [ngModel]="w.title" (ngModelChange)="updateWizardWidgetTitle(i, $event)" />
+                      </div>
+                      <div class="form-group">
+                        <label>لون العنصر</label>
+                        <div class="color-picker-row">
+                          @for (c of colors; track c) {
+                            <button class="color-dot" [style.background]="c" [class.selected]="getWizardWidgetColor(w) === c" (click)="updateWizardWidgetColor(i, c)"></button>
+                          }
+                          <input type="color" [ngModel]="getWizardWidgetColor(w)" (ngModelChange)="updateWizardWidgetColor(i, $event)" class="color-input-native" title="لون مخصص" />
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label>الحالة</label>
+                        <button class="toggle-visibility-btn" [class.visible]="w.isVisible" (click)="toggleWizardWidgetVisibility(i)">
+                          <span class="material-icons-round">{{ w.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                          {{ w.isVisible ? 'ظاهر' : 'مخفي' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Step 4: Content Binding -->
+      @if (wizardStep() === 4) {
+        <div class="wizard-step-content">
+          <h2 class="step-title">
+            <span class="material-icons-round">link</span>
+            ربط المحتوى
+          </h2>
+          <p class="step-desc">اربط كل عنصر بالبيانات المناسبة (قوالب عمليات، حسابات، فلاتر)</p>
+
+          @if (wizardWidgets().length === 0) {
+            <div class="empty-widgets-msg">
+              <span class="material-icons-round">link_off</span>
+              <p>لا توجد عناصر لربطها. ارجع للخطوة الثانية لإضافة عناصر.</p>
+            </div>
+          } @else {
+            <div class="binding-list">
+              @for (w of wizardWidgets(); track $index; let i = $index) {
+                @if (hasBindableContent(w)) {
+                  <div class="binding-card" [class.expanded]="bindingWidgetIdx() === i">
+                    <div class="binding-card-header" (click)="startBinding(bindingWidgetIdx() === i ? -1 : i)">
+                      <div class="binding-card-icon" [style.background]="'linear-gradient(135deg, ' + getWizardWidgetColor(w) + ', ' + getWizardWidgetColor(w) + '88)'">
+                        <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
+                      </div>
+                      <div class="binding-card-info">
+                        <h5>{{ w.title }}</h5>
+                        <span class="binding-summary">{{ getBindingLabel(w) }}</span>
+                      </div>
+                      <span class="material-icons-round expand-icon">{{ bindingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
+                    </div>
+
+                    @if (bindingWidgetIdx() === i) {
+                      <div class="binding-card-body">
+                        <!-- Templates Widget Binding -->
+                        @if (w.widgetType === 'templates') {
+                          <h5 class="binding-section-title">اختر قوالب العمليات</h5>
+                          <div class="binding-options-grid">
+                            @for (op of operationTypes(); track op.id) {
+                              <label class="binding-option" [class.selected]="(w.config?.operationTypeIds || []).includes(op.id)">
+                                <input type="checkbox" [checked]="(w.config?.operationTypeIds || []).includes(op.id)" (change)="toggleOperationType(i, op.id)" />
+                                <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                                <span>{{ op.name }}</span>
+                              </label>
+                            }
+                            @if (operationTypes().length === 0) {
+                              <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
+                            }
+                          </div>
+                        }
+
+                        <!-- Accounts Widget Binding -->
+                        @if (w.widgetType === 'accounts') {
+                          <h5 class="binding-section-title">اختر الحسابات للمراقبة</h5>
+                          <div class="binding-options-grid">
+                            @for (acc of allAccounts(); track acc.id) {
+                              <label class="binding-option" [class.selected]="(w.config?.accountIds || []).includes(acc.id)">
+                                <input type="checkbox" [checked]="(w.config?.accountIds || []).includes(acc.id)" (change)="toggleAccount(i, acc.id)" />
+                                <span class="material-icons-round">account_balance_wallet</span>
+                                <span>{{ acc.name }}</span>
+                              </label>
+                            }
+                            @if (allAccounts().length === 0) {
+                              <p class="no-data-msg">لا توجد حسابات. أنشئها من صفحة الحسابات.</p>
+                            }
+                          </div>
+                        }
+
+                        <!-- Log Widget Binding -->
+                        @if (w.widgetType === 'log') {
+                          <h5 class="binding-section-title">فلاتر السجل</h5>
+                          <div class="form-row">
+                            <div class="form-group">
+                              <label>نوع العملية</label>
+                              <select [ngModel]="w.config?.filters?.operationType || ''" (ngModelChange)="updateLogFilter(i, 'operationType', $event)">
+                                <option value="">الكل</option>
+                                @for (op of operationTypes(); track op.id) {
+                                  <option [value]="op.id">{{ op.name }}</option>
+                                }
+                              </select>
+                            </div>
+                            <div class="form-group">
+                              <label>الفترة</label>
+                              <select [ngModel]="w.config?.filters?.period || ''" (ngModelChange)="updateLogFilter(i, 'period', $event)">
+                                <option value="">الكل</option>
+                                <option value="today">اليوم</option>
+                                <option value="week">هذا الأسبوع</option>
+                                <option value="month">هذا الشهر</option>
+                              </select>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
+
+              @if (!wizardWidgets().some(w => hasBindableContent(w))) {
+                <div class="empty-widgets-msg">
+                  <span class="material-icons-round">link_off</span>
+                  <p>لا توجد عناصر تحتاج لربط محتوى. يمكنك إنشاء الشاشة مباشرة.</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Wizard Footer -->
+      <div class="wizard-footer">
+        <div class="wizard-footer-right">
+          @if (wizardStep() > 1) {
+            <button class="wizard-btn secondary" (click)="prevWizardStep()">
+              <span class="material-icons-round">arrow_forward</span>
+              السابق
+            </button>
+          }
+        </div>
+        <div class="wizard-footer-left">
+          @if (wizardStep() < 4) {
+            <button class="wizard-btn primary" (click)="nextWizardStep()" [disabled]="wizardStep() === 1 && !wizardScreenName()">
+              التالي
+              <span class="material-icons-round">arrow_back</span>
+            </button>
+          } @else {
+            <button class="wizard-btn success" (click)="saveWizardScreen()" [disabled]="saving() || !wizardScreenName()">
+              <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
+              {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- ==================== DETAIL VIEW ==================== -->
   @if (viewMode() === 'detail' && activeScreen()) {
     <div class="detail-view">
+      <!-- Detail Header -->
       <div class="detail-header">
         <div class="detail-header-right">
           <button class="back-btn" (click)="backToList()">
@@ -105,12 +468,6 @@
               {{ saving() ? 'جاري الحفظ...' : 'حفظ التخطيط' }}
             </button>
           }
-          @if (editMode()) {
-            <button class="mode-btn" (click)="openCopyWidgetsModal()">
-              <span class="material-icons-round">content_copy</span>
-              نسخ من شاشة أخرى
-            </button>
-          }
           <button class="mode-btn" [class.active]="editMode()" (click)="toggleEditMode()">
             <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
             {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
@@ -119,6 +476,10 @@
             <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="toggleWidgetLibrary()">
               <span class="material-icons-round">widgets</span>
               مكتبة العناصر
+            </button>
+            <button class="library-btn" (click)="openCopyWidgetModal()">
+              <span class="material-icons-round">content_copy</span>
+              نسخ من شاشة
             </button>
           }
         </div>
@@ -183,10 +544,11 @@
               <gridster [options]="gridsterOptions">
                 @for (item of gridItems; track item.widgetData.id) {
                   <gridster-item [item]="item">
-                    <div class="widget-card" [class.edit-mode]="editMode()">
-                      <div class="widget-header" [style.border-bottom-color]="getWidgetTypeInfo(item.widgetData.widgetType).color + '33'">
+                    <div class="widget-card" [class.edit-mode]="editMode()" [class.hidden-widget]="!item.widgetData.isVisible">
+                      <!-- Widget Header -->
+                      <div class="widget-header" [style.border-bottom-color]="(item.widgetData.config?.color || getWidgetTypeInfo(item.widgetData.widgetType).color) + '33'">
                         <div class="widget-title">
-                          <span class="material-icons-round widget-type-icon" [style.color]="getWidgetTypeInfo(item.widgetData.widgetType).color">
+                          <span class="material-icons-round widget-type-icon" [style.color]="item.widgetData.config?.color || getWidgetTypeInfo(item.widgetData.widgetType).color">
                             {{ getWidgetTypeInfo(item.widgetData.widgetType).icon }}
                           </span>
                           <span>{{ item.widgetData.title }}</span>
@@ -196,6 +558,9 @@
                             <button class="action-btn edit" (click)="openWidgetForm(item.widgetData)" title="تعديل">
                               <span class="material-icons-round">edit</span>
                             </button>
+                            <button class="action-btn edit" (click)="toggleWidgetVisibility(item.widgetData)" [title]="item.widgetData.isVisible ? 'إخفاء' : 'إظهار'">
+                              <span class="material-icons-round">{{ item.widgetData.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                            </button>
                             <button class="action-btn delete" (click)="deleteWidget(item.widgetData)" title="حذف">
                               <span class="material-icons-round">delete</span>
                             </button>
@@ -203,7 +568,10 @@
                         }
                       </div>
 
+                      <!-- Widget Body -->
                       <div class="widget-body widget-body-content">
+
+                        <!-- ===== Templates Widget ===== -->
                         @if (item.widgetData.widgetType === 'templates') {
                           <div class="templates-widget">
                             @for (tpl of demoTemplates; track tpl.name) {
@@ -217,16 +585,26 @@
                           </div>
                         }
 
+                        <!-- ===== Log Widget ===== -->
                         @if (item.widgetData.widgetType === 'log') {
                           <div class="log-widget">
                             <table class="log-table">
                               <thead>
-                                <tr><th>النوع</th><th>المبلغ</th><th>الحساب</th><th>التاريخ</th></tr>
+                                <tr>
+                                  <th>النوع</th>
+                                  <th>المبلغ</th>
+                                  <th>الحساب</th>
+                                  <th>التاريخ</th>
+                                </tr>
                               </thead>
                               <tbody>
                                 @for (entry of demoLogEntries; track entry.id) {
                                   <tr>
-                                    <td><span class="log-type-badge" [class.collection]="entry.type === 'تحصيل'" [class.delivery]="entry.type === 'توريد'" [class.expense]="entry.type === 'صرف'" [class.transfer]="entry.type === 'تحويل'">{{ entry.type }}</span></td>
+                                    <td>
+                                      <span class="log-type-badge" [class.collection]="entry.type === 'تحصيل'" [class.delivery]="entry.type === 'توريد'" [class.expense]="entry.type === 'صرف'" [class.transfer]="entry.type === 'تحويل'">
+                                        {{ entry.type }}
+                                      </span>
+                                    </td>
                                     <td class="log-amount">{{ entry.amount }}</td>
                                     <td>{{ entry.account }}</td>
                                     <td class="log-date">{{ entry.date }}</td>
@@ -237,6 +615,7 @@
                           </div>
                         }
 
+                        <!-- ===== Accounts Widget ===== -->
                         @if (item.widgetData.widgetType === 'accounts') {
                           <div class="accounts-widget">
                             @for (acc of demoAccounts; track acc.name) {
@@ -247,13 +626,16 @@
                                 </div>
                                 <div class="account-balance-area">
                                   <span class="account-balance">{{ acc.balance }}</span>
-                                  <span class="material-icons-round account-trend" [style.color]="getTrendColor(acc.trend)">{{ getTrendIcon(acc.trend) }}</span>
+                                  <span class="material-icons-round account-trend" [style.color]="getTrendColor(acc.trend)">
+                                    {{ getTrendIcon(acc.trend) }}
+                                  </span>
                                 </div>
                               </div>
                             }
                           </div>
                         }
 
+                        <!-- ===== Stats Widget ===== -->
                         @if (item.widgetData.widgetType === 'stats') {
                           <div class="stats-widget">
                             @for (stat of demoStats; track stat.label) {
@@ -265,23 +647,39 @@
                                   <span class="stat-value">{{ stat.value }}</span>
                                   <span class="stat-label">{{ stat.label }}</span>
                                 </div>
-                                <span class="stat-change" [style.color]="stat.change.startsWith('+') ? '#22c55e' : '#ef4444'">{{ stat.change }}</span>
+                                <span class="stat-change" [style.color]="stat.change.startsWith('+') ? '#22c55e' : '#ef4444'">
+                                  {{ stat.change }}
+                                </span>
                               </div>
                             }
                           </div>
                         }
 
+                        <!-- ===== Chart Widget ===== -->
                         @if (item.widgetData.widgetType === 'chart') {
                           <div class="chart-widget">
-                            <canvas baseChart [datasets]="barChartData.datasets" [labels]="barChartData.labels" [options]="barChartOptions" type="bar"></canvas>
+                            <canvas baseChart
+                              [datasets]="barChartData.datasets"
+                              [labels]="barChartData.labels"
+                              [options]="barChartOptions"
+                              type="bar">
+                            </canvas>
                           </div>
                         }
 
+                        <!-- ===== Notes Widget ===== -->
                         @if (item.widgetData.widgetType === 'notes') {
                           <div class="notes-widget">
-                            <textarea class="notes-textarea" [value]="notesText[item.widgetData.id] || ''" (input)="onNotesChange(item.widgetData.id, $any($event.target).value)" placeholder="اكتب ملاحظاتك هنا..." [readonly]="!editMode()"></textarea>
+                            <textarea
+                              class="notes-textarea"
+                              [value]="notesText[item.widgetData.id] || ''"
+                              (input)="onNotesChange(item.widgetData.id, $any($event.target).value)"
+                              placeholder="اكتب ملاحظاتك هنا..."
+                              [readonly]="!editMode()">
+                            </textarea>
                           </div>
                         }
+
                       </div>
                     </div>
                   </gridster-item>
@@ -294,323 +692,66 @@
     </div>
   }
 
-  <!-- ==================== WIZARD MODAL ==================== -->
-  @if (showWizard()) {
-    <div class="modal-overlay" (click)="closeWizard()">
-      <div class="wizard-modal" (click)="$event.stopPropagation()">
-        <!-- Wizard Header -->
-        <div class="wizard-header">
+  <!-- ==================== SCREEN FORM MODAL (Edit) ==================== -->
+  @if (showScreenForm()) {
+    <div class="modal-overlay" (click)="closeScreenForm()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon blue">
-              <span class="material-icons-round">{{ getWizardStepIcon() }}</span>
+              <span class="material-icons-round">space_dashboard</span>
             </div>
             <div>
-              <h2>{{ editingScreen() ? 'تعديل الشاشة' : 'إنشاء شاشة جديدة' }}</h2>
-              <p>{{ getWizardStepTitle() }}</p>
+              <h2>{{ editingScreen() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h2>
+              <p>{{ editingScreen() ? 'تعديل بيانات الشاشة المخصصة' : 'إنشاء لوحة عمل مخصصة جديدة' }}</p>
             </div>
           </div>
-          <button class="close-btn" (click)="closeWizard()">
+          <button class="close-btn" (click)="closeScreenForm()">
             <span class="material-icons-round">close</span>
           </button>
         </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>اسم الشاشة</label>
+            <input type="text" [ngModel]="screenForm().name" (ngModelChange)="screenForm.set({...screenForm(), name: $event})" placeholder="مثال: شاشة التحصيل اليومي" />
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea rows="3" [ngModel]="screenForm().description" (ngModelChange)="screenForm.set({...screenForm(), description: $event})" placeholder="وصف مختصر للشاشة..."></textarea>
+          </div>
 
-        <!-- Wizard Steps Indicator -->
-        <div class="wizard-steps">
-          @for (step of [1,2,3,4]; track step) {
-            <div class="wizard-step" [class.active]="wizardStep() === step" [class.completed]="wizardStep() > step">
-              <div class="step-number">
-                @if (wizardStep() > step) {
-                  <span class="material-icons-round">check</span>
-                } @else {
-                  {{ step }}
-                }
-              </div>
-              <span class="step-label">
-                @switch (step) {
-                  @case (1) { القالب }
-                  @case (2) { العناصر }
-                  @case (3) { التخصيص }
-                  @case (4) { الربط }
-                }
-              </span>
+          <!-- Icon Selection -->
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <div class="icon-grid">
+              @for (icon of icons; track icon) {
+                <button class="icon-option" [class.selected]="screenForm().icon === icon" (click)="screenForm.set({...screenForm(), icon: icon})">
+                  <span class="material-icons-round">{{ icon }}</span>
+                </button>
+              }
             </div>
-            @if (step < 4) {
-              <div class="step-connector" [class.completed]="wizardStep() > step"></div>
-            }
-          }
+          </div>
+
+          <!-- Color Selection -->
+          <div class="form-group">
+            <label>اللون</label>
+            <div class="color-grid">
+              @for (color of colors; track color) {
+                <button class="color-option" [style.background]="color" [class.selected]="screenForm().color === color" (click)="screenForm.set({...screenForm(), color: color})">
+                  @if (screenForm().color === color) {
+                    <span class="material-icons-round">check</span>
+                  }
+                </button>
+              }
+              <input type="color" [ngModel]="screenForm().color" (ngModelChange)="screenForm.set({...screenForm(), color: $event})" class="color-input-native" title="لون مخصص" />
+            </div>
+          </div>
         </div>
-
-        <!-- Wizard Body -->
-        <div class="wizard-body">
-
-          <!-- ===== Step 1: Choose Template ===== -->
-          @if (wizardStep() === 1) {
-            <div class="form-group">
-              <label>اسم الشاشة</label>
-              <input type="text" [ngModel]="screenForm().name" (ngModelChange)="screenForm.set({...screenForm(), name: $event})" placeholder="مثال: شاشة التحصيل اليومي" />
-            </div>
-            <div class="form-group">
-              <label>الوصف</label>
-              <textarea rows="2" [ngModel]="screenForm().description" (ngModelChange)="screenForm.set({...screenForm(), description: $event})" placeholder="وصف مختصر للشاشة..."></textarea>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label>الأيقونة</label>
-                <div class="icon-grid">
-                  @for (icon of icons; track icon) {
-                    <button class="icon-option" [class.selected]="screenForm().icon === icon" (click)="screenForm.set({...screenForm(), icon: icon})">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>اللون</label>
-                <div class="color-grid">
-                  @for (color of colors; track color) {
-                    <button class="color-option" [style.background]="color" [class.selected]="screenForm().color === color" (click)="screenForm.set({...screenForm(), color: color})">
-                      @if (screenForm().color === color) {
-                        <span class="material-icons-round">check</span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            </div>
-
-            @if (!editingScreen()) {
-              <div class="form-group">
-                <label>اختر قالب الشاشة</label>
-                <div class="template-cards-grid">
-                  @for (tpl of presetTemplates; track tpl.key) {
-                    <button class="preset-template-card" [class.selected]="screenForm().templateKey === tpl.key" (click)="screenForm.set({...screenForm(), templateKey: tpl.key})">
-                      <div class="preset-icon" [style.background]="tpl.color + '22'" [style.color]="tpl.color">
-                        <span class="material-icons-round">{{ tpl.icon }}</span>
-                      </div>
-                      <div class="preset-info">
-                        <span class="preset-name">{{ tpl.name }}</span>
-                        <span class="preset-desc">{{ tpl.desc }}</span>
-                      </div>
-                      @if (screenForm().templateKey === tpl.key) {
-                        <span class="material-icons-round preset-check">check_circle</span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          }
-
-          <!-- ===== Step 2: Add/Remove Widgets ===== -->
-          @if (wizardStep() === 2) {
-            <div class="step2-layout">
-              <div class="step2-widgets-list">
-                <h4>
-                  <span class="material-icons-round">view_list</span>
-                  العناصر الحالية ({{ wizardWidgets().length }})
-                </h4>
-                @if (wizardWidgets().length === 0) {
-                  <div class="mini-empty">
-                    <span class="material-icons-round">inbox</span>
-                    <p>لا توجد عناصر بعد</p>
-                  </div>
-                } @else {
-                  @for (w of wizardWidgets(); track w.id) {
-                    <div class="wizard-widget-row">
-                      <div class="wizard-widget-info">
-                        <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                        <div>
-                          <span class="ww-title">{{ w.title }}</span>
-                          <span class="ww-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
-                        </div>
-                      </div>
-                      <button class="action-btn delete" (click)="wizardDeleteWidget(w)" title="حذف">
-                        <span class="material-icons-round">delete</span>
-                      </button>
-                    </div>
-                  }
-                }
-              </div>
-
-              <div class="step2-add-area">
-                <h4>
-                  <span class="material-icons-round">add_circle</span>
-                  إضافة عناصر
-                </h4>
-                <div class="wizard-add-grid">
-                  @for (wt of widgetTypes; track wt.value) {
-                    <button class="wizard-add-btn" (click)="wizardAddWidget(wt)">
-                      <div class="wizard-add-icon" [style.background]="wt.color + '22'" [style.color]="wt.color">
-                        <span class="material-icons-round">{{ wt.icon }}</span>
-                      </div>
-                      <span class="wizard-add-label">{{ wt.label }}</span>
-                    </button>
-                  }
-                </div>
-
-                @if (screens().length > 1) {
-                  <button class="copy-from-btn" (click)="openCopyWidgetsModal()">
-                    <span class="material-icons-round">content_copy</span>
-                    نسخ عناصر من شاشة أخرى
-                  </button>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- ===== Step 3: Customize ===== -->
-          @if (wizardStep() === 3) {
-            <p class="step-hint">
-              <span class="material-icons-round">info</span>
-              يمكنك تغيير مسميات العناصر وإخفاء/إظهارها. لتغيير الحجم والموضع، استخدم وضع التعديل بعد الانتهاء.
-            </p>
-            @if (wizardWidgets().length === 0) {
-              <div class="mini-empty">
-                <span class="material-icons-round">inbox</span>
-                <p>لا توجد عناصر للتخصيص. ارجع للخطوة السابقة لإضافة عناصر.</p>
-              </div>
-            } @else {
-              <div class="customize-list">
-                @for (w of wizardWidgets(); track w.id) {
-                  <div class="customize-row" [class.hidden-widget]="!w.isVisible">
-                    <div class="customize-icon" [style.background]="getWidgetTypeInfo(w.widgetType).color + '22'" [style.color]="getWidgetTypeInfo(w.widgetType).color">
-                      <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                    </div>
-                    <div class="customize-fields">
-                      <input type="text" [value]="w.title" (blur)="wizardUpdateTitle(w, $any($event.target).value)" placeholder="عنوان العنصر" />
-                      <span class="customize-type">{{ getWidgetTypeInfo(w.widgetType).label }} — {{ w.width }}×{{ w.height }}</span>
-                    </div>
-                    <button class="action-btn" [class.active]="w.isVisible" (click)="wizardToggleVisibility(w)" [title]="w.isVisible ? 'إخفاء' : 'إظهار'">
-                      <span class="material-icons-round">{{ w.isVisible ? 'visibility' : 'visibility_off' }}</span>
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-          }
-
-          <!-- ===== Step 4: Link Content ===== -->
-          @if (wizardStep() === 4) {
-            <p class="step-hint">
-              <span class="material-icons-round">info</span>
-              اربط عناصر القوالب بأنواع العمليات، وعناصر المراقبة بالحسابات.
-            </p>
-
-            @if (getLinkableWidgets().length === 0) {
-              <div class="mini-empty">
-                <span class="material-icons-round">link_off</span>
-                <p>لا توجد عناصر تحتاج ربط (قوالب أو مراقبة حسابات). يمكنك تخطي هذه الخطوة.</p>
-              </div>
-            } @else {
-              <div class="linking-layout">
-                <!-- Widget selector -->
-                <div class="linking-widgets">
-                  <h4>اختر عنصراً للربط:</h4>
-                  @for (w of getLinkableWidgets(); track w.id) {
-                    <button class="linking-widget-btn" [class.active]="selectedWidgetForLinking()?.id === w.id" (click)="selectWidgetForLinking(w)">
-                      <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                      <span>{{ w.title }}</span>
-                    </button>
-                  }
-                </div>
-
-                <!-- Linking area -->
-                <div class="linking-content">
-                  @if (!selectedWidgetForLinking()) {
-                    <div class="mini-empty">
-                      <span class="material-icons-round">touch_app</span>
-                      <p>اختر عنصراً من القائمة لبدء الربط</p>
-                    </div>
-                  } @else if (linkingLoading()) {
-                    <div class="loading-state" style="padding: 30px 0">
-                      <span class="material-icons-round spin">sync</span>
-                    </div>
-                  } @else {
-                    <!-- Templates linking -->
-                    @if (selectedWidgetForLinking()!.widgetType === 'templates') {
-                      <h4>أنواع العمليات المتاحة:</h4>
-                      <div class="linking-items-grid">
-                        @for (op of operationTypes(); track op.id) {
-                          <button class="linking-item" [class.linked]="isOperationTypeLinked(op.id)" (click)="isOperationTypeLinked(op.id) ? null : addOperationTypeToWidget(op.id)">
-                            <span class="material-icons-round" [style.color]="op.color || '#3b82f6'">{{ op.icon || 'receipt_long' }}</span>
-                            <span>{{ op.name }}</span>
-                            @if (isOperationTypeLinked(op.id)) {
-                              <span class="material-icons-round linked-check">check_circle</span>
-                            }
-                          </button>
-                        }
-                      </div>
-                      @if (widgetLinkedTemplates().length > 0) {
-                        <h4 style="margin-top: 16px">المرتبطة حالياً:</h4>
-                        <div class="linked-list">
-                          @for (link of widgetLinkedTemplates(); track link.id) {
-                            <div class="linked-row">
-                              <span>قالب #{{ link.operationTypeId }}</span>
-                              <button class="action-btn delete" (click)="removeOperationTypeFromWidget(link.id)">
-                                <span class="material-icons-round">close</span>
-                              </button>
-                            </div>
-                          }
-                        </div>
-                      }
-                    }
-
-                    <!-- Accounts linking -->
-                    @if (selectedWidgetForLinking()!.widgetType === 'accounts') {
-                      <h4>الحسابات المتاحة:</h4>
-                      <div class="linking-items-grid">
-                        @for (acc of accounts(); track acc.id) {
-                          <button class="linking-item" [class.linked]="isAccountLinked(acc.id)" (click)="isAccountLinked(acc.id) ? null : addAccountToWidget(acc.id)">
-                            <span class="material-icons-round">account_balance_wallet</span>
-                            <span>{{ acc.name }}</span>
-                            @if (isAccountLinked(acc.id)) {
-                              <span class="material-icons-round linked-check">check_circle</span>
-                            }
-                          </button>
-                        }
-                      </div>
-                      @if (widgetLinkedAccounts().length > 0) {
-                        <h4 style="margin-top: 16px">المرتبطة حالياً:</h4>
-                        <div class="linked-list">
-                          @for (link of widgetLinkedAccounts(); track link.id) {
-                            <div class="linked-row">
-                              <span>حساب #{{ link.accountId }}</span>
-                              <button class="action-btn delete" (click)="removeAccountFromWidget(link.id)">
-                                <span class="material-icons-round">close</span>
-                              </button>
-                            </div>
-                          }
-                        </div>
-                      }
-                    }
-                  }
-                </div>
-              </div>
-            }
-          }
-        </div>
-
-        <!-- Wizard Footer -->
-        <div class="wizard-footer">
-          @if (wizardStep() > 1) {
-            <button class="btn-cancel" (click)="wizardBack()">
-              <span class="material-icons-round">arrow_forward</span>
-              السابق
-            </button>
-          }
-          <div class="wizard-footer-spacer"></div>
-          <button class="btn-save" (click)="wizardNext()" [disabled]="saving()">
-            @if (saving()) {
-              جاري الحفظ...
-            } @else if (wizardStep() === 4) {
-              <span class="material-icons-round">check</span>
-              إنهاء
-            } @else {
-              التالي
-              <span class="material-icons-round">arrow_back</span>
-            }
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveScreen()" [disabled]="saving()">
+            {{ saving() ? 'جاري الحفظ...' : (editingScreen() ? 'تحديث' : 'إنشاء') }}
           </button>
+          <button class="btn-cancel" (click)="closeScreenForm()">إلغاء</button>
         </div>
       </div>
     </div>
@@ -635,6 +776,7 @@
           </button>
         </div>
         <div class="modal-body">
+          <!-- Widget Type Selection -->
           <div class="form-group">
             <label>نوع العنصر</label>
             <div class="widget-type-grid">
@@ -647,9 +789,24 @@
               }
             </div>
           </div>
+
           <div class="form-group">
             <label>عنوان العنصر</label>
             <input type="text" [ngModel]="widgetForm().title" (ngModelChange)="widgetForm.set({...widgetForm(), title: $event})" placeholder="عنوان العنصر" />
+          </div>
+
+          <div class="form-group">
+            <label>لون العنصر</label>
+            <div class="color-grid">
+              @for (color of colors; track color) {
+                <button class="color-option" [style.background]="color" [class.selected]="widgetForm().config?.color === color" (click)="widgetForm.set({...widgetForm(), config: {...widgetForm().config, color: color}})">
+                  @if (widgetForm().config?.color === color) {
+                    <span class="material-icons-round">check</span>
+                  }
+                </button>
+              }
+              <input type="color" [ngModel]="widgetForm().config?.color || '#3b82f6'" (ngModelChange)="widgetForm.set({...widgetForm(), config: {...widgetForm().config, color: $event}})" class="color-input-native" title="لون مخصص" />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -662,178 +819,67 @@
     </div>
   }
 
-  <!-- ==================== COPY WIDGETS MODAL ==================== -->
-  @if (showCopyModal()) {
-    <div class="modal-overlay" (click)="showCopyModal.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
+  <!-- ==================== COPY WIDGET MODAL ==================== -->
+  @if (showCopyWidgetModal()) {
+    <div class="modal-overlay" (click)="closeCopyWidgetModal()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon blue">
               <span class="material-icons-round">content_copy</span>
             </div>
             <div>
-              <h2>نسخ عناصر من شاشة أخرى</h2>
-              <p>اختر شاشة ثم حدد العناصر المراد نسخها</p>
+              <h2>نسخ عنصر من شاشة أخرى</h2>
+              <p>اختر شاشة ثم اختر العنصر المراد نسخه</p>
             </div>
           </div>
-          <button class="close-btn" (click)="showCopyModal.set(false)">
+          <button class="close-btn" (click)="closeCopyWidgetModal()">
             <span class="material-icons-round">close</span>
           </button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>اختر الشاشة المصدر</label>
-            <select [ngModel]="copySourceScreenId()" (ngModelChange)="loadCopySourceWidgets($event)">
-              <option [value]="0" disabled>-- اختر شاشة --</option>
-              @for (s of copySourceScreens(); track s.id) {
-                <option [value]="s.id">{{ s.name }}</option>
-              }
-            </select>
-          </div>
-
-          @if (copySourceWidgets().length > 0) {
-            <div class="form-group">
-              <label>اختر العناصر للنسخ</label>
-              <div class="copy-widgets-list">
-                @for (w of copySourceWidgets(); track w.id) {
-                  <label class="copy-widget-item" [class.selected]="selectedCopyWidgets().has(w.id)">
-                    <input type="checkbox" [checked]="selectedCopyWidgets().has(w.id)" (change)="toggleCopyWidget(w.id)" />
-                    <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                    <span>{{ w.title }}</span>
-                  </label>
+          @if (otherScreens().length === 0) {
+            <div class="empty-widgets-msg">
+              <span class="material-icons-round">info</span>
+              <p>لا توجد شاشات أخرى تحتوي على عناصر للنسخ</p>
+            </div>
+          } @else {
+            <div class="copy-layout">
+              <div class="copy-screens-panel">
+                <h4>الشاشات</h4>
+                @for (s of otherScreens(); track s.id) {
+                  <div class="copy-screen-item" [class.selected]="selectedCopyScreen()?.id === s.id" (click)="selectCopyScreen(s)">
+                    <span class="material-icons-round" [style.color]="s.color">{{ s.icon || 'dashboard' }}</span>
+                    <span class="copy-screen-name">{{ s.name }}</span>
+                    <span class="copy-badge">{{ s.widgets.length }}</span>
+                  </div>
+                }
+              </div>
+              <div class="copy-widgets-panel">
+                @if (!selectedCopyScreen()) {
+                  <div class="empty-widgets-msg">
+                    <span class="material-icons-round">touch_app</span>
+                    <p>اختر شاشة لعرض عناصرها</p>
+                  </div>
+                } @else {
+                  <h4>عناصر {{ selectedCopyScreen()!.name }}</h4>
+                  @for (w of selectedCopyScreen()!.widgets; track w.id) {
+                    <div class="copy-widget-item">
+                      <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
+                      <div class="copy-widget-info">
+                        <h5>{{ w.title }}</h5>
+                        <span>{{ getWidgetTypeInfo(w.widgetType).label }}</span>
+                      </div>
+                      <button class="copy-widget-btn" (click)="copyWidgetFromOtherScreen(w)" [disabled]="saving()">
+                        <span class="material-icons-round">{{ saving() ? 'sync' : 'content_copy' }}</span>
+                        نسخ
+                      </button>
+                    </div>
+                  }
                 }
               </div>
             </div>
           }
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="executeCopyWidgets()" [disabled]="saving() || selectedCopyWidgets().size === 0">
-            {{ saving() ? 'جاري النسخ...' : 'نسخ ' + selectedCopyWidgets().size + ' عنصر' }}
-          </button>
-          <button class="btn-cancel" (click)="showCopyModal.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== PERMISSIONS MODAL ==================== -->
-  @if (showPermissionsModal()) {
-    <div class="modal-overlay" (click)="closePermissionsModal()">
-      <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon purple">
-              <span class="material-icons-round">security</span>
-            </div>
-            <div>
-              <h2>صلاحيات الشاشة: {{ permissionsScreen()?.name }}</h2>
-              <p>تحديد المستخدمين المسموح لهم بالوصول وصلاحياتهم</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closePermissionsModal()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          @if (permissionsLoading()) {
-            <div class="loading-state" style="padding: 30px 0">
-              <span class="material-icons-round spin">sync</span>
-              <p>جاري التحميل...</p>
-            </div>
-          } @else {
-            <div class="permissions-table-wrap">
-              <table class="permissions-table">
-                <thead>
-                  <tr>
-                    <th>المستخدم</th>
-                    <th>الدور</th>
-                    <th>عرض فقط</th>
-                    <th>تنفيذ عمليات</th>
-                    <th>بدون صلاحية</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (user of allUsers(); track user.id) {
-                    <tr>
-                      <td>
-                        <div class="user-cell">
-                          <span class="material-icons-round user-avatar-icon">{{ getRoleIcon(user.role) }}</span>
-                          <div>
-                            <span class="user-name">{{ user.fullName }}</span>
-                            <span class="user-username">{{ user.username }}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td><span class="role-badge">{{ getRoleLabel(user.role) }}</span></td>
-                      <td>
-                        <button class="perm-btn" [class.active]="getUserPermission(user.id)?.permission === 'view'" (click)="toggleUserPermission(user, 'view')">
-                          <span class="material-icons-round">{{ getUserPermission(user.id)?.permission === 'view' ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
-                        </button>
-                      </td>
-                      <td>
-                        <button class="perm-btn" [class.active]="getUserPermission(user.id)?.permission === 'execute'" (click)="toggleUserPermission(user, 'execute')">
-                          <span class="material-icons-round">{{ getUserPermission(user.id)?.permission === 'execute' ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
-                        </button>
-                      </td>
-                      <td>
-                        <button class="perm-btn" [class.active]="!getUserPermission(user.id)" (click)="getUserPermission(user.id) ? toggleUserPermission(user, getUserPermission(user.id)!.permission) : null">
-                          <span class="material-icons-round">{{ !getUserPermission(user.id) ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="savePermissions()" [disabled]="saving()">
-            {{ saving() ? 'جاري الحفظ...' : 'حفظ الصلاحيات' }}
-          </button>
-          <button class="btn-cancel" (click)="closePermissionsModal()">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== SIDEBAR MODAL ==================== -->
-  @if (showSidebarModal()) {
-    <div class="modal-overlay" (click)="closeSidebarModal()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green">
-              <span class="material-icons-round">menu_open</span>
-            </div>
-            <div>
-              <h2>إضافة للقائمة الجانبية</h2>
-              <p>إضافة "{{ permissionsScreen()?.name }}" كعنصر في القائمة الجانبية</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeSidebarModal()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>القسم في القائمة الجانبية</label>
-            <select [ngModel]="sidebarForm().sectionId" (ngModelChange)="sidebarForm.set({...sidebarForm(), sectionId: $event})">
-              @for (sec of sidebarSections(); track sec.id) {
-                <option [value]="sec.id">{{ sec.name }}</option>
-              }
-            </select>
-          </div>
-          <div class="form-group">
-            <label>ترتيب العرض</label>
-            <input type="number" [ngModel]="sidebarForm().sortOrder" (ngModelChange)="sidebarForm.set({...sidebarForm(), sortOrder: $event})" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="addToSidebar()" [disabled]="saving()">
-            {{ saving() ? 'جاري الإضافة...' : 'إضافة للقائمة' }}
-          </button>
-          <button class="btn-cancel" (click)="closeSidebarModal()">إلغاء</button>
         </div>
       </div>
     </div>

@@ -1510,6 +1510,7 @@ api.get('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), async (
     isVisible: userSidebarConfig.isVisible,
     customSortOrder: userSidebarConfig.customSortOrder,
     customSectionName: userSidebarConfig.customSectionName,
+    permission: userSidebarConfig.permission,
     itemId: sidebarItems.id,
     screenKey: sidebarItems.screenKey,
     label: sidebarItems.label,
@@ -1552,6 +1553,7 @@ api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), async (
           isVisible: item.isVisible,
           customSortOrder: item.customSortOrder,
           customSectionName: item.customSectionName || null,
+          permission: item.permission || existing[0].permission || 'view',
           updatedAt: new Date(),
         }).where(eq(userSidebarConfig.id, existing[0].id));
       } else {
@@ -1561,6 +1563,7 @@ api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), async (
           isVisible: item.isVisible,
           customSortOrder: item.customSortOrder,
           customSectionName: item.customSectionName || null,
+          permission: item.permission || 'view',
         });
       }
     }
@@ -1754,10 +1757,178 @@ api.post('/businesses/:bizId/screens', bizAuthMiddleware(), async (c) => {
     icon: body.icon || 'dashboard',
     color: body.color || '#3b82f6',
     layoutConfig: body.layoutConfig || {},
+    templateKey: body.templateKey || null,
     isSystem: false,
     isActive: true,
   }).returning();
+
+  // إذا تم إرسال عناصر مع الشاشة (من قالب جاهز)
+  if (body.widgets && Array.isArray(body.widgets) && body.widgets.length > 0) {
+    for (const w of body.widgets) {
+      await db.insert(screenWidgets).values({
+        screenId: created.id,
+        widgetType: w.widgetType,
+        title: w.title,
+        config: w.config || {},
+        positionX: w.positionX || 0,
+        positionY: w.positionY || 0,
+        width: w.width || 4,
+        height: w.height || 3,
+        sortOrder: w.sortOrder || 0,
+        isVisible: w.isVisible !== false,
+      });
+    }
+  }
+
+  // إضافة تلقائية للقائمة الجانبية
+  if (body.addToSidebar !== false) {
+    try {
+      // البحث عن قسم "الشاشات المخصصة" أو إنشاؤه
+      let [customSection] = await db.select().from(sidebarSections)
+        .where(and(eq(sidebarSections.businessId, bizId), eq(sidebarSections.name, 'الشاشات المخصصة')));
+      if (!customSection) {
+        const maxOrder = await db.select({ max: sql<number>`COALESCE(MAX(sort_order), 0)` }).from(sidebarSections).where(eq(sidebarSections.businessId, bizId));
+        [customSection] = await db.insert(sidebarSections).values({
+          businessId: bizId,
+          name: 'الشاشات المخصصة',
+          icon: 'space_dashboard',
+          sortOrder: (maxOrder[0]?.max || 0) + 1,
+          isActive: true,
+        }).returning();
+      }
+      // إضافة الشاشة كعنصر في القائمة الجانبية
+      const [sidebarItem] = await db.insert(sidebarItems).values({
+        sectionId: customSection.id,
+        screenKey: `custom-screen-${created.id}`,
+        label: body.name,
+        icon: body.icon || 'dashboard',
+        route: `/biz/{bizId}/custom-screens?screen=${created.id}`,
+        sortOrder: 0,
+        isActive: true,
+      }).returning();
+      // إضافة للمستخدمين الحاليين
+      const existingConfigs = await db.select().from(userSidebarConfig).where(eq(userSidebarConfig.businessId, bizId));
+      const userIds = [...new Set(existingConfigs.map(c => c.userId))];
+      for (const uid of userIds) {
+        await db.insert(userSidebarConfig).values({
+          userId: uid,
+          businessId: bizId,
+          sidebarItemId: sidebarItem.id,
+          isVisible: true,
+          permission: 'execute',
+        });
+      }
+    } catch (e) {
+      console.error('Error adding screen to sidebar:', e);
+    }
+  }
+
   return c.json(created, 201);
+});
+
+// نسخ شاشة كاملة مع عناصرها
+api.post('/screens/:id/clone', async (c) => {
+  const sourceId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  
+  // جلب الشاشة الأصلية
+  const [source] = await db.select().from(screenTemplates).where(eq(screenTemplates.id, sourceId));
+  if (!source) return c.json({ error: 'شاشة غير موجودة' }, 404);
+
+  // إنشاء نسخة
+  const [cloned] = await db.insert(screenTemplates).values({
+    businessId: source.businessId,
+    name: body.name || `${source.name} (نسخة)`,
+    description: body.description || source.description,
+    icon: body.icon || source.icon,
+    color: body.color || source.color,
+    layoutConfig: source.layoutConfig,
+    isSystem: false,
+    isActive: true,
+  }).returning();
+
+  // نسخ العناصر
+  const sourceWidgets = await db.select().from(screenWidgets).where(eq(screenWidgets.screenId, sourceId));
+  for (const w of sourceWidgets) {
+    const [newWidget] = await db.insert(screenWidgets).values({
+      screenId: cloned.id,
+      widgetType: w.widgetType,
+      title: w.title,
+      config: w.config,
+      positionX: w.positionX,
+      positionY: w.positionY,
+      width: w.width,
+      height: w.height,
+      sortOrder: w.sortOrder,
+      isVisible: w.isVisible,
+    }).returning();
+
+    // نسخ ربط القوالب
+    const wTemplates = await db.select().from(screenWidgetTemplates).where(eq(screenWidgetTemplates.widgetId, w.id));
+    for (const t of wTemplates) {
+      await db.insert(screenWidgetTemplates).values({
+        widgetId: newWidget.id,
+        operationTypeId: t.operationTypeId,
+        sortOrder: t.sortOrder,
+      });
+    }
+
+    // نسخ ربط الحسابات
+    const wAccounts = await db.select().from(screenWidgetAccounts).where(eq(screenWidgetAccounts.widgetId, w.id));
+    for (const a of wAccounts) {
+      await db.insert(screenWidgetAccounts).values({
+        widgetId: newWidget.id,
+        accountId: a.accountId,
+        sortOrder: a.sortOrder,
+      });
+    }
+  }
+
+  return c.json(cloned, 201);
+});
+
+// نسخ عنصر واحد من شاشة لأخرى
+api.post('/widgets/:id/copy-to/:targetScreenId', async (c) => {
+  const widgetId = parseInt(c.req.param('id'));
+  const targetScreenId = parseInt(c.req.param('targetScreenId'));
+
+  const [source] = await db.select().from(screenWidgets).where(eq(screenWidgets.id, widgetId));
+  if (!source) return c.json({ error: 'عنصر غير موجود' }, 404);
+
+  const [newWidget] = await db.insert(screenWidgets).values({
+    screenId: targetScreenId,
+    widgetType: source.widgetType,
+    title: `${source.title} (نسخة)`,
+    config: source.config,
+    positionX: 0,
+    positionY: 0,
+    width: source.width,
+    height: source.height,
+    sortOrder: 99,
+    isVisible: source.isVisible,
+  }).returning();
+
+  // نسخ ربط القوالب
+  const wTemplates = await db.select().from(screenWidgetTemplates).where(eq(screenWidgetTemplates.widgetId, widgetId));
+  for (const t of wTemplates) {
+    await db.insert(screenWidgetTemplates).values({
+      widgetId: newWidget.id,
+      operationTypeId: t.operationTypeId,
+      sortOrder: t.sortOrder,
+    });
+  }
+
+  // نسخ ربط الحسابات
+  const wAccounts = await db.select().from(screenWidgetAccounts).where(eq(screenWidgetAccounts.widgetId, widgetId));
+  for (const a of wAccounts) {
+    await db.insert(screenWidgetAccounts).values({
+      widgetId: newWidget.id,
+      accountId: a.accountId,
+      sortOrder: a.sortOrder,
+    });
+  }
+
+  return c.json(newWidget, 201);
 });
 
 // تعديل شاشة
@@ -1792,6 +1963,23 @@ api.delete('/screens/:id', async (c) => {
   const [deleted] = await db.delete(screenTemplates).where(eq(screenTemplates.id, id)).returning();
   if (!deleted) return c.json({ error: 'شاشة غير موجودة' }, 404);
   return c.json({ success: true });
+});
+
+// جلب جميع الشاشات مع عدد العناصر (للنسخ)
+api.get('/businesses/:bizId/screens-with-widgets', bizAuthMiddleware(), async (c) => {
+  const bizId = parseInt(c.req.param('bizId'));
+  const screens = await db.select().from(screenTemplates)
+    .where(eq(screenTemplates.businessId, bizId))
+    .orderBy(screenTemplates.createdAt);
+  
+  const result = [];
+  for (const screen of screens) {
+    const widgets = await db.select().from(screenWidgets)
+      .where(eq(screenWidgets.screenId, screen.id))
+      .orderBy(screenWidgets.sortOrder);
+    result.push({ ...screen, widgets });
+  }
+  return c.json(result);
 });
 
 // جلب عناصر شاشة

@@ -708,6 +708,7 @@ export const userSidebarConfig = pgTable('user_sidebar_config', {
   isVisible: boolean('is_visible').notNull().default(true),
   customSortOrder: integer('custom_sort_order'),
   customSectionName: varchar('custom_section_name', { length: 200 }),
+  permission: varchar('permission', { length: 20 }).notNull().default('view'), // view | execute
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -782,6 +783,7 @@ export const screenTemplates = pgTable('screen_templates', {
   icon: varchar('icon', { length: 50 }).default('dashboard'),
   color: varchar('color', { length: 20 }).default('#3b82f6'),
   layoutConfig: jsonb('layout_config').$type<any>().default({}),
+  templateKey: varchar('template_key', { length: 50 }), // collection | delivery | monitoring | reports | blank
   isSystem: boolean('is_system').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),

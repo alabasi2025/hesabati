@@ -129,6 +129,15 @@
                         <span class="material-icons-round">{{ item.icon }}</span>
                       </div>
                       <span class="config-item-label">{{ item.label }}</span>
+                      <select
+                        class="permission-select"
+                        [value]="item.permission || 'view'"
+                        (change)="setPermission(item.itemId, $any($event.target).value)"
+                        [title]="getPermissionLabel(item.permission || 'view')"
+                      >
+                        <option value="view">عرض فقط</option>
+                        <option value="execute">تنفيذ عمليات</option>
+                      </select>
                       <button
                         class="toggle-btn"
                         [class.on]="item.isVisible"

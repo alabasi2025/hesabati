@@ -7,7 +7,6 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { AuthService } from '../../services/auth.service';
 
 interface ScreenTemplate {
   id: number;
@@ -17,6 +16,7 @@ interface ScreenTemplate {
   icon: string;
   color: string;
   layoutConfig: any;
+  templateKey: string;
   isSystem: boolean;
   isActive: boolean;
   createdAt: string;
@@ -42,32 +42,24 @@ interface GridWidget extends GridsterItemConfig {
   widgetData: ScreenWidget;
 }
 
-interface ScreenPresetTemplate {
-  key: string;
+interface WizardWidget {
+  widgetType: string;
+  title: string;
+  config: any;
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+  sortOrder: number;
+  isVisible: boolean;
+}
+
+interface ScreenWithWidgets {
+  id: number;
   name: string;
   icon: string;
   color: string;
-  desc: string;
-  widgets: { widgetType: string; title: string; positionX: number; positionY: number; width: number; height: number; sortOrder: number }[];
-}
-
-interface AppUser {
-  id: number;
-  username: string;
-  fullName: string;
-  role: string;
-  isActive: boolean;
-}
-
-interface ScreenPermission {
-  id: number;
-  screenId: number;
-  userId: number;
-  permission: string;
-  sortOrder: number;
-  username: string;
-  fullName: string;
-  role: string;
+  widgets: ScreenWidget[];
 }
 
 @Component({
@@ -81,7 +73,6 @@ export class CustomScreensComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
   private toast = inject(ToastService);
-  private auth = inject(AuthService);
 
   bizId = 0;
   loading = signal(true);
@@ -98,28 +89,45 @@ export class CustomScreensComponent implements OnInit {
   gridItems: GridWidget[] = [];
 
   // ===================== UI State =====================
-  viewMode = signal<'list' | 'detail'>('list');
+  viewMode = signal<'list' | 'detail' | 'wizard'>('list');
   editMode = signal(false);
   showWidgetLibrary = signal(false);
   hasUnsavedChanges = signal(false);
 
   // ===================== Wizard State =====================
-  showWizard = signal(false);
   wizardStep = signal(1);
-  wizardScreen = signal<ScreenTemplate | null>(null);
-  wizardWidgets = signal<ScreenWidget[]>([]);
-  editingScreen = signal<ScreenTemplate | null>(null);
+  wizardScreenName = signal('');
+  wizardScreenDesc = signal('');
+  wizardScreenIcon = signal('dashboard');
+  wizardScreenColor = signal('#3b82f6');
+  wizardSelectedTemplate = signal<string>('blank');
+  wizardWidgets = signal<WizardWidget[]>([]);
+  wizardEditingWidgetIdx = signal<number | null>(null);
 
-  // ===================== Screen Form (Step 1) =====================
+  // ===================== Widget Customization (Step 3) =====================
+  customizingWidgetIdx = signal<number | null>(null);
+
+  // ===================== Content Binding (Step 4) =====================
+  bindingWidgetIdx = signal<number | null>(null);
+  operationTypes = signal<any[]>([]);
+  allAccounts = signal<any[]>([]);
+
+  // ===================== Copy Widget State =====================
+  showCopyWidgetModal = signal(false);
+  otherScreens = signal<ScreenWithWidgets[]>([]);
+  selectedCopyScreen = signal<ScreenWithWidgets | null>(null);
+
+  // ===================== Screen Form Modal =====================
+  showScreenForm = signal(false);
+  editingScreen = signal<ScreenTemplate | null>(null);
   screenForm = signal({
     name: '',
     description: '',
     icon: 'dashboard',
     color: '#3b82f6',
-    templateKey: 'empty',
   });
 
-  // ===================== Widget Form Modal =====================
+  // ===================== Widget Edit Modal (Detail View) =====================
   showWidgetForm = signal(false);
   editingWidget = signal<ScreenWidget | null>(null);
   widgetForm = signal({
@@ -127,33 +135,6 @@ export class CustomScreensComponent implements OnInit {
     title: '',
     config: {} as any,
   });
-
-  // ===================== Copy Widgets Modal =====================
-  showCopyModal = signal(false);
-  copySourceScreens = signal<ScreenTemplate[]>([]);
-  copySourceWidgets = signal<ScreenWidget[]>([]);
-  selectedCopyWidgets = signal<Set<number>>(new Set());
-  copySourceScreenId = signal(0);
-
-  // ===================== Permissions Modal =====================
-  showPermissionsModal = signal(false);
-  permissionsScreen = signal<ScreenTemplate | null>(null);
-  allUsers = signal<AppUser[]>([]);
-  screenPermissions = signal<ScreenPermission[]>([]);
-  permissionsLoading = signal(false);
-
-  // ===================== Sidebar Modal =====================
-  showSidebarModal = signal(false);
-  sidebarSections = signal<any[]>([]);
-  sidebarForm = signal({ sectionId: 0, sortOrder: 99 });
-
-  // ===================== Content Linking (Step 4) =====================
-  operationTypes = signal<any[]>([]);
-  accounts = signal<any[]>([]);
-  selectedWidgetForLinking = signal<ScreenWidget | null>(null);
-  widgetLinkedTemplates = signal<any[]>([]);
-  widgetLinkedAccounts = signal<any[]>([]);
-  linkingLoading = signal(false);
 
   // ===================== Notes Widget =====================
   notesText: { [key: number]: string } = {};
@@ -181,47 +162,62 @@ export class CustomScreensComponent implements OnInit {
     { value: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', desc: 'ملاحظات وتذكيرات', color: '#f97316', defaultW: 4, defaultH: 3 },
   ];
 
-  // ===================== Screen Preset Templates =====================
-  presetTemplates: ScreenPresetTemplate[] = [
+  // ===================== Screen Templates =====================
+  screenTemplateOptions = [
     {
-      key: 'collection', name: 'قالب تحصيل', icon: 'payments', color: '#22c55e',
+      key: 'collection',
+      name: 'قالب تحصيل',
       desc: 'شاشة تحصيل يومي مع قوالب عمليات وسجل ومراقبة حسابات',
+      icon: 'payments',
+      color: '#22c55e',
       widgets: [
-        { widgetType: 'templates', title: 'قوالب العمليات', positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0 },
-        { widgetType: 'log', title: 'سجل العمليات', positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1 },
-        { widgetType: 'accounts', title: 'مراقبة الحسابات', positionX: 0, positionY: 4, width: 12, height: 3, sortOrder: 2 },
+        { widgetType: 'templates', title: 'قوالب العمليات', config: {}, positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0, isVisible: true },
+        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1, isVisible: true },
+        { widgetType: 'accounts', title: 'مراقبة الحسابات', config: {}, positionX: 0, positionY: 4, width: 12, height: 4, sortOrder: 2, isVisible: true },
       ],
     },
     {
-      key: 'delivery', name: 'قالب توريد', icon: 'local_shipping', color: '#3b82f6',
+      key: 'delivery',
+      name: 'قالب توريد',
       desc: 'شاشة توريد مع قوالب عمليات وسجل وإحصائيات',
+      icon: 'local_shipping',
+      color: '#3b82f6',
       widgets: [
-        { widgetType: 'templates', title: 'قوالب العمليات', positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0 },
-        { widgetType: 'log', title: 'سجل التوريدات', positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1 },
-        { widgetType: 'stats', title: 'إحصائيات التوريد', positionX: 0, positionY: 4, width: 12, height: 2, sortOrder: 2 },
+        { widgetType: 'templates', title: 'قوالب العمليات', config: {}, positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0, isVisible: true },
+        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1, isVisible: true },
+        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 0, positionY: 4, width: 12, height: 2, sortOrder: 2, isVisible: true },
       ],
     },
     {
-      key: 'monitoring', name: 'قالب مراقبة', icon: 'monitoring', color: '#f59e0b',
+      key: 'monitoring',
+      name: 'قالب مراقبة',
       desc: 'شاشة مراقبة ومتابعة مع حسابات وإحصائيات ورسم بياني',
+      icon: 'monitor',
+      color: '#f59e0b',
       widgets: [
-        { widgetType: 'accounts', title: 'مراقبة الحسابات', positionX: 0, positionY: 0, width: 6, height: 5, sortOrder: 0 },
-        { widgetType: 'stats', title: 'الإحصائيات', positionX: 6, positionY: 0, width: 6, height: 2, sortOrder: 1 },
-        { widgetType: 'chart', title: 'رسم بياني', positionX: 6, positionY: 2, width: 6, height: 5, sortOrder: 2 },
+        { widgetType: 'accounts', title: 'مراقبة الحسابات', config: {}, positionX: 0, positionY: 0, width: 12, height: 5, sortOrder: 0, isVisible: true },
+        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 0, positionY: 5, width: 6, height: 2, sortOrder: 1, isVisible: true },
+        { widgetType: 'chart', title: 'رسم بياني', config: {}, positionX: 6, positionY: 5, width: 6, height: 5, sortOrder: 2, isVisible: true },
       ],
     },
     {
-      key: 'reports', name: 'قالب تقارير', icon: 'assessment', color: '#8b5cf6',
+      key: 'reports',
+      name: 'قالب تقارير',
       desc: 'شاشة تقارير مع رسم بياني وإحصائيات وسجل',
+      icon: 'assessment',
+      color: '#8b5cf6',
       widgets: [
-        { widgetType: 'chart', title: 'رسم بياني', positionX: 0, positionY: 0, width: 6, height: 5, sortOrder: 0 },
-        { widgetType: 'stats', title: 'الإحصائيات', positionX: 6, positionY: 0, width: 6, height: 2, sortOrder: 1 },
-        { widgetType: 'log', title: 'سجل العمليات', positionX: 6, positionY: 2, width: 6, height: 5, sortOrder: 2 },
+        { widgetType: 'chart', title: 'رسم بياني', config: {}, positionX: 0, positionY: 0, width: 8, height: 5, sortOrder: 0, isVisible: true },
+        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 8, positionY: 0, width: 4, height: 2, sortOrder: 1, isVisible: true },
+        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 0, positionY: 5, width: 12, height: 5, sortOrder: 2, isVisible: true },
       ],
     },
     {
-      key: 'empty', name: 'شاشة فارغة', icon: 'add_box', color: '#94a3b8',
-      desc: 'ابدأ من الصفر وأضف العناصر التي تحتاجها',
+      key: 'blank',
+      name: 'قالب فارغ',
+      desc: 'ابدأ من الصفر - بدون عناصر',
+      icon: 'add_circle_outline',
+      color: '#94a3b8',
       widgets: [],
     },
   ];
@@ -310,6 +306,17 @@ export class CustomScreensComponent implements OnInit {
     this.route.parent?.params.subscribe(async (params) => {
       this.bizId = parseInt(params['bizId']);
       await this.loadScreens();
+
+      // Check if URL has ?screen= param to open directly
+      this.route.queryParams.subscribe(async (qp) => {
+        if (qp['screen']) {
+          const screenId = parseInt(qp['screen']);
+          const screen = this.screens().find(s => s.id === screenId);
+          if (screen) {
+            await this.openScreen(screen);
+          }
+        }
+      });
     });
   }
 
@@ -411,6 +418,7 @@ export class CustomScreensComponent implements OnInit {
       };
       return item;
     });
+    // Initialize notes
     widgets.forEach(w => {
       if (w.widgetType === 'notes') {
         this.notesText[w.id] = w.config?.text || '';
@@ -418,319 +426,234 @@ export class CustomScreensComponent implements OnInit {
     });
   }
 
-  // ===================== WIZARD: إنشاء شاشة جديدة =====================
-
-  openWizard(editScreen?: ScreenTemplate) {
-    if (editScreen) {
-      this.editingScreen.set(editScreen);
-      this.screenForm.set({
-        name: editScreen.name,
-        description: editScreen.description || '',
-        icon: editScreen.icon || 'dashboard',
-        color: editScreen.color || '#3b82f6',
-        templateKey: 'empty',
-      });
-      this.wizardStep.set(1);
-    } else {
-      this.editingScreen.set(null);
-      this.screenForm.set({ name: '', description: '', icon: 'dashboard', color: '#3b82f6', templateKey: 'empty' });
-      this.wizardStep.set(1);
-    }
-    this.wizardScreen.set(null);
-    this.wizardWidgets.set([]);
-    this.showWizard.set(true);
-  }
-
-  closeWizard() {
-    this.showWizard.set(false);
+  // ===================== WIZARD =====================
+  startWizard() {
+    this.viewMode.set('wizard');
     this.wizardStep.set(1);
-    this.editingScreen.set(null);
+    this.wizardScreenName.set('');
+    this.wizardScreenDesc.set('');
+    this.wizardScreenIcon.set('dashboard');
+    this.wizardScreenColor.set('#3b82f6');
+    this.wizardSelectedTemplate.set('blank');
+    this.wizardWidgets.set([]);
+    this.customizingWidgetIdx.set(null);
+    this.bindingWidgetIdx.set(null);
   }
 
-  async wizardNext() {
-    const step = this.wizardStep();
+  cancelWizard() {
+    this.viewMode.set('list');
+  }
 
-    if (step === 1) {
-      // Validate and create/update screen
-      const form = this.screenForm();
-      if (!form.name.trim()) {
-        this.toast.warning('يرجى إدخال اسم الشاشة');
-        return;
-      }
-      this.saving.set(true);
-      try {
-        const editing = this.editingScreen();
-        if (editing) {
-          const updated = await this.api.updateScreen(editing.id, {
-            name: form.name,
-            description: form.description,
-            icon: form.icon,
-            color: form.color,
-          });
-          this.wizardScreen.set(updated);
-          // Load existing widgets
-          const wds = await this.api.getScreenWidgets(editing.id);
-          this.wizardWidgets.set(wds);
-        } else {
-          // Create screen from template
-          const preset = this.presetTemplates.find(p => p.key === form.templateKey);
-          const screen = await this.api.createScreenFromTemplate(this.bizId, {
-            name: form.name,
-            description: form.description,
-            icon: form.icon,
-            color: form.color,
-            widgets: preset?.widgets || [],
-          });
-          this.wizardScreen.set(screen);
-          // Load created widgets
-          const wds = await this.api.getScreenWidgets(screen.id);
-          this.wizardWidgets.set(wds);
+  selectTemplate(key: string) {
+    this.wizardSelectedTemplate.set(key);
+    const tpl = this.screenTemplateOptions.find(t => t.key === key);
+    if (tpl) {
+      this.wizardWidgets.set(tpl.widgets.map(w => ({ ...w })));
+      if (key !== 'blank') {
+        this.wizardScreenIcon.set(tpl.icon);
+        this.wizardScreenColor.set(tpl.color);
+        if (!this.wizardScreenName()) {
+          this.wizardScreenName.set(tpl.name.replace('قالب ', 'شاشة '));
         }
-        this.wizardStep.set(2);
-      } catch (e: any) {
-        this.toast.error(e.message || 'حدث خطأ');
-      } finally {
-        this.saving.set(false);
       }
+    }
+  }
+
+  nextWizardStep() {
+    const step = this.wizardStep();
+    if (step === 1) {
+      // Validate template selection
+      this.wizardStep.set(2);
     } else if (step === 2) {
       this.wizardStep.set(3);
     } else if (step === 3) {
       this.wizardStep.set(4);
-      // Load operation types and accounts for linking
-      try {
-        const [opTypes, accs] = await Promise.all([
-          this.api.getOperationTypes(this.bizId),
-          this.api.getAccounts(this.bizId),
-        ]);
-        this.operationTypes.set(opTypes);
-        this.accounts.set(accs);
-      } catch (e) {
-        console.error(e);
-      }
-    } else if (step === 4) {
-      // Finish wizard
-      this.closeWizard();
-      await this.loadScreens();
-      const ws = this.wizardScreen();
-      if (ws) {
-        await this.openScreen(ws);
-      }
-      this.toast.success('تم إنشاء الشاشة بنجاح! يمكنك الآن تخصيصها.');
+      this.loadContentBindingData();
     }
   }
 
-  wizardBack() {
+  prevWizardStep() {
     const step = this.wizardStep();
     if (step > 1) {
       this.wizardStep.set(step - 1);
+      this.customizingWidgetIdx.set(null);
+      this.bindingWidgetIdx.set(null);
     }
   }
 
-  // Step 2: Add widget in wizard
-  async wizardAddWidget(type: any) {
-    const screen = this.wizardScreen();
-    if (!screen) return;
-    this.saving.set(true);
+  async loadContentBindingData() {
     try {
-      await this.api.createScreenWidget(screen.id, {
-        widgetType: type.value,
-        title: type.label,
-        width: type.defaultW,
-        height: type.defaultH,
-        config: {},
-      });
-      const wds = await this.api.getScreenWidgets(screen.id);
-      this.wizardWidgets.set(wds);
-      this.toast.success(`تم إضافة "${type.label}"`);
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // Step 2: Delete widget in wizard
-  async wizardDeleteWidget(widget: ScreenWidget) {
-    try {
-      await this.api.deleteWidget(widget.id);
-      const screen = this.wizardScreen();
-      if (screen) {
-        const wds = await this.api.getScreenWidgets(screen.id);
-        this.wizardWidgets.set(wds);
-      }
-      this.toast.success('تم حذف العنصر');
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  // Step 2: Open copy widgets modal
-  async openCopyWidgetsModal() {
-    const currentScreenId = this.wizardScreen()?.id || this.activeScreen()?.id;
-    const otherScreens = this.screens().filter(s => s.id !== currentScreenId);
-    this.copySourceScreens.set(otherScreens);
-    this.copySourceWidgets.set([]);
-    this.selectedCopyWidgets.set(new Set());
-    this.copySourceScreenId.set(0);
-    this.showCopyModal.set(true);
-  }
-
-  async loadCopySourceWidgets(screenId: number) {
-    this.copySourceScreenId.set(screenId);
-    try {
-      const wds = await this.api.getScreenWidgets(screenId);
-      this.copySourceWidgets.set(wds);
-      this.selectedCopyWidgets.set(new Set());
+      const [opTypes, accountsData] = await Promise.all([
+        this.api.getOperationTypes(this.bizId),
+        this.api.getAllAccounts(this.bizId),
+      ]);
+      this.operationTypes.set(opTypes);
+      this.allAccounts.set(accountsData.accounts || []);
     } catch (e) {
-      console.error(e);
+      console.error('Error loading binding data:', e);
     }
   }
 
-  toggleCopyWidget(widgetId: number) {
-    const current = new Set(this.selectedCopyWidgets());
-    if (current.has(widgetId)) {
-      current.delete(widgetId);
-    } else {
-      current.add(widgetId);
-    }
-    this.selectedCopyWidgets.set(current);
+  // Wizard Step 2: Add/Remove widgets
+  addWizardWidget(type: any) {
+    const widgets = [...this.wizardWidgets()];
+    widgets.push({
+      widgetType: type.value,
+      title: type.label,
+      config: {},
+      positionX: 0,
+      positionY: widgets.length * 3,
+      width: type.defaultW,
+      height: type.defaultH,
+      sortOrder: widgets.length,
+      isVisible: true,
+    });
+    this.wizardWidgets.set(widgets);
   }
 
-  async executeCopyWidgets() {
-    const targetId = this.wizardScreen()?.id || this.activeScreen()?.id;
-    if (!targetId) return;
-    const widgetIds = Array.from(this.selectedCopyWidgets());
-    if (widgetIds.length === 0) {
-      this.toast.warning('اختر عنصراً واحداً على الأقل');
+  removeWizardWidget(idx: number) {
+    const widgets = [...this.wizardWidgets()];
+    widgets.splice(idx, 1);
+    this.wizardWidgets.set(widgets);
+    if (this.customizingWidgetIdx() === idx) this.customizingWidgetIdx.set(null);
+    if (this.bindingWidgetIdx() === idx) this.bindingWidgetIdx.set(null);
+  }
+
+  // Wizard Step 3: Customize widgets
+  startCustomizing(idx: number) {
+    this.customizingWidgetIdx.set(idx);
+  }
+
+  updateWizardWidgetTitle(idx: number, title: string) {
+    const widgets = [...this.wizardWidgets()];
+    widgets[idx] = { ...widgets[idx], title };
+    this.wizardWidgets.set(widgets);
+  }
+
+  updateWizardWidgetColor(idx: number, color: string) {
+    const widgets = [...this.wizardWidgets()];
+    widgets[idx] = { ...widgets[idx], config: { ...widgets[idx].config, color } };
+    this.wizardWidgets.set(widgets);
+  }
+
+  toggleWizardWidgetVisibility(idx: number) {
+    const widgets = [...this.wizardWidgets()];
+    widgets[idx] = { ...widgets[idx], isVisible: !widgets[idx].isVisible };
+    this.wizardWidgets.set(widgets);
+  }
+
+  // Wizard Step 4: Content binding
+  startBinding(idx: number) {
+    this.bindingWidgetIdx.set(idx);
+  }
+
+  toggleOperationType(idx: number, opTypeId: number) {
+    const widgets = [...this.wizardWidgets()];
+    const w = widgets[idx];
+    const selectedOps = w.config.operationTypeIds || [];
+    const newOps = selectedOps.includes(opTypeId)
+      ? selectedOps.filter((id: number) => id !== opTypeId)
+      : [...selectedOps, opTypeId];
+    widgets[idx] = { ...w, config: { ...w.config, operationTypeIds: newOps } };
+    this.wizardWidgets.set(widgets);
+  }
+
+  toggleAccount(idx: number, accountId: number) {
+    const widgets = [...this.wizardWidgets()];
+    const w = widgets[idx];
+    const selectedAccs = w.config.accountIds || [];
+    const newAccs = selectedAccs.includes(accountId)
+      ? selectedAccs.filter((id: number) => id !== accountId)
+      : [...selectedAccs, accountId];
+    widgets[idx] = { ...w, config: { ...w.config, accountIds: newAccs } };
+    this.wizardWidgets.set(widgets);
+  }
+
+  updateLogFilter(idx: number, field: string, value: string) {
+    const widgets = [...this.wizardWidgets()];
+    const w = widgets[idx];
+    const filters = w.config.filters || {};
+    filters[field] = value;
+    widgets[idx] = { ...w, config: { ...w.config, filters } };
+    this.wizardWidgets.set(widgets);
+  }
+
+  // Wizard: Save
+  async saveWizardScreen() {
+    const name = this.wizardScreenName();
+    if (!name.trim()) {
+      this.toast.warning('يرجى إدخال اسم الشاشة');
       return;
     }
+
     this.saving.set(true);
     try {
-      await this.api.copyWidgets(targetId, widgetIds);
-      this.toast.success(`تم نسخ ${widgetIds.length} عنصر`);
-      this.showCopyModal.set(false);
-      // Refresh widgets
-      const wds = await this.api.getScreenWidgets(targetId);
-      if (this.showWizard()) {
-        this.wizardWidgets.set(wds);
-      } else {
-        this.widgets.set(wds);
-        this.buildGridItems(wds);
-      }
+      const payload = {
+        name,
+        description: this.wizardScreenDesc(),
+        icon: this.wizardScreenIcon(),
+        color: this.wizardScreenColor(),
+        templateKey: this.wizardSelectedTemplate(),
+        widgets: this.wizardWidgets(),
+        addToSidebar: true,
+      };
+      await this.api.createScreen(this.bizId, payload);
+      this.toast.success('تم إنشاء الشاشة بنجاح');
+      this.viewMode.set('list');
+      await this.loadScreens();
     } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء النسخ');
+      this.toast.error(e.message || 'حدث خطأ أثناء الإنشاء');
     } finally {
       this.saving.set(false);
     }
   }
 
-  // Step 3: Toggle visibility
-  async wizardToggleVisibility(widget: ScreenWidget) {
-    try {
-      await this.api.updateWidget(widget.id, { isVisible: !widget.isVisible });
-      const screen = this.wizardScreen();
-      if (screen) {
-        const wds = await this.api.getScreenWidgets(screen.id);
-        this.wizardWidgets.set(wds);
-      }
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
+  // ===================== Screen Form (Edit existing) =====================
+  openScreenForm(screen?: ScreenTemplate) {
+    if (screen) {
+      this.editingScreen.set(screen);
+      this.screenForm.set({
+        name: screen.name,
+        description: screen.description || '',
+        icon: screen.icon || 'dashboard',
+        color: screen.color || '#3b82f6',
+      });
+      this.showScreenForm.set(true);
+    } else {
+      // New screen -> go to wizard
+      this.startWizard();
     }
   }
 
-  // Step 3: Update widget title
-  async wizardUpdateTitle(widget: ScreenWidget, newTitle: string) {
-    if (!newTitle.trim()) return;
-    try {
-      await this.api.updateWidget(widget.id, { title: newTitle });
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
+  closeScreenForm() {
+    this.showScreenForm.set(false);
+    this.editingScreen.set(null);
   }
 
-  // Step 4: Content linking
-  async selectWidgetForLinking(widget: ScreenWidget) {
-    this.selectedWidgetForLinking.set(widget);
-    this.linkingLoading.set(true);
+  async saveScreen() {
+    const form = this.screenForm();
+    if (!form.name.trim()) {
+      this.toast.warning('يرجى إدخال اسم الشاشة');
+      return;
+    }
+
+    this.saving.set(true);
     try {
-      if (widget.widgetType === 'templates') {
-        const tpls = await this.api.getWidgetTemplates(widget.id);
-        this.widgetLinkedTemplates.set(tpls);
-      } else if (widget.widgetType === 'accounts') {
-        const accs = await this.api.getWidgetAccounts(widget.id);
-        this.widgetLinkedAccounts.set(accs);
+      const editing = this.editingScreen();
+      if (editing) {
+        await this.api.updateScreen(editing.id, form);
+        this.toast.success('تم تحديث الشاشة');
+      } else {
+        await this.api.createScreen(this.bizId, form);
+        this.toast.success('تم إنشاء الشاشة');
       }
-    } catch (e) {
-      console.error(e);
+      this.closeScreenForm();
+      await this.loadScreens();
+    } catch (e: any) {
+      this.toast.error(e.message || 'حدث خطأ');
     } finally {
-      this.linkingLoading.set(false);
+      this.saving.set(false);
     }
-  }
-
-  async addOperationTypeToWidget(opTypeId: number) {
-    const widget = this.selectedWidgetForLinking();
-    if (!widget) return;
-    try {
-      await this.api.addWidgetTemplate(widget.id, { operationTypeId: opTypeId });
-      const tpls = await this.api.getWidgetTemplates(widget.id);
-      this.widgetLinkedTemplates.set(tpls);
-      this.toast.success('تم ربط القالب');
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  async removeOperationTypeFromWidget(linkId: number) {
-    try {
-      await this.api.removeWidgetTemplate(linkId);
-      const widget = this.selectedWidgetForLinking();
-      if (widget) {
-        const tpls = await this.api.getWidgetTemplates(widget.id);
-        this.widgetLinkedTemplates.set(tpls);
-      }
-      this.toast.success('تم إزالة الربط');
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  async addAccountToWidget(accountId: number) {
-    const widget = this.selectedWidgetForLinking();
-    if (!widget) return;
-    try {
-      await this.api.addWidgetAccount(widget.id, { accountId });
-      const accs = await this.api.getWidgetAccounts(widget.id);
-      this.widgetLinkedAccounts.set(accs);
-      this.toast.success('تم ربط الحساب');
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  async removeAccountFromWidget(linkId: number) {
-    try {
-      await this.api.removeWidgetAccount(linkId);
-      const widget = this.selectedWidgetForLinking();
-      if (widget) {
-        const accs = await this.api.getWidgetAccounts(widget.id);
-        this.widgetLinkedAccounts.set(accs);
-      }
-      this.toast.success('تم إزالة الربط');
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  isOperationTypeLinked(opTypeId: number): boolean {
-    return this.widgetLinkedTemplates().some((t: any) => t.operationTypeId === opTypeId);
-  }
-
-  isAccountLinked(accountId: number): boolean {
-    return this.widgetLinkedAccounts().some((a: any) => a.accountId === accountId);
-  }
-
-  getLinkableWidgets(): ScreenWidget[] {
-    return this.wizardWidgets().filter(w => w.widgetType === 'templates' || w.widgetType === 'accounts');
   }
 
   // ===================== Screen CRUD =====================
@@ -741,12 +664,26 @@ export class CustomScreensComponent implements OnInit {
       type: 'danger',
     });
     if (!confirmed) return;
+
     try {
       await this.api.deleteScreen(screen.id);
       this.toast.success('تم حذف الشاشة');
       await this.loadScreens();
     } catch (e: any) {
       this.toast.error(e.message || 'حدث خطأ أثناء الحذف');
+    }
+  }
+
+  async cloneScreen(screen: ScreenTemplate) {
+    this.saving.set(true);
+    try {
+      await this.api.cloneScreen(screen.id, { name: `${screen.name} (نسخة)` });
+      this.toast.success('تم نسخ الشاشة بنجاح');
+      await this.loadScreens();
+    } catch (e: any) {
+      this.toast.error(e.message || 'حدث خطأ أثناء النسخ');
+    } finally {
+      this.saving.set(false);
     }
   }
 
@@ -783,19 +720,62 @@ export class CustomScreensComponent implements OnInit {
   async addWidgetFromLibrary(type: any) {
     const screen = this.activeScreen();
     if (!screen) return;
+
     this.saving.set(true);
     try {
-      await this.api.createScreenWidget(screen.id, {
+      const newWidget = {
         widgetType: type.value,
         title: type.label,
+        positionX: 0,
+        positionY: 0,
         width: type.defaultW,
         height: type.defaultH,
         config: {},
-      });
+      };
+      await this.api.createScreenWidget(screen.id, newWidget);
       this.toast.success(`تم إضافة "${type.label}"`);
       await this.loadWidgets(screen.id);
     } catch (e: any) {
       this.toast.error(e.message || 'حدث خطأ');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  // ===================== Copy Widget from Other Screens =====================
+  async openCopyWidgetModal() {
+    try {
+      const data = await this.api.getScreensWithWidgets(this.bizId);
+      const currentScreenId = this.activeScreen()?.id;
+      this.otherScreens.set(data.filter((s: any) => s.id !== currentScreenId && s.widgets?.length > 0));
+      this.selectedCopyScreen.set(null);
+      this.showCopyWidgetModal.set(true);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تحميل الشاشات');
+    }
+  }
+
+  closeCopyWidgetModal() {
+    this.showCopyWidgetModal.set(false);
+    this.selectedCopyScreen.set(null);
+  }
+
+  selectCopyScreen(screen: ScreenWithWidgets) {
+    this.selectedCopyScreen.set(screen);
+  }
+
+  async copyWidgetFromOtherScreen(widget: ScreenWidget) {
+    const screen = this.activeScreen();
+    if (!screen) return;
+
+    this.saving.set(true);
+    try {
+      await this.api.copyWidgetToScreen(widget.id, screen.id);
+      this.toast.success(`تم نسخ "${widget.title}" بنجاح`);
+      await this.loadWidgets(screen.id);
+      this.closeCopyWidgetModal();
+    } catch (e: any) {
+      this.toast.error(e.message || 'حدث خطأ أثناء النسخ');
     } finally {
       this.saving.set(false);
     }
@@ -812,7 +792,12 @@ export class CustomScreensComponent implements OnInit {
       });
     } else {
       this.editingWidget.set(null);
-      this.widgetForm.set({ widgetType: 'templates', title: this.widgetTypes[0].label, config: {} });
+      const typeInfo = this.widgetTypes[0];
+      this.widgetForm.set({
+        widgetType: 'templates',
+        title: typeInfo.label,
+        config: {},
+      });
     }
     this.showWidgetForm.set(true);
   }
@@ -829,6 +814,7 @@ export class CustomScreensComponent implements OnInit {
       this.toast.warning('يرجى إدخال عنوان العنصر');
       return;
     }
+
     this.saving.set(true);
     try {
       const editing = this.editingWidget();
@@ -866,6 +852,7 @@ export class CustomScreensComponent implements OnInit {
       type: 'danger',
     });
     if (!confirmed) return;
+
     try {
       await this.api.deleteWidget(widget.id);
       this.toast.success('تم حذف العنصر');
@@ -876,10 +863,21 @@ export class CustomScreensComponent implements OnInit {
     }
   }
 
+  async toggleWidgetVisibility(widget: ScreenWidget) {
+    try {
+      await this.api.updateWidget(widget.id, { isVisible: !widget.isVisible });
+      const screen = this.activeScreen();
+      if (screen) await this.loadWidgets(screen.id);
+    } catch (e: any) {
+      this.toast.error(e.message || 'حدث خطأ');
+    }
+  }
+
   // ===================== Save Layout =====================
   async saveLayout() {
     const screen = this.activeScreen();
     if (!screen) return;
+
     this.saving.set(true);
     try {
       const widgetUpdates = this.gridItems.map(item => ({
@@ -890,6 +888,8 @@ export class CustomScreensComponent implements OnInit {
         height: item.rows,
       }));
       await this.api.batchUpdateWidgets(screen.id, widgetUpdates);
+
+      // Save notes text
       for (const item of this.gridItems) {
         if (item.widgetData.widgetType === 'notes' && this.notesText[item.widgetData.id] !== undefined) {
           await this.api.updateWidget(item.widgetData.id, {
@@ -897,137 +897,11 @@ export class CustomScreensComponent implements OnInit {
           });
         }
       }
+
       this.hasUnsavedChanges.set(false);
       this.toast.success('تم حفظ التخطيط بنجاح');
     } catch (e: any) {
       this.toast.error(e.message || 'حدث خطأ أثناء الحفظ');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // ===================== Permissions =====================
-  async openPermissionsModal(screen: ScreenTemplate) {
-    this.permissionsScreen.set(screen);
-    this.permissionsLoading.set(true);
-    this.showPermissionsModal.set(true);
-    try {
-      const [users, perms] = await Promise.all([
-        this.api.getUsers(),
-        this.api.getScreenPermissions(screen.id),
-      ]);
-      this.allUsers.set(users);
-      this.screenPermissions.set(perms);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الصلاحيات');
-    } finally {
-      this.permissionsLoading.set(false);
-    }
-  }
-
-  closePermissionsModal() {
-    this.showPermissionsModal.set(false);
-    this.permissionsScreen.set(null);
-  }
-
-  getUserPermission(userId: number): ScreenPermission | undefined {
-    return this.screenPermissions().find(p => p.userId === userId);
-  }
-
-  async toggleUserPermission(user: AppUser, permission: string) {
-    const screen = this.permissionsScreen();
-    if (!screen) return;
-    const existing = this.getUserPermission(user.id);
-    try {
-      if (existing && existing.permission === permission) {
-        // Remove permission
-        await this.api.deleteScreenPermission(existing.id);
-      } else {
-        // Add or update permission
-        await this.api.addScreenPermission(screen.id, { userId: user.id, permission });
-      }
-      const perms = await this.api.getScreenPermissions(screen.id);
-      this.screenPermissions.set(perms);
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  async savePermissions() {
-    const screen = this.permissionsScreen();
-    if (!screen) return;
-    this.saving.set(true);
-    try {
-      const permissions = this.screenPermissions().map(p => ({
-        userId: p.userId,
-        permission: p.permission,
-        sortOrder: p.sortOrder,
-      }));
-      await this.api.batchUpdateScreenPermissions(screen.id, permissions);
-      this.toast.success('تم حفظ الصلاحيات');
-      this.closePermissionsModal();
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  getRoleLabel(role: string): string {
-    switch (role) {
-      case 'admin': return 'مدير النظام';
-      case 'accountant': return 'محاسب';
-      case 'manager': return 'مدير محطة';
-      case 'viewer': return 'مشاهد';
-      default: return 'مستخدم';
-    }
-  }
-
-  getRoleIcon(role: string): string {
-    switch (role) {
-      case 'admin': return 'admin_panel_settings';
-      case 'accountant': return 'calculate';
-      case 'manager': return 'manage_accounts';
-      case 'viewer': return 'visibility';
-      default: return 'person';
-    }
-  }
-
-  // ===================== Add to Sidebar =====================
-  async openSidebarModal(screen: ScreenTemplate) {
-    this.permissionsScreen.set(screen);
-    try {
-      const sections = await this.api.getSidebarSections(this.bizId);
-      this.sidebarSections.set(sections);
-      this.sidebarForm.set({
-        sectionId: sections.length > 0 ? sections[0].id : 0,
-        sortOrder: 99,
-      });
-      this.showSidebarModal.set(true);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الأقسام');
-    }
-  }
-
-  closeSidebarModal() {
-    this.showSidebarModal.set(false);
-  }
-
-  async addToSidebar() {
-    const screen = this.permissionsScreen();
-    if (!screen) return;
-    const form = this.sidebarForm();
-    if (!form.sectionId) {
-      this.toast.warning('اختر قسماً');
-      return;
-    }
-    this.saving.set(true);
-    try {
-      await this.api.addScreenToSidebar(this.bizId, screen.id, form);
-      this.toast.success(`تم إضافة "${screen.name}" للقائمة الجانبية`);
-      this.closeSidebarModal();
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
     } finally {
       this.saving.set(false);
     }
@@ -1062,23 +936,20 @@ export class CustomScreensComponent implements OnInit {
     }
   }
 
-  getWizardStepTitle(): string {
-    switch (this.wizardStep()) {
-      case 1: return 'اختيار القالب والإعدادات الأساسية';
-      case 2: return 'إضافة وإدارة العناصر';
-      case 3: return 'التخصيص (ألوان، مسميات، إخفاء/إظهار)';
-      case 4: return 'ربط المحتوى';
-      default: return '';
-    }
+  getWizardWidgetColor(w: WizardWidget): string {
+    return w.config?.color || this.getWidgetTypeInfo(w.widgetType).color;
   }
 
-  getWizardStepIcon(): string {
-    switch (this.wizardStep()) {
-      case 1: return 'dashboard_customize';
-      case 2: return 'widgets';
-      case 3: return 'palette';
-      case 4: return 'link';
-      default: return 'circle';
+  hasBindableContent(w: WizardWidget): boolean {
+    return ['templates', 'accounts', 'log'].includes(w.widgetType);
+  }
+
+  getBindingLabel(w: WizardWidget): string {
+    switch (w.widgetType) {
+      case 'templates': return `${(w.config?.operationTypeIds || []).length} قالب مرتبط`;
+      case 'accounts': return `${(w.config?.accountIds || []).length} حساب مرتبط`;
+      case 'log': return w.config?.filters ? 'فلاتر محددة' : 'بدون فلاتر';
+      default: return '';
     }
   }
 }

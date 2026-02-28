@@ -200,6 +200,16 @@
   &:hover { background: rgba(255,255,255,0.1); }
 }
 
+.permission-select {
+  padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--border-color); background: var(--bg-surface);
+  color: var(--text-secondary); font-family: 'Tajawal', sans-serif;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  outline: none; direction: rtl;
+  transition: border-color 0.2s;
+  &:focus { border-color: var(--accent-blue); }
+}
+
 /* ===================== Management Panel ===================== */
 .management-panel {
   background: var(--bg-card); border-radius: 16px;
