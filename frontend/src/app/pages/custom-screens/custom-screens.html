@@ -1077,6 +1077,544 @@
     </div>
   }
 
+  <!-- ==================== COLLECTION STYLE VIEW ==================== -->
+  @if (viewMode() === 'collection_style' && activeScreen()) {
+    <div class="cs-page-container" @fadeIn>
+
+      <!-- ===== Page Header ===== -->
+      <div class="cs-page-header">
+        <div class="cs-header-left">
+          <button class="cs-back-btn" (click)="backToList()">
+            <span class="material-icons-round">arrow_forward</span>
+          </button>
+          <div class="cs-page-icon" [style.background]="'linear-gradient(135deg, ' + (activeScreen()!.color || '#14b8a6') + ', ' + (activeScreen()!.color || '#0ea5e9') + '99)'">
+            <span class="material-icons-round">{{ activeScreen()!.icon || 'dashboard' }}</span>
+          </div>
+          <div>
+            <h1 class="cs-page-title">{{ activeScreen()!.name }}</h1>
+            <p class="cs-page-subtitle">{{ activeScreen()!.description || 'شاشة مخصصة' }}</p>
+          </div>
+        </div>
+        <div class="cs-header-right">
+          <button class="cs-help-btn" (click)="openCsConfigWizard()" title="إعداد الشاشة">
+            <span class="material-icons-round">settings</span>
+          </button>
+        </div>
+      </div>
+
+      @if (csConfigLoading()) {
+        <div class="cs-loading-center">
+          <div class="cs-loading-spinner"></div>
+          <p>جاري التحميل...</p>
+        </div>
+      } @else {
+
+        <!-- ===== View Tabs ===== -->
+        <div class="cs-view-tabs">
+          <button class="cs-view-tab" [class.active]="csActiveTab() === 'tab1'"
+                  (click)="csActiveTab.set('tab1'); cancelCsOpType()">
+            <div class="cs-vt-icon cs-collection-icon">
+              <span class="material-icons-round">call_received</span>
+            </div>
+            <span>{{ collectionStyleConfig()?.tab1Label || 'تحصيل' }}</span>
+          </button>
+          <button class="cs-view-tab" [class.active]="csActiveTab() === 'tab2'"
+                  (click)="csActiveTab.set('tab2'); cancelCsOpType()">
+            <div class="cs-vt-icon cs-delivery-icon">
+              <span class="material-icons-round">call_made</span>
+            </div>
+            <span>{{ collectionStyleConfig()?.tab2Label || 'توريد' }}</span>
+          </button>
+          <button class="cs-view-tab" [class.active]="csActiveTab() === 'history'"
+                  (click)="csActiveTab.set('history'); cancelCsOpType()">
+            <div class="cs-vt-icon cs-history-icon">
+              <span class="material-icons-round">history</span>
+            </div>
+            <span>السجل</span>
+          </button>
+          <button class="cs-view-tab" [class.active]="csActiveTab() === 'funds'"
+                  (click)="csActiveTab.set('funds'); cancelCsOpType()">
+            <div class="cs-vt-icon cs-funds-icon">
+              <span class="material-icons-round">savings</span>
+            </div>
+            <span>{{ collectionStyleConfig()?.accountsSectionLabel || 'الصناديق' }}</span>
+          </button>
+        </div>
+
+        <!-- ===== TAB 1 VIEW (Collection) ===== -->
+        @if (csActiveTab() === 'tab1') {
+          <div class="cs-view-section">
+            @if (getCsTab1Templates().length === 0) {
+              <div class="cs-no-op-types-card">
+                <div class="cs-noopt-icon">
+                  <span class="material-icons-round">category</span>
+                </div>
+                <h3>لا توجد أنواع عمليات</h3>
+                <p>اضغط "إعداد الشاشة" لإضافة أنواع العمليات</p>
+              </div>
+            }
+
+            @if (getCsTab1Templates().length > 0 && !csSelectedOpType()) {
+              <div class="cs-select-ot-section">
+                <h2 class="cs-section-title">
+                  <span class="material-icons-round">category</span>
+                  اختر نوع العملية
+                </h2>
+                <div class="cs-ot-cards-grid">
+                  @for (ot of getCsTab1Templates(); track ot.id) {
+                    <button class="cs-ot-card-3d" (click)="selectCsOpType(ot)">
+                      <div class="cs-ot-card-icon cs-collection">
+                        <span class="material-icons-round">{{ ot.icon || 'call_received' }}</span>
+                      </div>
+                      <div class="cs-ot-card-body">
+                        <div class="cs-ot-card-name">{{ ot.name }}</div>
+                        @if (ot.description) {
+                          <div class="cs-ot-card-desc">{{ ot.description }}</div>
+                        }
+                        <div class="cs-ot-card-count">
+                          <span class="material-icons-round">group</span>
+                          {{ (ot.linkedAccounts || ot.accounts || []).length }} حساب
+                        </div>
+                      </div>
+                      <span class="material-icons-round cs-ot-arrow">arrow_back_ios</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (csSelectedOpType()) {
+              <div class="cs-form-section">
+                <div class="cs-cf-header">
+                  <button class="cs-back-btn-sm" (click)="cancelCsOpType()">
+                    <span class="material-icons-round">arrow_forward</span>
+                  </button>
+                  <div class="cs-cf-title-wrap">
+                    <div class="cs-cf-icon cs-collection">
+                      <span class="material-icons-round">{{ csSelectedOpType().icon || 'call_received' }}</span>
+                    </div>
+                    <div>
+                      <h2>{{ csSelectedOpType().name }}</h2>
+                      <p>{{ csSelectedOpType().description || collectionStyleConfig()?.tab1Label || 'تسجيل العملية' }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cs-global-fields">
+                  <div class="cs-form-group">
+                    <label class="cs-form-label">البيان العام (يطبق على الكل)</label>
+                    <input class="cs-form-input" type="text" placeholder="مثال: تحصيل يوم..."
+                           [value]="csFormDescription()"
+                           (input)="csFormDescription.set($any($event.target).value)">
+                  </div>
+                  <div class="cs-form-group">
+                    <label class="cs-form-label">التاريخ</label>
+                    <input class="cs-form-input" type="date" [value]="csFormDate()"
+                           (change)="csFormDate.set($any($event.target).value)">
+                  </div>
+                </div>
+
+                <div class="cs-entries-table-wrap">
+                  <div class="cs-entries-table-header">
+                    <span>الحساب</span>
+                    <span>المبلغ</span>
+                    <span>ملاحظات</span>
+                  </div>
+                  @for (entry of csFormEntries(); track $index; let i = $index) {
+                    <div class="cs-entry-row" [class.has-amount]="+entry.amount > 0">
+                      <div class="cs-entry-account">
+                        <div class="cs-entry-account-icon">
+                          <span class="material-icons-round">account_circle</span>
+                        </div>
+                        <span>{{ entry.accountName }}</span>
+                      </div>
+                      <div class="cs-entry-amount-wrap">
+                        <input class="cs-entry-amount-input" type="number" placeholder="0"
+                               [value]="entry.amount"
+                               (input)="updateCsFormEntry(i, 'amount', $any($event.target).value)">
+                        <span class="cs-entry-currency">ر.ي</span>
+                      </div>
+                      <input class="cs-entry-notes-input" type="text" placeholder="ملاحظة..."
+                             [value]="entry.notes"
+                             (input)="updateCsFormEntry(i, 'notes', $any($event.target).value)">
+                    </div>
+                  }
+                </div>
+
+                <div class="cs-cf-footer">
+                  <div class="cs-total-display">
+                    <span class="cs-total-label">إجمالي:</span>
+                    <span class="cs-total-amount cs-collection-color">{{ formatAmount(getCsFormTotal()) }}</span>
+                    <span class="cs-total-currency">ر.ي</span>
+                  </div>
+                  <button class="cs-btn-3d cs-btn-collection" [disabled]="saving() || getCsFormTotal() === 0"
+                          (click)="saveCsOperation()">
+                    <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+                    {{ saving() ? 'جاري الحفظ...' : 'حفظ العملية' }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ===== TAB 2 VIEW (Delivery) ===== -->
+        @if (csActiveTab() === 'tab2') {
+          <div class="cs-view-section">
+            @if (getCsTab2Templates().length === 0) {
+              <div class="cs-no-op-types-card">
+                <div class="cs-noopt-icon cs-delivery">
+                  <span class="material-icons-round">category</span>
+                </div>
+                <h3>لا توجد أنواع عمليات</h3>
+                <p>اضغط "إعداد الشاشة" لإضافة أنواع العمليات</p>
+              </div>
+            }
+
+            @if (getCsTab2Templates().length > 0 && !csSelectedOpType()) {
+              <div class="cs-select-ot-section">
+                <h2 class="cs-section-title">
+                  <span class="material-icons-round">category</span>
+                  اختر نوع العملية
+                </h2>
+                <div class="cs-ot-cards-grid">
+                  @for (ot of getCsTab2Templates(); track ot.id) {
+                    <button class="cs-ot-card-3d" (click)="selectCsOpType(ot)">
+                      <div class="cs-ot-card-icon cs-delivery">
+                        <span class="material-icons-round">{{ ot.icon || 'call_made' }}</span>
+                      </div>
+                      <div class="cs-ot-card-body">
+                        <div class="cs-ot-card-name">{{ ot.name }}</div>
+                        @if (ot.description) {
+                          <div class="cs-ot-card-desc">{{ ot.description }}</div>
+                        }
+                        <div class="cs-ot-card-count">
+                          <span class="material-icons-round">group</span>
+                          {{ (ot.linkedAccounts || ot.accounts || []).length }} حساب
+                        </div>
+                      </div>
+                      <span class="material-icons-round cs-ot-arrow">arrow_back_ios</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (csSelectedOpType()) {
+              <div class="cs-form-section">
+                <div class="cs-cf-header cs-delivery-header">
+                  <button class="cs-back-btn-sm" (click)="cancelCsOpType()">
+                    <span class="material-icons-round">arrow_forward</span>
+                  </button>
+                  <div class="cs-cf-title-wrap">
+                    <div class="cs-cf-icon cs-delivery">
+                      <span class="material-icons-round">{{ csSelectedOpType().icon || 'call_made' }}</span>
+                    </div>
+                    <div>
+                      <h2>{{ csSelectedOpType().name }}</h2>
+                      <p>{{ csSelectedOpType().description || collectionStyleConfig()?.tab2Label || 'تسجيل العملية' }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cs-global-fields">
+                  <div class="cs-form-group">
+                    <label class="cs-form-label">البيان العام</label>
+                    <input class="cs-form-input" type="text" placeholder="مثال: توريد يوم..."
+                           [value]="csFormDescription()"
+                           (input)="csFormDescription.set($any($event.target).value)">
+                  </div>
+                  <div class="cs-form-group">
+                    <label class="cs-form-label">التاريخ</label>
+                    <input class="cs-form-input" type="date" [value]="csFormDate()"
+                           (change)="csFormDate.set($any($event.target).value)">
+                  </div>
+                </div>
+
+                <div class="cs-entries-table-wrap">
+                  <div class="cs-entries-table-header">
+                    <span>الحساب</span>
+                    <span>المبلغ</span>
+                    <span>ملاحظات</span>
+                  </div>
+                  @for (entry of csFormEntries(); track $index; let i = $index) {
+                    <div class="cs-entry-row cs-delivery-row" [class.has-amount]="+entry.amount > 0">
+                      <div class="cs-entry-account">
+                        <div class="cs-entry-account-icon cs-delivery">
+                          <span class="material-icons-round">account_balance</span>
+                        </div>
+                        <span>{{ entry.accountName }}</span>
+                      </div>
+                      <div class="cs-entry-amount-wrap">
+                        <input class="cs-entry-amount-input" type="number" placeholder="0"
+                               [value]="entry.amount"
+                               (input)="updateCsFormEntry(i, 'amount', $any($event.target).value)">
+                        <span class="cs-entry-currency">ر.ي</span>
+                      </div>
+                      <input class="cs-entry-notes-input" type="text" placeholder="ملاحظة..."
+                             [value]="entry.notes"
+                             (input)="updateCsFormEntry(i, 'notes', $any($event.target).value)">
+                    </div>
+                  }
+                </div>
+
+                <div class="cs-cf-footer">
+                  <div class="cs-total-display">
+                    <span class="cs-total-label">إجمالي:</span>
+                    <span class="cs-total-amount cs-delivery-color">{{ formatAmount(getCsFormTotal()) }}</span>
+                    <span class="cs-total-currency">ر.ي</span>
+                  </div>
+                  <button class="cs-btn-3d cs-btn-delivery" [disabled]="saving() || getCsFormTotal() === 0"
+                          (click)="saveCsOperation()">
+                    <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+                    {{ saving() ? 'جاري الحفظ...' : 'حفظ العملية' }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ===== HISTORY VIEW ===== -->
+        @if (csActiveTab() === 'history') {
+          <div class="cs-view-section">
+            <div class="cs-history-stats">
+              <div class="cs-hs-card cs-collection">
+                <div class="cs-hs-icon"><span class="material-icons-round">call_received</span></div>
+                <div class="cs-hs-body">
+                  <div class="cs-hs-num">{{ getCsHistoryStats().receiptCount }}</div>
+                  <div class="cs-hs-label">عمليات {{ collectionStyleConfig()?.tab1Label || 'تحصيل' }}</div>
+                  <div class="cs-hs-amount">{{ formatAmount(getCsHistoryStats().totalReceipts) }} ر.ي</div>
+                </div>
+              </div>
+              <div class="cs-hs-card cs-delivery">
+                <div class="cs-hs-icon"><span class="material-icons-round">call_made</span></div>
+                <div class="cs-hs-body">
+                  <div class="cs-hs-num">{{ getCsHistoryStats().paymentCount }}</div>
+                  <div class="cs-hs-label">عمليات {{ collectionStyleConfig()?.tab2Label || 'توريد' }}</div>
+                  <div class="cs-hs-amount">{{ formatAmount(getCsHistoryStats().totalPayments) }} ر.ي</div>
+                </div>
+              </div>
+            </div>
+
+            @if (widgetLogEntries().length === 0) {
+              <div class="cs-empty-history">
+                <span class="material-icons-round">history</span>
+                <p>لا توجد عمليات مسجلة بعد</p>
+              </div>
+            } @else {
+              <div class="cs-history-list">
+                @for (entry of widgetLogEntries(); track entry.id) {
+                  <div class="cs-history-row" [class.cs-receipt-row]="entry.voucher_type === 'receipt'"
+                       [class.cs-payment-row]="entry.voucher_type === 'payment'">
+                    <div class="cs-hr-icon" [class.cs-receipt-icon]="entry.voucher_type === 'receipt'"
+                         [class.cs-payment-icon]="entry.voucher_type === 'payment'">
+                      <span class="material-icons-round">
+                        {{ entry.voucher_type === 'receipt' ? 'call_received' : 'call_made' }}
+                      </span>
+                    </div>
+                    <div class="cs-hr-main">
+                      <div class="cs-hr-desc">{{ entry.description || entry.operation_type_name || 'بدون بيان' }}</div>
+                      <div class="cs-hr-date">{{ formatDate(entry.entry_date) }}</div>
+                    </div>
+                    <div class="cs-hr-amount" [class.cs-receipt-amount]="entry.voucher_type === 'receipt'"
+                         [class.cs-payment-amount]="entry.voucher_type === 'payment'">
+                      {{ formatAmount(entry.total_debit) }}
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ===== FUNDS VIEW ===== -->
+        @if (csActiveTab() === 'funds') {
+          <div class="cs-view-section">
+            @if (getCsAccounts().length === 0) {
+              <div class="cs-no-op-types-card">
+                <div class="cs-noopt-icon">
+                  <span class="material-icons-round">savings</span>
+                </div>
+                <h3>لا توجد حسابات</h3>
+                <p>اضغط "إعداد الشاشة" لإضافة حسابات للمراقبة</p>
+              </div>
+            } @else {
+              <div class="cs-funds-summary">
+                @for (acc of getCsAccounts(); track acc.id) {
+                  <div class="cs-fund-summary-card">
+                    <div class="cs-fsc-header">
+                      <div class="cs-fsc-icon">
+                        <span class="material-icons-round">{{ getAccountIcon(acc.account_type) }}</span>
+                      </div>
+                      <div class="cs-fsc-info">
+                        <strong>{{ acc.name }}</strong>
+                        <span class="cs-fsc-type">{{ acc.account_type || 'حساب' }}</span>
+                      </div>
+                    </div>
+                    <div class="cs-fsc-balance" [class.positive]="acc.total_balance >= 0"
+                      [class.negative]="acc.total_balance < 0">
+                      <span class="cs-fsc-balance-label">الرصيد الحالي</span>
+                      <span class="cs-fsc-balance-value">{{ formatAmount(acc.total_balance) }} ر.ي</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+      }
+    </div>
+  }
+
+  <!-- ==================== COLLECTION STYLE CONFIG WIZARD MODAL ==================== -->
+  @if (showCsConfigWizard()) {
+    <div class="modal-overlay" (click)="closeCsConfigWizard()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()" @modalAnim>
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon green">
+              <span class="material-icons-round">settings</span>
+            </div>
+            <div>
+              <h2>إعداد الشاشة المخصصة</h2>
+              <p>الخطوة {{ csWizardStep() }} من 4</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="closeCsConfigWizard()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <!-- Wizard Steps Indicator -->
+        <div class="wizard-steps" style="padding: 0 24px;">
+          @for (step of [1,2,3,4]; track step) {
+            <div class="wizard-step" [class.active]="csWizardStep() === step" [class.completed]="csWizardStep() > step">
+              <div class="step-number">{{ csWizardStep() > step ? '✓' : step }}</div>
+              <span class="step-label">
+                @switch (step) {
+                  @case (1) { التسميات }
+                  @case (2) { قوالب التبويب الأول }
+                  @case (3) { قوالب التبويب الثاني }
+                  @case (4) { حسابات المراقبة }
+                }
+              </span>
+            </div>
+            @if (step < 4) {
+              <div class="step-connector" [class.active]="csWizardStep() > step"></div>
+            }
+          }
+        </div>
+
+        <div class="modal-body">
+          <!-- الخطوة 1: التسميات -->
+          @if (csWizardStep() === 1) {
+            <div @fadeIn>
+              <h3 class="section-title">تسميات الأقسام</h3>
+              <div class="form-group">
+                <label>اسم التبويب الأول</label>
+                <input type="text" [ngModel]="csTab1Label()" (ngModelChange)="csTab1Label.set($event)" placeholder="مثلاً: تحصيل" />
+              </div>
+              <div class="form-group">
+                <label>اسم التبويب الثاني</label>
+                <input type="text" [ngModel]="csTab2Label()" (ngModelChange)="csTab2Label.set($event)" placeholder="مثلاً: توريد" />
+              </div>
+              <div class="form-group">
+                <label>اسم قسم المراقبة</label>
+                <input type="text" [ngModel]="csAccountsSectionLabel()" (ngModelChange)="csAccountsSectionLabel.set($event)" placeholder="مثلاً: الصناديق" />
+              </div>
+            </div>
+          }
+
+          <!-- الخطوة 2: قوالب التبويب الأول -->
+          @if (csWizardStep() === 2) {
+            <div @fadeIn>
+              <h3 class="section-title">اختر قوالب العمليات للتبويب الأول ({{ csTab1Label() }})</h3>
+              <div class="binding-options-grid">
+                @for (op of operationTypes(); track op.id) {
+                  <label class="binding-option" [class.selected]="csTab1OperationTypeIds().includes(op.id)">
+                    <input type="checkbox" [checked]="csTab1OperationTypeIds().includes(op.id)" (change)="toggleCsTab1OpType(op.id)" />
+                    <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                    <span>{{ op.name }}</span>
+                  </label>
+                }
+                @if (operationTypes().length === 0) {
+                  <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- الخطوة 3: قوالب التبويب الثاني -->
+          @if (csWizardStep() === 3) {
+            <div @fadeIn>
+              <h3 class="section-title">اختر قوالب العمليات للتبويب الثاني ({{ csTab2Label() }})</h3>
+              <div class="binding-options-grid">
+                @for (op of operationTypes(); track op.id) {
+                  <label class="binding-option" [class.selected]="csTab2OperationTypeIds().includes(op.id)">
+                    <input type="checkbox" [checked]="csTab2OperationTypeIds().includes(op.id)" (change)="toggleCsTab2OpType(op.id)" />
+                    <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                    <span>{{ op.name }}</span>
+                  </label>
+                }
+                @if (operationTypes().length === 0) {
+                  <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- الخطوة 4: حسابات المراقبة -->
+          @if (csWizardStep() === 4) {
+            <div @fadeIn>
+              <h3 class="section-title">اختر الحسابات/الصناديق لقسم {{ csAccountsSectionLabel() }}</h3>
+              <div class="binding-options-grid">
+                @for (acc of allAccounts(); track acc.id) {
+                  <label class="binding-option" [class.selected]="csAccountIds().includes(acc.id)">
+                    <input type="checkbox" [checked]="csAccountIds().includes(acc.id)" (change)="toggleCsAccount(acc.id)" />
+                    <span class="material-icons-round">account_balance_wallet</span>
+                    <span>{{ acc.name }}</span>
+                  </label>
+                }
+                @if (allAccounts().length === 0) {
+                  <p class="no-data-msg">لا توجد حسابات. أنشئها من صفحة الحسابات.</p>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <div style="display: flex; gap: 8px; width: 100%; justify-content: space-between;">
+            <div>
+              @if (csWizardStep() > 1) {
+                <button class="btn-cancel" (click)="prevCsWizardStep()">
+                  <span class="material-icons-round">arrow_forward</span>
+                  السابق
+                </button>
+              }
+            </div>
+            <div style="display: flex; gap: 8px;">
+              @if (csWizardStep() < 4) {
+                <button class="btn-save" (click)="nextCsWizardStep()">
+                  التالي
+                  <span class="material-icons-round">arrow_back</span>
+                </button>
+              } @else {
+                <button class="btn-save" (click)="saveCsConfig()" [disabled]="saving()">
+                  <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
+                  {{ saving() ? 'جاري الحفظ...' : 'حفظ الإعداد' }}
+                </button>
+              }
+              <button class="btn-cancel" (click)="closeCsConfigWizard()">إلغاء</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- ==================== OPERATION EXECUTION MODAL ==================== -->
   @if (showOperationModal()) {
     <div class="modal-overlay" (click)="closeOperationModal()">

@@ -373,4 +373,12 @@ export class ApiService {
     if (params.length) url += '?' + params.join('&');
     return this.request<any>(url);
   }
+
+  // ===================== إعداد الشاشة المخصصة (collection-style) =====================
+  getCollectionStyleConfig(bizId: number, screenId: number) {
+    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`);
+  }
+  saveCollectionStyleConfig(bizId: number, screenId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`, { method: 'PUT', body: JSON.stringify(d) });
+  }
 }

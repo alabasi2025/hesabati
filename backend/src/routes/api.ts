@@ -14,6 +14,7 @@ import {
   users,
   fundTypes, bankTypes, exchangeTypes, eWalletTypes,
   screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
+  customScreenConfig,
   auditLog,
   exchangeRates, roles, rolePermissions, userRoles,
 } from '../db/schema/index.ts';
@@ -2991,6 +2992,73 @@ api.get('/businesses/:bizId/reports/trial-balance', bizAuthMiddleware(), safeHan
   const totalCredit = rows.reduce((s: number, r: any) => s + Number(r.total_credit), 0);
 
   return c.json({ dateFrom, dateTo, accounts: rows, totals: { totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) < 0.01 } });
+}));
+
+// ===================== إعداد الشاشة المخصصة (collection-style) =====================
+api.get('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthMiddleware(), safeHandler('جلب إعداد الشاشة المخصصة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const screenId = parseId(c.req.param('screenId'));
+  if (!screenId) return c.json({ error: 'معرّف الشاشة غير صالح' }, 400);
+
+  // التحقق من وجود الشاشة وملكيتها
+  const [screen] = await db.select().from(screenTemplates).where(and(eq(screenTemplates.id, screenId), eq(screenTemplates.businessId, bizId)));
+  if (!screen) return c.json({ error: 'الشاشة غير موجودة أو لا تنتمي لهذا العمل' }, 404);
+
+  // جلب الإعداد
+  const [config] = await db.select().from(customScreenConfig).where(eq(customScreenConfig.screenId, screenId));
+
+  if (config) {
+    return c.json(config);
+  }
+
+  // إرجاع قيم افتراضية إذا لم يوجد إعداد
+  return c.json({
+    id: null,
+    screenId,
+    tab1Label: 'تحصيل',
+    tab1OperationTypeIds: [],
+    tab2Label: 'توريد',
+    tab2OperationTypeIds: [],
+    accountsSectionLabel: 'الصناديق',
+    accountIds: [],
+  });
+}));
+
+api.put('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthMiddleware(), safeHandler('حفظ إعداد الشاشة المخصصة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const screenId = parseId(c.req.param('screenId'));
+  if (!screenId) return c.json({ error: 'معرّف الشاشة غير صالح' }, 400);
+
+  // التحقق من وجود الشاشة وملكيتها
+  const [screen] = await db.select().from(screenTemplates).where(and(eq(screenTemplates.id, screenId), eq(screenTemplates.businessId, bizId)));
+  if (!screen) return c.json({ error: 'الشاشة غير موجودة أو لا تنتمي لهذا العمل' }, 404);
+
+  const body = normalizeBody(await c.req.json());
+
+  const configData = {
+    tab1Label: body.tab1Label || body.tab1_label || 'تحصيل',
+    tab1OperationTypeIds: body.tab1OperationTypeIds || body.tab1_operation_type_ids || [],
+    tab2Label: body.tab2Label || body.tab2_label || 'توريد',
+    tab2OperationTypeIds: body.tab2OperationTypeIds || body.tab2_operation_type_ids || [],
+    accountsSectionLabel: body.accountsSectionLabel || body.accounts_section_label || 'الصناديق',
+    accountIds: body.accountIds || body.account_ids || [],
+    updatedAt: new Date(),
+  };
+
+  // التحقق من وجود إعداد سابق
+  const [existing] = await db.select().from(customScreenConfig).where(eq(customScreenConfig.screenId, screenId));
+
+  let result;
+  if (existing) {
+    [result] = await db.update(customScreenConfig).set(configData).where(eq(customScreenConfig.screenId, screenId)).returning();
+  } else {
+    [result] = await db.insert(customScreenConfig).values({ ...configData, screenId }).returning();
+  }
+
+  // تحديث templateKey في screen_templates إلى collection_style
+  await db.update(screenTemplates).set({ templateKey: 'collection_style', updatedAt: new Date() }).where(eq(screenTemplates.id, screenId));
+
+  return c.json(result);
 }));
 
 export default api;

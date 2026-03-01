@@ -895,3 +895,22 @@ export const screenPermissions = pgTable('screen_permissions', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+
+// ===================== CUSTOM SCREEN CONFIG (إعداد الشاشة المخصصة - نمط التحصيل) =====================
+
+export const customScreenConfig = pgTable('custom_screen_config', {
+  id: serial('id').primaryKey(),
+  screenId: integer('screen_id').notNull().references(() => screenTemplates.id).unique(),
+  // التبويب الأول (مثلاً عمليات القبض)
+  tab1Label: varchar('tab1_label', { length: 200 }).notNull().default('تحصيل'),
+  tab1OperationTypeIds: jsonb('tab1_operation_type_ids').$type<number[]>().default([]),
+  // التبويب الثاني (مثلاً عمليات الصرف)
+  tab2Label: varchar('tab2_label', { length: 200 }).notNull().default('توريد'),
+  tab2OperationTypeIds: jsonb('tab2_operation_type_ids').$type<number[]>().default([]),
+  // قسم المراقبة (صناديق/محافظ/بنوك...)
+  accountsSectionLabel: varchar('accounts_section_label', { length: 200 }).notNull().default('الصناديق'),
+  accountIds: jsonb('account_ids').$type<number[]>().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});

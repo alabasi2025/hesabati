@@ -182,7 +182,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   gridItems: GridWidget[] = [];
 
   // ===================== UI State =====================
-  viewMode = signal<'list' | 'detail' | 'wizard'>('list');
+  viewMode = signal<'list' | 'detail' | 'wizard' | 'collection_style'>('list');
   editMode = signal(false);
   showWidgetLibrary = signal(false);
   hasUnsavedChanges = signal(false);
@@ -246,6 +246,27 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   sidebarSections = signal<any[]>([]);
   selectedSidebarSection = signal(0);
   sidebarSortOrder = signal(99);
+
+  // ===================== Collection Style Config =====================
+  collectionStyleConfig = signal<any>(null);
+  csActiveTab = signal<'tab1' | 'tab2' | 'history' | 'funds'>('tab1');
+  csConfigLoading = signal(false);
+  // Collection Style Wizard (4 steps)
+  csWizardStep = signal(1);
+  csTab1Label = signal('تحصيل');
+  csTab2Label = signal('توريد');
+  csAccountsSectionLabel = signal('الصناديق');
+  csTab1OperationTypeIds = signal<number[]>([]);
+  csTab2OperationTypeIds = signal<number[]>([]);
+  csAccountIds = signal<number[]>([]);
+  showCsConfigWizard = signal(false);
+
+  // Collection Style - Operation Form
+  csSelectedOpType = signal<any>(null);
+  csFormEntries = signal<any[]>([]);
+  csFormDescription = signal('');
+  csFormDate = signal(new Date().toISOString().split('T')[0]);
+  csVouchers = signal<any[]>([]);
 
   // ===================== Operation Execution Modal =====================
   showOperationModal = signal(false);
@@ -326,6 +347,14 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 8, positionY: 0, width: 4, height: 2, sortOrder: 1, isVisible: true },
         { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 0, positionY: 5, width: 12, height: 5, sortOrder: 2, isVisible: true },
       ],
+    },
+    {
+      key: 'collection_style',
+      name: 'مثل التحصيل والتوريد',
+      desc: 'شاشة ثابتة بتبويبين للعمليات + سجل + مراقبة حسابات - قابلة للتخصيص',
+      icon: 'receipt_long',
+      color: '#14b8a6',
+      widgets: [], // لا تحتاج widgets - تعتمد على collection-style-config
     },
     {
       key: 'blank',
@@ -882,7 +911,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         this.wizardScreenIcon.set(tpl.icon);
         this.wizardScreenColor.set(tpl.color);
         if (!this.wizardScreenName()) {
-          this.wizardScreenName.set(tpl.name.replace('قالب ', 'شاشة '));
+          this.wizardScreenName.set(key === 'collection_style' ? 'شاشة مخصصة' : tpl.name.replace('قالب ', 'شاشة '));
         }
       }
     }
@@ -890,6 +919,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   nextWizardStep() {
     const step = this.wizardStep();
+    // إذا كان collection_style → تخطي الخطوات 2-4 وحفظ مباشرة
+    if (step === 1 && this.wizardSelectedTemplate() === 'collection_style') {
+      this.saveWizardScreen();
+      return;
+    }
     if (step === 1) {
       this.wizardStep.set(2);
     } else if (step === 2) {
@@ -1018,19 +1052,29 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.saving.set(true);
     try {
+      const isCollectionStyle = this.wizardSelectedTemplate() === 'collection_style';
       const payload = {
         name,
         description: this.wizardScreenDesc(),
         icon: this.wizardScreenIcon(),
         color: this.wizardScreenColor(),
         templateKey: this.wizardSelectedTemplate(),
-        widgets: this.wizardWidgets(),
+        widgets: isCollectionStyle ? [] : this.wizardWidgets(),
         addToSidebar: true,
       };
-      await this.api.createScreen(this.bizId, payload);
+      const newScreen = await this.api.createScreen(this.bizId, payload);
       this.toast.success('تم إنشاء الشاشة بنجاح');
-      this.viewMode.set('list');
       await this.loadScreens();
+
+      // إذا كان collection_style → فتح الشاشة مباشرة لإعدادها
+      if (isCollectionStyle && newScreen?.id) {
+        const screen = this.screens().find(s => s.id === newScreen.id) || { ...newScreen };
+        await this.openScreen(screen);
+        // فتح معالج الإعداد تلقائياً
+        setTimeout(() => this.openCsConfigWizard(), 500);
+      } else {
+        this.viewMode.set('list');
+      }
     } catch (e: any) {
       this.toast.error(e.message || 'حدث خطأ أثناء الإنشاء');
     } finally {
@@ -1120,10 +1164,23 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   // ===================== Screen Detail View =====================
   async openScreen(screen: ScreenTemplate) {
     this.activeScreen.set(screen);
-    this.viewMode.set('detail');
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.updateGridsterEditMode(false);
+
+    // إذا كانت الشاشة من نوع collection_style → فتح واجهة collection-style
+    if (screen.templateKey === 'collection_style') {
+      this.viewMode.set('collection_style');
+      try {
+        await this.loadCollectionStyleScreen(screen);
+      } catch (err) {
+        console.error('loadCollectionStyleScreen error:', err);
+      }
+      this.animateViewTransition();
+      return;
+    }
+
+    this.viewMode.set('detail');
     // Load operation types for log filter dropdown
     try {
       const opTypes = await this.api.getOperationTypes(this.bizId);
@@ -1133,6 +1190,258 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.animateViewTransition();
   }
 
+  // ===================== Collection Style Screen =====================
+  async loadCollectionStyleScreen(screen: ScreenTemplate) {
+    this.csConfigLoading.set(true);
+    this.csSelectedOpType.set(null);
+    this.csFormEntries.set([]);
+    try {
+      const [config, opTypes, accountsData] = await Promise.all([
+        this.api.getCollectionStyleConfig(this.bizId, screen.id),
+        this.api.getOperationTypes(this.bizId),
+        this.api.getAllAccounts(this.bizId),
+      ]);
+      this.collectionStyleConfig.set(config);
+      this.operationTypes.set(opTypes);
+      this.allAccounts.set(accountsData.accounts || []);
+      this.csActiveTab.set('tab1');
+      // تحميل السجل
+      await this.loadWidgetLog();
+      // تحميل الفاوتشرات
+      try {
+        const vouchers = await this.api.getVouchers(this.bizId);
+        this.csVouchers.set(vouchers || []);
+      } catch (e) { this.csVouchers.set([]); }
+      // تحميل أرصدة الحسابات
+      if (config.accountIds && config.accountIds.length > 0) {
+        const accounts = await this.api.getWidgetAccounts(this.bizId, config.accountIds);
+        this.widgetAccounts.set(accounts);
+      } else {
+        this.widgetAccounts.set([]);
+      }
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تحميل إعداد الشاشة');
+    } finally {
+      this.csConfigLoading.set(false);
+    }
+  }
+
+  getCsTab1Templates(): any[] {
+    const config = this.collectionStyleConfig();
+    if (!config || !config.tab1OperationTypeIds?.length) return [];
+    return this.operationTypes().filter((ot: any) => config.tab1OperationTypeIds.includes(ot.id));
+  }
+
+  getCsTab2Templates(): any[] {
+    const config = this.collectionStyleConfig();
+    if (!config || !config.tab2OperationTypeIds?.length) return [];
+    return this.operationTypes().filter((ot: any) => config.tab2OperationTypeIds.includes(ot.id));
+  }
+
+  getCsAccounts(): AccountData[] {
+    const config = this.collectionStyleConfig();
+    if (!config || !config.accountIds?.length) return [];
+    return this.widgetAccounts().filter((a: any) => config.accountIds.includes(a.id));
+  }
+
+  // ===================== Collection Style - Operation Form =====================
+  selectCsOpType(ot: any) {
+    this.csSelectedOpType.set(ot);
+    const accounts = ot.linkedAccounts || ot.accounts || [];
+    const entries = accounts.filter((la: any) => la.isActive !== false).map((la: any) => ({
+      accountId: la.accountId || la.id,
+      accountName: la.label || la.accountName || '',
+      amount: '',
+      notes: '',
+    }));
+    if (entries.length === 0) {
+      entries.push({ accountId: null, accountName: '', amount: '', notes: '' });
+    }
+    this.csFormEntries.set(entries);
+    this.csFormDescription.set('');
+    this.csFormDate.set(new Date().toISOString().split('T')[0]);
+  }
+
+  cancelCsOpType() {
+    this.csSelectedOpType.set(null);
+    this.csFormEntries.set([]);
+  }
+
+  updateCsFormEntry(index: number, field: string, value: string) {
+    this.csFormEntries.update(entries => {
+      const updated = [...entries];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }
+
+  getCsFormTotal(): number {
+    return this.csFormEntries().reduce((sum, e) => {
+      const amt = parseFloat(e.amount);
+      return sum + (isNaN(amt) ? 0 : amt);
+    }, 0);
+  }
+
+  getCsFilledEntriesCount(): number {
+    return this.csFormEntries().filter(e => parseFloat(e.amount) > 0).length;
+  }
+
+  async saveCsOperation() {
+    const opType = this.csSelectedOpType();
+    if (!opType) return;
+
+    const entries = this.csFormEntries().filter(e => parseFloat(e.amount) > 0);
+    if (!entries.length) {
+      this.toast.warning('أدخل مبلغاً واحداً على الأقل');
+      return;
+    }
+
+    const total = this.getCsFormTotal();
+    const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'توريد' : 'عملية';
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const confirmed = await this.toast.confirm({
+      title: `تأكيد ${vTypeLabel} - ${opType.name}`,
+      message: `سيتم تنفيذ ${entries.length} عملية بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      type: opType.voucherType === 'payment' ? 'danger' : 'info',
+    });
+    if (!confirmed) return;
+
+    this.saving.set(true);
+    const results: any[] = [];
+    const errors: string[] = [];
+
+    try {
+      for (const entry of entries) {
+        try {
+          const result = await this.api.createVoucher(this.bizId, {
+            voucherType: opType.voucherType || 'receipt',
+            operationTypeId: opType.id,
+            toAccountId: entry.accountId,
+            amount: parseFloat(entry.amount),
+            currencyId: 1,
+            description: this.csFormDescription() || `${opType.name} - ${entry.accountName}`,
+            voucherDate: this.csFormDate(),
+          });
+          results.push(result);
+        } catch (e: any) {
+          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+        }
+      }
+
+      if (results.length > 0 && errors.length === 0) {
+        this.toast.success(`تم تنفيذ ${results.length} عملية بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
+      } else if (results.length > 0 && errors.length > 0) {
+        this.toast.warning(`تم ${results.length} عملية، فشلت ${errors.length}`);
+      } else {
+        this.toast.error(`فشلت جميع العمليات`);
+      }
+
+      this.csSelectedOpType.set(null);
+      this.csFormEntries.set([]);
+      // إعادة تحميل البيانات
+      const screen = this.activeScreen();
+      if (screen) await this.loadCollectionStyleScreen(screen);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تنفيذ العملية');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  getCsHistoryStats() {
+    const all = this.csVouchers();
+    const receipts = all.filter((v: any) => v.voucherType === 'receipt');
+    const payments = all.filter((v: any) => v.voucherType === 'payment');
+    return {
+      totalReceipts: receipts.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
+      totalPayments: payments.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
+      receiptCount: receipts.length,
+      paymentCount: payments.length,
+    };
+  }
+
+  getCsFundBalance(acc: AccountData): number {
+    return acc.total_balance || 0;
+  }
+
+  // فتح معالج إعداد collection-style
+  async openCsConfigWizard() {
+    const screen = this.activeScreen();
+    if (!screen) return;
+    const config = this.collectionStyleConfig();
+    this.csTab1Label.set(config?.tab1Label || 'تحصيل');
+    this.csTab2Label.set(config?.tab2Label || 'توريد');
+    this.csAccountsSectionLabel.set(config?.accountsSectionLabel || 'الصناديق');
+    this.csTab1OperationTypeIds.set(config?.tab1OperationTypeIds || []);
+    this.csTab2OperationTypeIds.set(config?.tab2OperationTypeIds || []);
+    this.csAccountIds.set(config?.accountIds || []);
+    this.csWizardStep.set(1);
+    // تحميل البيانات
+    await this.loadContentBindingData();
+    this.showCsConfigWizard.set(true);
+    this.animateModalOpen('.modal-card');
+  }
+
+  closeCsConfigWizard() {
+    this.showCsConfigWizard.set(false);
+  }
+
+  nextCsWizardStep() {
+    const step = this.csWizardStep();
+    if (step < 4) this.csWizardStep.set(step + 1);
+  }
+
+  prevCsWizardStep() {
+    const step = this.csWizardStep();
+    if (step > 1) this.csWizardStep.set(step - 1);
+  }
+
+  toggleCsTab1OpType(id: number) {
+    const ids = [...this.csTab1OperationTypeIds()];
+    const idx = ids.indexOf(id);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
+    this.csTab1OperationTypeIds.set(ids);
+  }
+
+  toggleCsTab2OpType(id: number) {
+    const ids = [...this.csTab2OperationTypeIds()];
+    const idx = ids.indexOf(id);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
+    this.csTab2OperationTypeIds.set(ids);
+  }
+
+  toggleCsAccount(id: number) {
+    const ids = [...this.csAccountIds()];
+    const idx = ids.indexOf(id);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
+    this.csAccountIds.set(ids);
+  }
+
+  async saveCsConfig() {
+    const screen = this.activeScreen();
+    if (!screen) return;
+    this.saving.set(true);
+    try {
+      const payload = {
+        tab1Label: this.csTab1Label(),
+        tab1OperationTypeIds: this.csTab1OperationTypeIds(),
+        tab2Label: this.csTab2Label(),
+        tab2OperationTypeIds: this.csTab2OperationTypeIds(),
+        accountsSectionLabel: this.csAccountsSectionLabel(),
+        accountIds: this.csAccountIds(),
+      };
+      await this.api.saveCollectionStyleConfig(this.bizId, screen.id, payload);
+      this.toast.success('تم حفظ الإعداد بنجاح');
+      this.closeCsConfigWizard();
+      // إعادة تحميل الشاشة
+      await this.loadCollectionStyleScreen(screen);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في حفظ الإعداد');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
   backToList() {
     this.viewMode.set('list');
     this.activeScreen.set(null);
@@ -1140,6 +1449,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.gridItems = [];
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
+    this.collectionStyleConfig.set(null);
     this.animateViewTransition();
   }
 
