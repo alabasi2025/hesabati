@@ -1652,10 +1652,46 @@
 }
 
 .entry-account {
-  display: flex; align-items: center; gap: 8px;
-  min-width: 160px;
+  display: flex; align-items: flex-start; gap: 8px;
+  min-width: 180px;
   font-size: 13px; font-weight: 700; color: var(--text-primary);
-  .material-icons-round { font-size: 18px; color: var(--accent-blue); }
+  .material-icons-round { font-size: 18px; color: var(--accent-blue); margin-top: 2px; }
+}
+
+.entry-account-info {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.entry-account-name {
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+}
+
+.entry-account-balance {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  &.positive { color: #22c55e; }
+  &.negative { color: #ef4444; }
+}
+
+.operation-summary {
+  margin-top: 16px; padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.03));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+}
+
+.summary-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.summary-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--accent-blue);
+  .material-icons-round { font-size: 20px; }
+}
+
+.summary-amount {
+  font-size: 20px; font-weight: 800; color: var(--accent-blue);
+  font-family: 'Tajawal', sans-serif;
 }
 
 .entry-amount {

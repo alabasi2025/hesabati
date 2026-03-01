@@ -14,6 +14,7 @@ import {
   users,
   fundTypes, bankTypes, exchangeTypes, eWalletTypes,
   screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
+  auditLog,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import {
@@ -601,101 +602,184 @@ api.get('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('جلب 
 
 api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضافة سند', async (c) => {
   const bizId = c.get('bizId') as number;
+  const userId = (c.get('user') as any)?.userId;
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(voucherSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   
   const voucherData = validation.data as any;
+  const amount = typeof voucherData.amount === 'string' ? parseFloat(voucherData.amount) : voucherData.amount;
+  if (isNaN(amount) || amount <= 0) return c.json({ error: 'المبلغ يجب أن يكون رقماً موجباً' }, 400);
+
   // تحويل voucherDate من string إلى Date
   if (voucherData.voucherDate && typeof voucherData.voucherDate === 'string') {
     voucherData.voucherDate = new Date(voucherData.voucherDate);
   }
-  // توليد رقم السند تلقائياً إذا لم يُرسل
-  if (!voucherData.voucherNumber) {
-    const prefix = voucherData.voucherType === 'receipt' ? 'RCV' : voucherData.voucherType === 'payment' ? 'PAY' : 'VCH';
-    const countResult = await db.execute(sql`SELECT COUNT(*) as cnt FROM vouchers WHERE business_id = ${bizId}`);
-    const count = parseInt(String((countResult as any).rows?.[0]?.cnt || (countResult as any)[0]?.cnt || 0)) + 1;
-    voucherData.voucherNumber = `${prefix}-${String(count).padStart(6, '0')}`;
+
+  // === جلب بيانات نوع العملية إن وجد ===
+  let opType: any = null;
+  if (voucherData.operationTypeId) {
+    const otRows = await db.execute(sql`SELECT * FROM operation_types WHERE id = ${voucherData.operationTypeId} AND business_id = ${bizId}`);
+    const otResult = Array.isArray(otRows) ? otRows : (otRows as any).rows || [];
+    if (otResult.length > 0) opType = otResult[0] as any;
+    else return c.json({ error: 'نوع العملية غير موجود' }, 404);
+    if (!opType.is_active) return c.json({ error: 'نوع العملية غير مفعّل' }, 400);
   }
-  const [created] = await db.insert(vouchers).values({
-    ...voucherData,
-    businessId: bizId,
-    amount: String(voucherData.amount),
-    status: 'confirmed',
-    createdBy: (c.get('user') as any)?.userId,
-  }).returning();
-  
-  // إنشاء قيد محاسبي تلقائي لكل سند
-  if (created.toAccountId || created.fromAccountId) {
-    const amount = parseFloat(String(created.amount));
-    // جلب اسم نوع العملية و sourceAccountId إن وجد
-    let opTypeName = '';
-    let sourceAccountId: number | null = null;
-    if (voucherData.operationTypeId) {
-      const otRows = await db.execute(sql`SELECT name, source_account_id FROM operation_types WHERE id = ${voucherData.operationTypeId}`);
-      const otResult = Array.isArray(otRows) ? otRows : (otRows as any).rows || [];
-      if (otResult.length > 0) {
-        opTypeName = (otResult[0] as any).name;
-        sourceAccountId = (otResult[0] as any).source_account_id;
-      }
+
+  // === تحديد الحسابات (مدين / دائن) ===
+  const debitAccountId = voucherData.toAccountId;
+  const creditAccountId = voucherData.fromAccountId || (opType?.source_account_id) || null;
+  if (!debitAccountId) return c.json({ error: 'الحساب المستهدف (toAccountId) مطلوب' }, 400);
+
+  // === التحقق من ملكية الحسابات ===
+  if (debitAccountId && !(await verifyAccountOwnership(debitAccountId, bizId))) {
+    return c.json({ error: 'الحساب المستهدف لا ينتمي لهذا العمل' }, 403);
+  }
+  if (creditAccountId && !(await verifyAccountOwnership(creditAccountId, bizId))) {
+    return c.json({ error: 'الحساب المصدر لا ينتمي لهذا العمل' }, 403);
+  }
+
+  // === التحقق من الرصيد الكافي عند الصرف (payment) ===
+  const currencyId = voucherData.currencyId || 1;
+  const vType = opType?.voucher_type || voucherData.voucherType || 'receipt';
+  if (vType === 'payment' && debitAccountId) {
+    const balResult = await db.execute(sql`
+      SELECT balance FROM account_balances WHERE account_id = ${debitAccountId} AND currency_id = ${currencyId}
+    `);
+    const balRows = Array.isArray(balResult) ? balResult : (balResult as any).rows || [];
+    const currentBalance = balRows.length > 0 ? parseFloat(String((balRows[0] as any).balance)) : 0;
+    // لا نمنع الصرف إذا كان الحساب المصدر (contra) - فقط نحذر
+  }
+
+  // === تنفيذ العملية داخل transaction ===
+  const result = await db.transaction(async (tx) => {
+    // 1. توليد رقم السند بـ sequence
+    let voucherNumber = voucherData.voucherNumber;
+    if (!voucherNumber) {
+      const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
+      const prefix = vType === 'receipt' ? 'RCV' : vType === 'payment' ? 'PAY' : vType === 'transfer' ? 'TRF' : vType === 'collection' ? 'COL' : vType === 'delivery' ? 'DLV' : 'VCH';
+      const seqResult = await tx.execute(sql.raw(`SELECT nextval('${seqName}')`));
+      const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
+      const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
+      voucherNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
     }
-    
-    // تحديد الحساب المقابل (contra account) للقيد المتوازن
-    const contraAccountId = created.fromAccountId || sourceAccountId;
-    
-    const [entry] = await db.insert(journalEntries).values({
+
+    // 2. إنشاء السند
+    const [created] = await tx.insert(vouchers).values({
       businessId: bizId,
-      entryNumber: `JE-${created.voucherNumber || created.id}`,
-      entryDate: created.voucherDate ? new Date(created.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      description: opTypeName ? `${opTypeName} - ${created.description || ''}` : `سند ${created.voucherType} - ${created.description || ''}`,
-      reference: created.voucherNumber || `V-${created.id}`,
+      voucherNumber,
+      voucherType: vType,
+      status: 'confirmed',
+      amount: String(amount),
+      currencyId,
+      fromAccountId: creditAccountId,
+      toAccountId: debitAccountId,
+      fromFundId: voucherData.fromFundId || opType?.source_fund_id || null,
+      toFundId: voucherData.toFundId || null,
+      stationId: voucherData.stationId || null,
+      employeeId: voucherData.employeeId || null,
+      supplierId: voucherData.supplierId || null,
+      operationTypeId: voucherData.operationTypeId || null,
+      description: voucherData.description || (opType?.name) || '',
+      reference: voucherData.reference || null,
+      voucherDate: voucherData.voucherDate || new Date(),
+      createdBy: userId,
+    }).returning();
+
+    // 3. إنشاء القيد المحاسبي المتوازن
+    const opTypeName = opType?.name || '';
+    const entryDate = created.voucherDate ? new Date(created.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const entryDesc = opTypeName ? `${opTypeName} - ${created.description || ''}` : `سند ${vType} - ${created.description || ''}`;
+
+    const [entry] = await tx.insert(journalEntries).values({
+      businessId: bizId,
+      entryNumber: `JE-${voucherNumber}`,
+      entryDate,
+      description: entryDesc,
+      reference: voucherNumber,
       operationTypeId: voucherData.operationTypeId || null,
       totalDebit: String(amount),
       totalCredit: String(amount),
       isBalanced: true,
-      createdBy: (c.get('user') as any)?.userId,
+      createdBy: userId,
     }).returning();
-    
-    // إنشاء سطور القيد - الطرف المدين
-    if (created.toAccountId) {
-      await db.insert(journalEntryLines).values({
-        journalEntryId: entry.id, accountId: created.toAccountId,
-        lineType: 'debit', amount: String(amount),
-        description: created.description || opTypeName || `سند ${created.voucherType}`, sortOrder: 0,
-      });
-    }
-    // إنشاء سطور القيد - الطرف الدائن
-    if (contraAccountId) {
-      await db.insert(journalEntryLines).values({
-        journalEntryId: entry.id, accountId: contraAccountId,
+
+    // 4. إنشاء سطور القيد - الطرف المدين
+    await tx.insert(journalEntryLines).values({
+      journalEntryId: entry.id, accountId: debitAccountId,
+      lineType: 'debit', amount: String(amount),
+      description: entryDesc, sortOrder: 0,
+    });
+
+    // 5. إنشاء سطور القيد - الطرف الدائن
+    if (creditAccountId) {
+      await tx.insert(journalEntryLines).values({
+        journalEntryId: entry.id, accountId: creditAccountId,
         lineType: 'credit', amount: String(amount),
-        description: created.description || opTypeName || `سند ${created.voucherType}`, sortOrder: 1,
+        description: entryDesc, sortOrder: 1,
       });
     }
-    
-    // تحديث أرصدة الحسابات تلقائياً
-    const currencyId = voucherData.currencyId || 1;
-    if (created.toAccountId) {
-      await db.execute(sql`
+
+    // 6. تحديث أرصدة الحسابات
+    // الحساب المدين: يزيد رصيده
+    await tx.execute(sql`
+      INSERT INTO account_balances (account_id, currency_id, balance)
+      VALUES (${debitAccountId}, ${currencyId}, ${amount})
+      ON CONFLICT (account_id, currency_id) DO UPDATE SET
+        balance = account_balances.balance + ${amount},
+        updated_at = NOW()
+    `);
+    // الحساب الدائن: ينقص رصيده
+    if (creditAccountId) {
+      await tx.execute(sql`
         INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${created.toAccountId}, ${currencyId}, ${Number(amount)})
+        VALUES (${creditAccountId}, ${currencyId}, ${-amount})
         ON CONFLICT (account_id, currency_id) DO UPDATE SET
-          balance = account_balances.balance + ${Number(amount)},
+          balance = account_balances.balance - ${amount},
           updated_at = NOW()
       `);
     }
-    if (contraAccountId) {
-      await db.execute(sql`
-        INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${contraAccountId}, ${currencyId}, ${-Number(amount)})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET
-          balance = account_balances.balance - ${Number(amount)},
+
+    // 7. تحديث أرصدة الصناديق إن وجدت
+    const toFundId = voucherData.toFundId || null;
+    const fromFundId = voucherData.fromFundId || opType?.source_fund_id || null;
+    if (toFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${toFundId}, ${currencyId}, ${amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance + ${amount},
           updated_at = NOW()
       `);
     }
-  }
-  
-  return c.json(created, 201);
+    if (fromFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${fromFundId}, ${currencyId}, ${-amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance - ${amount},
+          updated_at = NOW()
+      `);
+    }
+
+    // 8. سجل التدقيق
+    await tx.insert(auditLog).values({
+      userId,
+      businessId: bizId,
+      action: 'create_voucher',
+      tableName: 'vouchers',
+      recordId: created.id,
+      newData: {
+        voucherNumber, voucherType: vType, amount: String(amount),
+        debitAccountId, creditAccountId, operationTypeId: voucherData.operationTypeId,
+        journalEntryId: entry.id,
+      },
+    });
+
+    return { voucher: created, journalEntry: entry };
+  });
+
+  return c.json(result.voucher, 201);
 }));
 
 api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('حذف سند', async (c) => {

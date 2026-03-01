@@ -772,6 +772,25 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
+  // حساب إجمالي المبالغ المدخلة
+  getOperationTotal(): number {
+    return this.operationEntries().reduce((sum, e) => {
+      const amt = parseFloat(e.amount);
+      return sum + (isNaN(amt) ? 0 : amt);
+    }, 0);
+  }
+
+  // عدد الحسابات التي أدخل فيها مبلغ
+  getFilledEntriesCount(): number {
+    return this.operationEntries().filter(e => parseFloat(e.amount) > 0).length;
+  }
+
+  // جلب رصيد حساب معين من widgetAccounts
+  getAccountBalance(accountId: number): number {
+    const acc = this.widgetAccounts().find(a => a.id === accountId);
+    return acc?.total_balance || 0;
+  }
+
   async executeOperation() {
     const opType = this.selectedOperationType();
     if (!opType) return;
@@ -782,22 +801,50 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       return;
     }
 
+    const total = this.getOperationTotal();
+    const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'صرف' : 'تحويل';
+
+    // === تأكيد قبل التنفيذ ===
+    const summaryLines = entries.map(e => `• ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const confirmed = await this.toast.confirm({
+      title: `تأكيد ${vTypeLabel} - ${opType.name}`,
+      message: `سيتم تنفيذ ${entries.length} عملية بإجمالي ${total.toLocaleString('ar-SA')} ريال:\n${summaryLines}`,
+      type: opType.voucherType === 'payment' ? 'danger' : 'info',
+    });
+    if (!confirmed) return;
+
     this.saving.set(true);
+    const results: any[] = [];
+    const errors: string[] = [];
+
     try {
       for (const entry of entries) {
-        await this.api.createVoucher(this.bizId, {
-          voucherType: opType.voucherType || 'receipt',
-          operationTypeId: opType.id,
-          toAccountId: entry.accountId,
-          amount: parseFloat(entry.amount),
-          currencyId: 1,
-          description: this.operationDescription() || `${opType.name} - ${entry.accountName}`,
-          voucherDate: this.operationDate(),
-        });
+        try {
+          const result = await this.api.createVoucher(this.bizId, {
+            voucherType: opType.voucherType || 'receipt',
+            operationTypeId: opType.id,
+            toAccountId: entry.accountId,
+            amount: parseFloat(entry.amount),
+            currencyId: 1,
+            description: this.operationDescription() || `${opType.name} - ${entry.accountName}`,
+            voucherDate: this.operationDate(),
+          });
+          results.push(result);
+        } catch (e: any) {
+          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+        }
       }
-      this.toast.success(`تم تنفيذ ${entries.length} عملية بنجاح`);
+
+      if (results.length > 0 && errors.length === 0) {
+        this.toast.success(`تم تنفيذ ${results.length} عملية بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
+      } else if (results.length > 0 && errors.length > 0) {
+        this.toast.warning(`تم تنفيذ ${results.length} عملية بنجاح، وفشلت ${errors.length} عملية`);
+      } else {
+        this.toast.error(`فشلت جميع العمليات: ${errors.join('، ')}`);
+      }
+
       this.closeOperationModal();
-      // Refresh widget data
+      // Refresh widget data (أرصدة + سجل + إحصائيات)
       await this.loadAllWidgetData(this.widgets());
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تنفيذ العملية');

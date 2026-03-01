@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-collections',
@@ -15,6 +16,7 @@ import { BusinessService } from '../../services/business.service';
 export class CollectionsComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
+  private toast = inject(ToastService);
   biz = inject(BusinessService);
 
   bizId = 0;
@@ -135,22 +137,46 @@ export class CollectionsComponent implements OnInit {
   async saveCollection() {
     const entries = this.collectionEntries().filter(e => parseFloat(e.amount) > 0);
     if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
+
+    const total = entries.reduce((s, e) => s + parseFloat(e.amount), 0);
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const confirmed = await this.toast.confirm({
+      title: `تأكيد التحصيل - ${this.selectedCollectionOT()?.name || ''}`,
+      message: `سيتم تنفيذ ${entries.length} عملية تحصيل بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      type: 'info',
+    });
+    if (!confirmed) return;
+
     this.saving.set(true);
     this.error.set('');
+    const results: any[] = [];
+    const errors: string[] = [];
     try {
       for (const entry of entries) {
-        await this.api.createVoucher(this.bizId, {
-          voucherType: 'receipt',
-          operationTypeId: this.selectedCollectionOT()?.id,
-          toAccountId: entry.accountId,
-          amount: parseFloat(entry.amount),
-          currencyId: 1,
-          description: this.collectionDescription() || `تحصيل - ${entry.accountName}`,
-          voucherDate: this.collectionDate(),
-        });
+        try {
+          const result = await this.api.createVoucher(this.bizId, {
+            voucherType: 'receipt',
+            operationTypeId: this.selectedCollectionOT()?.id,
+            toAccountId: entry.accountId,
+            amount: parseFloat(entry.amount),
+            currencyId: 1,
+            description: this.collectionDescription() || `تحصيل - ${entry.accountName}`,
+            voucherDate: this.collectionDate(),
+          });
+          results.push(result);
+        } catch (e: any) {
+          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+        }
       }
-      this.success.set(`✅ تم حفظ ${entries.length} قيد تحصيل بنجاح`);
-      setTimeout(() => this.success.set(''), 4000);
+      if (results.length > 0 && errors.length === 0) {
+        this.success.set(`تم حفظ ${results.length} قيد تحصيل بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
+        setTimeout(() => this.success.set(''), 4000);
+      } else if (results.length > 0) {
+        this.success.set(`تم ${results.length} عملية، فشلت ${errors.length}`);
+        setTimeout(() => this.success.set(''), 4000);
+      } else {
+        this.showError(`فشلت جميع العمليات`);
+      }
       this.selectedCollectionOT.set(null);
       this.collectionEntries.set([]);
       this.collectionDescription.set('');
@@ -187,23 +213,47 @@ export class CollectionsComponent implements OnInit {
   async saveDelivery() {
     const entries = this.deliveryEntries().filter(e => parseFloat(e.amount) > 0);
     if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
+
+    const total = entries.reduce((s, e) => s + parseFloat(e.amount), 0);
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const confirmed = await this.toast.confirm({
+      title: `تأكيد التوريد - ${this.selectedDeliveryOT()?.name || ''}`,
+      message: `سيتم تنفيذ ${entries.length} عملية توريد بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      type: 'danger',
+    });
+    if (!confirmed) return;
+
     this.saving.set(true);
     this.error.set('');
+    const results: any[] = [];
+    const errors: string[] = [];
     try {
       for (const entry of entries) {
-        await this.api.createVoucher(this.bizId, {
-          voucherType: 'payment',
-          operationTypeId: this.selectedDeliveryOT()?.id,
-          toAccountId: entry.accountId,
-          amount: parseFloat(entry.amount),
-          currencyId: 1,
-          description: this.deliveryDescription() || `توريد - ${entry.accountName}`,
-          voucherDate: this.deliveryDate(),
-          reference: entry.reference,
-        });
+        try {
+          const result = await this.api.createVoucher(this.bizId, {
+            voucherType: 'payment',
+            operationTypeId: this.selectedDeliveryOT()?.id,
+            toAccountId: entry.accountId,
+            amount: parseFloat(entry.amount),
+            currencyId: 1,
+            description: this.deliveryDescription() || `توريد - ${entry.accountName}`,
+            voucherDate: this.deliveryDate(),
+            reference: entry.reference,
+          });
+          results.push(result);
+        } catch (e: any) {
+          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+        }
       }
-      this.success.set(`✅ تم حفظ ${entries.length} قيد توريد بنجاح`);
-      setTimeout(() => this.success.set(''), 4000);
+      if (results.length > 0 && errors.length === 0) {
+        this.success.set(`تم حفظ ${results.length} قيد توريد بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
+        setTimeout(() => this.success.set(''), 4000);
+      } else if (results.length > 0) {
+        this.success.set(`تم ${results.length} عملية، فشلت ${errors.length}`);
+        setTimeout(() => this.success.set(''), 4000);
+      } else {
+        this.showError(`فشلت جميع العمليات`);
+      }
       this.selectedDeliveryOT.set(null);
       this.deliveryEntries.set([]);
       this.deliveryDescription.set('');

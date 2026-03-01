@@ -1113,7 +1113,14 @@
               <div class="operation-entry-row">
                 <div class="entry-account">
                   <span class="material-icons-round">account_balance_wallet</span>
-                  <span>{{ entry.accountName || 'حساب ' + (i + 1) }}</span>
+                  <div class="entry-account-info">
+                    <span class="entry-account-name">{{ entry.accountName || 'حساب ' + (i + 1) }}</span>
+                    @if (entry.accountId) {
+                      <span class="entry-account-balance" [class.positive]="getAccountBalance(entry.accountId) > 0" [class.negative]="getAccountBalance(entry.accountId) < 0">
+                        الرصيد: {{ formatAmount(getAccountBalance(entry.accountId)) }}
+                      </span>
+                    }
+                  </div>
                 </div>
                 <div class="entry-amount">
                   <input type="number" [ngModel]="entry.amount" (ngModelChange)="updateOperationEntry(i, 'amount', $event)" placeholder="المبلغ" min="0" step="0.01" />
@@ -1124,9 +1131,22 @@
               </div>
             }
           </div>
+
+          <!-- إجمالي المبالغ -->
+          @if (getOperationTotal() > 0) {
+            <div class="operation-summary">
+              <div class="summary-row">
+                <span class="summary-label">
+                  <span class="material-icons-round">functions</span>
+                  الإجمالي ({{ getFilledEntriesCount() }} حساب)
+                </span>
+                <span class="summary-amount">{{ formatAmount(getOperationTotal()) }}</span>
+              </div>
+            </div>
+          }
         </div>
         <div class="modal-footer">
-          <button class="btn-save" (click)="executeOperation()" [disabled]="saving()">
+          <button class="btn-save" (click)="executeOperation()" [disabled]="saving() || getFilledEntriesCount() === 0">
             <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
             {{ saving() ? 'جاري التنفيذ...' : 'تنفيذ العملية' }}
           </button>

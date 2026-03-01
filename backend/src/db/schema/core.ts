@@ -319,6 +319,7 @@ export const vouchers = pgTable('vouchers', {
   supplierId: integer('supplier_id').references(() => suppliers.id),
 
   categoryId: integer('category_id').references(() => voucherCategories.id),
+  operationTypeId: integer('operation_type_id').references(() => operationTypes.id),
 
   description: text('description'),
   reference: varchar('reference', { length: 200 }),
