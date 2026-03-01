@@ -754,7 +754,8 @@
 .modal-card {
   background: var(--bg-card); border: 1px solid var(--border-color);
   border-radius: 20px; width: 90%; max-width: 640px; max-height: 85vh;
-  overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+  overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
   animation: slide-in-up 0.3s ease;
 }
 @keyframes slide-in-up {
@@ -783,7 +784,7 @@
   display: flex; align-items: center; justify-content: center;
   &:hover { background: rgba(239,68,68,0.1); color: var(--accent-red); }
 }
-.modal-body { padding: 24px 28px; }
+.modal-body { padding: 24px 28px; overflow-y: auto; flex: 1; }
 .modal-footer {
   padding: 16px 28px; border-top: 1px solid var(--border-color);
   display: flex; gap: 10px; justify-content: flex-start;
@@ -1641,6 +1642,7 @@
 /* ===================== Operation Execution Modal ===================== */
 .operation-entries {
   display: flex; flex-direction: column; gap: 10px;
+  max-height: 50vh; overflow-y: auto; padding-left: 4px;
 }
 
 .operation-entry-row {

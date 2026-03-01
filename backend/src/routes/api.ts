@@ -606,36 +606,63 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
   if (!validation.success) return c.json({ error: validation.error }, 400);
   
   const voucherData = validation.data as any;
+  // تحويل voucherDate من string إلى Date
+  if (voucherData.voucherDate && typeof voucherData.voucherDate === 'string') {
+    voucherData.voucherDate = new Date(voucherData.voucherDate);
+  }
+  // توليد رقم السند تلقائياً إذا لم يُرسل
+  if (!voucherData.voucherNumber) {
+    const prefix = voucherData.voucherType === 'receipt' ? 'RCV' : voucherData.voucherType === 'payment' ? 'PAY' : 'VCH';
+    const countResult = await db.execute(sql`SELECT COUNT(*) as cnt FROM vouchers WHERE business_id = ${bizId}`);
+    const count = parseInt(String((countResult as any).rows?.[0]?.cnt || (countResult as any)[0]?.cnt || 0)) + 1;
+    voucherData.voucherNumber = `${prefix}-${String(count).padStart(6, '0')}`;
+  }
   const [created] = await db.insert(vouchers).values({
     ...voucherData,
     businessId: bizId,
     amount: String(voucherData.amount),
-    status: 'active',
+    status: 'confirmed',
     createdBy: (c.get('user') as any)?.userId,
   }).returning();
   
-  // إنشاء قيد محاسبي تلقائي
-  if (created.toAccountId && created.fromAccountId) {
+  // إنشاء قيد محاسبي تلقائي لكل سند
+  if (created.toAccountId || created.fromAccountId) {
     const amount = parseFloat(String(created.amount));
+    // جلب اسم نوع العملية إن وجد
+    let opTypeName = '';
+    if (voucherData.operationTypeId) {
+      const otRows = await db.execute(sql`SELECT name FROM operation_types WHERE id = ${voucherData.operationTypeId}`);
+      const otResult = Array.isArray(otRows) ? otRows : (otRows as any).rows || [];
+      if (otResult.length > 0) opTypeName = (otResult[0] as any).name;
+    }
     const [entry] = await db.insert(journalEntries).values({
       businessId: bizId,
-      entryNumber: `V-${created.id}`,
-      entryDate: new Date().toISOString().split('T')[0],
-      description: `سند ${created.voucherType} - ${created.description || ''}`,
-      reference: `V-${created.id}`,
+      entryNumber: `JE-${created.voucherNumber || created.id}`,
+      entryDate: created.voucherDate ? new Date(created.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      description: opTypeName ? `${opTypeName} - ${created.description || ''}` : `سند ${created.voucherType} - ${created.description || ''}`,
+      reference: created.voucherNumber || `V-${created.id}`,
+      operationTypeId: voucherData.operationTypeId || null,
+      totalDebit: String(amount),
+      totalCredit: String(amount),
+      isBalanced: true,
       createdBy: (c.get('user') as any)?.userId,
     }).returning();
     
-    await db.insert(journalEntryLines).values({
-      journalEntryId: entry.id, accountId: created.toAccountId,
-      lineType: 'debit', amount: String(amount),
-      description: `إلى حساب ${created.toAccountId}`, sortOrder: 0,
-    });
-    await db.insert(journalEntryLines).values({
-      journalEntryId: entry.id, accountId: created.fromAccountId,
-      lineType: 'credit', amount: String(amount),
-      description: `من حساب ${created.fromAccountId}`, sortOrder: 1,
-    });
+    // إنشاء سطور القيد
+    if (created.toAccountId) {
+      await db.insert(journalEntryLines).values({
+        journalEntryId: entry.id, accountId: created.toAccountId,
+        lineType: 'debit', amount: String(amount),
+        description: created.description || opTypeName || `سند ${created.voucherType}`, sortOrder: 0,
+      });
+    }
+    if (created.fromAccountId) {
+      await db.insert(journalEntryLines).values({
+        journalEntryId: entry.id, accountId: created.fromAccountId,
+        lineType: 'credit', amount: String(amount),
+        description: created.description || opTypeName || `سند ${created.voucherType}`, sortOrder: 1,
+      });
+    }
   }
   
   return c.json(created, 201);
@@ -1055,7 +1082,20 @@ api.post('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler(
   const data = validation.data as any;
   // تحويل screens من string إلى array إذا لزم
   if (typeof data.screens === 'string') data.screens = [data.screens];
-  const [created] = await db.insert(operationTypes).values({ ...data, businessId: bizId }).returning();
+  const { linkedAccounts: laList, ...otData } = data;
+  const [created] = await db.insert(operationTypes).values({ ...otData, businessId: bizId }).returning();
+  // حفظ الحسابات المرتبطة إن وُجدت
+  if (Array.isArray(laList) && laList.length > 0) {
+    await db.insert(operationTypeAccounts).values(
+      laList.map((la: any, i: number) => ({
+        operationTypeId: created.id,
+        accountId: la.accountId,
+        label: la.label || null,
+        permission: la.permission || 'both',
+        sortOrder: la.sortOrder ?? i,
+      }))
+    );
+  }
   return c.json(created, 201);
 }));
 
@@ -1064,8 +1104,24 @@ api.put('/operation-types/:id', safeHandler('تعديل نوع عملية', asyn
   if (!id) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
   const body = normalizeBody(await c.req.json());
   if (typeof body.screens === 'string') body.screens = [body.screens];
-  const [updated] = await db.update(operationTypes).set({ ...body, updatedAt: new Date() }).where(eq(operationTypes.id, id)).returning();
+  const { linkedAccounts: laList, ...otData } = body;
+  const [updated] = await db.update(operationTypes).set({ ...otData, updatedAt: new Date() }).where(eq(operationTypes.id, id)).returning();
   if (!updated) return c.json({ error: 'نوع العملية غير موجود' }, 404);
+  // تحديث الحسابات المرتبطة إن أُرسلت
+  if (Array.isArray(laList)) {
+    await db.delete(operationTypeAccounts).where(eq(operationTypeAccounts.operationTypeId, id));
+    if (laList.length > 0) {
+      await db.insert(operationTypeAccounts).values(
+        laList.map((la: any, i: number) => ({
+          operationTypeId: id,
+          accountId: la.accountId,
+          label: la.label || null,
+          permission: la.permission || 'both',
+          sortOrder: la.sortOrder ?? i,
+        }))
+      );
+    }
+  }
   return c.json(updated);
 }));
 
