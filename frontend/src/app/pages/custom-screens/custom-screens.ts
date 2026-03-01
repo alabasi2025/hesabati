@@ -419,12 +419,10 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   private animatePageEntrance() {
     const container = this.elRef.nativeElement.querySelector('.page-container');
     if (container) {
-      gsap.from(container, {
-        opacity: 0,
-        y: 20,
-        duration: 0.5,
-        ease: 'power2.out',
-      });
+      gsap.fromTo(container, 
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }
+      );
     }
   }
 
@@ -432,14 +430,10 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     setTimeout(() => {
       const cards = this.elRef.nativeElement.querySelectorAll('.screen-card');
       if (cards.length) {
-        gsap.from(cards, {
-          opacity: 0,
-          y: 30,
-          scale: 0.95,
-          duration: 0.4,
-          stagger: 0.08,
-          ease: 'back.out(1.2)',
-        });
+        gsap.fromTo(cards, 
+          { opacity: 0, y: 30, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.2)' }
+        );
       }
     }, 50);
   }
@@ -448,14 +442,10 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     setTimeout(() => {
       const widgets = this.elRef.nativeElement.querySelectorAll('.widget-card');
       if (widgets.length) {
-        gsap.from(widgets, {
-          opacity: 0,
-          y: 20,
-          scale: 0.96,
-          duration: 0.35,
-          stagger: 0.06,
-          ease: 'power2.out',
-        });
+        gsap.fromTo(widgets, 
+          { opacity: 0, y: 20, scale: 0.96 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.35, stagger: 0.06, ease: 'power2.out' }
+        );
       }
     }, 100);
   }
@@ -464,26 +454,21 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     setTimeout(() => {
       const modal = this.elRef.nativeElement.querySelector(selector);
       if (modal) {
-        gsap.from(modal, {
-          opacity: 0,
-          scale: 0.9,
-          duration: 0.3,
-          ease: 'back.out(1.4)',
-        });
+        gsap.fromTo(modal, 
+          { opacity: 0, scale: 0.9 },
+          { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(1.4)' }
+        );
       }
     }, 10);
   }
 
   private animateViewTransition() {
     const container = this.elRef.nativeElement.querySelector('.page-container');
-    if (container) {
-      gsap.from(container.children, {
-        opacity: 0,
-        y: 15,
-        duration: 0.35,
-        stagger: 0.05,
-        ease: 'power2.out',
-      });
+    if (container && container.children.length) {
+      gsap.fromTo(container.children, 
+        { opacity: 0, y: 15 },
+        { opacity: 1, y: 0, duration: 0.35, stagger: 0.05, ease: 'power2.out' }
+      );
     }
   }
 
