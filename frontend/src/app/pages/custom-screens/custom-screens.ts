@@ -1107,6 +1107,15 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.showWidgetLibrary.set(!this.showWidgetLibrary());
   }
 
+  // Open widget library - auto-enables edit mode if not already enabled
+  openWidgetLibrary() {
+    if (!this.editMode()) {
+      this.editMode.set(true);
+      this.updateGridsterEditMode(true);
+    }
+    this.showWidgetLibrary.set(!this.showWidgetLibrary());
+  }
+
   async addWidgetFromLibrary(type: any) {
     const screen = this.activeScreen();
     if (!screen) return;

@@ -471,11 +471,11 @@
             <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
             {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
           </button>
+          <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="openWidgetLibrary()">
+            <span class="material-icons-round">widgets</span>
+            مكتبة العناصر
+          </button>
           @if (editMode()) {
-            <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="toggleWidgetLibrary()">
-              <span class="material-icons-round">widgets</span>
-              مكتبة العناصر
-            </button>
             <button class="library-btn" (click)="openCopyWidgetModal()">
               <span class="material-icons-round">content_copy</span>
               نسخ من شاشة
@@ -484,10 +484,10 @@
         </div>
       </div>
 
-      <div class="detail-content" [class.with-library]="editMode() && showWidgetLibrary()">
+      <div class="detail-content" [class.with-library]="showWidgetLibrary()">
 
         <!-- Widget Library Sidebar -->
-        @if (editMode() && showWidgetLibrary()) {
+        @if (showWidgetLibrary()) {
           <div class="widget-library" @slideIn>
             <div class="library-header">
               <h3>
