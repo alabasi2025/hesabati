@@ -628,13 +628,21 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
   // إنشاء قيد محاسبي تلقائي لكل سند
   if (created.toAccountId || created.fromAccountId) {
     const amount = parseFloat(String(created.amount));
-    // جلب اسم نوع العملية إن وجد
+    // جلب اسم نوع العملية و sourceAccountId إن وجد
     let opTypeName = '';
+    let sourceAccountId: number | null = null;
     if (voucherData.operationTypeId) {
-      const otRows = await db.execute(sql`SELECT name FROM operation_types WHERE id = ${voucherData.operationTypeId}`);
+      const otRows = await db.execute(sql`SELECT name, source_account_id FROM operation_types WHERE id = ${voucherData.operationTypeId}`);
       const otResult = Array.isArray(otRows) ? otRows : (otRows as any).rows || [];
-      if (otResult.length > 0) opTypeName = (otResult[0] as any).name;
+      if (otResult.length > 0) {
+        opTypeName = (otResult[0] as any).name;
+        sourceAccountId = (otResult[0] as any).source_account_id;
+      }
     }
+    
+    // تحديد الحساب المقابل (contra account) للقيد المتوازن
+    const contraAccountId = created.fromAccountId || sourceAccountId;
+    
     const [entry] = await db.insert(journalEntries).values({
       businessId: bizId,
       entryNumber: `JE-${created.voucherNumber || created.id}`,
@@ -648,7 +656,7 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
       createdBy: (c.get('user') as any)?.userId,
     }).returning();
     
-    // إنشاء سطور القيد
+    // إنشاء سطور القيد - الطرف المدين
     if (created.toAccountId) {
       await db.insert(journalEntryLines).values({
         journalEntryId: entry.id, accountId: created.toAccountId,
@@ -656,12 +664,34 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
         description: created.description || opTypeName || `سند ${created.voucherType}`, sortOrder: 0,
       });
     }
-    if (created.fromAccountId) {
+    // إنشاء سطور القيد - الطرف الدائن
+    if (contraAccountId) {
       await db.insert(journalEntryLines).values({
-        journalEntryId: entry.id, accountId: created.fromAccountId,
+        journalEntryId: entry.id, accountId: contraAccountId,
         lineType: 'credit', amount: String(amount),
         description: created.description || opTypeName || `سند ${created.voucherType}`, sortOrder: 1,
       });
+    }
+    
+    // تحديث أرصدة الحسابات تلقائياً
+    const currencyId = voucherData.currencyId || 1;
+    if (created.toAccountId) {
+      await db.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${created.toAccountId}, ${currencyId}, ${Number(amount)})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET
+          balance = account_balances.balance + ${Number(amount)},
+          updated_at = NOW()
+      `);
+    }
+    if (contraAccountId) {
+      await db.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${contraAccountId}, ${currencyId}, ${-Number(amount)})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET
+          balance = account_balances.balance - ${Number(amount)},
+          updated_at = NOW()
+      `);
     }
   }
   
@@ -1087,13 +1117,16 @@ api.post('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler(
   // حفظ الحسابات المرتبطة إن وُجدت
   if (Array.isArray(laList) && laList.length > 0) {
     await db.insert(operationTypeAccounts).values(
-      laList.map((la: any, i: number) => ({
-        operationTypeId: created.id,
-        accountId: la.accountId,
-        label: la.label || null,
-        permission: la.permission || 'both',
-        sortOrder: la.sortOrder ?? i,
-      }))
+      laList.map((la: any, i: number) => {
+        const accId = typeof la === 'number' ? la : (la.accountId || la.id);
+        return {
+          operationTypeId: created.id,
+          accountId: accId,
+          label: typeof la === 'object' ? (la.label || null) : null,
+          permission: typeof la === 'object' ? (la.permission || 'both') : 'both',
+          sortOrder: typeof la === 'object' ? (la.sortOrder ?? i) : i,
+        };
+      })
     );
   }
   return c.json(created, 201);

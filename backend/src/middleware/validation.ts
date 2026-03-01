@@ -112,6 +112,13 @@ export const operationTypeSchema = z.object({
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
   notes: z.string().optional().nullable(),
+  linkedAccounts: z.array(z.union([z.number(), z.object({
+    accountId: z.number().optional(),
+    id: z.number().optional(),
+    label: z.string().optional().nullable(),
+    permission: z.string().optional(),
+    sortOrder: z.number().optional(),
+  })])).optional(),
 });
 
 export const journalEntrySchema = z.object({
