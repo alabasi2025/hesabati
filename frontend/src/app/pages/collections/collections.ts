@@ -52,9 +52,9 @@ export class CollectionsComponent implements OnInit {
   deliveryEntries = signal<{ accountId: number; accountName: string; accountType: string; amount: string; reference: string; notes: string }[]>([]);
 
   // Computed
-  collectionOpTypes = computed(() => this.operationTypes().filter(ot => ot.category === 'collection'));
+  collectionOpTypes = computed(() => this.operationTypes().filter(ot => ot.category === 'collection' || ot.category === 'تحصيل'));
   deliveryOpTypes = computed(() => this.operationTypes().filter(ot =>
-    ot.category === 'delivery' || ot.category === 'transfer'
+    ot.category === 'delivery' || ot.category === 'transfer' || ot.category === 'توريد' || ot.category === 'تحويلات'
   ));
 
   collectionTotal = computed(() =>
