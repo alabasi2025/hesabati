@@ -1,0 +1,264 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d purple">
+        <span class="material-icons-round">admin_panel_settings</span>
+      </div>
+      <div>
+        <h1 class="page-title">الأدوار والصلاحيات</h1>
+        <p class="page-subtitle">إدارة أدوار المستخدمين وصلاحياتهم والسقوف المالية</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-3d btn-primary" (click)="openForm()">
+        <span class="material-icons-round">add</span>
+        دور جديد
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Stats Cards ===== -->
+  <div class="stats-row">
+    <div class="stat-card-3d purple">
+      <div class="sc-icon"><span class="material-icons-round">shield</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ roles.length }}</div>
+        <div class="sc-label">الأدوار</div>
+      </div>
+    </div>
+    <div class="stat-card-3d blue">
+      <div class="sc-icon"><span class="material-icons-round">people</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ users.length }}</div>
+        <div class="sc-label">المستخدمون</div>
+      </div>
+    </div>
+    <div class="stat-card-3d green">
+      <div class="sc-icon"><span class="material-icons-round">assignment_ind</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ userRoles.length }}</div>
+        <div class="sc-label">تعيينات نشطة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== قائمة الأدوار ===== -->
+  @if (!showForm) {
+    @if (roles.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-3d">
+          <span class="material-icons-round">admin_panel_settings</span>
+        </div>
+        <h3>لا توجد أدوار</h3>
+        <p>أنشئ دوراً جديداً لتحديد صلاحيات المستخدمين</p>
+        <button class="btn-3d btn-primary" (click)="openForm()">
+          <span class="material-icons-round">add</span>
+          دور جديد
+        </button>
+      </div>
+    } @else {
+      <div class="roles-grid">
+        @for (role of roles; track role.id) {
+          <div class="role-card-3d">
+            <div class="rc-header">
+              <div class="rc-color-dot" [style.background]="role.color"></div>
+              <h3 class="rc-name">{{ role.name }}</h3>
+              <div class="rc-actions">
+                <button class="icon-btn edit-btn" (click)="editRole(role)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                @if (!role.isSystem) {
+                  <button class="icon-btn delete-btn" (click)="deleteRole(role.id)" title="حذف">
+                    <span class="material-icons-round">delete</span>
+                  </button>
+                }
+              </div>
+            </div>
+            <p class="rc-desc">{{ role.description || 'بدون وصف' }}</p>
+            <div class="rc-perms">
+              @for (p of role.permissions; track $index) {
+                <span class="perm-badge">
+                  {{ getResourceLabel(p.resource) }} - {{ getActionLabel(p.action) }}
+                </span>
+              }
+              @if (!role.permissions || role.permissions.length === 0) {
+                <span class="perm-badge empty">بدون صلاحيات</span>
+              }
+            </div>
+            <div class="rc-footer">
+              <span class="rc-users">
+                <span class="material-icons-round">people</span>
+                {{ role.userCount || 0 }} مستخدم
+              </span>
+              <div class="rc-limits">
+                @if (role.maxVoucherAmount) {
+                  <span class="rc-limit">سقف: {{ role.maxVoucherAmount }}</span>
+                }
+                @if (role.isSystem) {
+                  <span class="rc-system-badge">نظام</span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ===== تعيين الأدوار للمستخدمين ===== -->
+    <div class="assign-card-3d">
+      <div class="assign-header">
+        <div class="assign-icon">
+          <span class="material-icons-round">person_add</span>
+        </div>
+        <h3>تعيين الأدوار للمستخدمين</h3>
+      </div>
+      <div class="assign-body">
+        <div class="assign-form">
+          <div class="assign-field">
+            <label class="form-label">المستخدم</label>
+            <select class="form-select" [(ngModel)]="assignUserId">
+              <option value="">اختر المستخدم...</option>
+              <option *ngFor="let u of users" [value]="u.id">{{u.username}}</option>
+            </select>
+          </div>
+          <div class="assign-field">
+            <label class="form-label">الدور</label>
+            <select class="form-select" [(ngModel)]="assignRoleId">
+              <option value="">اختر الدور...</option>
+              <option *ngFor="let r of roles" [value]="r.id">{{r.name}}</option>
+            </select>
+          </div>
+          <div class="assign-action">
+            <button class="btn-3d btn-primary" (click)="assignRole()">
+              <span class="material-icons-round">person_add</span>
+              تعيين
+            </button>
+          </div>
+        </div>
+
+        @if (userRoles.length > 0) {
+          <div class="user-roles-list">
+            @for (ur of userRoles; track ur.userId) {
+              <div class="ur-row-3d">
+                <div class="ur-avatar">
+                  <span class="material-icons-round">person</span>
+                </div>
+                <div class="ur-info">
+                  <div class="ur-name">{{ ur.userName }}</div>
+                </div>
+                <span class="ur-role-badge" [style.background]="ur.roleColor">{{ ur.roleName }}</span>
+                <button class="icon-btn delete-btn" (click)="removeRole(ur.userId)" title="إزالة">
+                  <span class="material-icons-round">close</span>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ===== نموذج إنشاء/تعديل دور (Modal) ===== -->
+  @if (showForm) {
+    <div class="modal-overlay" (click)="cancelForm()">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header purple-header">
+          <div class="modal-icon purple">
+            <span class="material-icons-round">{{ editId ? 'edit' : 'shield' }}</span>
+          </div>
+          <div>
+            <h2>{{ editId ? 'تعديل الدور' : 'دور جديد' }}</h2>
+            <p class="modal-subtitle">تحديد الصلاحيات والسقوف المالية</p>
+          </div>
+          <button class="modal-close" (click)="cancelForm()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Step 1: معلومات الدور -->
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">١</div>
+              <span>معلومات الدور</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">اسم الدور <span class="required">*</span></label>
+                <input type="text" class="form-input" [(ngModel)]="form.name" placeholder="مثال: محاسب">
+              </div>
+              <div class="form-group">
+                <label class="form-label">الوصف</label>
+                <input type="text" class="form-input" [(ngModel)]="form.description" placeholder="وصف اختياري">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">اللون</label>
+                <input type="color" class="form-color" [(ngModel)]="form.color">
+              </div>
+              <div class="form-group">
+                <label class="form-label">سقف السند الواحد</label>
+                <input type="number" class="form-input" [(ngModel)]="form.maxVoucherAmount" placeholder="0 = بدون حد">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">سقف يومي</label>
+                <input type="number" class="form-input" [(ngModel)]="form.maxDailyAmount" placeholder="0 = بدون حد">
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: الصلاحيات -->
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">٢</div>
+              <span>الصلاحيات</span>
+            </div>
+            <div class="perms-table-wrap">
+              <table class="perms-table">
+                <thead>
+                  <tr>
+                    <th class="res-col">المورد</th>
+                    @for (a of allActions; track a) {
+                      <th class="action-col">{{ getActionLabel(a) }}</th>
+                    }
+                    <th class="action-col">الكل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (res of allResources; track res.key) {
+                    <tr>
+                      <td class="res-cell">
+                        <span class="material-icons-round res-icon">{{ res.icon }}</span>
+                        {{ res.label }}
+                      </td>
+                      @for (a of allActions; track a) {
+                        <td class="action-cell">
+                          <input type="checkbox" class="perm-checkbox" [checked]="hasPerm(res.key, a)" (change)="togglePerm(res.key, a)">
+                        </td>
+                      }
+                      <td class="action-cell">
+                        <input type="checkbox" class="perm-checkbox all" [checked]="hasAllPerms(res.key)" (change)="toggleAllPerms(res.key)">
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="cancelForm()">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="save()">
+            <span class="material-icons-round">{{ editId ? 'save' : 'add' }}</span>
+            {{ editId ? 'تحديث' : 'حفظ' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

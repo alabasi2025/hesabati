@@ -1,0 +1,229 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d blue">
+        <span class="material-icons-round">currency_exchange</span>
+      </div>
+      <div>
+        <h1 class="page-title">أسعار الصرف اليومية</h1>
+        <p class="page-subtitle">إدارة أسعار صرف العملات وتحويل المبالغ</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-3d btn-primary" (click)="showForm = !showForm">
+        <span class="material-icons-round">add</span>
+        سعر صرف جديد
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Stats Cards ===== -->
+  <div class="stats-row">
+    <div class="stat-card-3d blue">
+      <div class="sc-icon"><span class="material-icons-round">currency_exchange</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ rates.length }}</div>
+        <div class="sc-label">أسعار مسجلة</div>
+      </div>
+    </div>
+    <div class="stat-card-3d green">
+      <div class="sc-icon"><span class="material-icons-round">paid</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ currencies.length }}</div>
+        <div class="sc-label">عملات متاحة</div>
+      </div>
+    </div>
+    <div class="stat-card-3d amber">
+      <div class="sc-icon"><span class="material-icons-round">swap_horiz</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ getSourceCount('manual') }}</div>
+        <div class="sc-label">أسعار يدوية</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== محول العملات ===== -->
+  <div class="converter-card-3d">
+    <div class="converter-header">
+      <div class="converter-icon">
+        <span class="material-icons-round">swap_horiz</span>
+      </div>
+      <h3>محول العملات</h3>
+    </div>
+    <div class="converter-body">
+      <div class="converter-field">
+        <label class="form-label">المبلغ</label>
+        <input type="number" class="form-input" [(ngModel)]="convertAmount" placeholder="المبلغ">
+      </div>
+      <div class="converter-field">
+        <label class="form-label">من عملة</label>
+        <select class="form-select" [(ngModel)]="convertFrom">
+          <option value="">اختر...</option>
+          <option *ngFor="let c of currencies" [value]="c.id">{{c.nameAr || c.code}}</option>
+        </select>
+      </div>
+      <div class="converter-arrow">
+        <span class="material-icons-round">arrow_back</span>
+      </div>
+      <div class="converter-field">
+        <label class="form-label">إلى عملة</label>
+        <select class="form-select" [(ngModel)]="convertTo">
+          <option value="">اختر...</option>
+          <option *ngFor="let c of currencies" [value]="c.id">{{c.nameAr || c.code}}</option>
+        </select>
+      </div>
+      <div class="converter-action">
+        <button class="btn-3d btn-blue" (click)="convert()">
+          <span class="material-icons-round">calculate</span>
+          تحويل
+        </button>
+      </div>
+      <div class="converter-result" *ngIf="convertResult !== null">
+        <span class="result-value">{{ convertResult | number:'1.2-4' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== نموذج الإضافة ===== -->
+  @if (showForm) {
+    <div class="modal-overlay" (click)="cancel()">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header blue-header">
+          <div class="modal-icon blue">
+            <span class="material-icons-round">{{ editId ? 'edit' : 'add_circle' }}</span>
+          </div>
+          <div>
+            <h2>{{ editId ? 'تعديل سعر الصرف' : 'سعر صرف جديد' }}</h2>
+            <p class="modal-subtitle">تحديد سعر الصرف بين عملتين</p>
+          </div>
+          <button class="modal-close" (click)="cancel()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">١</div>
+              <span>العملات</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">من عملة <span class="required">*</span></label>
+                <select class="form-select" [(ngModel)]="form.fromCurrencyId">
+                  <option value="">اختر العملة...</option>
+                  <option *ngFor="let c of currencies" [value]="c.id">{{c.nameAr || c.code}} ({{c.code}})</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">إلى عملة <span class="required">*</span></label>
+                <select class="form-select" [(ngModel)]="form.toCurrencyId">
+                  <option value="">اختر العملة...</option>
+                  <option *ngFor="let c of currencies" [value]="c.id">{{c.nameAr || c.code}} ({{c.code}})</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">٢</div>
+              <span>التفاصيل</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">سعر الصرف <span class="required">*</span></label>
+                <input type="number" step="0.0001" class="form-input" [(ngModel)]="form.rate" placeholder="0.0037">
+              </div>
+              <div class="form-group">
+                <label class="form-label">تاريخ السريان</label>
+                <input type="date" class="form-input" [(ngModel)]="form.effectiveDate">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">المصدر</label>
+                <select class="form-select" [(ngModel)]="form.source">
+                  <option value="manual">يدوي</option>
+                  <option value="market">سوق</option>
+                  <option value="bank">بنك</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">ملاحظات</label>
+                <input type="text" class="form-input" [(ngModel)]="form.notes" placeholder="ملاحظات اختيارية">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="cancel()">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="save()">
+            <span class="material-icons-round">{{ editId ? 'save' : 'add' }}</span>
+            {{ editId ? 'تحديث' : 'حفظ' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== قائمة أسعار الصرف ===== -->
+  @if (rates.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-3d">
+        <span class="material-icons-round">currency_exchange</span>
+      </div>
+      <h3>لا توجد أسعار صرف</h3>
+      <p>أضف سعر صرف جديد لبدء تحويل العملات</p>
+      <button class="btn-3d btn-primary" (click)="showForm = true">
+        <span class="material-icons-round">add</span>
+        سعر صرف جديد
+      </button>
+    </div>
+  } @else {
+    <div class="rates-list">
+      @for (r of rates; track r.id) {
+        <div class="rate-row-3d">
+          <div class="rr-type-indicator"></div>
+          <div class="rr-icon">
+            <span class="material-icons-round">sync_alt</span>
+          </div>
+          <div class="rr-main">
+            <div class="rr-pair">
+              <span class="rr-currency">{{ getCurrencyName(r.fromCurrencyId) }}</span>
+              <span class="material-icons-round rr-arrow">arrow_back</span>
+              <span class="rr-currency">{{ getCurrencyName(r.toCurrencyId) }}</span>
+            </div>
+            <div class="rr-meta">
+              <span class="rr-date">
+                <span class="material-icons-round">calendar_today</span>
+                {{ r.effectiveDate }}
+              </span>
+              @if (r.notes) {
+                <span class="rr-note">
+                  <span class="material-icons-round">notes</span>
+                  {{ r.notes }}
+                </span>
+              }
+            </div>
+          </div>
+          <div class="rr-right">
+            <div class="rr-rate">{{ r.rate }}</div>
+            <span class="rr-source-badge" [class]="'source-' + r.source">
+              {{ r.source === 'manual' ? 'يدوي' : r.source === 'market' ? 'سوق' : 'بنك' }}
+            </span>
+          </div>
+          <div class="rr-actions">
+            <button class="icon-btn edit-btn" (click)="edit(r)" title="تعديل">
+              <span class="material-icons-round">edit</span>
+            </button>
+            <button class="icon-btn delete-btn" (click)="remove(r.id)" title="حذف">
+              <span class="material-icons-round">delete</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>

@@ -1,0 +1,328 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d green">
+        <span class="material-icons-round">analytics</span>
+      </div>
+      <div>
+        <h1 class="page-title">التقارير المتقدمة</h1>
+        <p class="page-subtitle">تحليل مالي شامل: أرباح وخسائر، كشف حساب، ملخص يومي، ميزان مراجعة</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Tabs ===== -->
+  <div class="tabs-3d">
+    @for (t of tabs; track t.key) {
+      <button class="tab-btn" [class.active]="activeTab === t.key" (click)="activeTab = t.key; loadTab()">
+        <span class="material-icons-round">{{ t.icon }}</span>
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ===== Filters ===== -->
+  @if (activeTab !== 'daily') {
+    <div class="filter-card-3d">
+      <div class="filter-row">
+        <div class="filter-field">
+          <label class="form-label">من تاريخ</label>
+          <input type="date" class="form-input" [(ngModel)]="dateFrom">
+        </div>
+        <div class="filter-field">
+          <label class="form-label">إلى تاريخ</label>
+          <input type="date" class="form-input" [(ngModel)]="dateTo">
+        </div>
+        @if (activeTab === 'statement') {
+          <div class="filter-field wide">
+            <label class="form-label">الحساب</label>
+            <select class="form-select" [(ngModel)]="selectedAccountId">
+              <option *ngFor="let a of accounts" [value]="a.id">{{a.name}}</option>
+            </select>
+          </div>
+        }
+        <div class="filter-action">
+          <button class="btn-3d btn-primary" (click)="loadTab()">
+            <span class="material-icons-round">search</span>
+            عرض
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="filter-card-3d">
+      <div class="filter-row">
+        <div class="filter-field">
+          <label class="form-label">التاريخ</label>
+          <input type="date" class="form-input" [(ngModel)]="dailyDate">
+        </div>
+        <div class="filter-action">
+          <button class="btn-3d btn-primary" (click)="loadTab()">
+            <span class="material-icons-round">search</span>
+            عرض
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Loading ===== -->
+  @if (loading) {
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>جاري التحميل...</p>
+    </div>
+  }
+
+  <!-- ===== تقرير الأرباح والخسائر ===== -->
+  @if (activeTab === 'profit-loss' && profitLoss && !loading) {
+    <div class="stats-row">
+      <div class="stat-card-3d green">
+        <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ profitLoss.summary.total_income | number:'1.0-0' }}</div>
+          <div class="sc-label">الإيرادات</div>
+        </div>
+      </div>
+      <div class="stat-card-3d red">
+        <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ profitLoss.summary.total_expenses | number:'1.0-0' }}</div>
+          <div class="sc-label">المصروفات</div>
+        </div>
+      </div>
+      <div class="stat-card-3d" [class]="profitLoss.summary.net_profit >= 0 ? 'blue' : 'amber'">
+        <div class="sc-icon"><span class="material-icons-round">{{ profitLoss.summary.net_profit >= 0 ? 'trending_up' : 'trending_down' }}</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ profitLoss.summary.net_profit | number:'1.0-0' }}</div>
+          <div class="sc-label">صافي الربح</div>
+        </div>
+      </div>
+      <div class="stat-card-3d gray">
+        <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ profitLoss.summary.total_operations }}</div>
+          <div class="sc-label">عدد العمليات</div>
+        </div>
+      </div>
+    </div>
+
+    @if (profitLoss.byCategory?.length) {
+      <div class="table-card-3d">
+        <div class="table-header">
+          <div class="table-icon"><span class="material-icons-round">category</span></div>
+          <h3>تفصيل حسب التصنيف</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>التصنيف</th>
+                <th>النوع</th>
+                <th>المجموع</th>
+                <th>العدد</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of profitLoss.byCategory; track $index) {
+                <tr>
+                  <td class="cell-name">{{ c.category }}</td>
+                  <td><span class="type-badge" [class]="c.voucher_type === 'receipt' ? 'receipt' : 'payment'">{{ c.voucher_type === 'receipt' ? 'إيراد' : 'مصروف' }}</span></td>
+                  <td class="cell-amount">{{ c.total | number:'1.0-0' }}</td>
+                  <td class="cell-count">{{ c.count }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ===== كشف حساب ===== -->
+  @if (activeTab === 'statement' && statement && !loading) {
+    <div class="account-info-3d">
+      <div class="ai-icon"><span class="material-icons-round">account_balance</span></div>
+      <div class="ai-main">
+        <div class="ai-name">{{ statement.account?.name }}</div>
+        <div class="ai-entries">عدد الحركات: {{ statement.totalEntries }}</div>
+      </div>
+      <div class="ai-balances">
+        @for (b of statement.balances; track $index) {
+          <div class="ai-balance" [class]="b.balance >= 0 ? 'positive' : 'negative'">
+            <span class="ai-currency">{{ b.currencyCode }}</span>
+            <span class="ai-amount">{{ b.balance | number:'1.0-2' }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="table-card-3d">
+      <div class="table-header">
+        <div class="table-icon"><span class="material-icons-round">receipt</span></div>
+        <h3>حركات الحساب</h3>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>المرجع</th>
+              <th>البيان</th>
+              <th>مدين</th>
+              <th>دائن</th>
+              <th>الرصيد</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of statement.entries; track $index) {
+              <tr>
+                <td class="cell-date">{{ e.entry_date }}</td>
+                <td class="cell-ref">{{ e.entry_number }}</td>
+                <td class="cell-desc">{{ e.entry_description || e.line_description }}</td>
+                <td class="cell-debit">{{ e.line_type === 'debit' ? (e.amount | number:'1.0-2') : '-' }}</td>
+                <td class="cell-credit">{{ e.line_type === 'credit' ? (e.amount | number:'1.0-2') : '-' }}</td>
+                <td class="cell-balance" [class]="e.runningBalance >= 0 ? 'positive' : 'negative'">{{ e.runningBalance | number:'1.0-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ===== ملخص يومي ===== -->
+  @if (activeTab === 'daily' && dailySummary && !loading) {
+    <div class="stats-row">
+      <div class="stat-card-3d green">
+        <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ dailySummary.summary.receipts | number:'1.0-0' }}</div>
+          <div class="sc-label">التحصيل</div>
+        </div>
+      </div>
+      <div class="stat-card-3d red">
+        <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ dailySummary.summary.payments | number:'1.0-0' }}</div>
+          <div class="sc-label">الصرف</div>
+        </div>
+      </div>
+      <div class="stat-card-3d gray">
+        <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ dailySummary.summary.operations_count }}</div>
+          <div class="sc-label">عدد العمليات</div>
+        </div>
+      </div>
+    </div>
+
+    @if (dailySummary.byOperationType?.length) {
+      <div class="table-card-3d">
+        <div class="table-header">
+          <div class="table-icon"><span class="material-icons-round">list_alt</span></div>
+          <h3>تفصيل حسب نوع العملية</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>نوع العملية</th>
+                <th>النوع</th>
+                <th>المجموع</th>
+                <th>العدد</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (o of dailySummary.byOperationType; track $index) {
+                <tr>
+                  <td class="cell-name">
+                    @if (o.icon) {
+                      <span class="material-icons-round op-icon" [style.color]="o.color">{{ o.icon }}</span>
+                    }
+                    {{ o.name }}
+                  </td>
+                  <td><span class="type-badge" [class]="o.voucher_type === 'receipt' ? 'receipt' : 'payment'">{{ o.voucher_type === 'receipt' ? 'تحصيل' : 'صرف' }}</span></td>
+                  <td class="cell-amount">{{ o.total | number:'1.0-0' }}</td>
+                  <td class="cell-count">{{ o.count }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ===== ميزان المراجعة ===== -->
+  @if (activeTab === 'trial-balance' && trialBalance && !loading) {
+    <div class="stats-row">
+      <div class="stat-card-3d green">
+        <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ trialBalance.totals.totalDebit | number:'1.0-2' }}</div>
+          <div class="sc-label">إجمالي المدين</div>
+        </div>
+      </div>
+      <div class="stat-card-3d red">
+        <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ trialBalance.totals.totalCredit | number:'1.0-2' }}</div>
+          <div class="sc-label">إجمالي الدائن</div>
+        </div>
+      </div>
+      <div class="stat-card-3d" [class]="trialBalance.totals.isBalanced ? 'blue' : 'amber'">
+        <div class="sc-icon"><span class="material-icons-round">{{ trialBalance.totals.isBalanced ? 'check_circle' : 'warning' }}</span></div>
+        <div class="sc-body">
+          <div class="sc-num">{{ trialBalance.totals.isBalanced ? 'متوازن ✓' : 'غير متوازن ✗' }}</div>
+          <div class="sc-label">الحالة</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card-3d">
+      <div class="table-header">
+        <div class="table-icon"><span class="material-icons-round">balance</span></div>
+        <h3>ميزان المراجعة</h3>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>الحساب</th>
+              <th>النوع</th>
+              <th>مدين</th>
+              <th>دائن</th>
+              <th>الرصيد</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of trialBalance.accounts; track $index) {
+              <tr>
+                <td class="cell-name">{{ a.account_name }}</td>
+                <td class="cell-type">{{ a.account_type }}</td>
+                <td class="cell-debit">{{ a.total_debit | number:'1.0-2' }}</td>
+                <td class="cell-credit">{{ a.total_credit | number:'1.0-2' }}</td>
+                <td class="cell-balance" [class]="a.balance >= 0 ? 'positive' : 'negative'">{{ a.balance | number:'1.0-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Empty State ===== -->
+  @if (!loading && ((activeTab === 'profit-loss' && !profitLoss) || (activeTab === 'statement' && !statement) || (activeTab === 'daily' && !dailySummary) || (activeTab === 'trial-balance' && !trialBalance))) {
+    <div class="empty-state">
+      <div class="empty-icon-3d">
+        <span class="material-icons-round">analytics</span>
+      </div>
+      <h3>اضغط "عرض" لتحميل التقرير</h3>
+      <p>حدد الفترة الزمنية ثم اضغط على زر العرض</p>
+    </div>
+  }
+
+</div>
