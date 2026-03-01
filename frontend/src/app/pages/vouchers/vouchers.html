@@ -144,6 +144,20 @@
               </span>
             </div>
             <div class="vr-actions">
+              @if (!v.isReversed && !v.reversedByVoucherId) {
+                <button class="icon-btn" style="color:#f59e0b" title="عكس العملية" (click)="openReverse(v.id)">
+                  <span class="material-icons-round">undo</span>
+                </button>
+              }
+              @if (v.isReversed) {
+                <span style="color:#ef4444;font-size:11px;padding:2px 6px;background:#fef2f2;border-radius:4px">معكوس</span>
+              }
+              @if (v.reversedByVoucherId) {
+                <span style="color:#f59e0b;font-size:11px;padding:2px 6px;background:#fffbeb;border-radius:4px">سند عكس</span>
+              }
+              <button class="icon-btn" style="color:#3b82f6" title="المرفقات" (click)="openAttachments(v.id)">
+                <span class="material-icons-round">attach_file</span>
+              </button>
               <button class="icon-btn delete-btn" (click)="deleteVoucher(v.id)">
                 <span class="material-icons-round">delete</span>
               </button>
@@ -329,6 +343,89 @@
             <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
             {{ saving() ? 'جاري الحفظ...' : 'حفظ السند' }}
           </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Reverse Voucher Dialog ===== -->
+  @if (showReverseDialog()) {
+    <div class="modal-overlay" (click)="showReverseDialog.set(false)">
+      <div class="modal-3d" style="max-width:480px" (click)="$event.stopPropagation()">
+        <div class="modal-header" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
+            <span class="material-icons-round">undo</span>
+          </div>
+          <h2 style="color:white">عكس العملية</h2>
+          <button class="modal-close" (click)="showReverseDialog.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom:12px;color:#64748b">سيتم إنشاء سند عكسي يلغي تأثير السند الأصلي على الأرصدة.</p>
+          <div class="form-group">
+            <label class="form-label">سبب العكس <span class="required">*</span></label>
+            <input class="form-input" type="text" placeholder="أدخل سبب عكس العملية..."
+                   [value]="reverseReason()" (input)="reverseReason.set($any($event.target).value)">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="showReverseDialog.set(false)">إلغاء</button>
+          <button class="btn-3d" style="background:#f59e0b;color:white" (click)="confirmReverse()">
+            <span class="material-icons-round">undo</span>
+            تأكيد العكس
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Attachments Dialog ===== -->
+  @if (showAttachments()) {
+    <div class="modal-overlay" (click)="showAttachments.set(false)">
+      <div class="modal-3d" style="max-width:560px" (click)="$event.stopPropagation()">
+        <div class="modal-header" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">
+          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
+            <span class="material-icons-round">attach_file</span>
+          </div>
+          <h2 style="color:white">المرفقات</h2>
+          <button class="modal-close" (click)="showAttachments.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (attachments().length > 0) {
+            <div style="margin-bottom:16px">
+              @for (att of attachments(); track att.id) {
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="material-icons-round" style="color:#3b82f6">description</span>
+                    <div>
+                      <div style="font-size:14px;font-weight:500">{{att.fileName}}</div>
+                      <div style="font-size:11px;color:#94a3b8">{{att.description || att.fileType}}</div>
+                    </div>
+                  </div>
+                  <button class="icon-btn delete-btn" (click)="removeAttachment(att.id)">
+                    <span class="material-icons-round">close</span>
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <p style="text-align:center;color:#94a3b8;padding:16px">لا توجد مرفقات</p>
+          }
+          <div style="border-top:1px solid #e2e8f0;padding-top:16px">
+            <h4 style="font-size:14px;margin-bottom:8px">إضافة مرفق</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <input class="form-input" type="text" placeholder="اسم الملف" [value]="attachmentForm().fileName" (input)="attachmentForm.update(f => ({...f, fileName: $any($event.target).value}))">
+              <input class="form-input" type="text" placeholder="مسار الملف" [value]="attachmentForm().filePath" (input)="attachmentForm.update(f => ({...f, filePath: $any($event.target).value}))">
+            </div>
+            <input class="form-input" style="margin-top:8px" type="text" placeholder="وصف (اختياري)" [value]="attachmentForm().description" (input)="attachmentForm.update(f => ({...f, description: $any($event.target).value}))">
+            <button class="btn-3d" style="margin-top:8px;background:#3b82f6;color:white;width:100%" (click)="addAttachment()">
+              <span class="material-icons-round">upload</span>
+              إضافة
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -30,6 +30,13 @@ export class VouchersComponent implements OnInit {
   showForm = signal(false);
   activeTab = signal<string>('all');
   selectedVoucher = signal<any>(null);
+  showReverseDialog = signal(false);
+  reverseReason = signal('');
+  reverseTargetId = signal<number | null>(null);
+  showAttachments = signal(false);
+  attachmentTargetId = signal<number | null>(null);
+  attachments = signal<any[]>([]);
+  attachmentForm = signal<any>({ fileName: '', filePath: '', fileType: '', description: '' });
 
   // Form state
   voucherType = signal<'receipt' | 'payment'>('payment');
@@ -168,6 +175,56 @@ export class VouchersComponent implements OnInit {
     } catch (e: any) {
       this.error.set(e.message);
     }
+  }
+
+  // ========== عكس العمليات ==========
+  openReverse(voucherId: number) {
+    this.reverseTargetId.set(voucherId);
+    this.reverseReason.set('');
+    this.showReverseDialog.set(true);
+  }
+
+  async confirmReverse() {
+    const id = this.reverseTargetId();
+    const reason = this.reverseReason();
+    if (!id || !reason) { this.error.set('يجب إدخال سبب العكس'); return; }
+    try {
+      await this.api.reverseVoucher(this.bizId, id, reason);
+      this.showReverseDialog.set(false);
+      this.toast.success('تم عكس السند بنجاح');
+      await this.loadVouchers();
+    } catch (e: any) {
+      this.error.set(e.message);
+    }
+  }
+
+  // ========== المرفقات ==========
+  async openAttachments(voucherId: number) {
+    this.attachmentTargetId.set(voucherId);
+    this.showAttachments.set(true);
+    try {
+      this.attachments.set(await this.api.getAttachments('voucher', voucherId));
+    } catch { this.attachments.set([]); }
+  }
+
+  async addAttachment() {
+    const f = this.attachmentForm();
+    if (!f.fileName) return;
+    try {
+      await this.api.uploadAttachment(this.bizId, {
+        entityType: 'voucher', entityId: this.attachmentTargetId(),
+        fileName: f.fileName, filePath: f.filePath, fileType: f.fileType || 'application/octet-stream', description: f.description,
+      });
+      this.attachmentForm.set({ fileName: '', filePath: '', fileType: '', description: '' });
+      this.attachments.set(await this.api.getAttachments('voucher', this.attachmentTargetId()!));
+    } catch (e: any) { this.error.set(e.message); }
+  }
+
+  async removeAttachment(id: number) {
+    try {
+      await this.api.deleteAttachment(this.bizId, id);
+      this.attachments.set(await this.api.getAttachments('voucher', this.attachmentTargetId()!));
+    } catch (e: any) { this.error.set(e.message); }
   }
 
   getAccountName(id: number): string {

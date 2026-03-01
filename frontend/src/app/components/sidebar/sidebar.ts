@@ -235,6 +235,8 @@ export class SidebarComponent {
           { icon: 'wallet', label: 'إدارة المحافظ', route: `${b}/wallets` },
           { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
           { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
+          { icon: 'currency_exchange', label: 'أسعار الصرف', route: `${b}/exchange-rates` },
+          { icon: 'admin_panel_settings', label: 'الأدوار والصلاحيات', route: `${b}/roles` },
         ]},
         { title: 'العمليات المالية', items: [
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
@@ -251,6 +253,7 @@ export class SidebarComponent {
         { title: 'التصفيات والتقارير', items: [
           { icon: 'balance', label: 'التصفيات', route: `${b}/settlements` },
           { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
+          { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
           { icon: 'warning', label: 'حسابات معلقة', route: `${b}/pending`, badge: 3, badgeColor: 'red' },
         ]},
       ]);

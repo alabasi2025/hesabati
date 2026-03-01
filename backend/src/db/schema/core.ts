@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // ===================== ENUMS =====================
 
@@ -22,6 +22,7 @@ export const expenseTypeEnum = pgEnum('expense_type', ['fixed', 'variable', 'ann
 export const warehouseTypeEnum = pgEnum('warehouse_type', ['main', 'station']);
 export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment']);
 export const employeeStatusEnum = pgEnum('employee_status', ['active', 'inactive', 'suspended']);
+export const voucherReversalStatusEnum = pgEnum('voucher_reversal_status', ['original', 'reversed', 'reversal']);
 
 export const billingSystemEnum = pgEnum('billing_system', [
   'moghrabi_v1', 'moghrabi_v2', 'moghrabi_v3',
@@ -60,6 +61,54 @@ export const currencies = pgTable('currencies', {
   symbol: varchar('symbol', { length: 10 }).notNull(),
   exchangeRate: decimal('exchange_rate', { precision: 15, scale: 4 }).notNull().default('1'),
   isDefault: boolean('is_default').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== EXCHANGE RATES (أسعار الصرف اليومية) =====================
+
+export const exchangeRates = pgTable('exchange_rates', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  fromCurrencyId: integer('from_currency_id').notNull().references(() => currencies.id),
+  toCurrencyId: integer('to_currency_id').notNull().references(() => currencies.id),
+  rate: decimal('rate', { precision: 15, scale: 6 }).notNull(),
+  effectiveDate: date('effective_date').notNull(),
+  source: varchar('source', { length: 100 }).default('manual'), // manual | api
+  notes: text('notes'),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== ROLES & PERMISSIONS (RBAC) =====================
+
+export const roles = pgTable('roles', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 100 }).notNull(),
+  description: text('description'),
+  color: varchar('color', { length: 20 }).default('#3b82f6'),
+  maxVoucherAmount: decimal('max_voucher_amount', { precision: 20, scale: 2 }),
+  maxDailyAmount: decimal('max_daily_amount', { precision: 20, scale: 2 }),
+  isSystem: boolean('is_system').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const rolePermissions = pgTable('role_permissions', {
+  id: serial('id').primaryKey(),
+  roleId: integer('role_id').notNull().references(() => roles.id),
+  resource: varchar('resource', { length: 100 }).notNull(), // vouchers | accounts | reports | screens | settings
+  action: varchar('action', { length: 50 }).notNull(), // create | read | update | delete | approve | reverse
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const userRoles = pgTable('user_roles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  roleId: integer('role_id').notNull().references(() => roles.id),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  assignedBy: integer('assigned_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -327,6 +376,11 @@ export const vouchers = pgTable('vouchers', {
 
   createdBy: integer('created_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
+  reversalStatus: varchar('reversal_status', { length: 20 }).default('original'), // original | reversed | reversal
+  reversedVoucherId: integer('reversed_voucher_id'),
+  reversalReason: text('reversal_reason'),
+  reversedAt: timestamp('reversed_at'),
+  reversedBy: integer('reversed_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

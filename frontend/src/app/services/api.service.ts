@@ -313,4 +313,64 @@ export class ApiService {
 
   // ===================== المرفقات =====================
   getAttachments(entityType: string, entityId: number) { return this.request<any[]>(`/attachments/${entityType}/${entityId}`); }
+  uploadAttachment(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/attachments`, { method: 'POST', body: JSON.stringify(d) }); }
+  deleteAttachment(bizId: number, id: number)          { return this.request<any>(`/businesses/${bizId}/attachments/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أسعار الصرف =====================
+  getExchangeRates(bizId: number, date?: string) {
+    let url = `/businesses/${bizId}/exchange-rates`;
+    if (date) url += `?date=${date}`;
+    return this.request<any[]>(url);
+  }
+  createExchangeRate(bizId: number, d: any)            { return this.request<any>(`/businesses/${bizId}/exchange-rates`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateExchangeRate(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/exchange-rates/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteExchangeRate(bizId: number, id: number)        { return this.request<any>(`/businesses/${bizId}/exchange-rates/${id}`, { method: 'DELETE' }); }
+  convertCurrency(bizId: number, from: number, to: number, amount: number) {
+    return this.request<any>(`/businesses/${bizId}/exchange-rates/convert?from=${from}&to=${to}&amount=${amount}`);
+  }
+
+  // ===================== الأدوار والصلاحيات RBAC =====================
+  getRoles(bizId: number)                              { return this.request<any[]>(`/businesses/${bizId}/roles`); }
+  createRole(bizId: number, d: any)                    { return this.request<any>(`/businesses/${bizId}/roles`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateRole(bizId: number, id: number, d: any)        { return this.request<any>(`/businesses/${bizId}/roles/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteRole(bizId: number, id: number)                { return this.request<any>(`/businesses/${bizId}/roles/${id}`, { method: 'DELETE' }); }
+  getUserRoles(bizId: number)                          { return this.request<any[]>(`/businesses/${bizId}/user-roles`); }
+  assignUserRole(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/user-roles`, { method: 'POST', body: JSON.stringify(d) }); }
+  removeUserRole(bizId: number, userId: number)        { return this.request<any>(`/businesses/${bizId}/user-roles/${userId}`, { method: 'DELETE' }); }
+
+  // ===================== عكس العمليات =====================
+  reverseVoucher(bizId: number, voucherId: number, reason: string) {
+    return this.request<any>(`/businesses/${bizId}/vouchers/${voucherId}/reverse`, { method: 'POST', body: JSON.stringify({ reason }) });
+  }
+
+  // ===================== التقارير =====================
+  getProfitLossReport(bizId: number, dateFrom?: string, dateTo?: string) {
+    let url = `/businesses/${bizId}/reports/profit-loss`;
+    const params: string[] = [];
+    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
+    if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  getAccountStatement(bizId: number, accountId: number, dateFrom?: string, dateTo?: string) {
+    let url = `/businesses/${bizId}/reports/account-statement/${accountId}`;
+    const params: string[] = [];
+    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
+    if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  getDailySummary(bizId: number, date?: string) {
+    let url = `/businesses/${bizId}/reports/daily-summary`;
+    if (date) url += `?date=${date}`;
+    return this.request<any>(url);
+  }
+  getTrialBalance(bizId: number, dateFrom?: string, dateTo?: string) {
+    let url = `/businesses/${bizId}/reports/trial-balance`;
+    const params: string[] = [];
+    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
+    if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
 }
