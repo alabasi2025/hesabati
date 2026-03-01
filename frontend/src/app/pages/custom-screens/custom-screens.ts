@@ -869,7 +869,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       } else if (results.length > 0 && errors.length > 0) {
         this.toast.warning(`تم تنفيذ ${results.length} عملية بنجاح، وفشلت ${errors.length} عملية`);
       } else {
-        this.toast.error(`فشلت جميع العمليات: ${errors.join('، ')}`);
+        const firstError = errors.length > 0 ? errors[0] : '';
+        const errorDetail = firstError.includes('غير مفعّل') 
+          ? 'نوع العملية غير مفعّل - يرجى تفعيله من صفحة أنواع العمليات'
+          : firstError.includes('غير موجود')
+          ? 'نوع العملية غير موجود - يرجى التحقق من الإعدادات'
+          : firstError.includes('لا ينتمي')
+          ? 'الحساب لا ينتمي لهذا العمل - يرجى التحقق من إعدادات الحسابات'
+          : firstError.includes('المستهدف')
+          ? 'الحساب المستهدف مطلوب - يرجى التحقق من إعدادات نوع العملية'
+          : `فشلت العمليات:\n${errors.join('\n')}`;
+        this.toast.error(errorDetail);
       }
 
       this.closeOperationModal();
@@ -1324,20 +1334,38 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
           });
           results.push(result);
         } catch (e: any) {
-          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+          const errMsg = e.message || 'خطأ غير معروف';
+          errors.push(`${entry.accountName}: ${errMsg}`);
         }
       }
 
       if (results.length > 0 && errors.length === 0) {
         this.toast.success(`تم تنفيذ ${results.length} عملية بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
       } else if (results.length > 0 && errors.length > 0) {
-        this.toast.warning(`تم ${results.length} عملية، فشلت ${errors.length}`);
+        this.toast.warning(`تم ${results.length} عملية بنجاح، فشلت ${errors.length} عملية:\n${errors.join('\n')}`);
       } else {
-        this.toast.error(`فشلت جميع العمليات`);
+        // عرض تفاصيل الخطأ الأول لتوضيح السبب
+        const firstError = errors.length > 0 ? errors[0] : '';
+        const errorDetail = firstError.includes('غير مفعّل') 
+          ? 'نوع العملية غير مفعّل - يرجى تفعيله من صفحة أنواع العمليات'
+          : firstError.includes('غير موجود')
+          ? 'نوع العملية غير موجود - يرجى التحقق من الإعدادات'
+          : firstError.includes('لا ينتمي')
+          ? 'الحساب لا ينتمي لهذا العمل - يرجى التحقق من إعدادات الحسابات'
+          : firstError.includes('المبلغ')
+          ? 'المبلغ غير صالح - يرجى إدخال مبلغ صحيح'
+          : firstError.includes('المستهدف')
+          ? 'الحساب المستهدف مطلوب - يرجى التحقق من إعدادات نوع العملية'
+          : errors.length > 0 
+          ? `فشلت العمليات:\n${errors.join('\n')}`
+          : 'فشلت العمليات - خطأ غير متوقع';
+        this.toast.error(errorDetail);
       }
 
-      this.csSelectedOpType.set(null);
-      this.csFormEntries.set([]);
+      if (results.length > 0) {
+        this.csSelectedOpType.set(null);
+        this.csFormEntries.set([]);
+      }
       // إعادة تحميل البيانات
       const screen = this.activeScreen();
       if (screen) await this.loadCollectionStyleScreen(screen);
