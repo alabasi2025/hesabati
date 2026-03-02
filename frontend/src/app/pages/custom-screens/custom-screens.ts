@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -109,6 +109,27 @@ interface AccountData {
   last_movements: any[];
 }
 
+// نفس فلاتر صفحة الحسابات — أنواع الحسابات والتصنيفات
+const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
+  billing:      { label: 'فوترة',    icon: 'receipt',                  color: '#a855f7' },
+  fund:         { label: 'صندوق',    icon: 'savings',                  color: '#22c55e' },
+  bank:         { label: 'بنك',      icon: 'account_balance',          color: '#3b82f6' },
+  e_wallet:     { label: 'محفظة',    icon: 'account_balance_wallet',   color: '#8b5cf6' },
+  exchange:     { label: 'صراف',     icon: 'currency_exchange',        color: '#f59e0b' },
+  accounting:   { label: 'محاسبي',   icon: 'book',                     color: '#14b8a6' },
+  intermediary: { label: 'وسيط',     icon: 'swap_horiz',               color: '#f97316' },
+  cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
+  custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
+  service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
+};
+const FUND_TYPE_LABELS: Record<string, string> = {
+  collection: 'تحصيل وتوريد', salary_advance: 'سلف', custody: 'عهدة',
+  safe: 'خزنة', expense: 'مصروفات', deposit: 'إيداع', personal: 'شخصي',
+};
+function getTab4TypeMeta(type: string) {
+  return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
+}
+
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
@@ -187,22 +208,184 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // ===================== Collection-style screen (شاشة ثابتة) =====================
   collectionStyleConfig = signal<{
-    tab1Label: string; tab1OperationTypeIds: number[];
-    tab2Label: string; tab2OperationTypeIds: number[];
-    accountsSectionLabel: string; accountIds: number[];
+    tab1Label: string; tab1Color?: string; tab1Icon?: string | null; tab1OperationTypeIds: number[];
+    tab2Label: string; tab2Color?: string; tab2Icon?: string | null; tab2OperationTypeIds: number[];
+    tab3Label: string; tab3Color?: string; tab3Icon?: string | null;
+    accountsSectionLabel: string; tab4Color?: string; tab4Icon?: string | null; accountIds: number[];
   } | null>(null);
   showCollectionStyleConfigModal = signal(false);
   collectionStyleActiveTab = signal<'tab1' | 'tab2' | 'log' | 'accounts'>('tab1');
   collectionStyleAccounts = signal<any[]>([]);
   // قائمة الحسابات لاختيارها في نافذة الإعداد (تُحمّل عند فتح النافذة)
   allAccountsForConfig = signal<any[]>([]);
+  configStations = signal<any[]>([]);
+  // فلاتر اختيار الحسابات في نافذة الإعداد
+  configAccountsSearch = signal('');
+  configActiveType = signal('all');
+  configSubFilters = signal<Record<string, string[]>>({});
+  configStationFilter = signal<number | null>(null);
+  configCollapsedGroups = signal<Set<string>>(new Set());
+  // التبويب الرابع: قائمة كاملة للحسابات المختارة (للفلاتر مثل صفحة الحسابات)
+  tab4FullAccounts = signal<any[]>([]);
+  tab4Stations = signal<any[]>([]);
+  accountsTab4Search = signal('');
+  accountsTab4ActiveType = signal('all');
+  accountsTab4SubFilters = signal<Record<string, string[]>>({});
+  accountsTab4StationFilter = signal<number | null>(null);
+  tab4CollapsedGroups = signal<Set<string>>(new Set());
+
+  // ===== التبويب الرابع: فلاتر مثل صفحة الحسابات (computed) =====
+  tab4DynamicFilters = computed(() => {
+    const all = this.tab4FullAccounts();
+    const typeKey = (a: any) => a.accountType || a.account_type || '';
+    const typesInDB = [...new Set(all.map(typeKey).filter(Boolean))];
+    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
+    const sorted = typesInDB.sort((a, b) => {
+      const ia = priority.indexOf(a);
+      const ib = priority.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return getTab4TypeMeta(a).label.localeCompare(getTab4TypeMeta(b).label, 'ar');
+    });
+    return sorted.map(type => ({ value: type, ...getTab4TypeMeta(type) }));
+  });
+
+  tab4TypeHasStationFilter = computed(() => {
+    const type = this.accountsTab4ActiveType();
+    return ['fund', 'billing'].includes(type);
+  });
+
+  tab4AvailableStations = computed(() => {
+    const type = this.accountsTab4ActiveType();
+    if (type === 'all') return [];
+    const all = this.tab4FullAccounts();
+    const typeKey = (a: any) => a.accountType || a.account_type;
+    const typeAccounts = all.filter(a => typeKey(a) === type && (a as any).stationId);
+    const stationIds = [...new Set(typeAccounts.map((a: any) => a.stationId))];
+    return this.tab4Stations().filter((s: any) => stationIds.includes(s.id));
+  });
+
+  tab4SubFilterOptions = computed(() => this.buildSubFilterOptions(this.accountsTab4ActiveType(), this.tab4FullAccounts()));
+
+  tab4FilteredAccounts = computed(() => this.buildFilteredAccounts(
+    this.tab4FullAccounts(),
+    this.accountsTab4ActiveType(),
+    this.accountsTab4Search(),
+    this.accountsTab4SubFilters(),
+    this.accountsTab4StationFilter()
+  ));
+
+  tab4GroupedAccounts = computed<{ key: string; label: string; icon: string; color: string; accounts: any[]; count: number; collapsed: boolean }[]>(() =>
+    this.buildGroupedAccounts(this.tab4FilteredAccounts(), this.accountsTab4ActiveType(), this.tab4CollapsedGroups())
+  );
+
+  // ===== الويزارد: فلاتر اختيار الحسابات (نفس آلية التبويب الرابع) =====
+  wizardDynamicFilters = computed(() => {
+    const all = this.allAccounts();
+    const typeKey = (a: any) => a.accountType || a.account_type || '';
+    const typesInDB = [...new Set(all.map(typeKey).filter(Boolean))];
+    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
+    const sorted = [...typesInDB].sort((a, b) => {
+      const ia = priority.indexOf(a);
+      const ib = priority.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return getTab4TypeMeta(a).label.localeCompare(getTab4TypeMeta(b).label, 'ar');
+    });
+    return sorted.map(type => ({ value: type, ...getTab4TypeMeta(type) }));
+  });
+
+  wizardTypeHasStationFilter = computed(() => ['fund', 'billing'].includes(this.wizardAccountsActiveType()));
+
+  wizardAvailableStations = computed(() => {
+    const type = this.wizardAccountsActiveType();
+    if (type === 'all') return [];
+    const all = this.allAccounts();
+    const typeKey = (a: any) => a.accountType || a.account_type;
+    const typeAccounts = all.filter(a => typeKey(a) === type && (a as any).stationId);
+    const stationIds = new Set(typeAccounts.map((a: any) => a.stationId));
+    return this.wizardStations().filter((s: any) => stationIds.has(s.id));
+  });
+
+  wizardSubFilterOptions = computed(() => this.buildSubFilterOptions(this.wizardAccountsActiveType(), this.allAccounts()));
+
+  wizardFilteredAccounts = computed(() => this.buildFilteredAccounts(
+    this.allAccounts(),
+    this.wizardAccountsActiveType(),
+    this.wizardAccountsSearch(),
+    this.wizardAccountsSubFilters(),
+    this.wizardAccountsStationFilter()
+  ));
+
+  wizardGroupedAccounts = computed(() => this.buildGroupedAccounts(
+    this.wizardFilteredAccounts(),
+    this.wizardAccountsActiveType(),
+    this.wizardAccountsCollapsedGroups()
+  ));
+
+  // ===== نافذة الإعداد: فلاتر اختيار الحسابات =====
+  configDynamicFilters = computed(() => {
+    const all = this.allAccountsForConfig();
+    const typeKey = (a: any) => a.accountType || a.account_type || '';
+    const typesInDB = [...new Set(all.map(typeKey).filter(Boolean))];
+    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
+    const sorted = [...typesInDB].sort((a, b) => {
+      const ia = priority.indexOf(a);
+      const ib = priority.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return getTab4TypeMeta(a).label.localeCompare(getTab4TypeMeta(b).label, 'ar');
+    });
+    return sorted.map(type => ({ value: type, ...getTab4TypeMeta(type) }));
+  });
+
+  configTypeHasStationFilter = computed(() => ['fund', 'billing'].includes(this.configActiveType()));
+
+  configAvailableStations = computed(() => {
+    const type = this.configActiveType();
+    if (type === 'all') return [];
+    const all = this.allAccountsForConfig();
+    const typeKey = (a: any) => a.accountType || a.account_type;
+    const typeAccounts = all.filter(a => typeKey(a) === type && (a as any).stationId);
+    const stationIds = new Set(typeAccounts.map((a: any) => a.stationId));
+    return this.configStations().filter((s: any) => stationIds.has(s.id));
+  });
+
+  configSubFilterOptions = computed(() => this.buildSubFilterOptions(this.configActiveType(), this.allAccountsForConfig()));
+
+  configFilteredAccounts = computed(() => this.buildFilteredAccounts(
+    this.allAccountsForConfig(),
+    this.configActiveType(),
+    this.configAccountsSearch(),
+    this.configSubFilters(),
+    this.configStationFilter()
+  ));
+
+  configGroupedAccounts = computed(() => this.buildGroupedAccounts(
+    this.configFilteredAccounts(),
+    this.configActiveType(),
+    this.configCollapsedGroups()
+  ));
+
   // Config form (for modal)
   configForm = signal({
     tab1Label: 'تحصيل',
+    tab1Color: '#0d9488',
+    tab1Icon: '' as string,
     tab1OperationTypeIds: [] as number[],
     tab2Label: 'توريد',
+    tab2Color: '#3b82f6',
+    tab2Icon: '' as string,
     tab2OperationTypeIds: [] as number[],
+    tab3Label: 'السجل',
+    tab3Color: '#6366f1',
+    tab3Icon: '' as string,
     accountsSectionLabel: 'الصناديق',
+    tab4Color: '#8b5cf6',
+    tab4Icon: '' as string,
     accountIds: [] as number[],
   });
 
@@ -218,6 +401,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // ===================== Wizard State =====================
   wizardStep = signal(1);
+  wizardDataLoading = signal(false);
   wizardScreenName = signal('');
   wizardScreenDesc = signal('');
   wizardScreenIcon = signal('dashboard');
@@ -233,6 +417,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   bindingWidgetIdx = signal<number | null>(null);
   operationTypes = signal<any[]>([]);
   allAccounts = signal<any[]>([]);
+  wizardStations = signal<any[]>([]);
 
   // ===================== Copy Widget State =====================
   showCopyWidgetModal = signal(false);
@@ -283,11 +468,26 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   /** إعداد شاشة ثابتة (collection_style): التسميات وقوالب التبويبين وحسابات المراقبة */
   wizardTab1Label = signal('تحصيل');
+  wizardTab1Color = signal('#0d9488');
+  wizardTab1Icon = signal('');
   wizardTab2Label = signal('توريد');
+  wizardTab2Color = signal('#3b82f6');
+  wizardTab2Icon = signal('');
+  wizardTab3Label = signal('السجل');
+  wizardTab3Color = signal('#6366f1');
+  wizardTab3Icon = signal(''); 
   wizardAccountsSectionLabel = signal('الصناديق');
+  wizardTab4Color = signal('#8b5cf6');
+  wizardTab4Icon = signal('');
   wizardTab1OpTypeIds = signal<number[]>([]);
   wizardTab2OpTypeIds = signal<number[]>([]);
   wizardAccountIds = signal<number[]>([]);
+  // فلاتر اختيار الحسابات في الويزارد (نفس آلية التبويب الرابع)
+  wizardAccountsSearch = signal('');
+  wizardAccountsActiveType = signal('all');
+  wizardAccountsSubFilters = signal<Record<string, string[]>>({});
+  wizardAccountsStationFilter = signal<number | null>(null);
+  wizardAccountsCollapsedGroups = signal<Set<string>>(new Set());
 
   // ===================== Operation Execution Modal =====================
   showOperationModal = signal(false);
@@ -301,6 +501,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     'dashboard', 'bolt', 'receipt_long', 'receipt', 'account_balance_wallet',
     'category', 'savings', 'menu_book', 'currency_exchange', 'groups',
     'handshake', 'warehouse', 'local_shipping', 'balance', 'assessment',
+    'history', 'list_alt',
     'monitor', 'grid_view', 'view_module', 'widgets', 'space_dashboard',
     'analytics', 'pie_chart', 'bar_chart', 'trending_up', 'speed',
   ];
@@ -320,71 +521,25 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   ];
 
   // ===================== Screen Templates =====================
-  // الشاشة الثابتة أولاً (الخيار المطلوب) ثم قوالب الويدجتات المتحركة
+  // قالب واحد فقط: شاشة ثابتة (أربعة تبويبات)
   screenTemplateOptions = [
     {
       key: 'collection_style',
-      name: 'شاشة ثابتة (مثل التحصيل والتوريد)',
-      desc: 'شاشة حقيقية بتبويبات وقوالب وسجل ومراقبة - تسمياتك وقوالبك التي تختارها',
+      name: 'شاشة ثابتة',
+      desc: 'أربعة تبويبات: قوالب العمليات (تبويبان)، السجل، ومراقبة الحسابات',
       icon: 'receipt_long',
       color: '#0d9488',
-      widgets: [],
-    },
-    {
-      key: 'collection',
-      name: 'قالب تحصيل (شاشة متحركة)',
-      desc: 'شاشة بسحب وإفلات - قوالب عمليات وسجل ومراقبة',
-      icon: 'payments',
-      color: '#22c55e',
-      widgets: [
-        { widgetType: 'templates', title: 'قوالب العمليات', config: {}, positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0, isVisible: true },
-        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1, isVisible: true },
-        { widgetType: 'accounts', title: 'مراقبة الحسابات', config: {}, positionX: 0, positionY: 4, width: 12, height: 4, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'delivery',
-      name: 'قالب توريد (شاشة متحركة)',
-      desc: 'شاشة بسحب وإفلات - قوالب عمليات وسجل وإحصائيات',
-      icon: 'local_shipping',
-      color: '#3b82f6',
-      widgets: [
-        { widgetType: 'templates', title: 'قوالب العمليات', config: {}, positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0, isVisible: true },
-        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1, isVisible: true },
-        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 0, positionY: 4, width: 12, height: 2, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'monitoring',
-      name: 'قالب مراقبة (شاشة متحركة)',
-      desc: 'شاشة بسحب وإفلات - حسابات وإحصائيات ورسم بياني',
-      icon: 'monitor',
-      color: '#f59e0b',
-      widgets: [
-        { widgetType: 'accounts', title: 'مراقبة الحسابات', config: {}, positionX: 0, positionY: 0, width: 12, height: 5, sortOrder: 0, isVisible: true },
-        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 0, positionY: 5, width: 6, height: 2, sortOrder: 1, isVisible: true },
-        { widgetType: 'chart', title: 'رسم بياني', config: {}, positionX: 6, positionY: 5, width: 6, height: 5, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'reports',
-      name: 'قالب تقارير (شاشة متحركة)',
-      desc: 'شاشة بسحب وإفلات - رسم بياني وإحصائيات وسجل',
-      icon: 'assessment',
-      color: '#8b5cf6',
-      widgets: [
-        { widgetType: 'chart', title: 'رسم بياني', config: {}, positionX: 0, positionY: 0, width: 8, height: 5, sortOrder: 0, isVisible: true },
-        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 8, positionY: 0, width: 4, height: 2, sortOrder: 1, isVisible: true },
-        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 0, positionY: 5, width: 12, height: 5, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'blank',
-      name: 'قالب فارغ (شاشة متحركة)',
-      desc: 'ابدأ من الصفر - سحب وإفلات',
-      icon: 'add_circle_outline',
-      color: '#94a3b8',
-      widgets: [],
+      tab1Label: 'تحصيل',
+      tab1Color: '#0d9488',
+      tab2Label: 'توريد',
+      tab2Color: '#3b82f6',
+      tab3Label: 'السجل',
+      tab3Color: '#6366f1',
+      tab3Icon: '',
+      tab4Color: '#8b5cf6',
+      tab4Icon: '',
+      accountsSectionLabel: 'الصناديق',
+      widgets: [] as any[],
     },
   ];
 
@@ -914,6 +1069,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   startWizard() {
     this.viewMode.set('wizard');
     this.wizardStep.set(1);
+    this.wizardDataLoading.set(false);
     this.wizardScreenName.set('');
     this.wizardScreenDesc.set('');
     this.wizardScreenIcon.set('receipt_long');
@@ -926,8 +1082,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.wizardSidebarSectionId.set(0);
     this.wizardSidebarSortOrder.set(0);
     this.wizardTab1Label.set('تحصيل');
+    this.wizardTab1Color.set('#0d9488');
+    this.wizardTab1Icon.set('');
     this.wizardTab2Label.set('توريد');
+    this.wizardTab2Color.set('#3b82f6');
+    this.wizardTab2Icon.set('');
+    this.wizardTab3Label.set('السجل');
+    this.wizardTab3Color.set('#6366f1');
+    this.wizardTab3Icon.set('');
     this.wizardAccountsSectionLabel.set('الصناديق');
+    this.wizardTab4Color.set('#8b5cf6');
+    this.wizardTab4Icon.set('');
     this.wizardTab1OpTypeIds.set([]);
     this.wizardTab2OpTypeIds.set([]);
     this.wizardAccountIds.set([]);
@@ -942,27 +1107,29 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   selectTemplate(key: string) {
     this.wizardSelectedTemplate.set(key);
-    const tpl = this.screenTemplateOptions.find(t => t.key === key);
+    const tpl = this.screenTemplateOptions.find(t => t.key === key) as any;
     if (tpl) {
-      this.wizardWidgets.set(tpl.widgets.map(w => ({ ...w })));
-      if (key === 'collection_style') {
-        this.wizardScreenIcon.set(tpl.icon);
-        this.wizardScreenColor.set(tpl.color);
-        this.wizardTab1Label.set('تحصيل');
-        this.wizardTab2Label.set('توريد');
-        this.wizardAccountsSectionLabel.set('الصناديق');
-        this.wizardTab1OpTypeIds.set([]);
-        this.wizardTab2OpTypeIds.set([]);
-        this.wizardAccountIds.set([]);
-        if (!this.wizardScreenName()) {
-          this.wizardScreenName.set(tpl.name.replace('قالب ', 'شاشة '));
-        }
-      } else if (key !== 'blank') {
-        this.wizardScreenIcon.set(tpl.icon);
-        this.wizardScreenColor.set(tpl.color);
-        if (!this.wizardScreenName()) {
-          this.wizardScreenName.set(tpl.name.replace('قالب ', 'شاشة '));
-        }
+      this.wizardWidgets.set([]);
+      this.wizardScreenIcon.set(tpl.icon);
+      this.wizardScreenColor.set(tpl.color);
+      this.wizardTab1Label.set(tpl.tab1Label ?? 'تحصيل');
+      this.wizardTab1Color.set(tpl.tab1Color ?? '#0d9488');
+      this.wizardTab1Icon.set(tpl.tab1Icon ?? '');
+      this.wizardTab2Label.set(tpl.tab2Label ?? 'توريد');
+      this.wizardTab2Color.set(tpl.tab2Color ?? '#3b82f6');
+      this.wizardTab2Icon.set(tpl.tab2Icon ?? '');
+      this.wizardTab3Label.set(tpl.tab3Label ?? 'السجل');
+      this.wizardTab3Color.set(tpl.tab3Color ?? '#6366f1');
+      this.wizardTab3Icon.set(tpl.tab3Icon ?? '');
+      this.wizardAccountsSectionLabel.set(tpl.accountsSectionLabel ?? 'الصناديق');
+      this.wizardTab4Color.set(tpl.tab4Color ?? '#8b5cf6');
+      this.wizardTab4Icon.set(tpl.tab4Icon ?? '');
+      this.wizardTab1OpTypeIds.set([]);
+      this.wizardTab2OpTypeIds.set([]);
+      this.wizardAccountIds.set([]);
+      if (!this.wizardScreenName()) {
+        const name = key === 'blank' ? 'شاشة جديدة' : (tpl.name.replace(/^قالب /, 'شاشة '));
+        this.wizardScreenName.set(name);
       }
     }
   }
@@ -970,16 +1137,30 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   nextWizardStep() {
     const step = this.wizardStep();
     if (step === 1) {
-      this.wizardStep.set(2);
-      if (this.wizardSelectedTemplate() === 'collection_style') {
-        this.loadContentBindingData();
-      }
-    } else if (step === 2) {
+      this.wizardDataLoading.set(true);
+      this.loadContentBindingData().then(() => {
+        this.wizardStep.set(2);
+        this.wizardDataLoading.set(false);
+        this.animateViewTransition();
+      });
+      return;
+    }
+    if (step === 2) {
       this.wizardStep.set(3);
-    } else if (step === 3) {
+      this.animateViewTransition();
+      return;
+    }
+    if (step === 3) {
       this.wizardStep.set(4);
-      this.loadContentBindingData();
-      this.loadWizardSidebarSections();
+      this.animateViewTransition();
+      return;
+    }
+    if (step === 4) {
+      this.wizardStep.set(5);
+      Promise.all([this.loadContentBindingData(), this.loadWizardSidebarSections()]).then(() => {
+        this.animateViewTransition();
+      });
+      return;
     }
     this.animateViewTransition();
   }
@@ -1020,6 +1201,12 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       ]);
       this.operationTypes.set(opTypes);
       this.allAccounts.set(accountsData.accounts || []);
+      this.wizardStations.set(accountsData.stations || []);
+      this.wizardAccountsSearch.set('');
+      this.wizardAccountsActiveType.set('all');
+      this.wizardAccountsSubFilters.set({});
+      this.wizardAccountsStationFilter.set(null);
+      this.wizardAccountsCollapsedGroups.set(new Set());
     } catch (e) {
       console.error('Error loading binding data:', e);
     }
@@ -1130,16 +1317,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.wizardWidgets.set(widgets);
   }
 
-  // Wizard: Save
+  // Wizard: Save — كل القوالب تُنتج شاشة ثابتة (collection_style)
   async saveWizardScreen() {
     let name = (this.wizardScreenName() || '').trim();
     if (!name) {
-      if (this.wizardSelectedTemplate() === 'collection_style') {
-        name = 'شاشة ثابتة';
-      } else {
-        this.toast.warning('يرجى إدخال اسم الشاشة');
-        return;
-      }
+      name = 'شاشة ثابتة';
     }
 
     this.saving.set(true);
@@ -1150,35 +1332,40 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         description: this.wizardScreenDesc() || '',
         icon: this.wizardScreenIcon(),
         color: this.wizardScreenColor(),
-        templateKey: this.wizardSelectedTemplate(),
-        widgets: this.wizardWidgets() ?? [],
+        templateKey: 'collection_style',
+        widgets: [],
         addToSidebar: !!addToSidebar,
-      };
-      if (this.wizardSelectedTemplate() === 'collection_style') {
-        payload.collectionStyleConfig = {
+        collectionStyleConfig: {
           tab1Label: this.wizardTab1Label() || 'تحصيل',
+          tab1Color: this.wizardTab1Color() || '#0d9488',
+          tab1Icon: this.wizardTab1Icon() || undefined,
           tab1OperationTypeIds: Array.isArray(this.wizardTab1OpTypeIds()) ? this.wizardTab1OpTypeIds() : [],
           tab2Label: this.wizardTab2Label() || 'توريد',
-          tab2OperationTypeIds: Array.isArray(this.wizardTab2OpTypeIds()) ? this.wizardTab2OpTypeIds() : [],
+          tab2Color: this.wizardTab2Color() || '#3b82f6',
+          tab2Icon: this.wizardTab2Icon() || undefined,
+          tab3Label: this.wizardTab3Label() || 'السجل',
+          tab3Color: this.wizardTab3Color() || '#6366f1',
+          tab3Icon: this.wizardTab3Icon() || undefined,
           accountsSectionLabel: this.wizardAccountsSectionLabel() || 'الصناديق',
+          tab4Color: this.wizardTab4Color() || '#8b5cf6',
+          tab4Icon: this.wizardTab4Icon() || undefined,
           accountIds: Array.isArray(this.wizardAccountIds()) ? this.wizardAccountIds() : [],
-        };
-      }
+        },
+      };
       if (addToSidebar) {
         payload.sectionId = this.wizardSidebarSectionId() || undefined;
         payload.sidebarSortOrder = this.wizardSidebarSortOrder();
       }
       const created = await this.api.createScreen(this.bizId, payload);
       this.toast.success('تم إنشاء الشاشة بنجاح');
-      if (this.wizardSelectedTemplate() === 'collection_style' && created?.id) {
-        await this.loadScreens();
-        const screen = this.screens().find(s => s.id === created.id) || normalizeScreen(created);
+      await this.loadScreens();
+      const screen = this.screens().find(s => s.id === created?.id) || (created ? normalizeScreen(created) : null);
+      if (screen) {
         this.openScreen(screen);
         this.viewMode.set('detail');
         this.showCollectionStyleConfigModal.set(false);
       } else {
         this.viewMode.set('list');
-        await this.loadScreens();
       }
     } catch (e: any) {
       this.toast.error(e?.message || 'حدث خطأ أثناء الإنشاء');
@@ -1289,14 +1476,27 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         if (config.accountIds?.length) {
           const accs = await this.api.getWidgetAccounts(this.bizId, config.accountIds);
           this.collectionStyleAccounts.set(Array.isArray(accs) ? accs : []);
+          const full = await this.api.getAllAccounts(this.bizId);
+          const ids = new Set(config.accountIds);
+          const filtered = (full?.accounts || []).filter((a: any) => ids.has(a.id));
+          this.tab4FullAccounts.set(filtered);
+          this.tab4Stations.set(full?.stations || []);
+          this.accountsTab4Search.set('');
+          this.accountsTab4ActiveType.set('all');
+          this.accountsTab4SubFilters.set({});
+          this.accountsTab4StationFilter.set(null);
+          this.tab4CollapsedGroups.set(new Set());
         } else {
           this.collectionStyleAccounts.set([]);
+          this.tab4FullAccounts.set([]);
+          this.tab4Stations.set([]);
         }
       } catch (e) {
         this.collectionStyleConfig.set({
-          tab1Label: 'تحصيل', tab1OperationTypeIds: [],
-          tab2Label: 'توريد', tab2OperationTypeIds: [],
-          accountsSectionLabel: 'الصناديق', accountIds: [],
+          tab1Label: 'تحصيل', tab1Color: '#0d9488', tab1Icon: null, tab1OperationTypeIds: [],
+          tab2Label: 'توريد', tab2Color: '#3b82f6', tab2Icon: null, tab2OperationTypeIds: [],
+          tab3Label: 'السجل', tab3Color: '#6366f1', tab3Icon: null,
+          accountsSectionLabel: 'الصناديق', tab4Color: '#8b5cf6', tab4Icon: null, accountIds: [],
         });
       }
     } else {
@@ -1319,23 +1519,408 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     return config.tab2OperationTypeIds.map(id => all.find(o => o.id === id)).filter(Boolean);
   }
 
+  /** أيقونة التبويب الأول من الإعداد (تتغير حسب الاختيار) */
+  getCollectionStyleTab1Icon(): string {
+    const icon = this.collectionStyleConfig()?.tab1Icon;
+    return (icon && String(icon).trim()) ? String(icon).trim() : 'call_received';
+  }
+
+  /** أيقونة التبويب الثاني من الإعداد (تتغير حسب الاختيار) */
+  getCollectionStyleTab2Icon(): string {
+    const icon = this.collectionStyleConfig()?.tab2Icon;
+    return (icon && String(icon).trim()) ? String(icon).trim() : 'call_made';
+  }
+
+  /** لون التبويب الأول من الإعداد (تتغير حسب الاختيار) */
+  getCollectionStyleTab1Color(): string {
+    const config = this.collectionStyleConfig();
+    const c = config?.tab1Color ?? (config as any)?.tab1_color;
+    return (c && String(c).trim()) ? String(c).trim() : '#22c55e';
+  }
+
+  /** لون التبويب الثاني من الإعداد (تتغير حسب الاختيار) */
+  getCollectionStyleTab2Color(): string {
+    const config = this.collectionStyleConfig();
+    const c = config?.tab2Color ?? (config as any)?.tab2_color;
+    return (c && String(c).trim()) ? String(c).trim() : '#ef4444';
+  }
+
+  /** التبويب الثالث: اسم، لون، أيقونة */
+  getCollectionStyleTab3Label(): string {
+    const c = this.collectionStyleConfig()?.tab3Label ?? (this.collectionStyleConfig() as any)?.tab3_label;
+    return (c && String(c).trim()) ? String(c).trim() : 'السجل';
+  }
+  getCollectionStyleTab3Color(): string {
+    const config = this.collectionStyleConfig();
+    const c = config?.tab3Color ?? (config as any)?.tab3_color;
+    return (c && String(c).trim()) ? String(c).trim() : '#6366f1';
+  }
+  getCollectionStyleTab3Icon(): string {
+    const icon = this.collectionStyleConfig()?.tab3Icon ?? (this.collectionStyleConfig() as any)?.tab3_icon;
+    return (icon && String(icon).trim()) ? String(icon).trim() : 'history';
+  }
+
+  /** التبويب الرابع: لون وأيقونة (الاسم = accountsSectionLabel) */
+  getCollectionStyleTab4Color(): string {
+    const config = this.collectionStyleConfig();
+    const c = config?.tab4Color ?? (config as any)?.tab4_color;
+    return (c && String(c).trim()) ? String(c).trim() : '#8b5cf6';
+  }
+  getCollectionStyleTab4Icon(): string {
+    const icon = this.collectionStyleConfig()?.tab4Icon ?? (this.collectionStyleConfig() as any)?.tab4_icon;
+    return (icon && String(icon).trim()) ? String(icon).trim() : 'account_balance_wallet';
+  }
+
+  getTab4TypeInfo(type: string) { return getTab4TypeMeta(type); }
+
+  private getTab4BestGroupField(type: string, accs: any[]): string {
+    const typeToField: Record<string, string> = {
+      billing: 'provider', fund: 'subType', exchange: 'provider', bank: 'provider',
+      e_wallet: 'provider', service: 'provider', cash: 'subType', custody: 'subType', accounting: 'subType',
+    };
+    const preferredField = typeToField[type];
+    if (preferredField) {
+      const uniqueVals = new Set(accs.map(a => a[preferredField]).filter(Boolean));
+      if (uniqueVals.size > 1) return preferredField;
+    }
+    const providerUnique = new Set(accs.map(a => a.provider).filter(Boolean)).size;
+    const subTypeUnique = new Set(accs.map(a => a.subType).filter(Boolean)).size;
+    if (providerUnique > 1 && providerUnique >= subTypeUnique) return 'provider';
+    if (subTypeUnique > 1) return 'subType';
+    if (providerUnique > 0) return 'provider';
+    return 'subType';
+  }
+
+  /** بناء فلاتر فرعية حسب النوع (مشترك بين التبويب الرابع والويزارد والإعداد) */
+  private buildSubFilterOptions(type: string, allAccounts: any[]): { key: string; label: string; icon: string; values: { value: string; count: number; icon?: string; color?: string; displayName?: string }[] }[] {
+    if (type === 'all') return [];
+    const typeKey = (a: any) => a.accountType || a.account_type;
+    const typeAccounts = allAccounts.filter(a => typeKey(a) === type);
+    const filters: { key: string; label: string; icon: string; values: { value: string; count: number; icon?: string; color?: string; displayName?: string }[] }[] = [];
+    const extract = (arr: any[], field: string) => {
+      const map = new Map<string, number>();
+      for (const a of arr) {
+        const val = (a as any)[field] || '';
+        if (val) map.set(val, (map.get(val) || 0) + 1);
+      }
+      return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([value, count]) => ({ value, count }));
+    };
+    if (type === 'fund') {
+      const fundTypeMap = new Map<string, number>();
+      for (const a of typeAccounts) {
+        const ft = (a as any).subType || '__none__';
+        fundTypeMap.set(ft, (fundTypeMap.get(ft) || 0) + 1);
+      }
+      const values = [...fundTypeMap.entries()].map(([value, count]) => ({
+        value, count,
+        displayName: value === '__none__' ? 'بدون تصنيف' : (FUND_TYPE_LABELS[value] || value),
+        icon: value === '__none__' ? 'label_off' : 'savings',
+      }));
+      if (values.length > 1 || (values.length === 1 && values[0].value !== '__none__')) {
+        filters.push({ key: 'subType', label: 'نوع الصندوق', icon: 'category', values });
+      }
+    } else if (type === 'billing') {
+      const systemMap = new Map<string, number>();
+      for (const a of typeAccounts) {
+        const sys = (a as any).provider || (a as any).subType || '__none__';
+        systemMap.set(sys, (systemMap.get(sys) || 0) + 1);
+      }
+      const values = [...systemMap.entries()].map(([value, count]) => ({
+        value, count,
+        displayName: value === '__none__' ? 'بدون نظام' : value,
+        icon: value === '__none__' ? 'label_off' : 'receipt',
+      }));
+      if (values.length > 1) filters.push({ key: 'provider', label: 'النظام', icon: 'receipt', values });
+      const persons = extract(typeAccounts, 'responsiblePerson');
+      if (persons.length > 1) filters.push({ key: 'responsiblePerson', label: 'الموظف', icon: 'person', values: persons });
+    } else if (type === 'bank') {
+      const subTypes = extract(typeAccounts, 'subType');
+      if (subTypes.length > 1) filters.push({ key: 'subType', label: 'نوع الحساب', icon: 'category', values: subTypes });
+      const providers = extract(typeAccounts, 'provider');
+      if (providers.length > 1) filters.push({ key: 'provider', label: 'البنك', icon: 'account_balance', values: providers });
+    } else if (type === 'exchange') {
+      const providers = extract(typeAccounts, 'provider');
+      if (providers.length > 1) filters.push({ key: 'provider', label: 'الصراف', icon: 'currency_exchange', values: providers });
+    } else if (type === 'e_wallet') {
+      const subTypes = extract(typeAccounts, 'subType');
+      if (subTypes.length > 1) filters.push({ key: 'subType', label: 'نوع المحفظة', icon: 'category', values: subTypes });
+      const providers = extract(typeAccounts, 'provider');
+      if (providers.length > 1) filters.push({ key: 'provider', label: 'المحفظة', icon: 'account_balance_wallet', values: providers });
+    } else {
+      const subTypes = extract(typeAccounts, 'subType');
+      if (subTypes.length > 1) filters.push({ key: 'subType', label: 'التصنيف', icon: 'label', values: subTypes });
+      const providers = extract(typeAccounts, 'provider');
+      if (providers.length > 1) filters.push({ key: 'provider', label: 'الجهة', icon: 'business', values: providers });
+    }
+    return filters;
+  }
+
+  private buildFilteredAccounts(all: any[], type: string, search: string, subs: Record<string, string[]>, stationFilter: number | null): any[] {
+    const q = search.toLowerCase();
+    const typeKey = (a: any) => a.accountType || a.account_type;
+    return all.filter(a => {
+      const matchType = type === 'all' || typeKey(a) === type;
+      const name = (a.name || '').toLowerCase();
+      const provider = ((a as any).provider || '').toLowerCase();
+      const person = ((a as any).responsiblePerson || '').toLowerCase();
+      const stationName = ((a as any).stationName || '').toLowerCase();
+      const subLabel = ((a as any).subTypeLabel || '').toLowerCase();
+      const matchQ = !q || name.includes(q) || provider.includes(q) || person.includes(q) || stationName.includes(q) || subLabel.includes(q);
+      const matchStation = !stationFilter || (a as any).stationId === stationFilter;
+      let matchSub = true;
+      if (type !== 'all') {
+        for (const [key, vals] of Object.entries(subs)) {
+          if (vals.length > 0) {
+            const fieldVal = (a as any)[key] || '';
+            if (vals.includes('__none__')) {
+              const isNone = !fieldVal;
+              const otherVals = vals.filter(v => v !== '__none__');
+              if (isNone || otherVals.includes(fieldVal)) continue;
+              matchSub = false; break;
+            }
+            if (!vals.includes(fieldVal)) { matchSub = false; break; }
+          }
+        }
+      }
+      return matchType && matchQ && matchSub && matchStation;
+    });
+  }
+
+  private buildGroupedAccounts(accs: any[], type: string, collapsed: Set<string>): { key: string; label: string; icon: string; color: string; accounts: any[]; count: number; collapsed: boolean }[] {
+    const typeKey = (a: any) => a.accountType || a.account_type || 'other';
+    if (type === 'all' || accs.length === 0) {
+      const typeMap = new Map<string, any[]>();
+      for (const a of accs) {
+        const t = typeKey(a);
+        if (!typeMap.has(t)) typeMap.set(t, []);
+        typeMap.get(t)!.push(a);
+      }
+      const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
+      const sortedKeys = [...typeMap.keys()].sort((a, b) => {
+        const ia = priority.indexOf(a);
+        const ib = priority.indexOf(b);
+        if (ia >= 0 && ib >= 0) return ia - ib;
+        if (ia >= 0) return -1;
+        if (ib >= 0) return 1;
+        return getTab4TypeMeta(a).label.localeCompare(getTab4TypeMeta(b).label, 'ar');
+      });
+      return sortedKeys.map(key => {
+        const meta = getTab4TypeMeta(key);
+        return {
+          key,
+          label: meta.label,
+          icon: meta.icon,
+          color: meta.color,
+          accounts: typeMap.get(key)!,
+          count: typeMap.get(key)!.length,
+          collapsed: collapsed.has(key),
+        };
+      });
+    }
+    const groupField = this.getTab4BestGroupField(type, accs);
+    const groupMap = new Map<string, any[]>();
+    for (const a of accs) {
+      let groupVal = (a as any)[groupField] || 'بدون تصنيف';
+      if (groupField === 'subType' && type === 'fund' && FUND_TYPE_LABELS[groupVal]) groupVal = FUND_TYPE_LABELS[groupVal];
+      if (!groupMap.has(groupVal)) groupMap.set(groupVal, []);
+      groupMap.get(groupVal)!.push(a);
+    }
+    const meta = getTab4TypeMeta(type);
+    const sortedEntries = [...groupMap.entries()].sort((a, b) => b[1].length - a[1].length);
+    return sortedEntries.map(([groupLabel, items]) => ({
+      key: `${type}_${groupLabel}`,
+      label: groupLabel,
+      icon: meta.icon,
+      color: meta.color,
+      accounts: items.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ar')),
+      count: items.length,
+      collapsed: collapsed.has(`${type}_${groupLabel}`),
+    }));
+  }
+
+  setTab4ActiveType(type: string) {
+    this.accountsTab4ActiveType.set(type);
+    this.accountsTab4SubFilters.set({});
+    this.accountsTab4StationFilter.set(null);
+    this.tab4CollapsedGroups.set(new Set());
+  }
+
+  toggleTab4SubFilter(key: string, value: string) {
+    this.accountsTab4SubFilters.update(subs => {
+      const current = subs[key] || [];
+      const idx = current.indexOf(value);
+      const newVals = idx >= 0 ? current.filter(v => v !== value) : [...current, value];
+      return { ...subs, [key]: newVals };
+    });
+  }
+
+  isTab4SubFilterActive(key: string, value: string): boolean {
+    return (this.accountsTab4SubFilters()[key] || []).includes(value);
+  }
+
+  setTab4StationFilter(stationId: number | null) {
+    this.accountsTab4StationFilter.set(this.accountsTab4StationFilter() === stationId ? null : stationId);
+  }
+
+  clearTab4Filters() {
+    this.accountsTab4SubFilters.set({});
+    this.accountsTab4StationFilter.set(null);
+  }
+
+  hasTab4ActiveSubFilters(): boolean {
+    return Object.values(this.accountsTab4SubFilters()).some(v => v.length > 0) || this.accountsTab4StationFilter() !== null;
+  }
+
+  toggleTab4Group(key: string) {
+    this.tab4CollapsedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
+      return newSet;
+    });
+  }
+
+  tab4CollapseAll() {
+    const keys = this.tab4GroupedAccounts().map(g => g.key);
+    this.tab4CollapsedGroups.set(new Set(keys));
+  }
+
+  tab4ExpandAll() {
+    this.tab4CollapsedGroups.set(new Set());
+  }
+
+  // ===== الويزارد: دوال الفلاتر لاختيار الحسابات =====
+  setWizardActiveType(type: string) {
+    this.wizardAccountsActiveType.set(type);
+    this.wizardAccountsSubFilters.set({});
+    this.wizardAccountsStationFilter.set(null);
+    this.wizardAccountsCollapsedGroups.set(new Set());
+  }
+
+  toggleWizardSubFilter(key: string, value: string) {
+    this.wizardAccountsSubFilters.update(subs => {
+      const current = subs[key] || [];
+      const idx = current.indexOf(value);
+      const newVals = idx >= 0 ? current.filter(v => v !== value) : [...current, value];
+      return { ...subs, [key]: newVals };
+    });
+  }
+
+  isWizardSubFilterActive(key: string, value: string): boolean {
+    return (this.wizardAccountsSubFilters()[key] || []).includes(value);
+  }
+
+  setWizardStationFilter(stationId: number | null) {
+    this.wizardAccountsStationFilter.set(this.wizardAccountsStationFilter() === stationId ? null : stationId);
+  }
+
+  clearWizardFilters() {
+    this.wizardAccountsSubFilters.set({});
+    this.wizardAccountsStationFilter.set(null);
+  }
+
+  hasWizardActiveSubFilters(): boolean {
+    return Object.values(this.wizardAccountsSubFilters()).some(v => v.length > 0) || this.wizardAccountsStationFilter() !== null;
+  }
+
+  toggleWizardGroup(key: string) {
+    this.wizardAccountsCollapsedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
+      return newSet;
+    });
+  }
+
+  wizardCollapseAll() {
+    const keys = this.wizardGroupedAccounts().map(g => g.key);
+    this.wizardAccountsCollapsedGroups.set(new Set(keys));
+  }
+
+  wizardExpandAll() {
+    this.wizardAccountsCollapsedGroups.set(new Set());
+  }
+
+  // ===== نافذة الإعداد: دوال الفلاتر لاختيار الحسابات =====
+  setConfigActiveType(type: string) {
+    this.configActiveType.set(type);
+    this.configSubFilters.set({});
+    this.configStationFilter.set(null);
+    this.configCollapsedGroups.set(new Set());
+  }
+
+  toggleConfigSubFilter(key: string, value: string) {
+    this.configSubFilters.update(subs => {
+      const current = subs[key] || [];
+      const idx = current.indexOf(value);
+      const newVals = idx >= 0 ? current.filter(v => v !== value) : [...current, value];
+      return { ...subs, [key]: newVals };
+    });
+  }
+
+  isConfigSubFilterActive(key: string, value: string): boolean {
+    return (this.configSubFilters()[key] || []).includes(value);
+  }
+
+  setConfigStationFilter(stationId: number | null) {
+    this.configStationFilter.set(this.configStationFilter() === stationId ? null : stationId);
+  }
+
+  clearConfigFilters() {
+    this.configSubFilters.set({});
+    this.configStationFilter.set(null);
+  }
+
+  hasConfigActiveSubFilters(): boolean {
+    return Object.values(this.configSubFilters()).some(v => v.length > 0) || this.configStationFilter() !== null;
+  }
+
+  toggleConfigGroup(key: string) {
+    this.configCollapsedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
+      return newSet;
+    });
+  }
+
+  configCollapseAll() {
+    const keys = this.configGroupedAccounts().map(g => g.key);
+    this.configCollapsedGroups.set(new Set(keys));
+  }
+
+  configExpandAll() {
+    this.configCollapsedGroups.set(new Set());
+  }
+
   async loadCollectionStyleConfig(screenId: number) {
     try {
       const config = await this.api.getCollectionStyleConfig(this.bizId, screenId);
       this.collectionStyleConfig.set(config);
       this.configForm.set({
         tab1Label: config.tab1Label ?? 'تحصيل',
+        tab1Color: config.tab1Color ?? '#0d9488',
+        tab1Icon: config.tab1Icon ?? '',
         tab1OperationTypeIds: config.tab1OperationTypeIds ?? [],
         tab2Label: config.tab2Label ?? 'توريد',
+        tab2Color: config.tab2Color ?? '#3b82f6',
+        tab2Icon: config.tab2Icon ?? '',
         tab2OperationTypeIds: config.tab2OperationTypeIds ?? [],
+        tab3Label: config.tab3Label ?? 'السجل',
+        tab3Color: config.tab3Color ?? '#6366f1',
+        tab3Icon: config.tab3Icon ?? '',
         accountsSectionLabel: config.accountsSectionLabel ?? 'الصناديق',
+        tab4Color: config.tab4Color ?? '#8b5cf6',
+        tab4Icon: config.tab4Icon ?? '',
         accountIds: config.accountIds ?? [],
       });
     } catch (e) {
       this.configForm.set({
-        tab1Label: 'تحصيل', tab1OperationTypeIds: [],
-        tab2Label: 'توريد', tab2OperationTypeIds: [],
-        accountsSectionLabel: 'الصناديق', accountIds: [],
+        tab1Label: 'تحصيل', tab1Color: '#0d9488', tab1Icon: '', tab1OperationTypeIds: [],
+        tab2Label: 'توريد', tab2Color: '#3b82f6', tab2Icon: '', tab2OperationTypeIds: [],
+        tab3Label: 'السجل', tab3Color: '#6366f1', tab3Icon: '',
+        accountsSectionLabel: 'الصناديق', tab4Color: '#8b5cf6', tab4Icon: '',
+        accountIds: [],
       });
     }
   }
@@ -1345,8 +1930,15 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!screen) return;
     this.loadCollectionStyleConfig(screen.id);
     this.showCollectionStyleConfigModal.set(true);
-    // قائمة الحسابات + الصناديق للاختيار (نفس getAllAccounts المستخدم في الويزارد)
-    this.api.getAllAccounts(this.bizId).then(data => this.allAccountsForConfig.set(data?.accounts || []));
+    this.configAccountsSearch.set('');
+    this.configActiveType.set('all');
+    this.configSubFilters.set({});
+    this.configStationFilter.set(null);
+    this.configCollapsedGroups.set(new Set());
+    this.api.getAllAccounts(this.bizId).then(data => {
+      this.allAccountsForConfig.set(data?.accounts || []);
+      this.configStations.set(data?.stations || []);
+    });
   }
 
   closeCollectionStyleConfigModal() {
@@ -1359,27 +1951,58 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     const form = this.configForm();
     this.saving.set(true);
     try {
-      await this.api.putCollectionStyleConfig(this.bizId, screen.id, {
+      const updated = await this.api.putCollectionStyleConfig(this.bizId, screen.id, {
         tab1Label: form.tab1Label,
+        tab1Color: form.tab1Color,
+        tab1Icon: form.tab1Icon || undefined,
         tab1OperationTypeIds: form.tab1OperationTypeIds,
         tab2Label: form.tab2Label,
+        tab2Color: form.tab2Color,
+        tab2Icon: form.tab2Icon || undefined,
         tab2OperationTypeIds: form.tab2OperationTypeIds,
+        tab3Label: form.tab3Label,
+        tab3Color: form.tab3Color,
+        tab3Icon: form.tab3Icon || undefined,
         accountsSectionLabel: form.accountsSectionLabel,
+        tab4Color: form.tab4Color,
+        tab4Icon: form.tab4Icon || undefined,
         accountIds: form.accountIds,
       });
+      // تحديث الإعداد المحلي من الاستجابة ليعكس الأيقونات والألوان المحفوظة
       this.collectionStyleConfig.set({
-        tab1Label: form.tab1Label,
-        tab1OperationTypeIds: form.tab1OperationTypeIds,
-        tab2Label: form.tab2Label,
-        tab2OperationTypeIds: form.tab2OperationTypeIds,
-        accountsSectionLabel: form.accountsSectionLabel,
-        accountIds: form.accountIds,
+        tab1Label: updated?.tab1Label ?? form.tab1Label,
+        tab1Color: updated?.tab1Color ?? form.tab1Color,
+        tab1Icon: updated?.tab1Icon ?? (form.tab1Icon || null),
+        tab1OperationTypeIds: updated?.tab1OperationTypeIds ?? form.tab1OperationTypeIds,
+        tab2Label: updated?.tab2Label ?? form.tab2Label,
+        tab2Color: updated?.tab2Color ?? form.tab2Color,
+        tab2Icon: updated?.tab2Icon ?? (form.tab2Icon || null),
+        tab2OperationTypeIds: updated?.tab2OperationTypeIds ?? form.tab2OperationTypeIds,
+        tab3Label: updated?.tab3Label ?? form.tab3Label,
+        tab3Color: updated?.tab3Color ?? form.tab3Color,
+        tab3Icon: updated?.tab3Icon ?? (form.tab3Icon || null),
+        accountsSectionLabel: updated?.accountsSectionLabel ?? form.accountsSectionLabel,
+        tab4Color: updated?.tab4Color ?? form.tab4Color,
+        tab4Icon: updated?.tab4Icon ?? (form.tab4Icon || null),
+        accountIds: updated?.accountIds ?? form.accountIds,
       });
       if (form.accountIds?.length) {
         const accs = await this.api.getWidgetAccounts(this.bizId, form.accountIds);
         this.collectionStyleAccounts.set(Array.isArray(accs) ? accs : []);
+        const full = await this.api.getAllAccounts(this.bizId);
+        const ids = new Set(form.accountIds);
+        const filtered = (full?.accounts || []).filter((a: any) => ids.has(a.id));
+        this.tab4FullAccounts.set(filtered);
+        this.tab4Stations.set(full?.stations || []);
+        this.accountsTab4Search.set('');
+        this.accountsTab4ActiveType.set('all');
+        this.accountsTab4SubFilters.set({});
+        this.accountsTab4StationFilter.set(null);
+        this.tab4CollapsedGroups.set(new Set());
       } else {
         this.collectionStyleAccounts.set([]);
+        this.tab4FullAccounts.set([]);
+        this.tab4Stations.set([]);
       }
       this.toast.success('تم حفظ الإعداد');
       this.closeCollectionStyleConfigModal();
