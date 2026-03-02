@@ -1,15 +1,15 @@
-import { Component, inject, OnInit, OnDestroy, signal, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { trigger, transition, style, animate, query, stagger, state } from '@angular/animations';
+
 import { Gridster, GridsterItem, GridsterConfig, GridsterItemConfig, GridType, CompactType, DisplayGrid } from 'angular-gridster2';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import gsap from 'gsap';
+
 
 interface ScreenTemplate {
   id: number;
@@ -107,52 +107,13 @@ interface AccountData {
   imports: [CommonModule, FormsModule, Gridster, GridsterItem, BaseChartDirective, ColorPickerDirective],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
-  animations: [
-    trigger('fadeIn', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(12px)' }),
-        animate('350ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
-      ]),
-    ]),
-    trigger('fadeInStagger', [
-      transition(':enter', [
-        query(':enter', [
-          style({ opacity: 0, transform: 'translateY(16px)' }),
-          stagger(60, [animate('350ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))]),
-        ], { optional: true }),
-      ]),
-    ]),
-    trigger('slideIn', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateX(-20px)' }),
-        animate('300ms ease-out', style({ opacity: 1, transform: 'translateX(0)' })),
-      ]),
-      transition(':leave', [
-        animate('200ms ease-in', style({ opacity: 0, transform: 'translateX(-20px)' })),
-      ]),
-    ]),
-    trigger('modalAnim', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'scale(0.92)' }),
-        animate('250ms ease-out', style({ opacity: 1, transform: 'scale(1)' })),
-      ]),
-      transition(':leave', [
-        animate('180ms ease-in', style({ opacity: 0, transform: 'scale(0.92)' })),
-      ]),
-    ]),
-    trigger('cardFlip', [
-      state('front', style({ transform: 'perspective(800px) rotateY(0deg)' })),
-      state('back', style({ transform: 'perspective(800px) rotateY(180deg)' })),
-      transition('front <=> back', animate('500ms ease-in-out')),
-    ]),
-  ],
+
 })
 export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private api = inject(ApiService);
   private toast = inject(ToastService);
-  private elRef = inject(ElementRef);
 
   bizId = 0;
   loading = signal(true);
@@ -305,67 +266,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   // ===================== Screen Templates =====================
   screenTemplateOptions = [
     {
-      key: 'collection',
-      name: 'قالب تحصيل',
-      desc: 'شاشة تحصيل يومي مع قوالب عمليات وسجل ومراقبة حسابات',
-      icon: 'payments',
-      color: '#22c55e',
-      widgets: [
-        { widgetType: 'templates', title: 'قوالب العمليات', config: {}, positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0, isVisible: true },
-        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1, isVisible: true },
-        { widgetType: 'accounts', title: 'مراقبة الحسابات', config: {}, positionX: 0, positionY: 4, width: 12, height: 4, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'delivery',
-      name: 'قالب توريد',
-      desc: 'شاشة توريد مع قوالب عمليات وسجل وإحصائيات',
-      icon: 'local_shipping',
-      color: '#3b82f6',
-      widgets: [
-        { widgetType: 'templates', title: 'قوالب العمليات', config: {}, positionX: 0, positionY: 0, width: 6, height: 4, sortOrder: 0, isVisible: true },
-        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 6, positionY: 0, width: 6, height: 4, sortOrder: 1, isVisible: true },
-        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 0, positionY: 4, width: 12, height: 2, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'monitoring',
-      name: 'قالب مراقبة',
-      desc: 'شاشة مراقبة ومتابعة مع حسابات وإحصائيات ورسم بياني',
-      icon: 'monitor',
-      color: '#f59e0b',
-      widgets: [
-        { widgetType: 'accounts', title: 'مراقبة الحسابات', config: {}, positionX: 0, positionY: 0, width: 12, height: 5, sortOrder: 0, isVisible: true },
-        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 0, positionY: 5, width: 6, height: 2, sortOrder: 1, isVisible: true },
-        { widgetType: 'chart', title: 'رسم بياني', config: {}, positionX: 6, positionY: 5, width: 6, height: 5, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
-      key: 'reports',
-      name: 'قالب تقارير',
-      desc: 'شاشة تقارير مع رسم بياني وإحصائيات وسجل',
-      icon: 'assessment',
-      color: '#8b5cf6',
-      widgets: [
-        { widgetType: 'chart', title: 'رسم بياني', config: {}, positionX: 0, positionY: 0, width: 8, height: 5, sortOrder: 0, isVisible: true },
-        { widgetType: 'stats', title: 'الإحصائيات', config: {}, positionX: 8, positionY: 0, width: 4, height: 2, sortOrder: 1, isVisible: true },
-        { widgetType: 'log', title: 'سجل العمليات', config: {}, positionX: 0, positionY: 5, width: 12, height: 5, sortOrder: 2, isVisible: true },
-      ],
-    },
-    {
       key: 'collection_style',
-      name: 'مثل التحصيل والتوريد',
+      name: 'شاشة مخصصة',
       desc: 'شاشة ثابتة بتبويبين للعمليات + سجل + مراقبة حسابات - قابلة للتخصيص',
       icon: 'receipt_long',
       color: '#14b8a6',
-      widgets: [], // لا تحتاج widgets - تعتمد على collection-style-config
-    },
-    {
-      key: 'blank',
-      name: 'قالب فارغ',
-      desc: 'ابدأ من الصفر - بدون عناصر',
-      icon: 'add_circle_outline',
-      color: '#94a3b8',
       widgets: [],
     },
   ];
@@ -439,8 +344,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   ngAfterViewInit() {
-    // GSAP entrance animation for page
-    this.animatePageEntrance();
+    // No animations
   }
 
   ngOnDestroy() {
@@ -449,61 +353,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   // ===================== GSAP Animations =====================
-  private animatePageEntrance() {
-    const container = this.elRef.nativeElement.querySelector('.page-container');
-    if (container) {
-      gsap.fromTo(container, 
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }
-      );
-    }
-  }
-
-  private animateScreenCards() {
-    setTimeout(() => {
-      const cards = this.elRef.nativeElement.querySelectorAll('.screen-card');
-      if (cards.length) {
-        gsap.fromTo(cards, 
-          { opacity: 0, y: 30, scale: 0.95 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.2)' }
-        );
-      }
-    }, 50);
-  }
-
-  private animateWidgetEntrance() {
-    setTimeout(() => {
-      const widgets = this.elRef.nativeElement.querySelectorAll('.widget-card');
-      if (widgets.length) {
-        gsap.fromTo(widgets, 
-          { opacity: 0, y: 20, scale: 0.96 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.35, stagger: 0.06, ease: 'power2.out' }
-        );
-      }
-    }, 100);
-  }
-
-  private animateModalOpen(selector: string) {
-    setTimeout(() => {
-      const modal = this.elRef.nativeElement.querySelector(selector);
-      if (modal) {
-        gsap.fromTo(modal, 
-          { opacity: 0, scale: 0.9 },
-          { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(1.4)' }
-        );
-      }
-    }, 10);
-  }
-
-  private animateViewTransition() {
-    const container = this.elRef.nativeElement.querySelector('.page-container');
-    if (container && container.children.length) {
-      gsap.fromTo(container.children, 
-        { opacity: 0, y: 15 },
-        { opacity: 1, y: 0, duration: 0.35, stagger: 0.05, ease: 'power2.out' }
-      );
-    }
-  }
+  // Animations removed - static design
 
   initGridsterOptions() {
     this.gridsterOptions = {
@@ -572,7 +422,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     try {
       const data = await this.api.getScreens(this.bizId);
       this.screens.set(data);
-      this.animateScreenCards();
+
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الشاشات');
     } finally {
@@ -588,7 +438,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       this.buildGridItems(data);
       // Load real data for all widget types
       await this.loadAllWidgetData(data);
-      this.animateWidgetEntrance();
+
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل العناصر');
     } finally {
@@ -789,7 +639,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.operationDescription.set('');
     this.operationDate.set(new Date().toISOString().split('T')[0]);
     this.showOperationModal.set(true);
-    this.animateModalOpen('.modal-card');
+
   }
 
   closeOperationModal() {
@@ -904,14 +754,14 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.wizardScreenDesc.set('');
     this.wizardScreenIcon.set('dashboard');
     this.wizardScreenColor.set('#3b82f6');
-    this.wizardSelectedTemplate.set('blank');
+    this.wizardSelectedTemplate.set('collection_style');
     this.wizardAddToSidebar.set(true);
     this.wizardSidebarSectionId.set(0);
     this.wizardSidebarSortOrder.set(0);
     this.wizardWidgets.set([]);
     this.customizingWidgetIdx.set(null);
     this.bindingWidgetIdx.set(null);
-    this.animateViewTransition();
+
     // تحميل أقسام السايدبار
     this.loadWizardSidebarSections();
   }
@@ -930,40 +780,25 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   cancelWizard() {
     this.viewMode.set('list');
-    this.animateViewTransition();
+
   }
 
   selectTemplate(key: string) {
     this.wizardSelectedTemplate.set(key);
     const tpl = this.screenTemplateOptions.find(t => t.key === key);
     if (tpl) {
-      this.wizardWidgets.set(tpl.widgets.map(w => ({ ...w })));
-      if (key !== 'blank') {
-        this.wizardScreenIcon.set(tpl.icon);
-        this.wizardScreenColor.set(tpl.color);
-        if (!this.wizardScreenName()) {
-          this.wizardScreenName.set(key === 'collection_style' ? 'شاشة مخصصة' : tpl.name.replace('قالب ', 'شاشة '));
-        }
+      this.wizardWidgets.set([]);
+      this.wizardScreenIcon.set(tpl.icon);
+      this.wizardScreenColor.set(tpl.color);
+      if (!this.wizardScreenName()) {
+        this.wizardScreenName.set('شاشة مخصصة');
       }
     }
   }
 
   nextWizardStep() {
-    const step = this.wizardStep();
-    // إذا كان collection_style → تخطي الخطوات 2-4 وحفظ مباشرة
-    if (step === 1 && this.wizardSelectedTemplate() === 'collection_style') {
-      this.saveWizardScreen();
-      return;
-    }
-    if (step === 1) {
-      this.wizardStep.set(2);
-    } else if (step === 2) {
-      this.wizardStep.set(3);
-    } else if (step === 3) {
-      this.wizardStep.set(4);
-      this.loadContentBindingData();
-    }
-    this.animateViewTransition();
+    // القالب الوحيد هو collection_style → حفظ مباشرة
+    this.saveWizardScreen();
   }
 
   prevWizardStep() {
@@ -972,7 +807,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       this.wizardStep.set(step - 1);
       this.customizingWidgetIdx.set(null);
       this.bindingWidgetIdx.set(null);
-      this.animateViewTransition();
+  
     }
   }
 
@@ -1131,7 +966,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         color: screen.color || '#3b82f6',
       });
       this.showScreenForm.set(true);
-      this.animateModalOpen('.modal-card');
+  
     } else {
       this.startWizard();
     }
@@ -1214,7 +1049,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       } catch (err) {
         console.error('loadCollectionStyleScreen error:', err);
       }
-      this.animateViewTransition();
+  
       return;
     }
 
@@ -1225,7 +1060,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       this.operationTypes.set(opTypes);
     } catch (e) {}
     await this.loadWidgets(screen.id);
-    this.animateViewTransition();
+
   }
 
   // ===================== Collection Style Screen =====================
@@ -1435,7 +1270,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     // تحميل البيانات
     await this.loadContentBindingData();
     this.showCsConfigWizard.set(true);
-    this.animateModalOpen('.modal-card');
+
   }
 
   closeCsConfigWizard() {
@@ -1506,7 +1341,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.collectionStyleConfig.set(null);
-    this.animateViewTransition();
+
   }
 
   toggleEditMode() {
@@ -1562,7 +1397,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       this.otherScreens.set(data.filter((s: any) => s.id !== currentScreenId && s.widgets?.length > 0));
       this.selectedCopyScreen.set(null);
       this.showCopyWidgetModal.set(true);
-      this.animateModalOpen('.modal-card');
+  
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الشاشات');
     }
@@ -1613,7 +1448,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       });
     }
     this.showWidgetForm.set(true);
-    this.animateModalOpen('.modal-card');
+
   }
 
   closeWidgetForm() {
@@ -1826,7 +1661,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.permissionsScreen.set(screen);
     this.permissionsLoading.set(true);
     this.showPermissionsModal.set(true);
-    this.animateModalOpen('.modal-card');
+
     try {
       const [users, perms] = await Promise.all([
         this.api.getUsers(),
@@ -1897,7 +1732,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         this.selectedSidebarSection.set(sections[0].id);
       }
       this.showSidebarModal.set(true);
-      this.animateModalOpen('.modal-card');
+  
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الأقسام');
     }

@@ -28,7 +28,7 @@
     } @else {
 
       @if (screens().length === 0) {
-        <div class="empty-state-card" @fadeIn>
+        <div class="empty-state-card">
           <div class="empty-icon">
             <span class="material-icons-round">space_dashboard</span>
           </div>
@@ -42,7 +42,7 @@
       } @else {
         <div class="screens-grid">
           @for (screen of screens(); track screen.id) {
-            <div class="screen-card card-3d" (click)="openScreen(screen)">
+            <div class="screen-card" (click)="openScreen(screen)">
               <div class="screen-card-header">
                 <div class="screen-card-icon" [style.background]="'linear-gradient(135deg, ' + screen.color + ', ' + screen.color + '99)'">
                   <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
@@ -87,7 +87,7 @@
 
   <!-- ==================== WIZARD VIEW ==================== -->
   @if (viewMode() === 'wizard') {
-    <div class="wizard-container" @fadeIn>
+    <div class="wizard-container">
       <!-- Wizard Header -->
       <div class="wizard-header">
         <button class="back-btn" (click)="cancelWizard()">
@@ -99,34 +99,16 @@
         </div>
       </div>
 
-      <!-- Wizard Steps Indicator -->
-      <div class="wizard-steps">
-        @for (step of [1,2,3,4]; track step) {
-          <div class="wizard-step" [class.active]="wizardStep() === step" [class.completed]="wizardStep() > step">
-            <div class="step-number">{{ wizardStep() > step ? '✓' : step }}</div>
-            <span class="step-label">
-              @switch (step) {
-                @case (1) { اختر القالب }
-                @case (2) { أضف العناصر }
-                @case (3) { خصص المظهر }
-                @case (4) { ربط المحتوى }
-              }
-            </span>
-          </div>
-          @if (step < 4) {
-            <div class="step-connector" [class.active]="wizardStep() > step"></div>
-          }
-        }
-      </div>
+
 
       <!-- Wizard Content -->
       <div class="wizard-content">
 
         <!-- Step 1: Choose Template -->
         @if (wizardStep() === 1) {
-          <div class="wizard-step-content" @fadeIn>
-            <h2 class="step-title">اختر قالب الشاشة</h2>
-            <p class="step-desc">اختر قالباً جاهزاً أو ابدأ من الصفر</p>
+          <div class="wizard-step-content">
+            <h2 class="step-title">إنشاء شاشة مخصصة</h2>
+            <p class="step-desc">أدخل بيانات الشاشة الجديدة</p>
 
             <div class="form-row">
               <div class="form-group flex-1">
@@ -137,32 +119,6 @@
                 <label>الوصف (اختياري)</label>
                 <input type="text" [ngModel]="wizardScreenDesc()" (ngModelChange)="wizardScreenDesc.set($event)" placeholder="وصف مختصر..." />
               </div>
-            </div>
-
-            <div class="templates-grid">
-              @for (tpl of screenTemplateOptions; track tpl.key) {
-                <div class="template-card card-3d" [class.selected]="wizardSelectedTemplate() === tpl.key" (click)="selectTemplate(tpl.key)">
-                  <div class="template-card-icon" [style.background]="tpl.color + '22'" [style.color]="tpl.color">
-                    <span class="material-icons-round">{{ tpl.icon }}</span>
-                  </div>
-                  <h4>{{ tpl.name }}</h4>
-                  <p>{{ tpl.desc }}</p>
-                  @if (tpl.widgets.length > 0) {
-                    <div class="template-widgets-preview">
-                      @for (w of tpl.widgets; track w.widgetType + $index) {
-                        <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color" [title]="getWidgetTypeInfo(w.widgetType).label">
-                          {{ getWidgetTypeInfo(w.widgetType).icon }}
-                        </span>
-                      }
-                    </div>
-                  }
-                  @if (wizardSelectedTemplate() === tpl.key) {
-                    <div class="template-selected-badge">
-                      <span class="material-icons-round">check_circle</span>
-                    </div>
-                  }
-                </div>
-              }
             </div>
 
             <!-- Sidebar Options -->
@@ -236,237 +192,17 @@
           </div>
         }
 
-        <!-- Step 2: Add Widgets -->
-        @if (wizardStep() === 2) {
-          <div class="wizard-step-content" @fadeIn>
-            <h2 class="step-title">أضف العناصر</h2>
-            <p class="step-desc">اختر العناصر التي تريدها في شاشتك</p>
 
-            <div class="widget-type-grid">
-              @for (wt of widgetTypes; track wt.value) {
-                <button class="widget-type-option" (click)="addWizardWidget(wt)">
-                  <span class="material-icons-round" [style.color]="wt.color">{{ wt.icon }}</span>
-                  <span class="wt-label">{{ wt.label }}</span>
-                  <span class="wt-desc">{{ wt.desc }}</span>
-                  <span class="material-icons-round add-icon">add_circle</span>
-                </button>
-              }
-            </div>
-
-            @if (wizardWidgets().length > 0) {
-              <h3 class="section-title">العناصر المضافة ({{ wizardWidgets().length }})</h3>
-              <div class="wizard-widgets-list">
-                @for (w of wizardWidgets(); track $index; let i = $index) {
-                  <div class="wizard-widget-item" @slideIn>
-                    <div class="wizard-widget-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
-                      <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                    </div>
-                    <div class="wizard-widget-info">
-                      <span class="wizard-widget-name">{{ w.title }}</span>
-                      <span class="wizard-widget-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
-                    </div>
-                    <div class="wizard-widget-actions">
-                      <button class="action-btn edit" (click)="toggleWizardWidgetVisibility(i)" [title]="w.isVisible ? 'إخفاء' : 'إظهار'">
-                        <span class="material-icons-round">{{ w.isVisible ? 'visibility' : 'visibility_off' }}</span>
-                      </button>
-                      <button class="action-btn delete" (click)="removeWizardWidget(i)">
-                        <span class="material-icons-round">delete</span>
-                      </button>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
-
-        <!-- Step 3: Customize Appearance -->
-        @if (wizardStep() === 3) {
-          <div class="wizard-step-content" @fadeIn>
-            <h2 class="step-title">خصص المظهر</h2>
-            <p class="step-desc">عدّل عناوين وألوان العناصر</p>
-
-            @if (wizardWidgets().length === 0) {
-              <div class="empty-widgets-msg">
-                <span class="material-icons-round">widgets</span>
-                <p>لم تضف أي عناصر بعد. ارجع للخطوة السابقة لإضافة عناصر.</p>
-              </div>
-            } @else {
-              <div class="customize-list">
-                @for (w of wizardWidgets(); track $index; let i = $index) {
-                  <div class="customize-card card-3d" [class.expanded]="customizingWidgetIdx() === i">
-                    <div class="customize-card-header" (click)="startCustomizing(customizingWidgetIdx() === i ? -1 : i)">
-                      <div class="customize-card-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
-                        <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                      </div>
-                      <div class="customize-card-info">
-                        <span class="customize-card-title">{{ w.title }}</span>
-                        <span class="customize-card-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
-                      </div>
-                      <span class="material-icons-round expand-icon">{{ customizingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
-                    </div>
-
-                    @if (customizingWidgetIdx() === i) {
-                      <div class="customize-card-body" @fadeIn>
-                        <div class="form-group">
-                          <label>العنوان</label>
-                          <input type="text" [ngModel]="w.title" (ngModelChange)="updateWizardWidgetTitle(i, $event)" />
-                        </div>
-                        <div class="form-group">
-                          <label>اللون</label>
-                          <div class="color-picker-row">
-                            <div class="color-grid">
-                              @for (color of colors; track color) {
-                                <button class="color-option" [style.background]="color" [class.selected]="(w.config?.color || getWidgetTypeInfo(w.widgetType).color) === color" (click)="updateWizardWidgetColor(i, color)">
-                                  @if ((w.config?.color || getWidgetTypeInfo(w.widgetType).color) === color) {
-                                    <span class="material-icons-round">check</span>
-                                  }
-                                </button>
-                              }
-                            </div>
-                            <div class="color-picker-trigger"
-                                 [style.background]="getWizardWidgetColor(w)"
-                                 [colorPicker]="getWizardWidgetColor(w)"
-                                 (colorPickerChange)="onColorPickerChange($event, 'wizardWidget', i)"
-                                 cpPosition="bottom"
-                                 [cpOKButton]="true"
-                                 cpOKButtonText="اختيار"
-                                 [cpCancelButton]="true"
-                                 cpCancelButtonText="إلغاء"
-                                 title="لون مخصص">
-                              <span class="material-icons-round">colorize</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
-
-        <!-- Step 4: Content Binding -->
-        @if (wizardStep() === 4) {
-          <div class="wizard-step-content" @fadeIn>
-            <h2 class="step-title">ربط المحتوى</h2>
-            <p class="step-desc">اربط كل عنصر بالبيانات المناسبة</p>
-
-            <div class="binding-list">
-              @for (w of wizardWidgets(); track $index; let i = $index) {
-                @if (hasBindableContent(w)) {
-                  <div class="binding-card card-3d" [class.expanded]="bindingWidgetIdx() === i">
-                    <div class="binding-card-header" (click)="startBinding(bindingWidgetIdx() === i ? -1 : i)">
-                      <div class="binding-card-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
-                        <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                      </div>
-                      <div class="binding-card-info">
-                        <span class="binding-card-title">{{ w.title }}</span>
-                        <span class="binding-card-label">{{ getBindingLabel(w) }}</span>
-                      </div>
-                      <span class="material-icons-round expand-icon">{{ bindingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
-                    </div>
-
-                    @if (bindingWidgetIdx() === i) {
-                      <div class="binding-card-body" @fadeIn>
-                        <!-- Templates Widget Binding -->
-                        @if (w.widgetType === 'templates') {
-                          <h5 class="binding-section-title">اختر قوالب العمليات</h5>
-                          <div class="binding-options-grid">
-                            @for (op of operationTypes(); track op.id) {
-                              <label class="binding-option" [class.selected]="(w.config?.operationTypeIds || []).includes(op.id)">
-                                <input type="checkbox" [checked]="(w.config?.operationTypeIds || []).includes(op.id)" (change)="toggleOperationType(i, op.id)" />
-                                <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
-                                <span>{{ op.name }}</span>
-                              </label>
-                            }
-                            @if (operationTypes().length === 0) {
-                              <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
-                            }
-                          </div>
-                        }
-
-                        <!-- Accounts Widget Binding -->
-                        @if (w.widgetType === 'accounts') {
-                          <h5 class="binding-section-title">اختر الحسابات للمراقبة</h5>
-                          <div class="binding-options-grid">
-                            @for (acc of allAccounts(); track acc.id) {
-                              <label class="binding-option" [class.selected]="(w.config?.accountIds || []).includes(acc.id)">
-                                <input type="checkbox" [checked]="(w.config?.accountIds || []).includes(acc.id)" (change)="toggleAccount(i, acc.id)" />
-                                <span class="material-icons-round">account_balance_wallet</span>
-                                <span>{{ acc.name }}</span>
-                              </label>
-                            }
-                            @if (allAccounts().length === 0) {
-                              <p class="no-data-msg">لا توجد حسابات. أنشئها من صفحة الحسابات.</p>
-                            }
-                          </div>
-                        }
-
-                        <!-- Log Widget Binding -->
-                        @if (w.widgetType === 'log') {
-                          <h5 class="binding-section-title">فلاتر السجل</h5>
-                          <div class="form-row">
-                            <div class="form-group">
-                              <label>نوع العملية</label>
-                              <select [ngModel]="w.config?.filters?.operationType || ''" (ngModelChange)="updateLogFilter(i, 'operationType', $event)">
-                                <option value="">الكل</option>
-                                @for (op of operationTypes(); track op.id) {
-                                  <option [value]="op.id">{{ op.name }}</option>
-                                }
-                              </select>
-                            </div>
-                            <div class="form-group">
-                              <label>الفترة</label>
-                              <select [ngModel]="w.config?.filters?.period || ''" (ngModelChange)="updateLogFilter(i, 'period', $event)">
-                                <option value="">الكل</option>
-                                <option value="today">اليوم</option>
-                                <option value="week">هذا الأسبوع</option>
-                                <option value="month">هذا الشهر</option>
-                              </select>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              }
-
-              @if (!wizardWidgets().some(w => hasBindableContent(w))) {
-                <div class="empty-widgets-msg">
-                  <span class="material-icons-round">link_off</span>
-                  <p>لا توجد عناصر تحتاج لربط محتوى. يمكنك إنشاء الشاشة مباشرة.</p>
-                </div>
-              }
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Wizard Footer -->
       <div class="wizard-footer">
-        <div class="wizard-footer-right">
-          @if (wizardStep() > 1) {
-            <button class="wizard-btn secondary" (click)="prevWizardStep()">
-              <span class="material-icons-round">arrow_forward</span>
-              السابق
-            </button>
-          }
-        </div>
+        <div class="wizard-footer-right"></div>
         <div class="wizard-footer-left">
-          @if (wizardStep() < 4) {
-            <button class="wizard-btn primary" (click)="nextWizardStep()" [disabled]="wizardStep() === 1 && !wizardScreenName()">
-              التالي
-              <span class="material-icons-round">arrow_back</span>
-            </button>
-          } @else {
-            <button class="wizard-btn success" (click)="saveWizardScreen()" [disabled]="saving() || !wizardScreenName()">
-              <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
-              {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
-            </button>
-          }
+          <button class="wizard-btn success" (click)="nextWizardStep()" [disabled]="saving() || !wizardScreenName()">
+            <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
+            {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
+          </button>
         </div>
       </div>
     </div>
@@ -474,7 +210,7 @@
 
   <!-- ==================== DETAIL VIEW ==================== -->
   @if (viewMode() === 'detail' && activeScreen()) {
-    <div class="detail-view" @fadeIn>
+    <div class="detail-view">
       <!-- Detail Header -->
       <div class="detail-header">
         <div class="detail-header-right">
@@ -517,7 +253,7 @@
 
         <!-- Widget Library Sidebar -->
         @if (showWidgetLibrary()) {
-          <div class="widget-library" @slideIn>
+          <div class="widget-library">
             <div class="library-header">
               <h3>
                 <span class="material-icons-round">widgets</span>
@@ -555,7 +291,7 @@
           } @else {
 
             @if (gridItems.length === 0) {
-              <div class="empty-state-card" @fadeIn>
+              <div class="empty-state-card">
                 <div class="empty-icon">
                   <span class="material-icons-round">widgets</span>
                 </div>
@@ -572,7 +308,7 @@
               <gridster [options]="gridsterOptions">
                 @for (item of gridItems; track item.widgetData.id) {
                   <gridster-item [item]="item">
-                    <div class="widget-card card-3d" [class.edit-mode]="editMode()" [class.hidden-widget]="!item.widgetData.isVisible">
+                    <div class="widget-card" [class.edit-mode]="editMode()" [class.hidden-widget]="!item.widgetData.isVisible">
                       <!-- Widget Header -->
                       <div class="widget-header" [style.border-bottom-color]="(item.widgetData.config?.color || getWidgetTypeInfo(item.widgetData.widgetType).color) + '33'">
                         <div class="widget-title">
@@ -687,7 +423,7 @@
                         @if (item.widgetData.widgetType === 'accounts') {
                           <div class="accounts-widget">
                             @for (acc of getAccountsForWidget(item.widgetData); track acc.id) {
-                              <div class="account-row card-3d-subtle">
+                              <div class="account-row">
                                 <div class="account-info">
                                   <span class="material-icons-round account-icon">{{ getAccountIcon(acc.account_type) }}</span>
                                   <div class="account-details">
@@ -718,7 +454,7 @@
                         @if (item.widgetData.widgetType === 'stats') {
                           <div class="stats-widget">
                             @for (stat of getStatsData(); track stat.label) {
-                              <div class="stat-card card-3d-subtle">
+                              <div class="stat-card">
                                 <div class="stat-icon" [style.background]="stat.color + '18'" [style.color]="stat.color">
                                   <span class="material-icons-round">{{ stat.icon }}</span>
                                 </div>
@@ -784,7 +520,7 @@
   <!-- ==================== SCREEN FORM MODAL (Edit) ==================== -->
   @if (showScreenForm()) {
     <div class="modal-overlay" (click)="closeScreenForm()">
-      <div class="modal-card" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon blue">
@@ -862,7 +598,7 @@
   <!-- ==================== WIDGET FORM MODAL ==================== -->
   @if (showWidgetForm()) {
     <div class="modal-overlay" (click)="closeWidgetForm()">
-      <div class="modal-card" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon green">
@@ -937,7 +673,7 @@
   <!-- ==================== COPY WIDGET MODAL ==================== -->
   @if (showCopyWidgetModal()) {
     <div class="modal-overlay" (click)="closeCopyWidgetModal()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon blue">
@@ -1003,7 +739,7 @@
   <!-- ==================== PERMISSIONS MODAL ==================== -->
   @if (showPermissionsModal()) {
     <div class="modal-overlay" (click)="closePermissionsModal()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon purple">
@@ -1064,7 +800,7 @@
   <!-- ==================== ADD TO SIDEBAR MODAL ==================== -->
   @if (showSidebarModal()) {
     <div class="modal-overlay" (click)="closeSidebarModal()">
-      <div class="modal-card" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon green">
@@ -1108,7 +844,7 @@
 
   <!-- ==================== COLLECTION STYLE VIEW ==================== -->
   @if (viewMode() === 'collection_style' && activeScreen()) {
-    <div class="cs-page-container" @fadeIn>
+    <div class="cs-page-container">
 
       <!-- ===== Page Header ===== -->
       <div class="cs-page-header">
@@ -1191,7 +927,7 @@
                 </h2>
                 <div class="cs-ot-cards-grid">
                   @for (ot of getCsTab1Templates(); track ot.id) {
-                    <button class="cs-ot-card-3d" (click)="selectCsOpType(ot)">
+                    <button class="cs-ot-card" (click)="selectCsOpType(ot)">
                       <div class="cs-ot-card-icon cs-collection">
                         <span class="material-icons-round">{{ ot.icon || 'call_received' }}</span>
                       </div>
@@ -1308,7 +1044,7 @@
                 </h2>
                 <div class="cs-ot-cards-grid">
                   @for (ot of getCsTab2Templates(); track ot.id) {
-                    <button class="cs-ot-card-3d" (click)="selectCsOpType(ot)">
+                    <button class="cs-ot-card" (click)="selectCsOpType(ot)">
                       <div class="cs-ot-card-icon cs-delivery">
                         <span class="material-icons-round">{{ ot.icon || 'call_made' }}</span>
                       </div>
@@ -1500,7 +1236,7 @@
   <!-- ==================== COLLECTION STYLE CONFIG WIZARD MODAL ==================== -->
   @if (showCsConfigWizard()) {
     <div class="modal-overlay" (click)="closeCsConfigWizard()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon green">
@@ -1539,7 +1275,7 @@
         <div class="modal-body">
           <!-- الخطوة 1: التسميات -->
           @if (csWizardStep() === 1) {
-            <div @fadeIn>
+            <div>
               <h3 class="section-title">تسميات الأقسام</h3>
               <div class="form-group">
                 <label>اسم التبويب الأول</label>
@@ -1558,7 +1294,7 @@
 
           <!-- الخطوة 2: قوالب التبويب الأول -->
           @if (csWizardStep() === 2) {
-            <div @fadeIn>
+            <div>
               <h3 class="section-title">اختر قوالب العمليات للتبويب الأول ({{ csTab1Label() }})</h3>
               <div class="binding-options-grid">
                 @for (op of operationTypes(); track op.id) {
@@ -1577,7 +1313,7 @@
 
           <!-- الخطوة 3: قوالب التبويب الثاني -->
           @if (csWizardStep() === 3) {
-            <div @fadeIn>
+            <div>
               <h3 class="section-title">اختر قوالب العمليات للتبويب الثاني ({{ csTab2Label() }})</h3>
               <div class="binding-options-grid">
                 @for (op of operationTypes(); track op.id) {
@@ -1596,7 +1332,7 @@
 
           <!-- الخطوة 4: حسابات المراقبة -->
           @if (csWizardStep() === 4) {
-            <div @fadeIn>
+            <div>
               <h3 class="section-title">اختر الحسابات/الصناديق لقسم {{ csAccountsSectionLabel() }}</h3>
               <div class="binding-options-grid">
                 @for (acc of allAccounts(); track acc.id) {
@@ -1647,7 +1383,7 @@
   <!-- ==================== OPERATION EXECUTION MODAL ==================== -->
   @if (showOperationModal()) {
     <div class="modal-overlay" (click)="closeOperationModal()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()" @modalAnim>
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon green">
