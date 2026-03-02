@@ -1815,10 +1815,6 @@
     border-color: transparent; box-shadow: 0 6px 20px rgba(0,0,0,0.1);
      color: white;
   }
-  &:nth-child(1).active { background: linear-gradient(135deg, #22c55e, #14b8a6); }
-  &:nth-child(2).active { background: linear-gradient(135deg, #ef4444, #f97316); }
-  &:nth-child(3).active { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-  &:nth-child(4).active { background: linear-gradient(135deg, #10b981, #059669); }
   &:not(.active):hover { border-color: #14b8a6; color: #14b8a6; }
 }
 
@@ -1826,8 +1822,7 @@
   width: 32px; height: 32px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   .material-icons-round { font-size: 18px; color: white; }
-  &.cs-collection-icon { background: linear-gradient(135deg, #22c55e, #14b8a6); }
-  &.cs-delivery-icon { background: linear-gradient(135deg, #ef4444, #f97316); }
+
   &.cs-history-icon { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
   &.cs-funds-icon { background: linear-gradient(135deg, #10b981, #059669); }
 }

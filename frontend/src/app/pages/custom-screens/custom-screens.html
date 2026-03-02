@@ -1071,27 +1071,31 @@
         <!-- ===== View Tabs ===== -->
         <div class="cs-view-tabs">
           <button class="cs-view-tab" [class.active]="csActiveTab() === 'tab1'"
+                  [style.background]="csActiveTab() === 'tab1' ? (collectionStyleConfig()?.tab1Color || 'linear-gradient(135deg, #22c55e, #14b8a6)') : null"
                   (click)="csActiveTab.set('tab1'); cancelCsOpType()">
-            <div class="cs-vt-icon cs-collection-icon">
-              <span class="material-icons-round">call_received</span>
+            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.tab1Color ? collectionStyleConfig()!.tab1Color : 'linear-gradient(135deg, #22c55e, #14b8a6)'">
+              <span class="material-icons-round">{{ collectionStyleConfig()?.tab1Icon || 'call_received' }}</span>
             </div>
             <span>{{ collectionStyleConfig()?.tab1Label || 'تحصيل' }}</span>
           </button>
           <button class="cs-view-tab" [class.active]="csActiveTab() === 'tab2'"
+                  [style.background]="csActiveTab() === 'tab2' ? (collectionStyleConfig()?.tab2Color || 'linear-gradient(135deg, #ef4444, #f97316)') : null"
                   (click)="csActiveTab.set('tab2'); cancelCsOpType()">
-            <div class="cs-vt-icon cs-delivery-icon">
-              <span class="material-icons-round">call_made</span>
+            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.tab2Color ? collectionStyleConfig()!.tab2Color : 'linear-gradient(135deg, #ef4444, #f97316)'">
+              <span class="material-icons-round">{{ collectionStyleConfig()?.tab2Icon || 'call_made' }}</span>
             </div>
             <span>{{ collectionStyleConfig()?.tab2Label || 'توريد' }}</span>
           </button>
           <button class="cs-view-tab" [class.active]="csActiveTab() === 'history'"
+                  [style.background]="csActiveTab() === 'history' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : null"
                   (click)="csActiveTab.set('history'); cancelCsOpType()">
             <div class="cs-vt-icon cs-history-icon">
               <span class="material-icons-round">history</span>
             </div>
-            <span>السجل</span>
+            <span>{{ collectionStyleConfig()?.historyLabel || 'السجل' }}</span>
           </button>
           <button class="cs-view-tab" [class.active]="csActiveTab() === 'funds'"
+                  [style.background]="csActiveTab() === 'funds' ? 'linear-gradient(135deg, #10b981, #059669)' : null"
                   (click)="csActiveTab.set('funds'); cancelCsOpType()">
             <div class="cs-vt-icon cs-funds-icon">
               <span class="material-icons-round">savings</span>
