@@ -904,10 +904,16 @@ export const customScreenConfig = pgTable('custom_screen_config', {
   screenId: integer('screen_id').notNull().references(() => screenTemplates.id).unique(),
   // التبويب الأول (مثلاً عمليات القبض)
   tab1Label: varchar('tab1_label', { length: 200 }).notNull().default('تحصيل'),
+  tab1Icon: varchar('tab1_icon', { length: 100 }).notNull().default('arrow_downward'),
+  tab1Color: varchar('tab1_color', { length: 20 }).notNull().default('#22c55e'),
   tab1OperationTypeIds: jsonb('tab1_operation_type_ids').$type<number[]>().default([]),
   // التبويب الثاني (مثلاً عمليات الصرف)
   tab2Label: varchar('tab2_label', { length: 200 }).notNull().default('توريد'),
+  tab2Icon: varchar('tab2_icon', { length: 100 }).notNull().default('arrow_upward'),
+  tab2Color: varchar('tab2_color', { length: 20 }).notNull().default('#ef4444'),
   tab2OperationTypeIds: jsonb('tab2_operation_type_ids').$type<number[]>().default([]),
+  // تبويب السجل
+  historyLabel: varchar('history_label', { length: 200 }).notNull().default('السجل'),
   // قسم المراقبة (صناديق/محافظ/بنوك...)
   accountsSectionLabel: varchar('accounts_section_label', { length: 200 }).notNull().default('الصناديق'),
   accountIds: jsonb('account_ids').$type<number[]>().default([]),

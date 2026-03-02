@@ -15,6 +15,13 @@
       "when": 1772321100899,
       "tag": "0001_powerful_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772417520641,
+      "tag": "0002_lush_tombstone",
+      "breakpoints": true
     }
   ]
 }

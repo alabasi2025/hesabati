@@ -95,20 +95,39 @@
         </button>
         <div>
           <h1>إنشاء شاشة جديدة</h1>
-          <p>اتبع الخطوات لإنشاء شاشتك المخصصة</p>
+          <p>الخطوة {{ wizardStep() }} من 5</p>
         </div>
       </div>
 
-
+      <!-- Wizard Steps Indicator -->
+      <div class="wizard-steps">
+        @for (step of [1,2,3,4,5]; track step) {
+          <div class="wizard-step" [class.active]="wizardStep() === step" [class.completed]="wizardStep() > step" (click)="step < wizardStep() ? wizardStep.set(step) : null">
+            <div class="step-number">{{ wizardStep() > step ? '✓' : step }}</div>
+            <span class="step-label">
+              @switch (step) {
+                @case (1) { بيانات الشاشة }
+                @case (2) { التبويب الأول }
+                @case (3) { التبويب الثاني }
+                @case (4) { السجل }
+                @case (5) { الحسابات }
+              }
+            </span>
+          </div>
+          @if (step < 5) {
+            <div class="step-connector" [class.active]="wizardStep() > step"></div>
+          }
+        }
+      </div>
 
       <!-- Wizard Content -->
       <div class="wizard-content">
 
-        <!-- Step 1: Choose Template -->
+        <!-- ========== Step 1: Screen Info ========== -->
         @if (wizardStep() === 1) {
           <div class="wizard-step-content">
-            <h2 class="step-title">إنشاء شاشة مخصصة</h2>
-            <p class="step-desc">أدخل بيانات الشاشة الجديدة</p>
+            <h2 class="step-title">بيانات الشاشة</h2>
+            <p class="step-desc">أدخل المعلومات الأساسية للشاشة الجديدة</p>
 
             <div class="form-row">
               <div class="form-group flex-1">
@@ -153,7 +172,7 @@
             <!-- Icon & Color Selection -->
             <div class="form-row" style="margin-top: 24px;">
               <div class="form-group flex-1">
-                <label>الأيقونة</label>
+                <label>أيقونة الشاشة</label>
                 <div class="icon-grid compact">
                   @for (icon of icons; track icon) {
                     <button class="icon-option" [class.selected]="wizardScreenIcon() === icon" (click)="wizardScreenIcon.set(icon)">
@@ -163,7 +182,7 @@
                 </div>
               </div>
               <div class="form-group flex-1">
-                <label>اللون</label>
+                <label>لون الشاشة</label>
                 <div class="color-picker-row">
                   <div class="color-grid">
                     @for (color of colors; track color) {
@@ -192,17 +211,192 @@
           </div>
         }
 
+        <!-- ========== Step 2: Tab 1 Settings ========== -->
+        @if (wizardStep() === 2) {
+          <div class="wizard-step-content">
+            <h2 class="step-title">إعداد التبويب الأول</h2>
+            <p class="step-desc">حدد اسم وأيقونة ولون التبويب الأول واختر قوالب العمليات</p>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>اسم التبويب</label>
+                <input type="text" [ngModel]="wizardTab1Label()" (ngModelChange)="wizardTab1Label.set($event)" placeholder="مثلاً: تحصيل" />
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 16px;">
+              <div class="form-group flex-1">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid compact">
+                  @for (icon of icons; track icon) {
+                    <button class="icon-option" [class.selected]="wizardTab1Icon() === icon" (click)="wizardTab1Icon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group flex-1">
+                <label>لون التبويب</label>
+                <div class="color-picker-row">
+                  <div class="color-grid">
+                    @for (color of colors; track color) {
+                      <button class="color-option" [style.background]="color" [class.selected]="wizardTab1Color() === color" (click)="wizardTab1Color.set(color)">
+                        @if (wizardTab1Color() === color) {
+                          <span class="material-icons-round">check</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="section-title" style="margin-top: 24px;">اختر قوالب العمليات لهذا التبويب</h3>
+            <div class="binding-options-grid">
+              @for (op of operationTypes(); track op.id) {
+                <label class="binding-option" [class.selected]="wizardTab1OperationTypeIds().includes(op.id)">
+                  <input type="checkbox" [checked]="wizardTab1OperationTypeIds().includes(op.id)" (change)="toggleWizardTab1OpType(op.id)" />
+                  <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                  <span>{{ op.name }}</span>
+                </label>
+              }
+              @if (operationTypes().length === 0) {
+                <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- ========== Step 3: Tab 2 Settings ========== -->
+        @if (wizardStep() === 3) {
+          <div class="wizard-step-content">
+            <h2 class="step-title">إعداد التبويب الثاني</h2>
+            <p class="step-desc">حدد اسم وأيقونة ولون التبويب الثاني واختر قوالب العمليات</p>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>اسم التبويب</label>
+                <input type="text" [ngModel]="wizardTab2Label()" (ngModelChange)="wizardTab2Label.set($event)" placeholder="مثلاً: توريد" />
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 16px;">
+              <div class="form-group flex-1">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid compact">
+                  @for (icon of icons; track icon) {
+                    <button class="icon-option" [class.selected]="wizardTab2Icon() === icon" (click)="wizardTab2Icon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group flex-1">
+                <label>لون التبويب</label>
+                <div class="color-picker-row">
+                  <div class="color-grid">
+                    @for (color of colors; track color) {
+                      <button class="color-option" [style.background]="color" [class.selected]="wizardTab2Color() === color" (click)="wizardTab2Color.set(color)">
+                        @if (wizardTab2Color() === color) {
+                          <span class="material-icons-round">check</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="section-title" style="margin-top: 24px;">اختر قوالب العمليات لهذا التبويب</h3>
+            <div class="binding-options-grid">
+              @for (op of operationTypes(); track op.id) {
+                <label class="binding-option" [class.selected]="wizardTab2OperationTypeIds().includes(op.id)">
+                  <input type="checkbox" [checked]="wizardTab2OperationTypeIds().includes(op.id)" (change)="toggleWizardTab2OpType(op.id)" />
+                  <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                  <span>{{ op.name }}</span>
+                </label>
+              }
+              @if (operationTypes().length === 0) {
+                <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- ========== Step 4: History Tab ========== -->
+        @if (wizardStep() === 4) {
+          <div class="wizard-step-content">
+            <h2 class="step-title">إعداد تبويب السجل</h2>
+            <p class="step-desc">حدد اسم تبويب السجل الذي يعرض جميع العمليات المنفذة</p>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>اسم تبويب السجل</label>
+                <input type="text" [ngModel]="wizardHistoryLabel()" (ngModelChange)="wizardHistoryLabel.set($event)" placeholder="مثلاً: السجل" />
+              </div>
+            </div>
+
+            <div class="history-preview" style="margin-top: 32px; padding: 24px; background: var(--bg-secondary, #f8f9fa); border-radius: 12px; text-align: center;">
+              <span class="material-icons-round" style="font-size: 48px; color: var(--text-secondary); opacity: 0.5;">history</span>
+              <h3 style="margin-top: 12px; color: var(--text-secondary);">تبويب السجل</h3>
+              <p style="color: var(--text-secondary); opacity: 0.7;">سيعرض هذا التبويب جميع العمليات المنفذة عبر التبويبين الأول والثاني مع إمكانية الفلترة والبحث</p>
+            </div>
+          </div>
+        }
+
+        <!-- ========== Step 5: Accounts/Funds Tab ========== -->
+        @if (wizardStep() === 5) {
+          <div class="wizard-step-content">
+            <h2 class="step-title">إعداد تبويب الحسابات / الصناديق</h2>
+            <p class="step-desc">حدد اسم التبويب واختر الحسابات التي تريد مراقبتها</p>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>اسم التبويب</label>
+                <input type="text" [ngModel]="wizardAccountsLabel()" (ngModelChange)="wizardAccountsLabel.set($event)" placeholder="مثلاً: الصناديق" />
+              </div>
+            </div>
+
+            <h3 class="section-title" style="margin-top: 24px;">اختر الحسابات للمراقبة</h3>
+            <div class="binding-options-grid">
+              @for (acc of allAccounts(); track acc.id) {
+                <label class="binding-option" [class.selected]="wizardAccountIds().includes(acc.id)">
+                  <input type="checkbox" [checked]="wizardAccountIds().includes(acc.id)" (change)="toggleWizardAccount(acc.id)" />
+                  <span class="material-icons-round">account_balance_wallet</span>
+                  <span>{{ acc.name }}</span>
+                </label>
+              }
+              @if (allAccounts().length === 0) {
+                <p class="no-data-msg">لا توجد حسابات. أنشئها من صفحة الحسابات.</p>
+              }
+            </div>
+          </div>
+        }
 
       </div>
 
       <!-- Wizard Footer -->
       <div class="wizard-footer">
-        <div class="wizard-footer-right"></div>
+        <div class="wizard-footer-right">
+          @if (wizardStep() > 1) {
+            <button class="wizard-btn secondary" (click)="prevWizardStep()">
+              <span class="material-icons-round">arrow_forward</span>
+              السابق
+            </button>
+          }
+        </div>
         <div class="wizard-footer-left">
-          <button class="wizard-btn success" (click)="nextWizardStep()" [disabled]="saving() || !wizardScreenName()">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
-            {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
-          </button>
+          @if (wizardStep() < 5) {
+            <button class="wizard-btn primary" (click)="nextWizardStep()" [disabled]="wizardStep() === 1 && !wizardScreenName()">
+              التالي
+              <span class="material-icons-round">arrow_back</span>
+            </button>
+          } @else {
+            <button class="wizard-btn success" (click)="nextWizardStep()" [disabled]="saving() || !wizardScreenName()">
+              <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
+              {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
+            </button>
+          }
         </div>
       </div>
     </div>

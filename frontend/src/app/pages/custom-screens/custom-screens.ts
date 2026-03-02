@@ -148,19 +148,38 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   showWidgetLibrary = signal(false);
   hasUnsavedChanges = signal(false);
 
-  // ===================== Wizard State =====================
+  // ===================== Wizard State (5 steps) =====================
   wizardStep = signal(1);
   wizardScreenName = signal('');
   wizardScreenDesc = signal('');
   wizardScreenIcon = signal('dashboard');
   wizardScreenColor = signal('#3b82f6');
-  wizardSelectedTemplate = signal<string>('blank');
+  wizardSelectedTemplate = signal<string>('collection_style');
   wizardAddToSidebar = signal(true);
   wizardSidebarSectionId = signal(0);
   wizardSidebarSortOrder = signal(0);
   wizardSidebarSections = signal<any[]>([]);
   wizardWidgets = signal<WizardWidget[]>([]);
   wizardEditingWidgetIdx = signal<number | null>(null);
+
+  // Wizard Step 2: Tab 1 settings
+  wizardTab1Label = signal('تحصيل');
+  wizardTab1Icon = signal('arrow_downward');
+  wizardTab1Color = signal('#22c55e');
+  wizardTab1OperationTypeIds = signal<number[]>([]);
+
+  // Wizard Step 3: Tab 2 settings
+  wizardTab2Label = signal('توريد');
+  wizardTab2Icon = signal('arrow_upward');
+  wizardTab2Color = signal('#ef4444');
+  wizardTab2OperationTypeIds = signal<number[]>([]);
+
+  // Wizard Step 4: History tab
+  wizardHistoryLabel = signal('السجل');
+
+  // Wizard Step 5: Accounts/Funds tab
+  wizardAccountsLabel = signal('الصناديق');
+  wizardAccountIds = signal<number[]>([]);
 
   // ===================== Widget Customization (Step 3) =====================
   customizingWidgetIdx = signal<number | null>(null);
@@ -746,7 +765,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
-  // ===================== WIZARD =====================
+  // ===================== WIZARD (5 Steps) =====================
   startWizard() {
     this.viewMode.set('wizard');
     this.wizardStep.set(1);
@@ -762,8 +781,28 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.customizingWidgetIdx.set(null);
     this.bindingWidgetIdx.set(null);
 
-    // تحميل أقسام السايدبار
+    // Step 2: Tab 1
+    this.wizardTab1Label.set('تحصيل');
+    this.wizardTab1Icon.set('arrow_downward');
+    this.wizardTab1Color.set('#22c55e');
+    this.wizardTab1OperationTypeIds.set([]);
+
+    // Step 3: Tab 2
+    this.wizardTab2Label.set('توريد');
+    this.wizardTab2Icon.set('arrow_upward');
+    this.wizardTab2Color.set('#ef4444');
+    this.wizardTab2OperationTypeIds.set([]);
+
+    // Step 4: History
+    this.wizardHistoryLabel.set('السجل');
+
+    // Step 5: Accounts
+    this.wizardAccountsLabel.set('الصناديق');
+    this.wizardAccountIds.set([]);
+
+    // تحميل أقسام السايدبار والبيانات
     this.loadWizardSidebarSections();
+    this.loadContentBindingData();
   }
 
   async loadWizardSidebarSections() {
@@ -797,18 +836,48 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   nextWizardStep() {
-    // القالب الوحيد هو collection_style → حفظ مباشرة
-    this.saveWizardScreen();
+    const step = this.wizardStep();
+    if (step === 1) {
+      // التحقق من اسم الشاشة
+      if (!this.wizardScreenName().trim()) {
+        this.toast.warning('يرجى إدخال اسم الشاشة');
+        return;
+      }
+    }
+    if (step < 5) {
+      this.wizardStep.set(step + 1);
+    } else {
+      // الخطوة 5 → حفظ
+      this.saveWizardScreen();
+    }
   }
 
   prevWizardStep() {
     const step = this.wizardStep();
     if (step > 1) {
       this.wizardStep.set(step - 1);
-      this.customizingWidgetIdx.set(null);
-      this.bindingWidgetIdx.set(null);
-  
     }
+  }
+
+  toggleWizardTab1OpType(id: number) {
+    const ids = [...this.wizardTab1OperationTypeIds()];
+    const idx = ids.indexOf(id);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
+    this.wizardTab1OperationTypeIds.set(ids);
+  }
+
+  toggleWizardTab2OpType(id: number) {
+    const ids = [...this.wizardTab2OperationTypeIds()];
+    const idx = ids.indexOf(id);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
+    this.wizardTab2OperationTypeIds.set(ids);
+  }
+
+  toggleWizardAccount(id: number) {
+    const ids = [...this.wizardAccountIds()];
+    const idx = ids.indexOf(id);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
+    this.wizardAccountIds.set(ids);
   }
 
   async loadContentBindingData() {
@@ -918,15 +987,14 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.saving.set(true);
     try {
-      const isCollectionStyle = this.wizardSelectedTemplate() === 'collection_style';
       const addToSidebar = this.wizardAddToSidebar();
       const payload: any = {
         name,
         description: this.wizardScreenDesc(),
         icon: this.wizardScreenIcon(),
         color: this.wizardScreenColor(),
-        templateKey: this.wizardSelectedTemplate(),
-        widgets: isCollectionStyle ? [] : this.wizardWidgets(),
+        templateKey: 'collection_style',
+        widgets: [],
         addToSidebar,
       };
       // إضافة معلومات السايدبار إذا تم اختيار الإضافة
@@ -936,20 +1004,37 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         payload.sidebarSortOrder = this.wizardSidebarSortOrder();
       }
       const newScreen = await this.api.createScreen(this.bizId, payload);
+
+      // حفظ إعدادات التبويبات والحسابات مباشرة
+      if (newScreen?.id) {
+        const configPayload = {
+          tab1Label: this.wizardTab1Label(),
+          tab1Icon: this.wizardTab1Icon(),
+          tab1Color: this.wizardTab1Color(),
+          tab1OperationTypeIds: this.wizardTab1OperationTypeIds(),
+          tab2Label: this.wizardTab2Label(),
+          tab2Icon: this.wizardTab2Icon(),
+          tab2Color: this.wizardTab2Color(),
+          tab2OperationTypeIds: this.wizardTab2OperationTypeIds(),
+          historyLabel: this.wizardHistoryLabel(),
+          accountsSectionLabel: this.wizardAccountsLabel(),
+          accountIds: this.wizardAccountIds(),
+        };
+        await this.api.saveCollectionStyleConfig(this.bizId, newScreen.id, configPayload);
+      }
+
       this.toast.success('تم إنشاء الشاشة بنجاح');
       await this.loadScreens();
 
-      // إذا كان collection_style → فتح الشاشة مباشرة لإعدادها
-      if (isCollectionStyle && newScreen?.id) {
+      // فتح الشاشة مباشرة
+      if (newScreen?.id) {
         const screen = this.screens().find(s => s.id === newScreen.id) || { ...newScreen };
         await this.openScreen(screen);
-        // فتح معالج الإعداد تلقائياً
-        setTimeout(() => this.openCsConfigWizard(), 500);
       } else {
         this.viewMode.set('list');
       }
     } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء الإنشاء');
+      this.toast.error(e.message || 'حث خطأ أثناء الإنشاء');
     } finally {
       this.saving.set(false);
     }
