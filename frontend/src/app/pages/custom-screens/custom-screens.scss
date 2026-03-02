@@ -98,7 +98,8 @@
 
 .screen-card-actions {
   display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s;
-  .screen-card:hover & { opacity: 1; }
+  pointer-events: none;
+  .screen-card:hover & { opacity: 1; pointer-events: auto; }
 }
 
 .screen-card-body {

@@ -658,7 +658,7 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
     // 1. توليد رقم السند بـ sequence
     let voucherNumber = voucherData.voucherNumber;
     if (!voucherNumber) {
-      const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
+      const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : vType === 'collection' ? 'voucher_collection_seq' : vType === 'delivery' ? 'voucher_delivery_seq' : 'voucher_transfer_seq';
       const prefix = vType === 'receipt' ? 'RCV' : vType === 'payment' ? 'PAY' : vType === 'transfer' ? 'TRF' : vType === 'collection' ? 'COL' : vType === 'delivery' ? 'DLV' : 'VCH';
       const seqResult = await tx.execute(sql.raw(`SELECT nextval('${seqName}')`));
       const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
