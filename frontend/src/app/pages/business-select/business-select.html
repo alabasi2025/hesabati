@@ -29,8 +29,19 @@
     </div>
   }
 
+  <!-- Error -->
+  @if (!loading() && error()) {
+    <div class="error-container">
+      <span class="material-icons-round error-icon">error_outline</span>
+      <p class="error-title">لم يتم تحميل البيانات</p>
+      <p class="error-message">{{ error() }}</p>
+      <p class="error-hint">تأكد من: (1) تشغيل الخادم الخلفي على المنفذ 3000 (2) تسجيل الدخول (3) اتصال قاعدة البيانات</p>
+      <button type="button" class="retry-btn" (click)="loadBusinesses()">إعادة المحاولة</button>
+    </div>
+  }
+
   <!-- Business Cards -->
-  @if (!loading()) {
+  @if (!loading() && !error()) {
     <div class="businesses-grid">
       @for (biz of businesses(); track biz.id) {
         <div class="business-card" [style.--biz-color]="biz.color" (click)="enterBusiness(biz)">

@@ -3,12 +3,14 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { sql } from 'drizzle-orm';
 import authRoutes from './routes/auth.ts';
 import dashboardRoutes from './routes/dashboard.ts';
 import apiRoutes from './routes/api.ts';
 import { authMiddleware } from './middleware/auth.ts';
 import { rateLimitMiddleware, loginRateLimitMiddleware } from './middleware/rateLimit.ts';
 import { xssSanitizeMiddleware } from './middleware/validation.ts';
+import { db } from './db/index.ts';
 
 const app = new Hono();
 
@@ -70,6 +72,20 @@ app.notFound((c) => {
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', message: 'حساباتي - النظام يعمل بنجاح' }));
 
+// فحص اتصال قاعدة البيانات (للتأكد من ربط النظام بالقاعدة)
+app.get('/health/db', async (c) => {
+  try {
+    await db.execute(sql`SELECT 1 as ok`);
+    return c.json({ status: 'ok', database: 'connected', message: 'قاعدة البيانات متصلة بنجاح' });
+  } catch (err: any) {
+    console.error('فحص قاعدة البيانات:', err?.message || err);
+    return c.json(
+      { status: 'error', database: 'disconnected', error: err?.message || 'فشل الاتصال بقاعدة البيانات' },
+      503
+    );
+  }
+});
+
 // Root
 app.get('/', (c) => c.json({
   name: 'حساباتي API',
@@ -79,6 +95,9 @@ app.get('/', (c) => c.json({
 
 const port = parseInt(process.env.PORT || '3000');
 console.log(`🚀 حساباتي API يعمل على المنفذ ${port}`);
+console.log(`   الصحة: http://localhost:${port}/health`);
+console.log(`   قاعدة البيانات: http://localhost:${port}/health/db`);
+console.log(`   إن لم تكن الواجهة تعمل، شغّلها من مجلد frontend: pnpm start`);
 
 serve({ fetch: app.fetch, port });
 

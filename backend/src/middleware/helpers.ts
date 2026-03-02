@@ -85,7 +85,10 @@ export function safeHandler(
     try {
       return await handler(c);
     } catch (error: any) {
-      console.error(`خطأ في ${operationName}:`, error);
+      console.error(`خطأ في ${operationName}:`, error?.message || error);
+      if (process.env.NODE_ENV === 'development' && error?.stack) {
+        console.error(error.stack);
+      }
       
       // التعامل مع أخطاء قاعدة البيانات المحددة
       const message = error?.message || '';

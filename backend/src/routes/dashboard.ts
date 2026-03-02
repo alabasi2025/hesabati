@@ -8,7 +8,6 @@ const dashboardRoutes = new Hono();
 // إصلاح #8: N+1 - استعلام واحد مجمع
 dashboardRoutes.get('/stats', async (c) => {
   try {
-    // استخدام استعلامات Drizzle المنفصلة لكن بشكل متوازي
     const [
       bizCount,
       stationCount,
@@ -35,21 +34,27 @@ dashboardRoutes.get('/stats', async (c) => {
       db.select({ total: sql<string>`COALESCE(SUM(CAST(salary AS numeric)), 0)` }).from(employees).where(eq(employees.status, 'active')),
     ]);
 
+    const num = (arr: { count: number }[], def = 0) => (arr && arr[0] != null ? Number(arr[0].count) : def);
+    const totalSalaries = (salaryResult && salaryResult[0] != null && salaryResult[0].total != null)
+      ? String(salaryResult[0].total)
+      : '0';
+
     return c.json({
-      businesses: bizCount[0].count,
-      stations: stationCount[0].count,
-      employees: employeeCount[0].count,
-      accounts: accountCount[0].count,
-      funds: fundCount[0].count,
-      suppliers: supplierCount[0].count,
-      partners: partnerCount[0].count,
-      vouchers: voucherCount[0].count,
-      pendingAccounts: pendingCount[0].count,
-      warehouses: warehouseCount[0].count,
-      totalSalaries: salaryResult[0]?.total || '0',
+      businesses: num(bizCount),
+      stations: num(stationCount),
+      employees: num(employeeCount),
+      accounts: num(accountCount),
+      funds: num(fundCount),
+      suppliers: num(supplierCount),
+      partners: num(partnerCount),
+      vouchers: num(voucherCount),
+      pendingAccounts: num(pendingCount),
+      warehouses: num(warehouseCount),
+      totalSalaries,
     });
-  } catch (error) {
-    console.error('Dashboard stats error:', error);
+  } catch (error: any) {
+    console.error('Dashboard stats error:', error?.message || error);
+    if (process.env.NODE_ENV === 'development' && error?.stack) console.error(error.stack);
     return c.json({ error: 'حدث خطأ في جلب الإحصائيات' }, 500);
   }
 });

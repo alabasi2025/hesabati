@@ -29,6 +29,9 @@ importers:
       '@angular/router':
         specifier: ^21.2.0
         version: 21.2.0(@angular/common@21.2.0(@angular/core@21.2.0(@angular/compiler@21.2.0)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.0(@angular/compiler@21.2.0)(rxjs@7.8.2))(@angular/platform-browser@21.2.0(@angular/animations@21.2.0(@angular/core@21.2.0(@angular/compiler@21.2.0)(rxjs@7.8.2)))(@angular/common@21.2.0(@angular/core@21.2.0(@angular/compiler@21.2.0)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.0(@angular/compiler@21.2.0)(rxjs@7.8.2)))(rxjs@7.8.2)
+      '@fontsource/material-icons-round':
+        specifier: ^5.2.6
+        version: 5.2.6
       '@tailwindcss/postcss':
         specifier: ^4.2.1
         version: 4.2.1
@@ -531,6 +534,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource/material-icons-round@5.2.6':
+    resolution: {integrity: sha512-Ol5AsuryxVqldywNiQ4rTruST37jDS09AkndGsM6sSj87FZB+2n5LAF2TzJcgqlXI2NnGNsOP3+FPtkPXHOy/A==}
 
   '@gar/promise-retry@1.0.2':
     resolution: {integrity: sha512-Lm/ZLhDZcBECta3TmCQSngiQykFdfw+QtI1/GYMsZd4l3nG+P8WLB16XuS7WaBGLQ+9E+cOcWQsth9cayuGt8g==}
@@ -3163,6 +3169,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.3':
     optional: true
+
+  '@fontsource/material-icons-round@5.2.6': {}
 
   '@gar/promise-retry@1.0.2':
     dependencies:

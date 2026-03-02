@@ -12,6 +12,7 @@
   "packageManager": "pnpm@10.29.2",
   "dependencies": {
     "@angular/animations": "^21.2.0",
+    "@fontsource/material-icons-round": "^5.2.6",
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",
     "@angular/core": "^21.2.0",

@@ -20,11 +20,19 @@ interface ScreenTemplate {
   color: string;
   layoutConfig: any;
   templateKey: string;
+  template_key?: string; // من الـ API أحياناً
   isSystem: boolean;
   isActive: boolean;
   createdBy?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** تطبيع كائن الشاشة لاستخدام templateKey (الـ API قد يرجّع template_key) */
+function normalizeScreen(s: any): ScreenTemplate {
+  if (!s) return s;
+  const key = s.templateKey ?? s.template_key;
+  return { ...s, templateKey: key ?? '' };
 }
 
 interface ScreenWidget {
@@ -177,6 +185,27 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   logFilterDateTo = signal('');
   logFilterOpType = signal('');
 
+  // ===================== Collection-style screen (شاشة ثابتة) =====================
+  collectionStyleConfig = signal<{
+    tab1Label: string; tab1OperationTypeIds: number[];
+    tab2Label: string; tab2OperationTypeIds: number[];
+    accountsSectionLabel: string; accountIds: number[];
+  } | null>(null);
+  showCollectionStyleConfigModal = signal(false);
+  collectionStyleActiveTab = signal<'tab1' | 'tab2' | 'log' | 'accounts'>('tab1');
+  collectionStyleAccounts = signal<any[]>([]);
+  // قائمة الحسابات لاختيارها في نافذة الإعداد (تُحمّل عند فتح النافذة)
+  allAccountsForConfig = signal<any[]>([]);
+  // Config form (for modal)
+  configForm = signal({
+    tab1Label: 'تحصيل',
+    tab1OperationTypeIds: [] as number[],
+    tab2Label: 'توريد',
+    tab2OperationTypeIds: [] as number[],
+    accountsSectionLabel: 'الصناديق',
+    accountIds: [] as number[],
+  });
+
   // ===================== Gridster =====================
   gridsterOptions: GridsterConfig = {};
   gridItems: GridWidget[] = [];
@@ -247,6 +276,19 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   selectedSidebarSection = signal(0);
   sidebarSortOrder = signal(99);
 
+  /** عند إنشاء شاشة من الويزارد: إضافة للقائمة الجانبية مع اختيار القسم والترتيب */
+  wizardAddToSidebar = signal(false);
+  wizardSidebarSectionId = signal(0);
+  wizardSidebarSortOrder = signal(0);
+
+  /** إعداد شاشة ثابتة (collection_style): التسميات وقوالب التبويبين وحسابات المراقبة */
+  wizardTab1Label = signal('تحصيل');
+  wizardTab2Label = signal('توريد');
+  wizardAccountsSectionLabel = signal('الصناديق');
+  wizardTab1OpTypeIds = signal<number[]>([]);
+  wizardTab2OpTypeIds = signal<number[]>([]);
+  wizardAccountIds = signal<number[]>([]);
+
   // ===================== Operation Execution Modal =====================
   showOperationModal = signal(false);
   selectedOperationType = signal<any>(null);
@@ -278,11 +320,20 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   ];
 
   // ===================== Screen Templates =====================
+  // الشاشة الثابتة أولاً (الخيار المطلوب) ثم قوالب الويدجتات المتحركة
   screenTemplateOptions = [
     {
+      key: 'collection_style',
+      name: 'شاشة ثابتة (مثل التحصيل والتوريد)',
+      desc: 'شاشة حقيقية بتبويبات وقوالب وسجل ومراقبة - تسمياتك وقوالبك التي تختارها',
+      icon: 'receipt_long',
+      color: '#0d9488',
+      widgets: [],
+    },
+    {
       key: 'collection',
-      name: 'قالب تحصيل',
-      desc: 'شاشة تحصيل يومي مع قوالب عمليات وسجل ومراقبة حسابات',
+      name: 'قالب تحصيل (شاشة متحركة)',
+      desc: 'شاشة بسحب وإفلات - قوالب عمليات وسجل ومراقبة',
       icon: 'payments',
       color: '#22c55e',
       widgets: [
@@ -293,8 +344,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     },
     {
       key: 'delivery',
-      name: 'قالب توريد',
-      desc: 'شاشة توريد مع قوالب عمليات وسجل وإحصائيات',
+      name: 'قالب توريد (شاشة متحركة)',
+      desc: 'شاشة بسحب وإفلات - قوالب عمليات وسجل وإحصائيات',
       icon: 'local_shipping',
       color: '#3b82f6',
       widgets: [
@@ -305,8 +356,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     },
     {
       key: 'monitoring',
-      name: 'قالب مراقبة',
-      desc: 'شاشة مراقبة ومتابعة مع حسابات وإحصائيات ورسم بياني',
+      name: 'قالب مراقبة (شاشة متحركة)',
+      desc: 'شاشة بسحب وإفلات - حسابات وإحصائيات ورسم بياني',
       icon: 'monitor',
       color: '#f59e0b',
       widgets: [
@@ -317,8 +368,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     },
     {
       key: 'reports',
-      name: 'قالب تقارير',
-      desc: 'شاشة تقارير مع رسم بياني وإحصائيات وسجل',
+      name: 'قالب تقارير (شاشة متحركة)',
+      desc: 'شاشة بسحب وإفلات - رسم بياني وإحصائيات وسجل',
       icon: 'assessment',
       color: '#8b5cf6',
       widgets: [
@@ -329,8 +380,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     },
     {
       key: 'blank',
-      name: 'قالب فارغ',
-      desc: 'ابدأ من الصفر - بدون عناصر',
+      name: 'قالب فارغ (شاشة متحركة)',
+      desc: 'ابدأ من الصفر - سحب وإفلات',
       icon: 'add_circle_outline',
       color: '#94a3b8',
       widgets: [],
@@ -538,7 +589,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.loading.set(true);
     try {
       const data = await this.api.getScreens(this.bizId);
-      this.screens.set(data);
+      this.screens.set(Array.isArray(data) ? data.map(normalizeScreen) : []);
       this.animateScreenCards();
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الشاشات');
@@ -616,6 +667,12 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
       if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
       if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
+      // شاشة ثابتة (collection_style): عرض سجل عمليات التبويبين فقط
+      if (this.activeScreen()?.templateKey === 'collection_style' && this.collectionStyleConfig()) {
+        const c = this.collectionStyleConfig()!;
+        const ids = [...(c.tab1OperationTypeIds || []), ...(c.tab2OperationTypeIds || [])];
+        if (ids.length) filters.operationTypeIds = ids;
+      }
       const result = await this.api.getWidgetLog(this.bizId, filters);
       this.widgetLogEntries.set(result.entries || []);
       this.widgetLogTotal.set(result.total || 0);
@@ -859,12 +916,22 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.wizardStep.set(1);
     this.wizardScreenName.set('');
     this.wizardScreenDesc.set('');
-    this.wizardScreenIcon.set('dashboard');
-    this.wizardScreenColor.set('#3b82f6');
-    this.wizardSelectedTemplate.set('blank');
+    this.wizardScreenIcon.set('receipt_long');
+    this.wizardScreenColor.set('#0d9488');
+    this.wizardSelectedTemplate.set('collection_style');
     this.wizardWidgets.set([]);
     this.customizingWidgetIdx.set(null);
     this.bindingWidgetIdx.set(null);
+    this.wizardAddToSidebar.set(false);
+    this.wizardSidebarSectionId.set(0);
+    this.wizardSidebarSortOrder.set(0);
+    this.wizardTab1Label.set('تحصيل');
+    this.wizardTab2Label.set('توريد');
+    this.wizardAccountsSectionLabel.set('الصناديق');
+    this.wizardTab1OpTypeIds.set([]);
+    this.wizardTab2OpTypeIds.set([]);
+    this.wizardAccountIds.set([]);
+    this.selectTemplate('collection_style'); // تطبيق اسم وتسميات الشاشة الثابتة
     this.animateViewTransition();
   }
 
@@ -878,7 +945,19 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     const tpl = this.screenTemplateOptions.find(t => t.key === key);
     if (tpl) {
       this.wizardWidgets.set(tpl.widgets.map(w => ({ ...w })));
-      if (key !== 'blank') {
+      if (key === 'collection_style') {
+        this.wizardScreenIcon.set(tpl.icon);
+        this.wizardScreenColor.set(tpl.color);
+        this.wizardTab1Label.set('تحصيل');
+        this.wizardTab2Label.set('توريد');
+        this.wizardAccountsSectionLabel.set('الصناديق');
+        this.wizardTab1OpTypeIds.set([]);
+        this.wizardTab2OpTypeIds.set([]);
+        this.wizardAccountIds.set([]);
+        if (!this.wizardScreenName()) {
+          this.wizardScreenName.set(tpl.name.replace('قالب ', 'شاشة '));
+        }
+      } else if (key !== 'blank') {
         this.wizardScreenIcon.set(tpl.icon);
         this.wizardScreenColor.set(tpl.color);
         if (!this.wizardScreenName()) {
@@ -892,13 +971,35 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     const step = this.wizardStep();
     if (step === 1) {
       this.wizardStep.set(2);
+      if (this.wizardSelectedTemplate() === 'collection_style') {
+        this.loadContentBindingData();
+      }
     } else if (step === 2) {
       this.wizardStep.set(3);
     } else if (step === 3) {
       this.wizardStep.set(4);
       this.loadContentBindingData();
+      this.loadWizardSidebarSections();
     }
     this.animateViewTransition();
+  }
+
+  async loadWizardSidebarSections() {
+    if (this.sidebarSections().length > 0) {
+      if (this.wizardSidebarSectionId() === 0 && this.sidebarSections()[0]) {
+        this.wizardSidebarSectionId.set(this.sidebarSections()[0].id);
+      }
+      return;
+    }
+    try {
+      const sections = await this.api.getSidebarSections(this.bizId);
+      this.sidebarSections.set(sections);
+      if (sections.length > 0 && this.wizardSidebarSectionId() === 0) {
+        this.wizardSidebarSectionId.set(sections[0].id);
+      }
+    } catch {
+      this.sidebarSections.set([]);
+    }
   }
 
   prevWizardStep() {
@@ -999,6 +1100,27 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.wizardWidgets.set(widgets);
   }
 
+  /** معالج collection_style: تبديل قالب في التبويب الأول */
+  toggleWizardTab1OpType(opTypeId: number) {
+    const ids = this.wizardTab1OpTypeIds();
+    const next = ids.includes(opTypeId) ? ids.filter(id => id !== opTypeId) : [...ids, opTypeId];
+    this.wizardTab1OpTypeIds.set(next);
+  }
+
+  /** معالج collection_style: تبديل قالب في التبويب الثاني */
+  toggleWizardTab2OpType(opTypeId: number) {
+    const ids = this.wizardTab2OpTypeIds();
+    const next = ids.includes(opTypeId) ? ids.filter(id => id !== opTypeId) : [...ids, opTypeId];
+    this.wizardTab2OpTypeIds.set(next);
+  }
+
+  /** معالج collection_style: تبديل حساب في قسم المراقبة */
+  toggleWizardAccount(accountId: number) {
+    const ids = this.wizardAccountIds();
+    const next = ids.includes(accountId) ? ids.filter(id => id !== accountId) : [...ids, accountId];
+    this.wizardAccountIds.set(next);
+  }
+
   updateLogFilter(idx: number, field: string, value: string) {
     const widgets = [...this.wizardWidgets()];
     const w = widgets[idx];
@@ -1010,29 +1132,56 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Wizard: Save
   async saveWizardScreen() {
-    const name = this.wizardScreenName();
-    if (!name.trim()) {
-      this.toast.warning('يرجى إدخال اسم الشاشة');
-      return;
+    let name = (this.wizardScreenName() || '').trim();
+    if (!name) {
+      if (this.wizardSelectedTemplate() === 'collection_style') {
+        name = 'شاشة ثابتة';
+      } else {
+        this.toast.warning('يرجى إدخال اسم الشاشة');
+        return;
+      }
     }
 
     this.saving.set(true);
     try {
-      const payload = {
+      const addToSidebar = this.wizardAddToSidebar();
+      const payload: any = {
         name,
-        description: this.wizardScreenDesc(),
+        description: this.wizardScreenDesc() || '',
         icon: this.wizardScreenIcon(),
         color: this.wizardScreenColor(),
         templateKey: this.wizardSelectedTemplate(),
-        widgets: this.wizardWidgets(),
-        addToSidebar: true,
+        widgets: this.wizardWidgets() ?? [],
+        addToSidebar: !!addToSidebar,
       };
-      await this.api.createScreen(this.bizId, payload);
+      if (this.wizardSelectedTemplate() === 'collection_style') {
+        payload.collectionStyleConfig = {
+          tab1Label: this.wizardTab1Label() || 'تحصيل',
+          tab1OperationTypeIds: Array.isArray(this.wizardTab1OpTypeIds()) ? this.wizardTab1OpTypeIds() : [],
+          tab2Label: this.wizardTab2Label() || 'توريد',
+          tab2OperationTypeIds: Array.isArray(this.wizardTab2OpTypeIds()) ? this.wizardTab2OpTypeIds() : [],
+          accountsSectionLabel: this.wizardAccountsSectionLabel() || 'الصناديق',
+          accountIds: Array.isArray(this.wizardAccountIds()) ? this.wizardAccountIds() : [],
+        };
+      }
+      if (addToSidebar) {
+        payload.sectionId = this.wizardSidebarSectionId() || undefined;
+        payload.sidebarSortOrder = this.wizardSidebarSortOrder();
+      }
+      const created = await this.api.createScreen(this.bizId, payload);
       this.toast.success('تم إنشاء الشاشة بنجاح');
-      this.viewMode.set('list');
-      await this.loadScreens();
+      if (this.wizardSelectedTemplate() === 'collection_style' && created?.id) {
+        await this.loadScreens();
+        const screen = this.screens().find(s => s.id === created.id) || normalizeScreen(created);
+        this.openScreen(screen);
+        this.viewMode.set('detail');
+        this.showCollectionStyleConfigModal.set(false);
+      } else {
+        this.viewMode.set('list');
+        await this.loadScreens();
+      }
     } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء الإنشاء');
+      this.toast.error(e?.message || 'حدث خطأ أثناء الإنشاء');
     } finally {
       this.saving.set(false);
     }
@@ -1119,18 +1268,146 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // ===================== Screen Detail View =====================
   async openScreen(screen: ScreenTemplate) {
-    this.activeScreen.set(screen);
+    const normalized = normalizeScreen(screen);
+    this.activeScreen.set(normalized);
     this.viewMode.set('detail');
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.updateGridsterEditMode(false);
-    // Load operation types for log filter dropdown
     try {
       const opTypes = await this.api.getOperationTypes(this.bizId);
       this.operationTypes.set(opTypes);
     } catch (e) {}
-    await this.loadWidgets(screen.id);
+    if (normalized.templateKey === 'collection_style') {
+      this.collectionStyleConfig.set(null);
+      this.collectionStyleActiveTab.set('tab1');
+      try {
+        const config = await this.api.getCollectionStyleConfig(this.bizId, normalized.id);
+        this.collectionStyleConfig.set(config);
+        await this.loadWidgetStats();
+        await this.loadWidgetLog();
+        if (config.accountIds?.length) {
+          const accs = await this.api.getWidgetAccounts(this.bizId, config.accountIds);
+          this.collectionStyleAccounts.set(Array.isArray(accs) ? accs : []);
+        } else {
+          this.collectionStyleAccounts.set([]);
+        }
+      } catch (e) {
+        this.collectionStyleConfig.set({
+          tab1Label: 'تحصيل', tab1OperationTypeIds: [],
+          tab2Label: 'توريد', tab2OperationTypeIds: [],
+          accountsSectionLabel: 'الصناديق', accountIds: [],
+        });
+      }
+    } else {
+      await this.loadWidgets(normalized.id);
+    }
     this.animateViewTransition();
+  }
+
+  getCollectionStyleTab1OpTypes(): any[] {
+    const config = this.collectionStyleConfig();
+    const all = this.operationTypes();
+    if (!config?.tab1OperationTypeIds?.length) return [];
+    return config.tab1OperationTypeIds.map(id => all.find(o => o.id === id)).filter(Boolean);
+  }
+
+  getCollectionStyleTab2OpTypes(): any[] {
+    const config = this.collectionStyleConfig();
+    const all = this.operationTypes();
+    if (!config?.tab2OperationTypeIds?.length) return [];
+    return config.tab2OperationTypeIds.map(id => all.find(o => o.id === id)).filter(Boolean);
+  }
+
+  async loadCollectionStyleConfig(screenId: number) {
+    try {
+      const config = await this.api.getCollectionStyleConfig(this.bizId, screenId);
+      this.collectionStyleConfig.set(config);
+      this.configForm.set({
+        tab1Label: config.tab1Label ?? 'تحصيل',
+        tab1OperationTypeIds: config.tab1OperationTypeIds ?? [],
+        tab2Label: config.tab2Label ?? 'توريد',
+        tab2OperationTypeIds: config.tab2OperationTypeIds ?? [],
+        accountsSectionLabel: config.accountsSectionLabel ?? 'الصناديق',
+        accountIds: config.accountIds ?? [],
+      });
+    } catch (e) {
+      this.configForm.set({
+        tab1Label: 'تحصيل', tab1OperationTypeIds: [],
+        tab2Label: 'توريد', tab2OperationTypeIds: [],
+        accountsSectionLabel: 'الصناديق', accountIds: [],
+      });
+    }
+  }
+
+  openCollectionStyleConfigModal() {
+    const screen = this.activeScreen();
+    if (!screen) return;
+    this.loadCollectionStyleConfig(screen.id);
+    this.showCollectionStyleConfigModal.set(true);
+    // قائمة الحسابات + الصناديق للاختيار (نفس getAllAccounts المستخدم في الويزارد)
+    this.api.getAllAccounts(this.bizId).then(data => this.allAccountsForConfig.set(data?.accounts || []));
+  }
+
+  closeCollectionStyleConfigModal() {
+    this.showCollectionStyleConfigModal.set(false);
+  }
+
+  async saveCollectionStyleConfig() {
+    const screen = this.activeScreen();
+    if (!screen) return;
+    const form = this.configForm();
+    this.saving.set(true);
+    try {
+      await this.api.putCollectionStyleConfig(this.bizId, screen.id, {
+        tab1Label: form.tab1Label,
+        tab1OperationTypeIds: form.tab1OperationTypeIds,
+        tab2Label: form.tab2Label,
+        tab2OperationTypeIds: form.tab2OperationTypeIds,
+        accountsSectionLabel: form.accountsSectionLabel,
+        accountIds: form.accountIds,
+      });
+      this.collectionStyleConfig.set({
+        tab1Label: form.tab1Label,
+        tab1OperationTypeIds: form.tab1OperationTypeIds,
+        tab2Label: form.tab2Label,
+        tab2OperationTypeIds: form.tab2OperationTypeIds,
+        accountsSectionLabel: form.accountsSectionLabel,
+        accountIds: form.accountIds,
+      });
+      if (form.accountIds?.length) {
+        const accs = await this.api.getWidgetAccounts(this.bizId, form.accountIds);
+        this.collectionStyleAccounts.set(Array.isArray(accs) ? accs : []);
+      } else {
+        this.collectionStyleAccounts.set([]);
+      }
+      this.toast.success('تم حفظ الإعداد');
+      this.closeCollectionStyleConfigModal();
+    } catch (e: any) {
+      this.toast.error(e?.message || 'حدث خطأ');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  toggleConfigFormOpType(tab: 'tab1' | 'tab2', opTypeId: number) {
+    const form = { ...this.configForm() };
+    const arr = tab === 'tab1' ? form.tab1OperationTypeIds : form.tab2OperationTypeIds;
+    const idx = arr.indexOf(opTypeId);
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(opTypeId);
+    if (tab === 'tab1') form.tab1OperationTypeIds = [...arr];
+    else form.tab2OperationTypeIds = [...arr];
+    this.configForm.set(form);
+  }
+
+  toggleConfigFormAccount(accountId: number) {
+    const form = { ...this.configForm() };
+    const idx = form.accountIds.indexOf(accountId);
+    if (idx >= 0) form.accountIds.splice(idx, 1);
+    else form.accountIds.push(accountId);
+    form.accountIds = [...form.accountIds];
+    this.configForm.set(form);
   }
 
   backToList() {
@@ -1138,6 +1415,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.activeScreen.set(null);
     this.widgets.set([]);
     this.gridItems = [];
+    this.collectionStyleConfig.set(null);
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.animateViewTransition();

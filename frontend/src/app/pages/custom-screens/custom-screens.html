@@ -11,7 +11,7 @@
         </div>
         <div>
           <h1>الشاشات المخصصة</h1>
-          <p>إنشاء وإدارة لوحات العمل المخصصة بنظام السحب والإفلات</p>
+          <p>إنشاء شاشة ثابتة (تحصيل/توريد/سجل/مراقبة) أو لوحة متحركة بالسحب والإفلات</p>
         </div>
       </div>
       <button class="add-btn" (click)="startWizard()">
@@ -33,7 +33,7 @@
             <span class="material-icons-round">space_dashboard</span>
           </div>
           <h3>لا توجد شاشات مخصصة</h3>
-          <p>أنشئ شاشتك الأولى باستخدام القوالب الجاهزة أو ابدأ من الصفر</p>
+          <p>أنشئ شاشة ثابتة (مثل التحصيل والتوريد) أو لوحة متحركة من القوالب</p>
           <button class="add-btn" (click)="startWizard()">
             <span class="material-icons-round">add</span>
             إنشاء شاشة جديدة
@@ -204,123 +204,211 @@
                 </div>
               </div>
             </div>
-          </div>
-        }
 
-        <!-- Step 2: Add Widgets -->
-        @if (wizardStep() === 2) {
-          <div class="wizard-step-content" @fadeIn>
-            <h2 class="step-title">أضف العناصر</h2>
-            <p class="step-desc">اختر العناصر التي تريدها في شاشتك</p>
-
-            <div class="widget-type-grid">
-              @for (wt of widgetTypes; track wt.value) {
-                <button class="widget-type-option" (click)="addWizardWidget(wt)">
-                  <span class="material-icons-round" [style.color]="wt.color">{{ wt.icon }}</span>
-                  <span class="wt-label">{{ wt.label }}</span>
-                  <span class="wt-desc">{{ wt.desc }}</span>
-                  <span class="material-icons-round add-icon">add_circle</span>
-                </button>
-              }
-            </div>
-
-            @if (wizardWidgets().length > 0) {
-              <h3 class="section-title">العناصر المضافة ({{ wizardWidgets().length }})</h3>
-              <div class="wizard-widgets-list">
-                @for (w of wizardWidgets(); track $index; let i = $index) {
-                  <div class="wizard-widget-item" @slideIn>
-                    <div class="wizard-widget-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
-                      <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                    </div>
-                    <div class="wizard-widget-info">
-                      <span class="wizard-widget-name">{{ w.title }}</span>
-                      <span class="wizard-widget-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
-                    </div>
-                    <div class="wizard-widget-actions">
-                      <button class="action-btn edit" (click)="toggleWizardWidgetVisibility(i)" [title]="w.isVisible ? 'إخفاء' : 'إظهار'">
-                        <span class="material-icons-round">{{ w.isVisible ? 'visibility' : 'visibility_off' }}</span>
-                      </button>
-                      <button class="action-btn delete" (click)="removeWizardWidget(i)">
-                        <span class="material-icons-round">delete</span>
-                      </button>
-                    </div>
-                  </div>
-                }
+            @if (wizardSelectedTemplate() === 'collection_style') {
+              <div class="form-row collection-style-labels" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <h3 class="section-title" style="width: 100%;">تسميات التبويبات وقسم المراقبة</h3>
+                <div class="form-group flex-1">
+                  <label>اسم التبويب الأول</label>
+                  <input type="text" [ngModel]="wizardTab1Label()" (ngModelChange)="wizardTab1Label.set($event)" placeholder="مثال: تحصيل" />
+                </div>
+                <div class="form-group flex-1">
+                  <label>اسم التبويب الثاني</label>
+                  <input type="text" [ngModel]="wizardTab2Label()" (ngModelChange)="wizardTab2Label.set($event)" placeholder="مثال: توريد" />
+                </div>
+                <div class="form-group flex-1">
+                  <label>اسم قسم المراقبة</label>
+                  <input type="text" [ngModel]="wizardAccountsSectionLabel()" (ngModelChange)="wizardAccountsSectionLabel.set($event)" placeholder="مثال: الصناديق" />
+                </div>
               </div>
             }
           </div>
         }
 
-        <!-- Step 3: Customize Appearance -->
-        @if (wizardStep() === 3) {
+        <!-- Step 2: Add Widgets OR Tab1 templates (collection_style) -->
+        @if (wizardStep() === 2) {
           <div class="wizard-step-content" @fadeIn>
-            <h2 class="step-title">خصص المظهر</h2>
-            <p class="step-desc">عدّل عناوين وألوان العناصر</p>
-
-            @if (wizardWidgets().length === 0) {
-              <div class="empty-widgets-msg">
-                <span class="material-icons-round">widgets</span>
-                <p>لم تضف أي عناصر بعد. ارجع للخطوة السابقة لإضافة عناصر.</p>
+            @if (wizardSelectedTemplate() === 'collection_style') {
+              <h2 class="step-title">قوالب التبويب الأول</h2>
+              <p class="step-desc">اختر أنواع العمليات التي تظهر في التبويب «{{ wizardTab1Label() }}»</p>
+              <div class="binding-options-grid">
+                @for (op of operationTypes(); track op.id) {
+                  <label class="binding-option" [class.selected]="wizardTab1OpTypeIds().includes(op.id)">
+                    <input type="checkbox" [checked]="wizardTab1OpTypeIds().includes(op.id)" (change)="toggleWizardTab1OpType(op.id)" />
+                    <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                    <span>{{ op.name }}</span>
+                  </label>
+                }
+                @if (operationTypes().length === 0) {
+                  <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
+                }
               </div>
             } @else {
-              <div class="customize-list">
-                @for (w of wizardWidgets(); track $index; let i = $index) {
-                  <div class="customize-card card-3d" [class.expanded]="customizingWidgetIdx() === i">
-                    <div class="customize-card-header" (click)="startCustomizing(customizingWidgetIdx() === i ? -1 : i)">
-                      <div class="customize-card-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
+              <h2 class="step-title">أضف العناصر</h2>
+              <p class="step-desc">اختر العناصر التي تريدها في شاشتك</p>
+              <div class="widget-type-grid">
+                @for (wt of widgetTypes; track wt.value) {
+                  <button class="widget-type-option" (click)="addWizardWidget(wt)">
+                    <span class="material-icons-round" [style.color]="wt.color">{{ wt.icon }}</span>
+                    <span class="wt-label">{{ wt.label }}</span>
+                    <span class="wt-desc">{{ wt.desc }}</span>
+                    <span class="material-icons-round add-icon">add_circle</span>
+                  </button>
+                }
+              </div>
+              @if (wizardWidgets().length > 0) {
+                <h3 class="section-title">العناصر المضافة ({{ wizardWidgets().length }})</h3>
+                <div class="wizard-widgets-list">
+                  @for (w of wizardWidgets(); track $index; let i = $index) {
+                    <div class="wizard-widget-item" @slideIn>
+                      <div class="wizard-widget-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
                         <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
                       </div>
-                      <div class="customize-card-info">
-                        <span class="customize-card-title">{{ w.title }}</span>
-                        <span class="customize-card-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
+                      <div class="wizard-widget-info">
+                        <span class="wizard-widget-name">{{ w.title }}</span>
+                        <span class="wizard-widget-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
                       </div>
-                      <span class="material-icons-round expand-icon">{{ customizingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
+                      <div class="wizard-widget-actions">
+                        <button class="action-btn edit" (click)="toggleWizardWidgetVisibility(i)" [title]="w.isVisible ? 'إخفاء' : 'إظهار'">
+                          <span class="material-icons-round">{{ w.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                        </button>
+                        <button class="action-btn delete" (click)="removeWizardWidget(i)">
+                          <span class="material-icons-round">delete</span>
+                        </button>
+                      </div>
                     </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        }
 
-                    @if (customizingWidgetIdx() === i) {
-                      <div class="customize-card-body" @fadeIn>
-                        <div class="form-group">
-                          <label>العنوان</label>
-                          <input type="text" [ngModel]="w.title" (ngModelChange)="updateWizardWidgetTitle(i, $event)" />
+        <!-- Step 3: Customize Appearance OR Tab2 templates (collection_style) -->
+        @if (wizardStep() === 3) {
+          <div class="wizard-step-content" @fadeIn>
+            @if (wizardSelectedTemplate() === 'collection_style') {
+              <h2 class="step-title">قوالب التبويب الثاني</h2>
+              <p class="step-desc">اختر أنواع العمليات التي تظهر في التبويب «{{ wizardTab2Label() }}»</p>
+              <div class="binding-options-grid">
+                @for (op of operationTypes(); track op.id) {
+                  <label class="binding-option" [class.selected]="wizardTab2OpTypeIds().includes(op.id)">
+                    <input type="checkbox" [checked]="wizardTab2OpTypeIds().includes(op.id)" (change)="toggleWizardTab2OpType(op.id)" />
+                    <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
+                    <span>{{ op.name }}</span>
+                  </label>
+                }
+                @if (operationTypes().length === 0) {
+                  <p class="no-data-msg">لا توجد قوالب عمليات.</p>
+                }
+              </div>
+            } @else {
+              <h2 class="step-title">خصص المظهر</h2>
+              <p class="step-desc">عدّل عناوين وألوان العناصر</p>
+              @if (wizardWidgets().length === 0) {
+                <div class="empty-widgets-msg">
+                  <span class="material-icons-round">widgets</span>
+                  <p>لم تضف أي عناصر بعد. ارجع للخطوة السابقة لإضافة عناصر.</p>
+                </div>
+              } @else {
+                <div class="customize-list">
+                  @for (w of wizardWidgets(); track $index; let i = $index) {
+                    <div class="customize-card card-3d" [class.expanded]="customizingWidgetIdx() === i">
+                      <div class="customize-card-header" (click)="startCustomizing(customizingWidgetIdx() === i ? -1 : i)">
+                        <div class="customize-card-icon" [style.background]="getWizardWidgetColor(w) + '22'" [style.color]="getWizardWidgetColor(w)">
+                          <span class="material-icons-round">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
                         </div>
-                        <div class="form-group">
-                          <label>اللون</label>
-                          <div class="color-picker-row">
-                            <div class="color-grid">
-                              @for (color of colors; track color) {
-                                <button class="color-option" [style.background]="color" [class.selected]="(w.config?.color || getWidgetTypeInfo(w.widgetType).color) === color" (click)="updateWizardWidgetColor(i, color)">
-                                  @if ((w.config?.color || getWidgetTypeInfo(w.widgetType).color) === color) {
-                                    <span class="material-icons-round">check</span>
-                                  }
-                                </button>
-                              }
-                            </div>
-                            <div class="color-picker-trigger"
-                                 [style.background]="getWizardWidgetColor(w)"
-                                 [colorPicker]="getWizardWidgetColor(w)"
-                                 (colorPickerChange)="onColorPickerChange($event, 'wizardWidget', i)"
-                                 cpPosition="bottom"
-                                 [cpOKButton]="true"
-                                 cpOKButtonText="اختيار"
-                                 [cpCancelButton]="true"
-                                 cpCancelButtonText="إلغاء"
-                                 title="لون مخصص">
-                              <span class="material-icons-round">colorize</span>
+                        <div class="customize-card-info">
+                          <span class="customize-card-title">{{ w.title }}</span>
+                          <span class="customize-card-type">{{ getWidgetTypeInfo(w.widgetType).label }}</span>
+                        </div>
+                        <span class="material-icons-round expand-icon">{{ customizingWidgetIdx() === i ? 'expand_less' : 'expand_more' }}</span>
+                      </div>
+
+                      @if (customizingWidgetIdx() === i) {
+                        <div class="customize-card-body" @fadeIn>
+                          <div class="form-group">
+                            <label>العنوان</label>
+                            <input type="text" [ngModel]="w.title" (ngModelChange)="updateWizardWidgetTitle(i, $event)" />
+                          </div>
+                          <div class="form-group">
+                            <label>اللون</label>
+                            <div class="color-picker-row">
+                              <div class="color-grid">
+                                @for (color of colors; track color) {
+                                  <button class="color-option" [style.background]="color" [class.selected]="(w.config?.color || getWidgetTypeInfo(w.widgetType).color) === color" (click)="updateWizardWidgetColor(i, color)">
+                                    @if ((w.config?.color || getWidgetTypeInfo(w.widgetType).color) === color) {
+                                      <span class="material-icons-round">check</span>
+                                    }
+                                  </button>
+                                }
+                              </div>
+                              <div class="color-picker-trigger"
+                                   [style.background]="getWizardWidgetColor(w)"
+                                   [colorPicker]="getWizardWidgetColor(w)"
+                                   (colorPickerChange)="onColorPickerChange($event, 'wizardWidget', i)"
+                                   cpPosition="bottom"
+                                   [cpOKButton]="true"
+                                   cpOKButtonText="اختيار"
+                                   [cpCancelButton]="true"
+                                   cpCancelButtonText="إلغاء"
+                                   title="لون مخصص">
+                                <span class="material-icons-round">colorize</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
             }
           </div>
         }
 
-        <!-- Step 4: Content Binding -->
+        <!-- Step 4: Content Binding OR Accounts + Sidebar (collection_style) -->
         @if (wizardStep() === 4) {
           <div class="wizard-step-content" @fadeIn>
+            @if (wizardSelectedTemplate() === 'collection_style') {
+              <h2 class="step-title">حسابات قسم المراقبة</h2>
+              <p class="step-desc">اختر الحسابات/الصناديق التي تظهر في قسم «{{ wizardAccountsSectionLabel() }}»</p>
+              <div class="binding-options-grid">
+                @for (acc of allAccounts(); track acc.id) {
+                  <label class="binding-option" [class.selected]="wizardAccountIds().includes(acc.id)">
+                    <input type="checkbox" [checked]="wizardAccountIds().includes(acc.id)" (change)="toggleWizardAccount(acc.id)" />
+                    <span class="material-icons-round">account_balance_wallet</span>
+                    <span>{{ acc.name }}</span>
+                  </label>
+                }
+                @if (allAccounts().length === 0) {
+                  <p class="no-data-msg">لا توجد حسابات. أضف حسابات من صفحة الحسابات.</p>
+                }
+              </div>
+              <div class="wizard-sidebar-options" style="margin-top: 24px;">
+                <label class="wizard-checkbox">
+                  <input type="checkbox" [ngModel]="wizardAddToSidebar()" (ngModelChange)="wizardAddToSidebar.set($event)" />
+                  <span>إضافة الشاشة للقائمة الجانبية عند الإنشاء</span>
+                </label>
+                @if (wizardAddToSidebar()) {
+                  <div class="form-row" style="margin-top: 12px;">
+                    <div class="form-group">
+                      <label>القسم</label>
+                      <select [ngModel]="wizardSidebarSectionId()" (ngModelChange)="wizardSidebarSectionId.set(+$event)">
+                        @for (sec of sidebarSections(); track sec.id) {
+                          <option [value]="sec.id">{{ sec.name }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>ترتيب العرض</label>
+                      <input type="number" [ngModel]="wizardSidebarSortOrder()" (ngModelChange)="wizardSidebarSortOrder.set(+$event)" min="0" placeholder="0" />
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+            <div class="wizard-step-binding">
             <h2 class="step-title">ربط المحتوى</h2>
             <p class="step-desc">اربط كل عنصر بالبيانات المناسبة</p>
 
@@ -411,7 +499,35 @@
                   <p>لا توجد عناصر تحتاج لربط محتوى. يمكنك إنشاء الشاشة مباشرة.</p>
                 </div>
               }
+
+              <div class="wizard-sidebar-options">
+                <label class="wizard-checkbox">
+                  <input type="checkbox" [ngModel]="wizardAddToSidebar()" (ngModelChange)="wizardAddToSidebar.set($event)" />
+                  <span>إضافة الشاشة للقائمة الجانبية عند الإنشاء</span>
+                </label>
+                @if (wizardAddToSidebar()) {
+                  <div class="form-row">
+                    <div class="form-group flex-1">
+                      <label>القسم في التبويب الجانبي</label>
+                      <select [ngModel]="wizardSidebarSectionId()" (ngModelChange)="wizardSidebarSectionId.set(+$event)">
+                        @for (sec of sidebarSections(); track sec.id) {
+                          <option [value]="sec.id">{{ sec.name }}</option>
+                        }
+                      </select>
+                      @if (sidebarSections().length === 0) {
+                        <p class="no-data-msg">لا توجد أقسام. أضف قسماً من إعدادات التبويب الجانبي.</p>
+                      }
+                    </div>
+                    <div class="form-group flex-1">
+                      <label>رقم الترتيب</label>
+                      <input type="number" [ngModel]="wizardSidebarSortOrder()" (ngModelChange)="wizardSidebarSortOrder.set(+$event)" min="0" placeholder="0" />
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
+            </div>
+            }
           </div>
         }
       </div>
@@ -433,7 +549,7 @@
               <span class="material-icons-round">arrow_back</span>
             </button>
           } @else {
-            <button class="wizard-btn success" (click)="saveWizardScreen()" [disabled]="saving() || !wizardScreenName()">
+            <button class="wizard-btn success" (click)="saveWizardScreen()" [disabled]="saving() || (!wizardScreenName() && wizardSelectedTemplate() !== 'collection_style')">
               <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
               {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
             </button>
@@ -461,32 +577,169 @@
           </div>
         </div>
         <div class="detail-header-actions">
-          @if (editMode() && hasUnsavedChanges()) {
-            <button class="save-layout-btn" (click)="saveLayout()" [disabled]="saving()">
-              <span class="material-icons-round">save</span>
-              {{ saving() ? 'جاري الحفظ...' : 'حفظ التخطيط' }}
+          @if (activeScreen()!.templateKey === 'collection_style') {
+            <button class="library-btn" (click)="openCollectionStyleConfigModal()">
+              <span class="material-icons-round">tune</span>
+              إعداد الشاشة
             </button>
-          }
-          <button class="mode-btn" [class.active]="editMode()" (click)="toggleEditMode()">
-            <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
-            {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
-          </button>
-          <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="openWidgetLibrary()">
-            <span class="material-icons-round">widgets</span>
-            مكتبة العناصر
-          </button>
-          @if (editMode()) {
-            <button class="library-btn" (click)="openCopyWidgetModal()">
-              <span class="material-icons-round">content_copy</span>
-              نسخ من شاشة
+          } @else {
+            @if (editMode() && hasUnsavedChanges()) {
+              <button class="save-layout-btn" (click)="saveLayout()" [disabled]="saving()">
+                <span class="material-icons-round">save</span>
+                {{ saving() ? 'جاري الحفظ...' : 'حفظ التخطيط' }}
+              </button>
+            }
+            <button class="mode-btn" [class.active]="editMode()" (click)="toggleEditMode()">
+              <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
+              {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
             </button>
+            <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="openWidgetLibrary()">
+              <span class="material-icons-round">widgets</span>
+              مكتبة العناصر
+            </button>
+            @if (editMode()) {
+              <button class="library-btn" (click)="openCopyWidgetModal()">
+                <span class="material-icons-round">content_copy</span>
+                نسخ من شاشة
+              </button>
+            }
           }
         </div>
       </div>
 
       <div class="detail-content" [class.with-library]="showWidgetLibrary()">
 
-        <!-- Widget Library Sidebar -->
+        <!-- ========== شاشة ثابتة (collection_style) ========== -->
+        @if (activeScreen()!.templateKey === 'collection_style') {
+          <div class="collection-style-view">
+            @if (collectionStyleConfig()) {
+              <div class="collection-style-tabs-wrap">
+                <div class="view-tabs collection-style-tabs">
+                  <button class="view-tab cst-tab" [class.active]="collectionStyleActiveTab() === 'tab1'" (click)="collectionStyleActiveTab.set('tab1')">
+                    <span class="cst-tab-icon tab1-icon"><span class="material-icons-round">call_received</span></span>
+                    <span class="cst-tab-label">{{ collectionStyleConfig()!.tab1Label }}</span>
+                  </button>
+                  <button class="view-tab cst-tab" [class.active]="collectionStyleActiveTab() === 'tab2'" (click)="collectionStyleActiveTab.set('tab2')">
+                    <span class="cst-tab-icon tab2-icon"><span class="material-icons-round">call_made</span></span>
+                    <span class="cst-tab-label">{{ collectionStyleConfig()!.tab2Label }}</span>
+                  </button>
+                  <button class="view-tab cst-tab" [class.active]="collectionStyleActiveTab() === 'log'" (click)="collectionStyleActiveTab.set('log')">
+                    <span class="cst-tab-icon tab3-icon"><span class="material-icons-round">history</span></span>
+                    <span class="cst-tab-label">السجل</span>
+                  </button>
+                  <button class="view-tab cst-tab" [class.active]="collectionStyleActiveTab() === 'accounts'" (click)="collectionStyleActiveTab.set('accounts')">
+                    <span class="cst-tab-icon tab4-icon"><span class="material-icons-round">account_balance</span></span>
+                    <span class="cst-tab-label">{{ collectionStyleConfig()!.accountsSectionLabel }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="collection-style-content">
+                @if (collectionStyleActiveTab() === 'tab1') {
+                  <section class="cst-section templates-section">
+                    <h3 class="cst-section-title"><span class="material-icons-round">call_received</span> {{ collectionStyleConfig()!.tab1Label }}</h3>
+                    <div class="templates-grid-cst">
+                      @for (tpl of getCollectionStyleTab1OpTypes(); track tpl.id) {
+                        <button class="template-card-cst" [style.--tpl-color]="tpl.color || '#3b82f6'" (click)="openOperationExecution(tpl)">
+                          <div class="template-card-cst-icon" [style.background]="(tpl.color || '#3b82f6') + '22'" [style.color]="tpl.color || '#3b82f6'">
+                            <span class="material-icons-round">{{ tpl.icon || 'receipt' }}</span>
+                          </div>
+                          <span class="template-card-cst-name">{{ tpl.name }}</span>
+                        </button>
+                      }
+                    </div>
+                    @if (getCollectionStyleTab1OpTypes().length === 0) {
+                      <div class="cst-empty">
+                        <span class="material-icons-round">category</span>
+                        <p>لم تختر قوالباً بعد. اضغط "إعداد الشاشة" واختر قوالب هذا التبويب.</p>
+                      </div>
+                    }
+                  </section>
+                }
+                @if (collectionStyleActiveTab() === 'tab2') {
+                  <section class="cst-section templates-section">
+                    <h3 class="cst-section-title"><span class="material-icons-round">call_made</span> {{ collectionStyleConfig()!.tab2Label }}</h3>
+                    <div class="templates-grid-cst">
+                      @for (tpl of getCollectionStyleTab2OpTypes(); track tpl.id) {
+                        <button class="template-card-cst" [style.--tpl-color]="tpl.color || '#3b82f6'" (click)="openOperationExecution(tpl)">
+                          <div class="template-card-cst-icon" [style.background]="(tpl.color || '#3b82f6') + '22'" [style.color]="tpl.color || '#3b82f6'">
+                            <span class="material-icons-round">{{ tpl.icon || 'receipt' }}</span>
+                          </div>
+                          <span class="template-card-cst-name">{{ tpl.name }}</span>
+                        </button>
+                      }
+                    </div>
+                    @if (getCollectionStyleTab2OpTypes().length === 0) {
+                      <div class="cst-empty">
+                        <span class="material-icons-round">category</span>
+                        <p>لم تختر قوالباً بعد. اضغط "إعداد الشاشة" واختر قوالب هذا التبويب.</p>
+                      </div>
+                    }
+                  </section>
+                }
+                @if (collectionStyleActiveTab() === 'log') {
+                  <section class="cst-section log-section">
+                    <h3 class="cst-section-title"><span class="material-icons-round">history</span> السجل</h3>
+                    <div class="log-section-card">
+                      <div class="log-filters-cst">
+                        <input type="date" aria-label="من تاريخ" class="log-input-cst" [ngModel]="logFilterDateFrom()" (ngModelChange)="logFilterDateFrom.set($event)" placeholder="من تاريخ" />
+                        <input type="date" aria-label="إلى تاريخ" class="log-input-cst" [ngModel]="logFilterDateTo()" (ngModelChange)="logFilterDateTo.set($event)" placeholder="إلى تاريخ" />
+                        <button class="log-apply-btn" (click)="applyLogFilters()">
+                          <span class="material-icons-round">search</span>
+                          تطبيق
+                        </button>
+                      </div>
+                      <div class="log-table-wrap">
+                        <table class="log-table log-table-cst">
+                          <thead><tr><th>النوع</th><th>الوصف</th><th>المبلغ</th><th>التاريخ</th></tr></thead>
+                          <tbody>
+                            @for (entry of widgetLogEntries(); track entry.id) {
+                              <tr>
+                                <td><span class="log-type-cell">{{ entry.operation_type_name || '-' }}</span></td>
+                                <td>{{ entry.description || '-' }}</td>
+                                <td class="log-amount-cell">{{ formatAmount(entry.total_debit) }}</td>
+                                <td class="log-date-cell">{{ formatDate(entry.entry_date) }}</td>
+                              </tr>
+                            }
+                            @if (widgetLogEntries().length === 0) {
+                              <tr><td colspan="4" class="log-empty">لا توجد حركات</td></tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </section>
+                }
+                @if (collectionStyleActiveTab() === 'accounts') {
+                  <section class="cst-section accounts-section">
+                    <h3 class="cst-section-title"><span class="material-icons-round">account_balance</span> {{ collectionStyleConfig()!.accountsSectionLabel }}</h3>
+                    <div class="accounts-grid-cst">
+                      @for (acc of collectionStyleAccounts(); track acc.id) {
+                        <div class="account-card-cst">
+                          <div class="account-card-cst-icon"><span class="material-icons-round">account_balance_wallet</span></div>
+                          <div class="account-card-cst-body">
+                            <span class="account-card-cst-name">{{ acc.name }}</span>
+                            <span class="account-card-cst-balance">{{ formatAmount(acc.total_balance ?? acc.balances?.[0]?.balance) }}</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                    @if (collectionStyleAccounts().length === 0) {
+                      <div class="cst-empty">
+                        <span class="material-icons-round">account_balance</span>
+                        <p>لم تختر حسابات/صناديق بعد. اضغط "إعداد الشاشة" واختر الحسابات للمراقبة.</p>
+                      </div>
+                    }
+                  </section>
+                }
+              </div>
+            } @else {
+              <div class="loading-state cst-loading"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+            }
+          </div>
+        } @else {
+
+        <!-- Widget Library Sidebar (لشاشات الويدجتات فقط) -->
         @if (showWidgetLibrary()) {
           <div class="widget-library" @slideIn>
             <div class="library-header">
@@ -748,6 +1001,7 @@
             }
           }
         </div>
+        }
       </div>
     </div>
   }
@@ -1027,6 +1281,95 @@
             {{ saving() ? 'جاري الحفظ...' : 'حفظ الصلاحيات' }}
           </button>
           <button class="btn-cancel" (click)="closePermissionsModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== إعداد الشاشة الثابتة (collection_style) ==================== -->
+  @if (showCollectionStyleConfigModal()) {
+    <div class="modal-overlay" (click)="closeCollectionStyleConfigModal()">
+      <div class="modal-card modal-lg" (click)="$event.stopPropagation()" @modalAnim>
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon teal">
+              <span class="material-icons-round">tune</span>
+            </div>
+            <div>
+              <h2>إعداد الشاشة الثابتة</h2>
+              <p>تسميات التبويبات، قوالب العمليات، وحسابات المراقبة</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="closeCollectionStyleConfigModal()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body collection-style-config-body">
+          <div class="config-section config-section-labels">
+            <h4 class="config-section-title"><span class="material-icons-round">label</span> تسميات التبويبات والأقسام</h4>
+            <div class="config-row">
+              <div class="form-group">
+                <label>اسم التبويب الأول</label>
+                <input type="text" class="input-cst" [ngModel]="configForm().tab1Label" (ngModelChange)="configForm.set({...configForm(), tab1Label: $event})" placeholder="مثال: تحصيل" />
+              </div>
+              <div class="form-group">
+                <label>اسم التبويب الثاني</label>
+                <input type="text" class="input-cst" [ngModel]="configForm().tab2Label" (ngModelChange)="configForm.set({...configForm(), tab2Label: $event})" placeholder="مثال: توريد" />
+              </div>
+              <div class="form-group">
+                <label>اسم قسم المراقبة</label>
+                <input type="text" class="input-cst" [ngModel]="configForm().accountsSectionLabel" (ngModelChange)="configForm.set({...configForm(), accountsSectionLabel: $event})" placeholder="مثال: الصناديق" />
+              </div>
+            </div>
+          </div>
+
+          <div class="config-section">
+            <h4 class="config-section-title"><span class="material-icons-round">call_received</span> قوالب التبويب الأول ({{ configForm().tab1Label }})</h4>
+            <div class="op-type-chips">
+              @for (op of operationTypes(); track op.id) {
+                <button type="button" class="chip" [class.selected]="configForm().tab1OperationTypeIds.includes(op.id)" (click)="toggleConfigFormOpType('tab1', op.id)">
+                  <span class="material-icons-round chip-icon">{{ op.icon || 'receipt' }}</span>
+                  {{ op.name }}
+                </button>
+              }
+              @if (operationTypes().length === 0) {
+                <p class="config-no-data">لا توجد قوالب عمليات. أضفها من إعدادات النشاط.</p>
+              }
+            </div>
+          </div>
+
+          <div class="config-section">
+            <h4 class="config-section-title"><span class="material-icons-round">call_made</span> قوالب التبويب الثاني ({{ configForm().tab2Label }})</h4>
+            <div class="op-type-chips">
+              @for (op of operationTypes(); track op.id) {
+                <button type="button" class="chip" [class.selected]="configForm().tab2OperationTypeIds.includes(op.id)" (click)="toggleConfigFormOpType('tab2', op.id)">
+                  <span class="material-icons-round chip-icon">{{ op.icon || 'receipt' }}</span>
+                  {{ op.name }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="config-section">
+            <h4 class="config-section-title"><span class="material-icons-round">account_balance</span> حسابات/صناديق المراقبة</h4>
+            <div class="op-type-chips">
+              @for (acc of allAccountsForConfig(); track acc.id) {
+                <button type="button" class="chip" [class.selected]="configForm().accountIds.includes(acc.id)" (click)="toggleConfigFormAccount(acc.id)">
+                  <span class="material-icons-round chip-icon">account_balance</span>
+                  {{ acc.name }}
+                </button>
+              }
+              @if (allAccountsForConfig().length === 0) {
+                <p class="config-no-data">لا توجد حسابات. أضف حسابات من إعدادات الحسابات.</p>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveCollectionStyleConfig()" [disabled]="saving()">
+            {{ saving() ? 'جاري الحفظ...' : 'حفظ الإعداد' }}
+          </button>
+          <button class="btn-cancel" (click)="closeCollectionStyleConfigModal()">إلغاء</button>
         </div>
       </div>
     </div>

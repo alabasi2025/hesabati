@@ -22,6 +22,7 @@ export class BusinessSelectComponent implements OnInit {
 
   businesses = signal<Business[]>([]);
   loading = signal(true);
+  error = signal<string | null>(null);
   userName = signal('');
 
   ngOnInit() {
@@ -30,11 +31,14 @@ export class BusinessSelectComponent implements OnInit {
   }
 
   async loadBusinesses() {
+    this.error.set(null);
     try {
       const data = await this.api.getBusinesses();
       this.businesses.set(data);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      const msg = e?.message || 'فشل تحميل قائمة الأعمال';
+      this.error.set(msg);
+      this.businesses.set([]);
     } finally {
       this.loading.set(false);
     }

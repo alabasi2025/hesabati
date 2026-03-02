@@ -239,6 +239,20 @@ export class ApiService {
   createScreen(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }
   updateScreen(id: number, d: any)                   { return this.request<any>(`/screens/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteScreen(id: number)                           { return this.request<any>(`/screens/${id}`, { method: 'DELETE' }); }
+  getCollectionStyleConfig(bizId: number, screenId: number) {
+    return this.request<{
+      tab1Label: string; tab1OperationTypeIds: number[];
+      tab2Label: string; tab2OperationTypeIds: number[];
+      accountsSectionLabel: string; accountIds: number[];
+    }>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`);
+  }
+  putCollectionStyleConfig(bizId: number, screenId: number, d: {
+    tab1Label?: string; tab1OperationTypeIds?: number[];
+    tab2Label?: string; tab2OperationTypeIds?: number[];
+    accountsSectionLabel?: string; accountIds?: number[];
+  }) {
+    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`, { method: 'PUT', body: JSON.stringify(d) });
+  }
   getScreenWidgets(screenId: number)                  { return this.request<any[]>(`/screens/${screenId}/widgets`); }
   createScreenWidget(screenId: number, d: any)        { return this.request<any>(`/screens/${screenId}/widgets`, { method: 'POST', body: JSON.stringify(d) }); }
   updateWidget(id: number, d: any)                   { return this.request<any>(`/widgets/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
@@ -279,12 +293,13 @@ export class ApiService {
     if (params.length) url += '?' + params.join('&');
     return this.request<any>(url);
   }
-  getWidgetLog(bizId: number, filters?: { dateFrom?: string; dateTo?: string; operationTypeId?: number; limit?: number; offset?: number }) {
+  getWidgetLog(bizId: number, filters?: { dateFrom?: string; dateTo?: string; operationTypeId?: number; operationTypeIds?: number[]; limit?: number; offset?: number }) {
     let url = `/businesses/${bizId}/widget-log`;
     const params: string[] = [];
     if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
     if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
     if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
+    if (filters?.operationTypeIds?.length) params.push(`operationTypeIds=${filters.operationTypeIds.join(',')}`);
     if (filters?.limit) params.push(`limit=${filters.limit}`);
     if (filters?.offset) params.push(`offset=${filters.offset}`);
     if (params.length) url += '?' + params.join('&');
