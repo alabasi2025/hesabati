@@ -3008,89 +3008,66 @@ api.get('/businesses/:bizId/reports/trial-balance', bizAuthMiddleware(), safeHan
   return c.json({ dateFrom, dateTo, accounts: rows, totals: { totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) < 0.01 } });
 }));
 
-// ===================== إعداد الشاشة المخصصة (collection-style) =====================
+// ===================== إعداد الشاشة المخصصة (تبويبات ديناميكية) =====================
+
+// جلب إعداد الشاشة - يدعم النظام القديم (customScreenConfig) والجديد (layoutConfig.tabs)
 api.get('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthMiddleware(), safeHandler('جلب إعداد الشاشة المخصصة', async (c) => {
   const bizId = c.get('bizId') as number;
   const screenId = parseId(c.req.param('screenId'));
   if (!screenId) return c.json({ error: 'معرّف الشاشة غير صالح' }, 400);
 
-  // التحقق من وجود الشاشة وملكيتها
   const [screen] = await db.select().from(screenTemplates).where(and(eq(screenTemplates.id, screenId), eq(screenTemplates.businessId, bizId)));
   if (!screen) return c.json({ error: 'الشاشة غير موجودة أو لا تنتمي لهذا العمل' }, 404);
 
-  // جلب الإعداد
-  const [config] = await db.select().from(customScreenConfig).where(eq(customScreenConfig.screenId, screenId));
-
-  if (config) {
-    return c.json(config);
+  // النظام الجديد: التبويبات محفوظة في layoutConfig.tabs
+  const layoutConfig = (screen.layoutConfig as any) || {};
+  if (layoutConfig.tabs && Array.isArray(layoutConfig.tabs) && layoutConfig.tabs.length > 0) {
+    return c.json({ screenId, tabs: layoutConfig.tabs, notes: layoutConfig.notes || '' });
   }
 
-  // إرجاع قيم افتراضية إذا لم يوجد إعداد
-  return c.json({
-    id: null,
-    screenId,
-    tab1Label: 'تحصيل',
-    tab1Icon: 'arrow_downward',
-    tab1Color: '#22c55e',
-    tab1OperationTypeIds: [],
-    tab2Label: 'توريد',
-    tab2Icon: 'arrow_upward',
-    tab2Color: '#ef4444',
-    tab2OperationTypeIds: [],
-    historyLabel: 'السجل',
-    historyIcon: 'history',
-    historyColor: '#6366f1',
-    accountsSectionLabel: 'الصناديق',
-    accountsIcon: 'savings',
-    accountsColor: '#10b981',
-    accountIds: [],
-  });
+  // التوافق مع النظام القديم: تحويل customScreenConfig إلى tabs
+  const [oldConfig] = await db.select().from(customScreenConfig).where(eq(customScreenConfig.screenId, screenId));
+  if (oldConfig) {
+    const tabs: any[] = [];
+    if (oldConfig.tab1OperationTypeIds && (oldConfig.tab1OperationTypeIds as number[]).length > 0) {
+      tabs.push({ id: 'tab_1', label: oldConfig.tab1Label, icon: oldConfig.tab1Icon, color: oldConfig.tab1Color, type: 'operations', sortOrder: 1, config: { operationTypeIds: oldConfig.tab1OperationTypeIds } });
+    }
+    if (oldConfig.tab2OperationTypeIds && (oldConfig.tab2OperationTypeIds as number[]).length > 0) {
+      tabs.push({ id: 'tab_2', label: oldConfig.tab2Label, icon: oldConfig.tab2Icon, color: oldConfig.tab2Color, type: 'operations', sortOrder: 2, config: { operationTypeIds: oldConfig.tab2OperationTypeIds } });
+    }
+    tabs.push({ id: 'tab_history', label: oldConfig.historyLabel, icon: oldConfig.historyIcon, color: oldConfig.historyColor, type: 'log', sortOrder: tabs.length + 1, config: {} });
+    if (oldConfig.accountIds && (oldConfig.accountIds as number[]).length > 0) {
+      tabs.push({ id: 'tab_accounts', label: oldConfig.accountsSectionLabel, icon: oldConfig.accountsIcon, color: oldConfig.accountsColor, type: 'accounts', sortOrder: tabs.length + 1, config: { accountIds: oldConfig.accountIds } });
+    }
+    return c.json({ screenId, tabs, notes: '' });
+  }
+
+  // لا يوجد إعداد - إرجاع مصفوفة فارغة
+  return c.json({ screenId, tabs: [], notes: '' });
 }));
 
+// حفظ إعداد الشاشة - النظام الجديد يحفظ في layoutConfig
 api.put('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthMiddleware(), safeHandler('حفظ إعداد الشاشة المخصصة', async (c) => {
   const bizId = c.get('bizId') as number;
   const screenId = parseId(c.req.param('screenId'));
   if (!screenId) return c.json({ error: 'معرّف الشاشة غير صالح' }, 400);
 
-  // التحقق من وجود الشاشة وملكيتها
   const [screen] = await db.select().from(screenTemplates).where(and(eq(screenTemplates.id, screenId), eq(screenTemplates.businessId, bizId)));
   if (!screen) return c.json({ error: 'الشاشة غير موجودة أو لا تنتمي لهذا العمل' }, 404);
 
   const body = normalizeBody(await c.req.json());
+  const tabs = body.tabs || [];
+  const notes = body.notes || '';
 
-  const configData = {
-    tab1Label: body.tab1Label || body.tab1_label || 'تحصيل',
-    tab1Icon: body.tab1Icon || body.tab1_icon || 'arrow_downward',
-    tab1Color: body.tab1Color || body.tab1_color || '#22c55e',
-    tab1OperationTypeIds: body.tab1OperationTypeIds || body.tab1_operation_type_ids || [],
-    tab2Label: body.tab2Label || body.tab2_label || 'توريد',
-    tab2Icon: body.tab2Icon || body.tab2_icon || 'arrow_upward',
-    tab2Color: body.tab2Color || body.tab2_color || '#ef4444',
-    tab2OperationTypeIds: body.tab2OperationTypeIds || body.tab2_operation_type_ids || [],
-    historyLabel: body.historyLabel || body.history_label || 'السجل',
-    historyIcon: body.historyIcon || body.history_icon || 'history',
-    historyColor: body.historyColor || body.history_color || '#6366f1',
-    accountsSectionLabel: body.accountsSectionLabel || body.accounts_section_label || 'الصناديق',
-    accountsIcon: body.accountsIcon || body.accounts_icon || 'savings',
-    accountsColor: body.accountsColor || body.accounts_color || '#10b981',
-    accountIds: body.accountIds || body.account_ids || [],
+  // حفظ في layoutConfig
+  const layoutConfig = { tabs, notes };
+  const [result] = await db.update(screenTemplates).set({
+    layoutConfig,
+    templateKey: 'collection_style',
     updatedAt: new Date(),
-  };
+  }).where(eq(screenTemplates.id, screenId)).returning();
 
-  // التحقق من وجود إعداد سابق
-  const [existing] = await db.select().from(customScreenConfig).where(eq(customScreenConfig.screenId, screenId));
-
-  let result;
-  if (existing) {
-    [result] = await db.update(customScreenConfig).set(configData).where(eq(customScreenConfig.screenId, screenId)).returning();
-  } else {
-    [result] = await db.insert(customScreenConfig).values({ ...configData, screenId }).returning();
-  }
-
-  // تحديث templateKey في screen_templates إلى collection_style
-  await db.update(screenTemplates).set({ templateKey: 'collection_style', updatedAt: new Date() }).where(eq(screenTemplates.id, screenId));
-
-  return c.json(result);
+  return c.json({ screenId, tabs, notes });
 }));
 
 export default api;

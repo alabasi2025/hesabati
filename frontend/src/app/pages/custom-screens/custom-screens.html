@@ -1,179 +1,113 @@
-<div class="page-container">
+<div class="custom-screens-page">
 
-  <!-- ==================== LIST VIEW ==================== -->
-  @if (viewMode() === 'list') {
-
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-right">
-        <div class="header-icon">
-          <span class="material-icons-round">space_dashboard</span>
-        </div>
-        <div>
-          <h1>الشاشات المخصصة</h1>
-          <p>إنشاء وإدارة لوحات العمل المخصصة بنظام السحب والإفلات</p>
-        </div>
-      </div>
-      <button class="add-btn" (click)="startWizard()">
-        <span class="material-icons-round">add</span>
-        شاشة جديدة
-      </button>
+  <!-- ======================== LOADING ======================== -->
+  @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>جاري التحميل...</p>
     </div>
-
-    @if (loading()) {
-      <div class="loading-state">
-        <span class="material-icons-round spin">sync</span>
-        <p>جاري التحميل...</p>
-      </div>
-    } @else {
-
-      @if (screens().length === 0) {
-        <div class="empty-state-card">
-          <div class="empty-icon">
-            <span class="material-icons-round">space_dashboard</span>
-          </div>
-          <h3>لا توجد شاشات مخصصة</h3>
-          <p>أنشئ شاشتك الأولى باستخدام القوالب الجاهزة أو ابدأ من الصفر</p>
-          <button class="add-btn" (click)="startWizard()">
-            <span class="material-icons-round">add</span>
-            إنشاء شاشة جديدة
-          </button>
-        </div>
-      } @else {
-        <div class="screens-grid">
-          @for (screen of screens(); track screen.id) {
-            <div class="screen-card" (click)="openScreen(screen)">
-              <div class="screen-card-header">
-                <div class="screen-card-icon" [style.background]="'linear-gradient(135deg, ' + screen.color + ', ' + screen.color + '99)'">
-                  <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
-                </div>
-                <div class="screen-card-actions" (click)="$event.stopPropagation()">
-                  <button class="action-btn edit" (click)="openPermissionsModal(screen)" title="صلاحيات">
-                    <span class="material-icons-round">admin_panel_settings</span>
-                  </button>
-                  <button class="action-btn edit" (click)="openSidebarModal(screen)" title="إضافة للقائمة">
-                    <span class="material-icons-round">add_to_queue</span>
-                  </button>
-                  <button class="action-btn edit" (click)="openScreenForm(screen)" title="تعديل">
-                    <span class="material-icons-round">edit</span>
-                  </button>
-                  <button class="action-btn edit" (click)="cloneScreen(screen)" title="نسخ">
-                    <span class="material-icons-round">content_copy</span>
-                  </button>
-                  <button class="action-btn delete" (click)="deleteScreen(screen)" title="حذف">
-                    <span class="material-icons-round">delete</span>
-                  </button>
-                </div>
-              </div>
-              <div class="screen-card-body">
-                <h3>{{ screen.name }}</h3>
-                <p class="screen-desc">{{ screen.description || 'بدون وصف' }}</p>
-              </div>
-              <div class="screen-card-footer">
-                <span class="screen-date">
-                  <span class="material-icons-round">calendar_today</span>
-                  {{ formatDate(screen.createdAt) }}
-                </span>
-                <span class="screen-status" [class.active]="screen.isActive" [class.inactive]="!screen.isActive">
-                  {{ screen.isActive ? 'نشطة' : 'معطلة' }}
-                </span>
-              </div>
-            </div>
-          }
-        </div>
-      }
-    }
   }
 
-  <!-- ==================== WIZARD VIEW ==================== -->
-  @if (viewMode() === 'wizard') {
-    <div class="wizard-container">
-      <!-- Wizard Header -->
-      <div class="wizard-header">
-        <button class="back-btn" (click)="cancelWizard()">
-          <span class="material-icons-round">arrow_forward</span>
+  <!-- ======================== LIST VIEW ======================== -->
+  @if (viewMode() === 'list') {
+    <div class="list-view">
+      <div class="page-header">
+        <div class="header-right">
+          <span class="material-icons-round header-icon">space_dashboard</span>
+          <h2>الشاشات المخصصة</h2>
+          <span class="badge">{{ screens().length }}</span>
+        </div>
+        <button class="btn btn-primary" (click)="startWizard()">
+          <span class="material-icons-round">add</span>
+          إنشاء شاشة جديدة
         </button>
-        <div>
-          <h1>إنشاء شاشة جديدة</h1>
-          <p>الخطوة {{ wizardStep() }} من 5</p>
+      </div>
+
+      @if (screens().length === 0 && !loading()) {
+        <div class="empty-state">
+          <span class="material-icons-round empty-icon">space_dashboard</span>
+          <h3>لا توجد شاشات مخصصة</h3>
+          <p>أنشئ شاشتك الأولى لتبدأ بتنظيم عملك</p>
+          <button class="btn btn-primary" (click)="startWizard()">
+            <span class="material-icons-round">add</span>
+            إنشاء شاشة
+          </button>
+        </div>
+      }
+
+      <div class="screens-grid">
+        @for (screen of screens(); track screen.id) {
+          <div class="screen-card" [style.border-top-color]="screen.color || '#3b82f6'">
+            <div class="card-header" (click)="openScreen(screen)">
+              <div class="card-icon" [style.background]="screen.color || '#3b82f6'">
+                <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
+              </div>
+              <div class="card-info">
+                <h3>{{ screen.name }}</h3>
+                <p>{{ screen.description || 'شاشة مخصصة' }}</p>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="btn-icon" title="فتح" (click)="openScreen(screen)">
+                <span class="material-icons-round">open_in_new</span>
+              </button>
+              <button class="btn-icon" title="تعديل" (click)="openScreenForm(screen)">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="btn-icon" title="نسخ" (click)="cloneScreen(screen)">
+                <span class="material-icons-round">content_copy</span>
+              </button>
+              <button class="btn-icon" title="إضافة للقائمة" (click)="openSidebarModal(screen)">
+                <span class="material-icons-round">add_to_home_screen</span>
+              </button>
+              <button class="btn-icon" title="صلاحيات" (click)="openPermissionsModal(screen)">
+                <span class="material-icons-round">lock</span>
+              </button>
+              <button class="btn-icon danger" title="حذف" (click)="deleteScreen(screen)">
+                <span class="material-icons-round">delete</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ======================== WIZARD VIEW ======================== -->
+  @if (viewMode() === 'wizard') {
+    <div class="wizard-view">
+      <div class="wizard-header">
+        <button class="btn btn-ghost" (click)="cancelWizard()">
+          <span class="material-icons-round">close</span>
+          إلغاء
+        </button>
+        <h2>{{ wizardIsEditing() ? 'تعديل الشاشة' : 'إنشاء شاشة جديدة' }}</h2>
+        <div class="wizard-progress">
+          <span>الخطوة {{ wizardStep() }} من {{ getWizardTotalSteps() }}</span>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="(wizardStep() / getWizardTotalSteps()) * 100"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Wizard Steps Indicator -->
-      <div class="wizard-steps">
-        @for (step of [1,2,3,4,5]; track step) {
-          <div class="wizard-step" [class.active]="wizardStep() === step" [class.completed]="wizardStep() > step" (click)="step < wizardStep() ? wizardStep.set(step) : null">
-            <div class="step-number">{{ wizardStep() > step ? '✓' : step }}</div>
-            <span class="step-label">
-              @switch (step) {
-                @case (1) { بيانات الشاشة }
-                @case (2) { التبويب الأول }
-                @case (3) { التبويب الثاني }
-                @case (4) { السجل }
-                @case (5) { الحسابات }
-              }
-            </span>
-          </div>
-          @if (step < 5) {
-            <div class="step-connector" [class.active]="wizardStep() > step"></div>
-          }
-        }
-      </div>
+      <div class="wizard-body">
+        <h3 class="step-title">{{ getWizardStepTitle() }}</h3>
 
-      <!-- Wizard Content -->
-      <div class="wizard-content">
-
-        <!-- ========== Step 1: Screen Info ========== -->
+        <!-- STEP 1: Basic Info -->
         @if (wizardStep() === 1) {
-          <div class="wizard-step-content">
-            <h2 class="step-title">بيانات الشاشة</h2>
-            <p class="step-desc">أدخل المعلومات الأساسية للشاشة الجديدة</p>
-
+          <div class="wizard-step step-basic">
+            <div class="form-group">
+              <label>اسم الشاشة *</label>
+              <input type="text" [ngModel]="wizardScreenName()" (ngModelChange)="wizardScreenName.set($event)" placeholder="مثال: المبيعات اليومية">
+            </div>
+            <div class="form-group">
+              <label>الوصف</label>
+              <textarea [ngModel]="wizardScreenDesc()" (ngModelChange)="wizardScreenDesc.set($event)" placeholder="وصف مختصر للشاشة" rows="2"></textarea>
+            </div>
             <div class="form-row">
-              <div class="form-group flex-1">
-                <label>اسم الشاشة</label>
-                <input type="text" [ngModel]="wizardScreenName()" (ngModelChange)="wizardScreenName.set($event)" placeholder="مثال: شاشة التحصيل اليومي" />
-              </div>
-              <div class="form-group flex-1">
-                <label>الوصف (اختياري)</label>
-                <input type="text" [ngModel]="wizardScreenDesc()" (ngModelChange)="wizardScreenDesc.set($event)" placeholder="وصف مختصر..." />
-              </div>
-            </div>
-
-            <!-- Sidebar Options -->
-            <div class="sidebar-options" style="margin-top: 24px; padding: 16px; background: var(--bg-secondary, #f8f9fa); border-radius: 12px;">
-              <label class="sidebar-toggle" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px;">
-                <input type="checkbox" [checked]="wizardAddToSidebar()" (change)="wizardAddToSidebar.set(!wizardAddToSidebar())" style="width: 18px; height: 18px;" />
-                <span class="material-icons-round" style="font-size: 20px; color: var(--primary);">menu</span>
-                <span style="font-weight: 600;">إضافة الشاشة للقائمة الجانبية</span>
-              </label>
-
-              @if (wizardAddToSidebar()) {
-                <div class="form-row" style="gap: 16px;">
-                  <div class="form-group flex-1">
-                    <label>القسم في القائمة الجانبية</label>
-                    <select [ngModel]="wizardSidebarSectionId()" (ngModelChange)="wizardSidebarSectionId.set(+$event)">
-                      @for (sec of wizardSidebarSections(); track sec.id) {
-                        <option [value]="sec.id">{{ sec.name }}</option>
-                      }
-                      @if (wizardSidebarSections().length === 0) {
-                        <option value="0" disabled>لا توجد أقسام - سيتم إنشاء قسم "شاشات مخصصة"</option>
-                      }
-                    </select>
-                  </div>
-                  <div class="form-group" style="width: 120px;">
-                    <label>الترتيب</label>
-                    <input type="number" [ngModel]="wizardSidebarSortOrder()" (ngModelChange)="wizardSidebarSortOrder.set(+$event)" min="0" placeholder="0" />
-                  </div>
-                </div>
-              }
-            </div>
-
-            <!-- Icon & Color Selection -->
-            <div class="form-row" style="margin-top: 24px;">
-              <div class="form-group flex-1">
-                <label>أيقونة الشاشة</label>
-                <div class="icon-grid compact">
+              <div class="form-group">
+                <label>الأيقونة</label>
+                <div class="icon-grid">
                   @for (icon of icons; track icon) {
                     <button class="icon-option" [class.selected]="wizardScreenIcon() === icon" (click)="wizardScreenIcon.set(icon)">
                       <span class="material-icons-round">{{ icon }}</span>
@@ -181,898 +115,671 @@
                   }
                 </div>
               </div>
-              <div class="form-group flex-1">
-                <label>لون الشاشة</label>
-                <div class="color-picker-row">
-                  <div class="color-grid">
-                    @for (color of colors; track color) {
-                      <button class="color-option" [style.background]="color" [class.selected]="wizardScreenColor() === color" (click)="wizardScreenColor.set(color)">
-                        @if (wizardScreenColor() === color) {
-                          <span class="material-icons-round">check</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                  <div class="color-picker-trigger"
-                       [style.background]="wizardScreenColor()"
-                       [colorPicker]="wizardScreenColor()"
-                       (colorPickerChange)="onColorPickerChange($event, 'wizard')"
-                       cpPosition="bottom"
-                       [cpOKButton]="true"
-                       cpOKButtonText="اختيار"
-                       [cpCancelButton]="true"
-                       cpCancelButtonText="إلغاء"
-                       title="لون مخصص">
-                    <span class="material-icons-round">colorize</span>
-                  </div>
+              <div class="form-group">
+                <label>اللون</label>
+                <div class="color-grid">
+                  @for (color of colors; track color) {
+                    <button class="color-option" [class.selected]="wizardScreenColor() === color" [style.background]="color" (click)="wizardScreenColor.set(color)"></button>
+                  }
+                </div>
+                <div class="custom-color">
+                  <input type="text" [ngModel]="wizardScreenColor()" (ngModelChange)="wizardScreenColor.set($event)" [cpPosition]="'bottom'" [cpOutputFormat]="'hex'" [colorPicker]="wizardScreenColor()" (colorPickerChange)="onColorPickerChange($event, 'wizard')">
+                  <div class="color-preview" [style.background]="wizardScreenColor()"></div>
                 </div>
               </div>
+            </div>
+            <div class="form-group sidebar-option">
+              <label class="checkbox-label">
+                <input type="checkbox" [ngModel]="wizardAddToSidebar()" (ngModelChange)="wizardAddToSidebar.set($event)">
+                <span>إضافة للقائمة الجانبية تلقائياً</span>
+              </label>
+              @if (wizardAddToSidebar()) {
+                <div class="sidebar-config">
+                  <select [ngModel]="wizardSidebarSectionId()" (ngModelChange)="wizardSidebarSectionId.set(+$event)">
+                    @for (section of wizardSidebarSections(); track section.id) {
+                      <option [value]="section.id">{{ section.name }}</option>
+                    }
+                  </select>
+                  <input type="number" [ngModel]="wizardSidebarSortOrder()" (ngModelChange)="wizardSidebarSortOrder.set(+$event)" placeholder="ترتيب" min="0">
+                </div>
+              }
             </div>
           </div>
         }
 
-        <!-- ========== Step 2: Tab 1 Settings ========== -->
+        <!-- STEP 2: Add Tabs -->
         @if (wizardStep() === 2) {
-          <div class="wizard-step-content">
-            <h2 class="step-title">إعداد التبويب الأول</h2>
-            <p class="step-desc">حدد اسم وأيقونة ولون التبويب الأول واختر قوالب العمليات</p>
+          <div class="wizard-step step-tabs">
+            <p class="step-desc">اختر التبويبات التي تريدها في شاشتك. يمكنك إضافة أي عدد وترتيبها كما تشاء.</p>
 
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="wizardTab1Label()" (ngModelChange)="wizardTab1Label.set($event)" placeholder="مثلاً: تحصيل" />
-              </div>
-            </div>
-
-            <div class="form-row" style="margin-top: 16px;">
-              <div class="form-group flex-1">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid compact">
-                  @for (icon of icons; track icon) {
-                    <button class="icon-option" [class.selected]="wizardTab1Icon() === icon" (click)="wizardTab1Icon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group flex-1">
-                <label>لون التبويب</label>
-                <div class="color-picker-row">
-                  <div class="color-grid">
-                    @for (color of colors; track color) {
-                      <button class="color-option" [style.background]="color" [class.selected]="wizardTab1Color() === color" (click)="wizardTab1Color.set(color)">
-                        @if (wizardTab1Color() === color) {
-                          <span class="material-icons-round">check</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <h3 class="section-title" style="margin-top: 24px;">اختر قوالب العمليات لهذا التبويب</h3>
-            <div class="binding-options-grid">
-              @for (op of operationTypes(); track op.id) {
-                <label class="binding-option" [class.selected]="wizardTab1OperationTypeIds().includes(op.id)">
-                  <input type="checkbox" [checked]="wizardTab1OperationTypeIds().includes(op.id)" (change)="toggleWizardTab1OpType(op.id)" />
-                  <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
-                  <span>{{ op.name }}</span>
-                </label>
-              }
-              @if (operationTypes().length === 0) {
-                <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- ========== Step 3: Tab 2 Settings ========== -->
-        @if (wizardStep() === 3) {
-          <div class="wizard-step-content">
-            <h2 class="step-title">إعداد التبويب الثاني</h2>
-            <p class="step-desc">حدد اسم وأيقونة ولون التبويب الثاني واختر قوالب العمليات</p>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="wizardTab2Label()" (ngModelChange)="wizardTab2Label.set($event)" placeholder="مثلاً: توريد" />
-              </div>
-            </div>
-
-            <div class="form-row" style="margin-top: 16px;">
-              <div class="form-group flex-1">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid compact">
-                  @for (icon of icons; track icon) {
-                    <button class="icon-option" [class.selected]="wizardTab2Icon() === icon" (click)="wizardTab2Icon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group flex-1">
-                <label>لون التبويب</label>
-                <div class="color-picker-row">
-                  <div class="color-grid">
-                    @for (color of colors; track color) {
-                      <button class="color-option" [style.background]="color" [class.selected]="wizardTab2Color() === color" (click)="wizardTab2Color.set(color)">
-                        @if (wizardTab2Color() === color) {
-                          <span class="material-icons-round">check</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <h3 class="section-title" style="margin-top: 24px;">اختر قوالب العمليات لهذا التبويب</h3>
-            <div class="binding-options-grid">
-              @for (op of operationTypes(); track op.id) {
-                <label class="binding-option" [class.selected]="wizardTab2OperationTypeIds().includes(op.id)">
-                  <input type="checkbox" [checked]="wizardTab2OperationTypeIds().includes(op.id)" (change)="toggleWizardTab2OpType(op.id)" />
-                  <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
-                  <span>{{ op.name }}</span>
-                </label>
-              }
-              @if (operationTypes().length === 0) {
-                <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- ========== Step 4: History Tab ========== -->
-        @if (wizardStep() === 4) {
-          <div class="wizard-step-content">
-            <h2 class="step-title">إعداد تبويب السجل</h2>
-            <p class="step-desc">حدد اسم وأيقونة ولون تبويب السجل الذي يعرض جميع العمليات المنفذة</p>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>اسم تبويب السجل</label>
-                <input type="text" [ngModel]="wizardHistoryLabel()" (ngModelChange)="wizardHistoryLabel.set($event)" placeholder="مثلاً: السجل" />
-              </div>
-            </div>
-
-            <div class="form-row" style="margin-top: 16px;">
-              <div class="form-group flex-1">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid compact">
-                  @for (icon of icons; track icon) {
-                    <button class="icon-option" [class.selected]="wizardHistoryIcon() === icon" (click)="wizardHistoryIcon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group flex-1">
-                <label>لون التبويب</label>
-                <div class="color-picker-row">
-                  <div class="color-grid">
-                    @for (color of colors; track color) {
-                      <button class="color-option" [style.background]="color" [class.selected]="wizardHistoryColor() === color" (click)="wizardHistoryColor.set(color)">
-                        @if (wizardHistoryColor() === color) {
-                          <span class="material-icons-round">check</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="history-preview" style="margin-top: 32px; padding: 24px; background: var(--bg-secondary, #f8f9fa); border-radius: 12px; text-align: center;">
-              <span class="material-icons-round" [style.color]="wizardHistoryColor()" style="font-size: 48px;">{{ wizardHistoryIcon() }}</span>
-              <h3 style="margin-top: 12px; color: var(--text-secondary);">{{ wizardHistoryLabel() || 'تبويب السجل' }}</h3>
-              <p style="color: var(--text-secondary); opacity: 0.7;">سيعرض هذا التبويب جميع العمليات المنفذة عبر التبويبين الأول والثاني مع إمكانية الفلترة والبحث</p>
-            </div>
-          </div>
-        }
-
-        <!-- ========== Step 5: Accounts/Funds Tab ========== -->
-        @if (wizardStep() === 5) {
-          <div class="wizard-step-content">
-            <h2 class="step-title">إعداد تبويب الحسابات / الصناديق</h2>
-            <p class="step-desc">حدد اسم وأيقونة ولون التبويب واختر الحسابات التي تريد مراقبتها</p>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="wizardAccountsLabel()" (ngModelChange)="wizardAccountsLabel.set($event)" placeholder="مثلاً: الصناديق" />
-              </div>
-            </div>
-
-            <div class="form-row" style="margin-top: 16px;">
-              <div class="form-group flex-1">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid compact">
-                  @for (icon of icons; track icon) {
-                    <button class="icon-option" [class.selected]="wizardAccountsIcon() === icon" (click)="wizardAccountsIcon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group flex-1">
-                <label>لون التبويب</label>
-                <div class="color-picker-row">
-                  <div class="color-grid">
-                    @for (color of colors; track color) {
-                      <button class="color-option" [style.background]="color" [class.selected]="wizardAccountsColor() === color" (click)="wizardAccountsColor.set(color)">
-                        @if (wizardAccountsColor() === color) {
-                          <span class="material-icons-round">check</span>
-                        }
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <h3 class="section-title" style="margin-top: 24px;">اختر الحسابات للمراقبة</h3>
-
-            <!-- شريط البحث -->
-            <div class="acc-filter-bar">
-              <div class="acc-search-box">
-                <span class="material-icons-round">search</span>
-                <input type="text" placeholder="ابحث عن حساب..." [value]="accSearchQuery()" (input)="accSearchQuery.set($any($event.target).value)" />
-              </div>
-            </div>
-
-            <!-- فلاتر الأنواع -->
-            <div class="acc-type-tabs">
-              <button class="acc-type-tab" [class.active]="accFilterType() === 'all'" [style.--tab-color]="'#64748b'" (click)="setAccFilterType('all')">
-                <span class="material-icons-round">apps</span>
-                الكل
-                <span class="acc-tab-count">{{ allAccounts().length }}</span>
-              </button>
-              @for (t of accDynamicFilters(); track t.value) {
-                <button class="acc-type-tab" [class.active]="accFilterType() === t.value" [style.--tab-color]="t.color" (click)="setAccFilterType(t.value)">
-                  <span class="material-icons-round">{{ t.icon }}</span>
-                  {{ t.label }}
-                  <span class="acc-tab-count">{{ allAccounts().filter(a => a.accountType === t.value).length }}</span>
+            <div class="tab-types-grid">
+              @for (tabType of tabTypeOptions; track tabType.value) {
+                <button class="tab-type-card" (click)="addWizardTab(tabType.value)">
+                  <span class="material-icons-round" [style.color]="tabType.color">{{ tabType.icon }}</span>
+                  <strong>{{ tabType.label }}</strong>
+                  <small>{{ tabType.desc }}</small>
+                  <span class="material-icons-round add-icon">add_circle</span>
                 </button>
               }
             </div>
 
-            <!-- قائمة الحسابات المفلترة -->
-            <div class="acc-select-grid">
-              @for (acc of accFiltered(); track acc.id) {
-                <label class="acc-select-item" [class.selected]="wizardAccountIds().includes(acc.id)" [style.--acc-color]="getAccTypeMeta(acc.accountType).color">
-                  <input type="checkbox" [checked]="wizardAccountIds().includes(acc.id)" (change)="toggleWizardAccount(acc.id)" />
-                  <span class="material-icons-round acc-item-icon">{{ getAccTypeMeta(acc.accountType).icon }}</span>
-                  <div class="acc-item-info">
-                    <span class="acc-item-name">{{ acc.name }}</span>
-                    <span class="acc-item-type">{{ getAccTypeMeta(acc.accountType).label }}</span>
+            @if (wizardTabs().length > 0) {
+              <h4 class="subsection-title">التبويبات المضافة ({{ wizardTabs().length }})</h4>
+              <div class="added-tabs-list">
+                @for (tab of wizardTabs(); track tab.id; let i = $index) {
+                  <div class="added-tab-item" [style.border-right-color]="tab.color">
+                    <div class="tab-item-info">
+                      <span class="material-icons-round" [style.color]="tab.color">{{ tab.icon }}</span>
+                      <div>
+                        <input type="text" class="tab-name-input" [ngModel]="tab.label" (ngModelChange)="updateWizardTab(i, 'label', $event)" placeholder="اسم التبويب">
+                        <small class="tab-type-badge" [style.color]="getTabTypeInfo(tab.type).color">{{ getTabTypeInfo(tab.type).label }}</small>
+                      </div>
+                    </div>
+                    <div class="tab-item-actions">
+                      <button class="btn-icon sm" (click)="moveWizardTab(i, 'up')" [disabled]="i === 0" title="تحريك لأعلى">
+                        <span class="material-icons-round">arrow_upward</span>
+                      </button>
+                      <button class="btn-icon sm" (click)="moveWizardTab(i, 'down')" [disabled]="i === wizardTabs().length - 1" title="تحريك لأسفل">
+                        <span class="material-icons-round">arrow_downward</span>
+                      </button>
+                      <button class="btn-icon sm danger" (click)="removeWizardTab(i)" title="حذف">
+                        <span class="material-icons-round">delete</span>
+                      </button>
+                    </div>
                   </div>
-                  @if (wizardAccountIds().includes(acc.id)) {
-                    <span class="material-icons-round acc-check">check_circle</span>
-                  }
-                </label>
-              }
-              @if (accFiltered().length === 0 && allAccounts().length > 0) {
-                <p class="no-data-msg">لا توجد حسابات تطابق البحث</p>
-              }
-              @if (allAccounts().length === 0) {
-                <p class="no-data-msg">لا توجد حسابات. أنشئها من صفحة الحسابات.</p>
-              }
-            </div>
-
-            @if (wizardAccountIds().length > 0) {
-              <div class="acc-selected-summary">
-                <span class="material-icons-round">check_circle</span>
-                تم اختيار {{ wizardAccountIds().length }} حساب
+                }
               </div>
             }
           </div>
         }
 
+        <!-- STEP 3+: Configure each tab -->
+        @if (wizardStep() >= 3 && wizardStep() < getWizardTotalSteps()) {
+          @let configTabs = getConfigurableTabs();
+          @let configIdx = wizardStep() - 3;
+          @if (configIdx >= 0 && configIdx < configTabs.length) {
+            @let tab = configTabs[configIdx];
+            <div class="wizard-step step-config">
+              <div class="tab-config-header">
+                <div class="tab-preview" [style.border-color]="tab.color">
+                  <span class="material-icons-round" [style.color]="tab.color">{{ tab.icon }}</span>
+                  <span>{{ tab.label }}</span>
+                </div>
+                <div class="mini-config">
+                  <div class="icon-grid compact">
+                    @for (icon of icons; track icon) {
+                      <button class="icon-option sm" [class.selected]="tab.icon === icon" (click)="updateWizardTab(wizardTabs().indexOf(tab), 'icon', icon)">
+                        <span class="material-icons-round">{{ icon }}</span>
+                      </button>
+                    }
+                  </div>
+                  <div class="color-grid compact">
+                    @for (color of colors; track color) {
+                      <button class="color-option sm" [class.selected]="tab.color === color" [style.background]="color" (click)="updateWizardTab(wizardTabs().indexOf(tab), 'color', color)"></button>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              @if (tab.type === 'operations') {
+                <h4>اختر أنواع العمليات لهذا التبويب</h4>
+                <div class="op-types-grid">
+                  @for (ot of operationTypes(); track ot.id) {
+                    <button class="op-type-item" [class.selected]="(tab.config?.operationTypeIds || []).includes(ot.id)"
+                      (click)="toggleWizardTabOpType(wizardTabs().indexOf(tab), ot.id)">
+                      <span class="material-icons-round" [style.color]="ot.color || '#3b82f6'">{{ ot.icon || 'receipt_long' }}</span>
+                      <span>{{ ot.name }}</span>
+                      @if ((tab.config?.operationTypeIds || []).includes(ot.id)) {
+                        <span class="material-icons-round check">check_circle</span>
+                      }
+                    </button>
+                  }
+                </div>
+                <p class="selected-count">تم اختيار {{ (tab.config?.operationTypeIds || []).length }} نوع عملية</p>
+              }
+
+              @if (tab.type === 'accounts') {
+                <h4>اختر الحسابات لهذا التبويب</h4>
+                <div class="accounts-filter-bar">
+                  <div class="filter-chips">
+                    <button class="filter-chip" [class.active]="accFilterType() === 'all'" (click)="setAccFilterType('all')">
+                      الكل <span class="chip-count">{{ allAccounts().length }}</span>
+                    </button>
+                    @for (filter of accDynamicFilters(); track filter.value) {
+                      <button class="filter-chip" [class.active]="accFilterType() === filter.value" (click)="setAccFilterType(filter.value)" [style.--chip-color]="filter.color">
+                        <span class="material-icons-round chip-icon">{{ filter.icon }}</span>
+                        {{ filter.label }}
+                        <span class="chip-count">{{ allAccounts().filter(a => a.accountType === filter.value).length }}</span>
+                      </button>
+                    }
+                  </div>
+                  <div class="search-box">
+                    <span class="material-icons-round">search</span>
+                    <input type="text" [ngModel]="accSearchQuery()" (ngModelChange)="accSearchQuery.set($event)" placeholder="بحث...">
+                  </div>
+                </div>
+                <div class="accounts-grid">
+                  @for (acc of accFiltered(); track acc.id) {
+                    <button class="account-item" [class.selected]="(tab.config?.accountIds || []).includes(acc.id)"
+                      (click)="toggleWizardTabAccount(wizardTabs().indexOf(tab), acc.id)">
+                      <span class="material-icons-round acc-icon" [style.color]="getAccTypeMeta(acc.accountType).color">{{ getAccTypeMeta(acc.accountType).icon }}</span>
+                      <span class="acc-name">{{ acc.name }}</span>
+                      <span class="acc-type-label">{{ getAccTypeMeta(acc.accountType).label }}</span>
+                      @if ((tab.config?.accountIds || []).includes(acc.id)) {
+                        <span class="material-icons-round check">check_circle</span>
+                      }
+                    </button>
+                  }
+                </div>
+                <p class="selected-count">تم اختيار {{ (tab.config?.accountIds || []).length }} حساب</p>
+              }
+            </div>
+          }
+        }
+
+        <!-- LAST STEP: Preview -->
+        @if (wizardStep() === getWizardTotalSteps()) {
+          <div class="wizard-step step-preview">
+            <div class="preview-card">
+              <div class="preview-header" [style.background]="wizardScreenColor()">
+                <span class="material-icons-round">{{ wizardScreenIcon() }}</span>
+                <h3>{{ wizardScreenName() }}</h3>
+              </div>
+              <div class="preview-tabs">
+                @for (tab of wizardTabs(); track tab.id) {
+                  <div class="preview-tab" [style.border-bottom-color]="tab.color">
+                    <span class="material-icons-round" [style.color]="tab.color">{{ tab.icon }}</span>
+                    <span>{{ tab.label }}</span>
+                    <small>({{ getTabTypeInfo(tab.type).label }})</small>
+                  </div>
+                }
+              </div>
+              <div class="preview-summary">
+                <p><strong>عدد التبويبات:</strong> {{ wizardTabs().length }}</p>
+                <p><strong>إضافة للقائمة:</strong> {{ wizardAddToSidebar() ? 'نعم' : 'لا' }}</p>
+              </div>
+            </div>
+          </div>
+        }
       </div>
 
-      <!-- Wizard Footer -->
       <div class="wizard-footer">
-        <div class="wizard-footer-right">
-          @if (wizardStep() > 1) {
-            <button class="wizard-btn secondary" (click)="prevWizardStep()">
-              <span class="material-icons-round">arrow_forward</span>
-              السابق
-            </button>
-          }
-        </div>
-        <div class="wizard-footer-left">
-          @if (wizardStep() < 5) {
-            <button class="wizard-btn primary" (click)="nextWizardStep()" [disabled]="wizardStep() === 1 && !wizardScreenName()">
-              التالي
-              <span class="material-icons-round">arrow_back</span>
-            </button>
+        @if (wizardStep() > 1) {
+          <button class="btn btn-ghost" (click)="prevWizardStep()">
+            <span class="material-icons-round">arrow_forward</span>
+            السابق
+          </button>
+        }
+        <div class="spacer"></div>
+        <button class="btn btn-primary" (click)="nextWizardStep()" [disabled]="saving()">
+          @if (wizardStep() === getWizardTotalSteps()) {
+            <span class="material-icons-round">check</span>
+            {{ saving() ? 'جاري الحفظ...' : 'حفظ وإنشاء' }}
           } @else {
-            <button class="wizard-btn success" (click)="nextWizardStep()" [disabled]="saving() || !wizardScreenName()">
-              <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
-              {{ saving() ? 'جاري الإنشاء...' : 'إنشاء الشاشة' }}
-            </button>
+            التالي
+            <span class="material-icons-round">arrow_back</span>
           }
-        </div>
+        </button>
       </div>
     </div>
   }
 
-  <!-- ==================== DETAIL VIEW ==================== -->
-  @if (viewMode() === 'detail' && activeScreen()) {
-    <div class="detail-view">
-      <!-- Detail Header -->
-      <div class="detail-header">
-        <div class="detail-header-right">
+  <!-- ======================== SCREEN VIEW (Dynamic Tabs) ======================== -->
+  @if (viewMode() === 'screen' && activeScreen()) {
+    <div class="screen-view">
+      <div class="screen-header" [style.border-bottom-color]="activeScreen()!.color || '#3b82f6'">
+        <div class="header-right">
           @if (!openedFromSidebar()) {
-            <button class="back-btn" (click)="backToList()">
+            <button class="btn-icon" (click)="backToList()" title="رجوع">
               <span class="material-icons-round">arrow_forward</span>
             </button>
           }
-          <div class="detail-icon" [style.background]="'linear-gradient(135deg, ' + activeScreen()!.color + ', ' + activeScreen()!.color + '99)'">
+          <div class="screen-title-icon" [style.background]="activeScreen()!.color || '#3b82f6'">
             <span class="material-icons-round">{{ activeScreen()!.icon || 'dashboard' }}</span>
           </div>
-          <div>
-            <h1>{{ activeScreen()!.name }}</h1>
-            <p>{{ activeScreen()!.description || 'بدون وصف' }}</p>
-          </div>
+          <h2>{{ activeScreen()!.name }}</h2>
         </div>
-        <div class="detail-header-actions">
-          @if (editMode() && hasUnsavedChanges()) {
-            <button class="save-layout-btn" (click)="saveLayout()" [disabled]="saving()">
-              <span class="material-icons-round">save</span>
-              {{ saving() ? 'جاري الحفظ...' : 'حفظ التخطيط' }}
-            </button>
-          }
-          <button class="mode-btn" [class.active]="editMode()" (click)="toggleEditMode()">
-            <span class="material-icons-round">{{ editMode() ? 'visibility' : 'edit' }}</span>
-            {{ editMode() ? 'وضع العرض' : 'وضع التعديل' }}
+        <div class="header-actions">
+          <button class="btn-icon" (click)="openConfigWizard()" title="إعدادات التبويبات">
+            <span class="material-icons-round">settings</span>
           </button>
-          <button class="library-btn" [class.active]="showWidgetLibrary()" (click)="openWidgetLibrary()">
-            <span class="material-icons-round">widgets</span>
-            مكتبة العناصر
+          <button class="btn-icon" (click)="openScreenForm(activeScreen()!)" title="تعديل الشاشة">
+            <span class="material-icons-round">edit</span>
           </button>
-          @if (editMode()) {
-            <button class="library-btn" (click)="openCopyWidgetModal()">
-              <span class="material-icons-round">content_copy</span>
-              نسخ من شاشة
-            </button>
-          }
         </div>
       </div>
 
-      <div class="detail-content" [class.with-library]="showWidgetLibrary()">
+      @if (screenTabs().length > 0) {
+        <div class="tabs-bar">
+          @for (tab of screenTabs(); track tab.id) {
+            <button class="tab-btn" [class.active]="activeTabId() === tab.id" (click)="setActiveTab(tab.id)"
+              [style.--tab-color]="tab.color">
+              <span class="material-icons-round">{{ tab.icon }}</span>
+              <span>{{ tab.label }}</span>
+            </button>
+          }
+        </div>
 
-        <!-- Widget Library Sidebar -->
-        @if (showWidgetLibrary()) {
-          <div class="widget-library">
-            <div class="library-header">
-              <h3>
-                <span class="material-icons-round">widgets</span>
-                مكتبة العناصر
-              </h3>
-              <button class="close-library-btn" (click)="toggleWidgetLibrary()">
-                <span class="material-icons-round">close</span>
-              </button>
-            </div>
-            <p class="library-desc">اضغط على العنصر لإضافته للشاشة</p>
-            <div class="library-items">
-              @for (wt of widgetTypes; track wt.value) {
-                <button class="library-item" (click)="addWidgetFromLibrary(wt)">
-                  <div class="library-item-icon" [style.background]="wt.color + '22'" [style.color]="wt.color">
-                    <span class="material-icons-round">{{ wt.icon }}</span>
-                  </div>
-                  <div class="library-item-info">
-                    <span class="library-item-name">{{ wt.label }}</span>
-                    <span class="library-item-desc">{{ wt.desc }}</span>
-                  </div>
-                  <span class="material-icons-round library-add-icon">add_circle</span>
-                </button>
-              }
-            </div>
-          </div>
-        }
+        @for (tab of screenTabs(); track tab.id) {
+          @if (activeTabId() === tab.id) {
+            <div class="tab-content">
 
-        <!-- Gridster Area -->
-        <div class="gridster-area">
-          @if (widgetsLoading()) {
-            <div class="loading-state">
-              <span class="material-icons-round spin">sync</span>
-              <p>جاري تحميل العناصر...</p>
-            </div>
-          } @else {
-
-            @if (gridItems.length === 0) {
-              <div class="empty-state-card">
-                <div class="empty-icon">
-                  <span class="material-icons-round">widgets</span>
-                </div>
-                <h3>لا توجد عناصر في هذه الشاشة</h3>
-                <p>فعّل وضع التعديل وأضف عناصر من مكتبة العناصر</p>
-                @if (!editMode()) {
-                  <button class="add-btn" (click)="toggleEditMode(); toggleWidgetLibrary()">
-                    <span class="material-icons-round">edit</span>
-                    بدء التخصيص
-                  </button>
-                }
-              </div>
-            } @else {
-              <gridster [options]="gridsterOptions">
-                @for (item of gridItems; track item.widgetData.id) {
-                  <gridster-item [item]="item">
-                    <div class="widget-card" [class.edit-mode]="editMode()" [class.hidden-widget]="!item.widgetData.isVisible">
-                      <!-- Widget Header -->
-                      <div class="widget-header" [style.border-bottom-color]="(item.widgetData.config?.color || getWidgetTypeInfo(item.widgetData.widgetType).color) + '33'">
-                        <div class="widget-title">
-                          <span class="material-icons-round widget-type-icon" [style.color]="item.widgetData.config?.color || getWidgetTypeInfo(item.widgetData.widgetType).color">
-                            {{ getWidgetTypeInfo(item.widgetData.widgetType).icon }}
-                          </span>
-                          <span>{{ item.widgetData.title }}</span>
-                        </div>
-                        @if (editMode()) {
-                          <div class="widget-actions">
-                            <button class="action-btn edit" (click)="openWidgetForm(item.widgetData)" title="تعديل">
-                              <span class="material-icons-round">edit</span>
-                            </button>
-                            <button class="action-btn edit" (click)="toggleWidgetVisibility(item.widgetData)" [title]="item.widgetData.isVisible ? 'إخفاء' : 'إظهار'">
-                              <span class="material-icons-round">{{ item.widgetData.isVisible ? 'visibility' : 'visibility_off' }}</span>
-                            </button>
-                            <button class="action-btn delete" (click)="deleteWidget(item.widgetData)" title="حذف">
-                              <span class="material-icons-round">delete</span>
-                            </button>
-                          </div>
-                        }
-                      </div>
-
-                      <!-- Widget Body -->
-                      <div class="widget-body widget-body-content">
-
-                        <!-- ===== Templates Widget (Real Data) ===== -->
-                        @if (item.widgetData.widgetType === 'templates') {
-                          <div class="templates-widget">
-                            @for (tpl of getTemplatesForWidget(item.widgetData); track tpl.id) {
-                              <button class="template-btn" [style.--tpl-color]="tpl.color || '#3b82f6'" (click)="openOperationExecution(tpl)">
-                                <div class="template-icon" [style.background]="(tpl.color || '#3b82f6') + '22'" [style.color]="tpl.color || '#3b82f6'">
-                                  <span class="material-icons-round">{{ tpl.icon || 'receipt' }}</span>
-                                </div>
-                                <span class="template-name">{{ tpl.name }}</span>
-                              </button>
-                            }
-                            @if (getTemplatesForWidget(item.widgetData).length === 0) {
-                              <div class="widget-empty-state">
-                                <span class="material-icons-round">receipt_long</span>
-                                <p>لا توجد قوالب عمليات</p>
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <!-- ===== Log Widget (Real Data) ===== -->
-                        @if (item.widgetData.widgetType === 'log') {
-                          <div class="log-widget">
-                            <!-- Log Filters -->
-                            <div class="log-filters">
-                              <div class="log-filter-group">
-                                <input type="date" class="log-filter-input" [ngModel]="logFilterDateFrom()" (ngModelChange)="logFilterDateFrom.set($event)" placeholder="من تاريخ" />
-                                <input type="date" class="log-filter-input" [ngModel]="logFilterDateTo()" (ngModelChange)="logFilterDateTo.set($event)" placeholder="إلى تاريخ" />
-                                <select class="log-filter-input" [ngModel]="logFilterOpType()" (ngModelChange)="logFilterOpType.set($event)">
-                                  <option value="">كل الأنواع</option>
-                                  @for (op of operationTypes(); track op.id) {
-                                    <option [value]="op.id">{{ op.name }}</option>
-                                  }
-                                </select>
-                              </div>
-                              <div class="log-filter-actions">
-                                <button class="filter-btn apply" (click)="applyLogFilters()" title="تطبيق">
-                                  <span class="material-icons-round">search</span>
-                                </button>
-                                <button class="filter-btn clear" (click)="clearLogFilters()" title="مسح">
-                                  <span class="material-icons-round">clear</span>
-                                </button>
-                              </div>
-                            </div>
-                            <table class="log-table">
-                              <thead>
-                                <tr>
-                                  <th>النوع</th>
-                                  <th>الوصف</th>
-                                  <th>المبلغ</th>
-                                  <th>التاريخ</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                @for (entry of widgetLogEntries(); track entry.id) {
-                                  <tr>
-                                    <td>
-                                      <span class="log-type-badge" [class]="getVoucherTypeClass(entry.voucher_type)">
-                                        {{ entry.operation_type_name || getVoucherTypeLabel(entry.voucher_type) }}
-                                      </span>
-                                    </td>
-                                    <td class="log-desc">{{ entry.description || '-' }}</td>
-                                    <td class="log-amount">{{ formatAmount(entry.total_debit) }}</td>
-                                    <td class="log-date">{{ formatDate(entry.entry_date) }}</td>
-                                  </tr>
-                                }
-                                @if (widgetLogEntries().length === 0) {
-                                  <tr>
-                                    <td colspan="4" class="log-empty">
-                                      <span class="material-icons-round">history</span>
-                                      لا توجد عمليات
-                                    </td>
-                                  </tr>
-                                }
-                              </tbody>
-                            </table>
-                            @if (widgetLogTotal() > 0) {
-                              <div class="log-total">
-                                إجمالي {{ widgetLogTotal() }} عملية
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <!-- ===== Accounts Widget (Real Data) ===== -->
-                        @if (item.widgetData.widgetType === 'accounts') {
-                          <div class="accounts-widget">
-                            @for (acc of getAccountsForWidget(item.widgetData); track acc.id) {
-                              <div class="account-row">
-                                <div class="account-info">
-                                  <span class="material-icons-round account-icon">{{ getAccountIcon(acc.account_type) }}</span>
-                                  <div class="account-details">
-                                    <span class="account-name">{{ acc.name }}</span>
-                                    @if (acc.last_movements && acc.last_movements.length > 0) {
-                                      <span class="account-last-movement">آخر حركة: {{ formatDate(acc.last_movements[0]?.created_at) }}</span>
-                                    }
-                                  </div>
-                                </div>
-                                <div class="account-balance-area">
-                                  <span class="account-balance">{{ formatAmount(acc.total_balance) }}</span>
-                                  <span class="material-icons-round account-trend" [style.color]="getTrendColor(getBalanceTrend(acc))">
-                                    {{ getTrendIcon(getBalanceTrend(acc)) }}
-                                  </span>
-                                </div>
-                              </div>
-                            }
-                            @if (getAccountsForWidget(item.widgetData).length === 0) {
-                              <div class="widget-empty-state">
-                                <span class="material-icons-round">account_balance</span>
-                                <p>لا توجد حسابات مرتبطة</p>
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <!-- ===== Stats Widget (Real Data) ===== -->
-                        @if (item.widgetData.widgetType === 'stats') {
-                          <div class="stats-widget">
-                            @for (stat of getStatsData(); track stat.label) {
-                              <div class="stat-card">
-                                <div class="stat-icon" [style.background]="stat.color + '18'" [style.color]="stat.color">
-                                  <span class="material-icons-round">{{ stat.icon }}</span>
-                                </div>
-                                <div class="stat-info">
-                                  <span class="stat-value">{{ stat.value }}</span>
-                                  <span class="stat-label">{{ stat.label }}</span>
-                                </div>
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <!-- ===== Chart Widget (Real Data) ===== -->
-                        @if (item.widgetData.widgetType === 'chart') {
-                          <div class="chart-widget">
-                            @if (barChartData.labels && barChartData.labels.length > 0) {
-                              <canvas baseChart
-                                [datasets]="barChartData.datasets"
-                                [labels]="barChartData.labels"
-                                [options]="barChartOptions"
-                                type="bar">
-                              </canvas>
-                            } @else {
-                              <div class="widget-empty-state">
-                                <span class="material-icons-round">bar_chart</span>
-                                <p>لا توجد بيانات كافية للرسم البياني</p>
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <!-- ===== Notes Widget ===== -->
-                        @if (item.widgetData.widgetType === 'notes') {
-                          <div class="notes-widget">
-                            <textarea
-                              class="notes-textarea"
-                              [value]="notesText[item.widgetData.id] || ''"
-                              (input)="onNotesChange(item.widgetData.id, $any($event.target).value)"
-                              placeholder="اكتب ملاحظاتك هنا..."
-                              >
-                            </textarea>
-                            <div class="notes-footer">
-                              <span class="notes-autosave-hint">
-                                <span class="material-icons-round">cloud_done</span>
-                                يتم الحفظ تلقائياً
-                              </span>
-                            </div>
-                          </div>
-                        }
-
-                      </div>
+              <!-- ===== OPERATIONS TAB ===== -->
+              @if (tab.type === 'operations') {
+                <div class="operations-content">
+                  @if (!csSelectedOpType()) {
+                    <div class="op-buttons-grid">
+                      @for (ot of getTabOperationTypes(tab); track ot.id) {
+                        <button class="op-button" (click)="selectOpType(ot)" [style.--op-color]="ot.color || '#3b82f6'">
+                          <span class="material-icons-round">{{ ot.icon || 'receipt_long' }}</span>
+                          <span>{{ ot.name }}</span>
+                        </button>
+                      }
                     </div>
-                  </gridster-item>
-                }
-              </gridster>
-            }
-          }
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== SCREEN FORM MODAL (Edit) ==================== -->
-  @if (showScreenForm()) {
-    <div class="modal-overlay" (click)="closeScreenForm()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon blue">
-              <span class="material-icons-round">space_dashboard</span>
-            </div>
-            <div>
-              <h2>{{ editingScreen() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h2>
-              <p>{{ editingScreen() ? 'تعديل بيانات الشاشة المخصصة' : 'إنشاء لوحة عمل مخصصة جديدة' }}</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeScreenForm()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>اسم الشاشة</label>
-            <input type="text" [ngModel]="screenForm().name" (ngModelChange)="screenForm.set({...screenForm(), name: $event})" placeholder="مثال: شاشة التحصيل اليومي" />
-          </div>
-          <div class="form-group">
-            <label>الوصف</label>
-            <textarea rows="3" [ngModel]="screenForm().description" (ngModelChange)="screenForm.set({...screenForm(), description: $event})" placeholder="وصف مختصر للشاشة..."></textarea>
-          </div>
-
-          <!-- Icon Selection -->
-          <div class="form-group">
-            <label>الأيقونة</label>
-            <div class="icon-grid">
-              @for (icon of icons; track icon) {
-                <button class="icon-option" [class.selected]="screenForm().icon === icon" (click)="screenForm.set({...screenForm(), icon: icon})">
-                  <span class="material-icons-round">{{ icon }}</span>
-                </button>
-              }
-            </div>
-          </div>
-
-          <!-- Color Selection with Color Picker -->
-          <div class="form-group">
-            <label>اللون</label>
-            <div class="color-picker-row">
-              <div class="color-grid">
-                @for (color of colors; track color) {
-                  <button class="color-option" [style.background]="color" [class.selected]="screenForm().color === color" (click)="screenForm.set({...screenForm(), color: color})">
-                    @if (screenForm().color === color) {
-                      <span class="material-icons-round">check</span>
-                    }
-                  </button>
-                }
-              </div>
-              <div class="color-picker-trigger"
-                   [style.background]="screenForm().color"
-                   [colorPicker]="screenForm().color"
-                   (colorPickerChange)="onColorPickerChange($event, 'screen')"
-                   cpPosition="top"
-                   [cpOKButton]="true"
-                   cpOKButtonText="اختيار"
-                   [cpCancelButton]="true"
-                   cpCancelButtonText="إلغاء"
-                   title="لون مخصص">
-                <span class="material-icons-round">colorize</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="saveScreen()" [disabled]="saving()">
-            {{ saving() ? 'جاري الحفظ...' : (editingScreen() ? 'تحديث' : 'إنشاء') }}
-          </button>
-          <button class="btn-cancel" (click)="closeScreenForm()">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== WIDGET FORM MODAL ==================== -->
-  @if (showWidgetForm()) {
-    <div class="modal-overlay" (click)="closeWidgetForm()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green">
-              <span class="material-icons-round">widgets</span>
-            </div>
-            <div>
-              <h2>{{ editingWidget() ? 'تعديل العنصر' : 'إضافة عنصر' }}</h2>
-              <p>{{ editingWidget() ? 'تعديل إعدادات العنصر' : 'اختر نوع العنصر وأضفه للشاشة' }}</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeWidgetForm()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <!-- Widget Type Selection -->
-          <div class="form-group">
-            <label>نوع العنصر</label>
-            <div class="widget-type-grid">
-              @for (wt of widgetTypes; track wt.value) {
-                <button class="widget-type-option" [class.selected]="widgetForm().widgetType === wt.value" (click)="widgetForm.set({...widgetForm(), widgetType: wt.value, title: wt.label})">
-                  <span class="material-icons-round" [style.color]="wt.color">{{ wt.icon }}</span>
-                  <span class="wt-label">{{ wt.label }}</span>
-                  <span class="wt-desc">{{ wt.desc }}</span>
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>عنوان العنصر</label>
-            <input type="text" [ngModel]="widgetForm().title" (ngModelChange)="widgetForm.set({...widgetForm(), title: $event})" placeholder="عنوان العنصر" />
-          </div>
-
-          <div class="form-group">
-            <label>لون العنصر</label>
-            <div class="color-picker-row">
-              <div class="color-grid">
-                @for (color of colors; track color) {
-                  <button class="color-option" [style.background]="color" [class.selected]="widgetForm().config?.color === color" (click)="widgetForm.set({...widgetForm(), config: {...widgetForm().config, color: color}})">
-                    @if (widgetForm().config?.color === color) {
-                      <span class="material-icons-round">check</span>
-                    }
-                  </button>
-                }
-              </div>
-              <div class="color-picker-trigger"
-                   [style.background]="widgetForm().config?.color || '#3b82f6'"
-                   [colorPicker]="widgetForm().config?.color || '#3b82f6'"
-                   (colorPickerChange)="onColorPickerChange($event, 'widget')"
-                   cpPosition="top"
-                   [cpOKButton]="true"
-                   cpOKButtonText="اختيار"
-                   [cpCancelButton]="true"
-                   cpCancelButtonText="إلغاء"
-                   title="لون مخصص">
-                <span class="material-icons-round">colorize</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="saveWidget()" [disabled]="saving()">
-            {{ saving() ? 'جاري الحفظ...' : (editingWidget() ? 'تحديث' : 'إضافة') }}
-          </button>
-          <button class="btn-cancel" (click)="closeWidgetForm()">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== COPY WIDGET MODAL ==================== -->
-  @if (showCopyWidgetModal()) {
-    <div class="modal-overlay" (click)="closeCopyWidgetModal()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon blue">
-              <span class="material-icons-round">content_copy</span>
-            </div>
-            <div>
-              <h2>نسخ عنصر من شاشة أخرى</h2>
-              <p>اختر شاشة ثم اختر العنصر المراد نسخه</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeCopyWidgetModal()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          @if (otherScreens().length === 0) {
-            <div class="empty-widgets-msg">
-              <span class="material-icons-round">info</span>
-              <p>لا توجد شاشات أخرى تحتوي على عناصر للنسخ</p>
-            </div>
-          } @else {
-            <div class="copy-layout">
-              <div class="copy-screens-panel">
-                <h4>الشاشات</h4>
-                @for (s of otherScreens(); track s.id) {
-                  <div class="copy-screen-item" [class.selected]="selectedCopyScreen()?.id === s.id" (click)="selectCopyScreen(s)">
-                    <span class="material-icons-round" [style.color]="s.color">{{ s.icon || 'dashboard' }}</span>
-                    <span class="copy-screen-name">{{ s.name }}</span>
-                    <span class="copy-badge">{{ s.widgets.length }}</span>
-                  </div>
-                }
-              </div>
-              <div class="copy-widgets-panel">
-                @if (!selectedCopyScreen()) {
-                  <div class="empty-widgets-msg">
-                    <span class="material-icons-round">touch_app</span>
-                    <p>اختر شاشة لعرض عناصرها</p>
-                  </div>
-                } @else {
-                  <h4>عناصر {{ selectedCopyScreen()!.name }}</h4>
-                  @for (w of selectedCopyScreen()!.widgets; track w.id) {
-                    <div class="copy-widget-item">
-                      <span class="material-icons-round" [style.color]="getWidgetTypeInfo(w.widgetType).color">{{ getWidgetTypeInfo(w.widgetType).icon }}</span>
-                      <div class="copy-widget-info">
-                        <h5>{{ w.title }}</h5>
-                        <span>{{ getWidgetTypeInfo(w.widgetType).label }}</span>
+                    @if (getTabOperationTypes(tab).length === 0) {
+                      <div class="empty-tab">
+                        <span class="material-icons-round">receipt_long</span>
+                        <p>لم يتم تعيين أنواع عمليات لهذا التبويب</p>
                       </div>
-                      <button class="copy-widget-btn" (click)="copyWidgetFromOtherScreen(w)" [disabled]="saving()">
-                        <span class="material-icons-round">{{ saving() ? 'sync' : 'content_copy' }}</span>
-                        نسخ
+                    }
+                  } @else {
+                    <div class="operation-form">
+                      <div class="form-header">
+                        <button class="btn btn-ghost" (click)="cancelOpType()">
+                          <span class="material-icons-round">arrow_forward</span>
+                          رجوع
+                        </button>
+                        <h3 [style.color]="csSelectedOpType()!.color || '#3b82f6'">
+                          <span class="material-icons-round">{{ csSelectedOpType()!.icon || 'receipt_long' }}</span>
+                          {{ csSelectedOpType()!.name }}
+                        </h3>
+                      </div>
+                      <div class="form-group">
+                        <label>التاريخ</label>
+                        <input type="date" [ngModel]="csFormDate()" (ngModelChange)="csFormDate.set($event)">
+                      </div>
+                      <div class="form-group">
+                        <label>الوصف</label>
+                        <input type="text" [ngModel]="csFormDescription()" (ngModelChange)="csFormDescription.set($event)" placeholder="وصف العملية (اختياري)">
+                      </div>
+                      <div class="entries-list">
+                        @for (entry of csFormEntries(); track $index; let i = $index) {
+                          <div class="entry-row">
+                            <div class="entry-account">
+                              <span class="material-icons-round">account_balance</span>
+                              <span>{{ entry.accountName || 'حساب ' + (i + 1) }}</span>
+                              @if (entry.accountId) {
+                                <small class="balance-hint">الرصيد: {{ formatAmount(getAccountBalance(entry.accountId)) }}</small>
+                              }
+                            </div>
+                            <input type="number" class="amount-input" [ngModel]="entry.amount" (ngModelChange)="updateFormEntry(i, 'amount', $event)" placeholder="المبلغ" min="0">
+                          </div>
+                        }
+                      </div>
+                      <div class="form-summary">
+                        <span>الإجمالي: <strong>{{ formatAmount(getFormTotal()) }}</strong></span>
+                        <span>الحسابات المعبأة: <strong>{{ getFilledEntriesCount() }} / {{ csFormEntries().length }}</strong></span>
+                      </div>
+                      <button class="btn btn-primary btn-lg" (click)="saveOperation()" [disabled]="saving() || getFormTotal() === 0">
+                        <span class="material-icons-round">check</span>
+                        {{ saving() ? 'جاري التنفيذ...' : 'تنفيذ العملية' }}
                       </button>
                     </div>
                   }
-                }
-              </div>
+                </div>
+              }
+
+              <!-- ===== LOG TAB ===== -->
+              @if (tab.type === 'log') {
+                <div class="log-content">
+                  <div class="log-filters">
+                    <div class="filter-row">
+                      <input type="date" [ngModel]="logFilterDateFrom()" (ngModelChange)="logFilterDateFrom.set($event)">
+                      <input type="date" [ngModel]="logFilterDateTo()" (ngModelChange)="logFilterDateTo.set($event)">
+                      <select [ngModel]="logFilterOpType()" (ngModelChange)="logFilterOpType.set($event)">
+                        <option value="">كل العمليات</option>
+                        @for (ot of operationTypes(); track ot.id) {
+                          <option [value]="ot.id">{{ ot.name }}</option>
+                        }
+                      </select>
+                      <button class="btn btn-sm" (click)="applyLogFilters()">
+                        <span class="material-icons-round">filter_list</span> تصفية
+                      </button>
+                      <button class="btn btn-ghost btn-sm" (click)="clearLogFilters()">
+                        <span class="material-icons-round">clear</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="log-table-container">
+                    <table class="log-table">
+                      <thead>
+                        <tr><th>التاريخ</th><th>النوع</th><th>الوصف</th><th>المدين</th><th>الدائن</th></tr>
+                      </thead>
+                      <tbody>
+                        @for (entry of logEntries(); track entry.id) {
+                          <tr>
+                            <td>{{ formatDate(entry.entry_date) }}</td>
+                            <td><span class="voucher-badge" [class]="getVoucherTypeClass(entry.voucher_type)">{{ getVoucherTypeLabel(entry.voucher_type) }}</span></td>
+                            <td>{{ entry.description || entry.operation_type_name || '-' }}</td>
+                            <td class="amount debit">{{ formatAmount(entry.total_debit) }}</td>
+                            <td class="amount credit">{{ formatAmount(entry.total_credit) }}</td>
+                          </tr>
+                        }
+                        @if (logEntries().length === 0) {
+                          <tr><td colspan="5" class="empty-row">لا توجد عمليات</td></tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="log-footer"><span>إجمالي العمليات: {{ logTotal() }}</span></div>
+                </div>
+              }
+
+              <!-- ===== ACCOUNTS TAB ===== -->
+              @if (tab.type === 'accounts') {
+                <div class="accounts-content">
+                  <div class="accounts-list">
+                    @for (acc of getTabAccounts(tab); track acc.id) {
+                      <div class="account-card">
+                        <div class="acc-card-header">
+                          <span class="material-icons-round" [style.color]="getAccTypeMeta(acc.account_type).color">{{ getAccountIcon(acc.account_type) }}</span>
+                          <div class="acc-card-info">
+                            <strong>{{ acc.name }}</strong>
+                            <small>{{ getAccTypeMeta(acc.account_type).label }}</small>
+                          </div>
+                          <div class="acc-trend" [style.color]="getTrendColor(getBalanceTrend(acc))">
+                            <span class="material-icons-round">{{ getTrendIcon(getBalanceTrend(acc)) }}</span>
+                          </div>
+                        </div>
+                        <div class="acc-card-balance">
+                          @for (bal of acc.balances; track bal.currencyId) {
+                            <div class="balance-row">
+                              <span class="currency">{{ bal.currencyCode || 'YER' }}</span>
+                              <span class="balance-amount" [class.negative]="bal.balance < 0">{{ formatAmount(bal.balance) }}</span>
+                            </div>
+                          }
+                          @if (!acc.balances || acc.balances.length === 0) {
+                            <div class="balance-row"><span class="currency">YER</span><span class="balance-amount">0</span></div>
+                          }
+                        </div>
+                      </div>
+                    }
+                    @if (getTabAccounts(tab).length === 0) {
+                      <div class="empty-tab"><span class="material-icons-round">account_balance</span><p>لم يتم تعيين حسابات لهذا التبويب</p></div>
+                    }
+                  </div>
+                  @if (getTabAccounts(tab).length > 0) {
+                    <div class="accounts-total"><span>إجمالي الأرصدة:</span><strong>{{ formatAmount(getTotalAccountsBalance()) }}</strong></div>
+                  }
+                </div>
+              }
+
+              <!-- ===== STATS TAB ===== -->
+              @if (tab.type === 'stats') {
+                <div class="stats-content">
+                  <div class="stats-grid">
+                    @for (card of getStatsCards(); track card.label) {
+                      <div class="stat-card" [style.border-right-color]="card.color">
+                        <span class="material-icons-round" [style.color]="card.color">{{ card.icon }}</span>
+                        <div class="stat-info"><small>{{ card.label }}</small><strong>{{ card.value }}</strong></div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- ===== CHART TAB ===== -->
+              @if (tab.type === 'chart') {
+                <div class="chart-content">
+                  <div class="chart-container">
+                    <canvas baseChart [data]="barChartData" [options]="barChartOptions" type="bar"></canvas>
+                  </div>
+                </div>
+              }
+
+              <!-- ===== NOTES TAB ===== -->
+              @if (tab.type === 'notes') {
+                <div class="notes-content">
+                  <textarea class="notes-area" [ngModel]="screenNotes()" (ngModelChange)="onNotesChange($event)" placeholder="اكتب ملاحظاتك هنا... (يتم الحفظ تلقائياً)" rows="15"></textarea>
+                </div>
+              }
+
             </div>
           }
+        }
+      } @else {
+        <div class="empty-state">
+          <span class="material-icons-round empty-icon">tab</span>
+          <h3>لم يتم إعداد التبويبات بعد</h3>
+          <p>اضغط على أيقونة الإعدادات لإضافة تبويبات</p>
+          <button class="btn btn-primary" (click)="openConfigWizard()">
+            <span class="material-icons-round">settings</span>
+            إعداد التبويبات
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ======================== CONFIG WIZARD MODAL ======================== -->
+  @if (showConfigWizard()) {
+    <div class="modal-overlay" (click)="closeConfigWizard()">
+      <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>إعداد التبويبات</h3>
+          <div class="wizard-progress">
+            <span>الخطوة {{ configWizardStep() }} من {{ getConfigWizardTotalSteps() }}</span>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="(configWizardStep() / getConfigWizardTotalSteps()) * 100"></div>
+            </div>
+          </div>
+          <button class="btn-icon" (click)="closeConfigWizard()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          @if (configWizardStep() === 1) {
+            <div class="wizard-step step-tabs">
+              <p class="step-desc">أضف أو أزل أو أعد ترتيب التبويبات.</p>
+              <div class="tab-types-grid">
+                @for (tabType of tabTypeOptions; track tabType.value) {
+                  <button class="tab-type-card" (click)="addConfigWizardTab(tabType.value)">
+                    <span class="material-icons-round" [style.color]="tabType.color">{{ tabType.icon }}</span>
+                    <strong>{{ tabType.label }}</strong>
+                    <small>{{ tabType.desc }}</small>
+                    <span class="material-icons-round add-icon">add_circle</span>
+                  </button>
+                }
+              </div>
+              @if (configWizardTabs().length > 0) {
+                <h4 class="subsection-title">التبويبات ({{ configWizardTabs().length }})</h4>
+                <div class="added-tabs-list">
+                  @for (tab of configWizardTabs(); track tab.id; let i = $index) {
+                    <div class="added-tab-item" [style.border-right-color]="tab.color">
+                      <div class="tab-item-info">
+                        <span class="material-icons-round" [style.color]="tab.color">{{ tab.icon }}</span>
+                        <div>
+                          <input type="text" class="tab-name-input" [ngModel]="tab.label" (ngModelChange)="updateConfigWizardTab(i, 'label', $event)">
+                          <small class="tab-type-badge" [style.color]="getTabTypeInfo(tab.type).color">{{ getTabTypeInfo(tab.type).label }}</small>
+                        </div>
+                      </div>
+                      <div class="tab-item-actions">
+                        <button class="btn-icon sm" (click)="moveConfigWizardTab(i, 'up')" [disabled]="i === 0"><span class="material-icons-round">arrow_upward</span></button>
+                        <button class="btn-icon sm" (click)="moveConfigWizardTab(i, 'down')" [disabled]="i === configWizardTabs().length - 1"><span class="material-icons-round">arrow_downward</span></button>
+                        <button class="btn-icon sm danger" (click)="removeConfigWizardTab(i)"><span class="material-icons-round">delete</span></button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          @if (configWizardStep() >= 2 && configWizardStep() < getConfigWizardTotalSteps()) {
+            @let cfgTabs = getConfigWizardConfigurableTabs();
+            @let cfgIdx = configWizardStep() - 2;
+            @if (cfgIdx >= 0 && cfgIdx < cfgTabs.length) {
+              @let cfgTab = cfgTabs[cfgIdx];
+              <div class="wizard-step step-config">
+                <div class="tab-config-header">
+                  <div class="tab-preview" [style.border-color]="cfgTab.color">
+                    <span class="material-icons-round" [style.color]="cfgTab.color">{{ cfgTab.icon }}</span>
+                    <span>{{ cfgTab.label }}</span>
+                  </div>
+                  <div class="mini-config">
+                    <div class="icon-grid compact">
+                      @for (icon of icons; track icon) {
+                        <button class="icon-option sm" [class.selected]="cfgTab.icon === icon" (click)="updateConfigWizardTab(configWizardTabs().indexOf(cfgTab), 'icon', icon)">
+                          <span class="material-icons-round">{{ icon }}</span>
+                        </button>
+                      }
+                    </div>
+                    <div class="color-grid compact">
+                      @for (color of colors; track color) {
+                        <button class="color-option sm" [class.selected]="cfgTab.color === color" [style.background]="color" (click)="updateConfigWizardTab(configWizardTabs().indexOf(cfgTab), 'color', color)"></button>
+                      }
+                    </div>
+                  </div>
+                </div>
+                @if (cfgTab.type === 'operations') {
+                  <h4>اختر أنواع العمليات</h4>
+                  <div class="op-types-grid">
+                    @for (ot of operationTypes(); track ot.id) {
+                      <button class="op-type-item" [class.selected]="(cfgTab.config?.operationTypeIds || []).includes(ot.id)"
+                        (click)="toggleConfigWizardTabOpType(configWizardTabs().indexOf(cfgTab), ot.id)">
+                        <span class="material-icons-round" [style.color]="ot.color || '#3b82f6'">{{ ot.icon || 'receipt_long' }}</span>
+                        <span>{{ ot.name }}</span>
+                        @if ((cfgTab.config?.operationTypeIds || []).includes(ot.id)) {
+                          <span class="material-icons-round check">check_circle</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                  <p class="selected-count">تم اختيار {{ (cfgTab.config?.operationTypeIds || []).length }} نوع عملية</p>
+                }
+                @if (cfgTab.type === 'accounts') {
+                  <h4>اختر الحسابات</h4>
+                  <div class="accounts-filter-bar">
+                    <div class="filter-chips">
+                      <button class="filter-chip" [class.active]="accFilterType() === 'all'" (click)="setAccFilterType('all')">
+                        الكل <span class="chip-count">{{ allAccounts().length }}</span>
+                      </button>
+                      @for (filter of accDynamicFilters(); track filter.value) {
+                        <button class="filter-chip" [class.active]="accFilterType() === filter.value" (click)="setAccFilterType(filter.value)" [style.--chip-color]="filter.color">
+                          <span class="material-icons-round chip-icon">{{ filter.icon }}</span>
+                          {{ filter.label }}
+                          <span class="chip-count">{{ allAccounts().filter(a => a.accountType === filter.value).length }}</span>
+                        </button>
+                      }
+                    </div>
+                    <div class="search-box">
+                      <span class="material-icons-round">search</span>
+                      <input type="text" [ngModel]="accSearchQuery()" (ngModelChange)="accSearchQuery.set($event)" placeholder="بحث...">
+                    </div>
+                  </div>
+                  <div class="accounts-grid">
+                    @for (acc of accFiltered(); track acc.id) {
+                      <button class="account-item" [class.selected]="(cfgTab.config?.accountIds || []).includes(acc.id)"
+                        (click)="toggleConfigWizardTabAccount(configWizardTabs().indexOf(cfgTab), acc.id)">
+                        <span class="material-icons-round acc-icon" [style.color]="getAccTypeMeta(acc.accountType).color">{{ getAccTypeMeta(acc.accountType).icon }}</span>
+                        <span class="acc-name">{{ acc.name }}</span>
+                        <span class="acc-type-label">{{ getAccTypeMeta(acc.accountType).label }}</span>
+                        @if ((cfgTab.config?.accountIds || []).includes(acc.id)) {
+                          <span class="material-icons-round check">check_circle</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                  <p class="selected-count">تم اختيار {{ (cfgTab.config?.accountIds || []).length }} حساب</p>
+                }
+              </div>
+            }
+          }
+
+          @if (configWizardStep() === getConfigWizardTotalSteps()) {
+            <div class="wizard-step step-preview">
+              <div class="preview-tabs">
+                @for (tab of configWizardTabs(); track tab.id) {
+                  <div class="preview-tab" [style.border-bottom-color]="tab.color">
+                    <span class="material-icons-round" [style.color]="tab.color">{{ tab.icon }}</span>
+                    <span>{{ tab.label }}</span>
+                    <small>({{ getTabTypeInfo(tab.type).label }})</small>
+                  </div>
+                }
+              </div>
+              <p class="preview-summary-text">سيتم حفظ {{ configWizardTabs().length }} تبويب</p>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          @if (configWizardStep() > 1) {
+            <button class="btn btn-ghost" (click)="prevConfigWizardStep()"><span class="material-icons-round">arrow_forward</span> السابق</button>
+          }
+          <div class="spacer"></div>
+          <button class="btn btn-primary" (click)="nextConfigWizardStep()" [disabled]="saving()">
+            @if (configWizardStep() === getConfigWizardTotalSteps()) {
+              <span class="material-icons-round">check</span> {{ saving() ? 'جاري الحفظ...' : 'حفظ' }}
+            } @else {
+              التالي <span class="material-icons-round">arrow_back</span>
+            }
+          </button>
         </div>
       </div>
     </div>
   }
 
-  <!-- ==================== PERMISSIONS MODAL ==================== -->
-  @if (showPermissionsModal()) {
-    <div class="modal-overlay" (click)="closePermissionsModal()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+  <!-- ======================== SCREEN FORM MODAL ======================== -->
+  @if (showScreenForm()) {
+    <div class="modal-overlay" (click)="closeScreenForm()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon purple">
-              <span class="material-icons-round">admin_panel_settings</span>
-            </div>
-            <div>
-              <h2>صلاحيات الشاشة</h2>
-              <p>تحديد صلاحيات كل مستخدم لشاشة "{{ permissionsScreen()?.name }}"</p>
+          <h3>تعديل الشاشة</h3>
+          <button class="btn-icon" (click)="closeScreenForm()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group"><label>اسم الشاشة</label><input type="text" [ngModel]="screenForm().name" (ngModelChange)="screenForm.set({...screenForm(), name: $event})"></div>
+          <div class="form-group"><label>الوصف</label><textarea [ngModel]="screenForm().description" (ngModelChange)="screenForm.set({...screenForm(), description: $event})" rows="2"></textarea></div>
+          <div class="form-group"><label>الأيقونة</label>
+            <div class="icon-grid compact">
+              @for (icon of icons; track icon) {
+                <button class="icon-option sm" [class.selected]="screenForm().icon === icon" (click)="screenForm.set({...screenForm(), icon})"><span class="material-icons-round">{{ icon }}</span></button>
+              }
             </div>
           </div>
-          <button class="close-btn" (click)="closePermissionsModal()">
-            <span class="material-icons-round">close</span>
-          </button>
+          <div class="form-group"><label>اللون</label>
+            <div class="color-grid compact">
+              @for (color of colors; track color) {
+                <button class="color-option sm" [class.selected]="screenForm().color === color" [style.background]="color" (click)="screenForm.set({...screenForm(), color})"></button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" (click)="closeScreenForm()">إلغاء</button>
+          <button class="btn btn-primary" (click)="saveScreen()" [disabled]="saving()">{{ saving() ? 'جاري الحفظ...' : 'حفظ' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ======================== PERMISSIONS MODAL ======================== -->
+  @if (showPermissionsModal()) {
+    <div class="modal-overlay" (click)="closePermissionsModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>صلاحيات الشاشة: {{ permissionsScreen()?.name }}</h3>
+          <button class="btn-icon" (click)="closePermissionsModal()"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
           @if (permissionsLoading()) {
-            <div class="loading-state">
-              <span class="material-icons-round spin">sync</span>
-              <p>جاري تحميل الصلاحيات...</p>
-            </div>
+            <div class="loading-inline"><div class="spinner sm"></div> جاري التحميل...</div>
           } @else {
-            <div class="permissions-hint">
-              <span class="material-icons-round">info</span>
-              حدد لكل مستخدم مستوى الصلاحية: عرض فقط، تنفيذ عمليات، أو بدون صلاحية.
-            </div>
             <div class="permissions-list">
               @for (user of permissionsUsers(); track user.id) {
                 <div class="permission-row">
-                  <div class="permission-user">
-                    <div class="permission-user-icon">
-                      <span class="material-icons-round">person</span>
-                    </div>
-                    <div class="permission-user-info">
-                      <span class="permission-user-name">{{ user.fullName || user.username }}</span>
-                      <span class="permission-user-role">{{ user.role }}</span>
-                    </div>
-                  </div>
-                  <select class="permission-dropdown" [value]="getUserPermission(user.id)" (change)="setUserPermission(user.id, $any($event.target).value)">
+                  <span class="user-name">{{ user.fullName || user.username }}</span>
+                  <select [ngModel]="getUserPermission(user.id)" (ngModelChange)="setUserPermission(user.id, $event)">
                     <option value="none">بدون صلاحية</option>
                     <option value="view">عرض فقط</option>
-                    <option value="execute">تنفيذ عمليات</option>
+                    <option value="execute">عرض وتنفيذ</option>
                   </select>
                 </div>
               }
@@ -1080,806 +787,34 @@
           }
         </div>
         <div class="modal-footer">
-          <button class="btn-save" (click)="savePermissions()" [disabled]="saving() || permissionsLoading()">
-            {{ saving() ? 'جاري الحفظ...' : 'حفظ الصلاحيات' }}
-          </button>
-          <button class="btn-cancel" (click)="closePermissionsModal()">إلغاء</button>
+          <button class="btn btn-ghost" (click)="closePermissionsModal()">إلغاء</button>
+          <button class="btn btn-primary" (click)="savePermissions()" [disabled]="saving()">{{ saving() ? 'جاري الحفظ...' : 'حفظ' }}</button>
         </div>
       </div>
     </div>
   }
 
-  <!-- ==================== ADD TO SIDEBAR MODAL ==================== -->
+  <!-- ======================== SIDEBAR MODAL ======================== -->
   @if (showSidebarModal()) {
     <div class="modal-overlay" (click)="closeSidebarModal()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green">
-              <span class="material-icons-round">add_to_queue</span>
-            </div>
-            <div>
-              <h2>إضافة للقائمة الجانبية</h2>
-              <p>إضافة شاشة "{{ sidebarScreen()?.name }}" للقائمة الجانبية</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeSidebarModal()">
-            <span class="material-icons-round">close</span>
-          </button>
+          <h3>إضافة للقائمة الجانبية</h3>
+          <button class="btn-icon" (click)="closeSidebarModal()"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>القسم في القائمة الجانبية</label>
-            <select [ngModel]="selectedSidebarSection()" (ngModelChange)="selectedSidebarSection.set($event)">
-              @for (sec of sidebarSections(); track sec.id) {
-                <option [ngValue]="sec.id">{{ sec.name }}</option>
+          <div class="form-group"><label>القسم</label>
+            <select [ngModel]="selectedSidebarSection()" (ngModelChange)="selectedSidebarSection.set(+$event)">
+              @for (section of sidebarSections(); track section.id) {
+                <option [value]="section.id">{{ section.name }}</option>
               }
             </select>
-            @if (sidebarSections().length === 0) {
-              <p class="no-data-msg">لا توجد أقسام. أنشئ قسماً من إعدادات التبويب الجانبي.</p>
-            }
           </div>
-          <div class="form-group">
-            <label>الترتيب</label>
-            <input type="number" [ngModel]="sidebarSortOrder()" (ngModelChange)="sidebarSortOrder.set($event)" min="1" />
-          </div>
+          <div class="form-group"><label>الترتيب</label><input type="number" [ngModel]="sidebarSortOrder()" (ngModelChange)="sidebarSortOrder.set(+$event)" min="0"></div>
         </div>
         <div class="modal-footer">
-          <button class="btn-save" (click)="addToSidebar()" [disabled]="saving() || sidebarSections().length === 0">
-            {{ saving() ? 'جاري الإضافة...' : 'إضافة للقائمة' }}
-          </button>
-          <button class="btn-cancel" (click)="closeSidebarModal()">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== COLLECTION STYLE VIEW ==================== -->
-  @if (viewMode() === 'collection_style' && activeScreen()) {
-    <div class="cs-page-container">
-
-      <!-- ===== Page Header ===== -->
-      <div class="cs-page-header">
-        <div class="cs-header-left">
-          @if (!openedFromSidebar()) {
-            <button class="cs-back-btn" (click)="backToList()">
-              <span class="material-icons-round">arrow_forward</span>
-            </button>
-          }
-          <div class="cs-page-icon" [style.background]="'linear-gradient(135deg, ' + (activeScreen()!.color || '#14b8a6') + ', ' + (activeScreen()!.color || '#0ea5e9') + '99)'">
-            <span class="material-icons-round">{{ activeScreen()!.icon || 'dashboard' }}</span>
-          </div>
-          <div>
-            <h1 class="cs-page-title">{{ activeScreen()!.name }}</h1>
-            <p class="cs-page-subtitle">{{ activeScreen()!.description || 'شاشة مخصصة' }}</p>
-          </div>
-        </div>
-        <div class="cs-header-right">
-          <button class="cs-help-btn" (click)="openCsConfigWizard()" title="إعداد الشاشة">
-            <span class="material-icons-round">settings</span>
-          </button>
-        </div>
-      </div>
-
-      @if (csConfigLoading()) {
-        <div class="cs-loading-center">
-          <div class="cs-loading-spinner"></div>
-          <p>جاري التحميل...</p>
-        </div>
-      } @else {
-
-        <!-- ===== View Tabs ===== -->
-        <div class="cs-view-tabs">
-          <button class="cs-view-tab" [class.active]="csActiveTab() === 'tab1'"
-                  [style.background]="csActiveTab() === 'tab1' ? (collectionStyleConfig()?.tab1Color || 'linear-gradient(135deg, #22c55e, #14b8a6)') : null"
-                  (click)="csActiveTab.set('tab1'); cancelCsOpType()">
-            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.tab1Color ? collectionStyleConfig()!.tab1Color : 'linear-gradient(135deg, #22c55e, #14b8a6)'">
-              <span class="material-icons-round">{{ collectionStyleConfig()?.tab1Icon || 'call_received' }}</span>
-            </div>
-            <span>{{ collectionStyleConfig()?.tab1Label || 'تحصيل' }}</span>
-          </button>
-          <button class="cs-view-tab" [class.active]="csActiveTab() === 'tab2'"
-                  [style.background]="csActiveTab() === 'tab2' ? (collectionStyleConfig()?.tab2Color || 'linear-gradient(135deg, #ef4444, #f97316)') : null"
-                  (click)="csActiveTab.set('tab2'); cancelCsOpType()">
-            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.tab2Color ? collectionStyleConfig()!.tab2Color : 'linear-gradient(135deg, #ef4444, #f97316)'">
-              <span class="material-icons-round">{{ collectionStyleConfig()?.tab2Icon || 'call_made' }}</span>
-            </div>
-            <span>{{ collectionStyleConfig()?.tab2Label || 'توريد' }}</span>
-          </button>
-          <button class="cs-view-tab" [class.active]="csActiveTab() === 'history'"
-                  [style.background]="csActiveTab() === 'history' ? (collectionStyleConfig()?.historyColor || 'linear-gradient(135deg, #6366f1, #8b5cf6)') : null"
-                  (click)="csActiveTab.set('history'); cancelCsOpType()">
-            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.historyColor ? collectionStyleConfig()!.historyColor : 'linear-gradient(135deg, #6366f1, #8b5cf6)'">
-              <span class="material-icons-round">{{ collectionStyleConfig()?.historyIcon || 'history' }}</span>
-            </div>
-            <span>{{ collectionStyleConfig()?.historyLabel || 'السجل' }}</span>
-          </button>
-          <button class="cs-view-tab" [class.active]="csActiveTab() === 'funds'"
-                  [style.background]="csActiveTab() === 'funds' ? (collectionStyleConfig()?.accountsColor || 'linear-gradient(135deg, #10b981, #059669)') : null"
-                  (click)="csActiveTab.set('funds'); cancelCsOpType()">
-            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.accountsColor ? collectionStyleConfig()!.accountsColor : 'linear-gradient(135deg, #10b981, #059669)'">
-              <span class="material-icons-round">{{ collectionStyleConfig()?.accountsIcon || 'savings' }}</span>
-            </div>
-            <span>{{ collectionStyleConfig()?.accountsSectionLabel || 'الصناديق' }}</span>
-          </button>
-        </div>
-
-        <!-- ===== TAB 1 VIEW (Collection) ===== -->
-        @if (csActiveTab() === 'tab1') {
-          <div class="cs-view-section">
-            @if (getCsTab1Templates().length === 0) {
-              <div class="cs-no-op-types-card">
-                <div class="cs-noopt-icon">
-                  <span class="material-icons-round">category</span>
-                </div>
-                <h3>لا توجد أنواع عمليات</h3>
-                <p>اضغط "إعداد الشاشة" لإضافة أنواع العمليات</p>
-              </div>
-            }
-
-            @if (getCsTab1Templates().length > 0 && !csSelectedOpType()) {
-              <div class="cs-select-ot-section">
-                <h2 class="cs-section-title">
-                  <span class="material-icons-round">category</span>
-                  اختر نوع العملية
-                </h2>
-                <div class="cs-ot-cards-grid">
-                  @for (ot of getCsTab1Templates(); track ot.id) {
-                    <button class="cs-ot-card" (click)="selectCsOpType(ot)">
-                      <div class="cs-ot-card-icon cs-collection">
-                        <span class="material-icons-round">{{ ot.icon || 'call_received' }}</span>
-                      </div>
-                      <div class="cs-ot-card-body">
-                        <div class="cs-ot-card-name">{{ ot.name }}</div>
-                        @if (ot.description) {
-                          <div class="cs-ot-card-desc">{{ ot.description }}</div>
-                        }
-                        <div class="cs-ot-card-count">
-                          <span class="material-icons-round">group</span>
-                          {{ (ot.linkedAccounts || ot.accounts || []).length }} حساب
-                        </div>
-                      </div>
-                      <span class="material-icons-round cs-ot-arrow">arrow_back_ios</span>
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (csSelectedOpType()) {
-              <div class="cs-form-section">
-                <div class="cs-cf-header">
-                  <button class="cs-back-btn-sm" (click)="cancelCsOpType()">
-                    <span class="material-icons-round">arrow_forward</span>
-                  </button>
-                  <div class="cs-cf-title-wrap">
-                    <div class="cs-cf-icon cs-collection">
-                      <span class="material-icons-round">{{ csSelectedOpType().icon || 'call_received' }}</span>
-                    </div>
-                    <div>
-                      <h2>{{ csSelectedOpType().name }}</h2>
-                      <p>{{ csSelectedOpType().description || collectionStyleConfig()?.tab1Label || 'تسجيل العملية' }}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="cs-global-fields">
-                  <div class="cs-form-group">
-                    <label class="cs-form-label">البيان العام (يطبق على الكل)</label>
-                    <input class="cs-form-input" type="text" placeholder="مثال: تحصيل يوم..."
-                           [value]="csFormDescription()"
-                           (input)="csFormDescription.set($any($event.target).value)">
-                  </div>
-                  <div class="cs-form-group">
-                    <label class="cs-form-label">التاريخ</label>
-                    <input class="cs-form-input" type="date" [value]="csFormDate()"
-                           (change)="csFormDate.set($any($event.target).value)">
-                  </div>
-                </div>
-
-                <div class="cs-entries-table-wrap">
-                  <div class="cs-entries-table-header">
-                    <span>الحساب</span>
-                    <span>المبلغ</span>
-                    <span>ملاحظات</span>
-                  </div>
-                  @for (entry of csFormEntries(); track $index; let i = $index) {
-                    <div class="cs-entry-row" [class.has-amount]="+entry.amount > 0">
-                      <div class="cs-entry-account">
-                        <div class="cs-entry-account-icon">
-                          <span class="material-icons-round">account_circle</span>
-                        </div>
-                        <span>{{ entry.accountName }}</span>
-                      </div>
-                      <div class="cs-entry-amount-wrap">
-                        <input class="cs-entry-amount-input" type="number" placeholder="0"
-                               [value]="entry.amount"
-                               (input)="updateCsFormEntry(i, 'amount', $any($event.target).value)">
-                        <span class="cs-entry-currency">ر.ي</span>
-                      </div>
-                      <input class="cs-entry-notes-input" type="text" placeholder="ملاحظة..."
-                             [value]="entry.notes"
-                             (input)="updateCsFormEntry(i, 'notes', $any($event.target).value)">
-                    </div>
-                  }
-                </div>
-
-                <div class="cs-cf-footer">
-                  <div class="cs-total-display">
-                    <span class="cs-total-label">إجمالي:</span>
-                    <span class="cs-total-amount cs-collection-color">{{ formatAmount(getCsFormTotal()) }}</span>
-                    <span class="cs-total-currency">ر.ي</span>
-                  </div>
-                  <button class="cs-btn-3d cs-btn-collection" [disabled]="saving() || getCsFormTotal() === 0"
-                          (click)="saveCsOperation()">
-                    <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-                    {{ saving() ? 'جاري الحفظ...' : 'حفظ العملية' }}
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        }
-
-        <!-- ===== TAB 2 VIEW (Delivery) ===== -->
-        @if (csActiveTab() === 'tab2') {
-          <div class="cs-view-section">
-            @if (getCsTab2Templates().length === 0) {
-              <div class="cs-no-op-types-card">
-                <div class="cs-noopt-icon cs-delivery">
-                  <span class="material-icons-round">category</span>
-                </div>
-                <h3>لا توجد أنواع عمليات</h3>
-                <p>اضغط "إعداد الشاشة" لإضافة أنواع العمليات</p>
-              </div>
-            }
-
-            @if (getCsTab2Templates().length > 0 && !csSelectedOpType()) {
-              <div class="cs-select-ot-section">
-                <h2 class="cs-section-title">
-                  <span class="material-icons-round">category</span>
-                  اختر نوع العملية
-                </h2>
-                <div class="cs-ot-cards-grid">
-                  @for (ot of getCsTab2Templates(); track ot.id) {
-                    <button class="cs-ot-card" (click)="selectCsOpType(ot)">
-                      <div class="cs-ot-card-icon cs-delivery">
-                        <span class="material-icons-round">{{ ot.icon || 'call_made' }}</span>
-                      </div>
-                      <div class="cs-ot-card-body">
-                        <div class="cs-ot-card-name">{{ ot.name }}</div>
-                        @if (ot.description) {
-                          <div class="cs-ot-card-desc">{{ ot.description }}</div>
-                        }
-                        <div class="cs-ot-card-count">
-                          <span class="material-icons-round">group</span>
-                          {{ (ot.linkedAccounts || ot.accounts || []).length }} حساب
-                        </div>
-                      </div>
-                      <span class="material-icons-round cs-ot-arrow">arrow_back_ios</span>
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-
-            @if (csSelectedOpType()) {
-              <div class="cs-form-section">
-                <div class="cs-cf-header cs-delivery-header">
-                  <button class="cs-back-btn-sm" (click)="cancelCsOpType()">
-                    <span class="material-icons-round">arrow_forward</span>
-                  </button>
-                  <div class="cs-cf-title-wrap">
-                    <div class="cs-cf-icon cs-delivery">
-                      <span class="material-icons-round">{{ csSelectedOpType().icon || 'call_made' }}</span>
-                    </div>
-                    <div>
-                      <h2>{{ csSelectedOpType().name }}</h2>
-                      <p>{{ csSelectedOpType().description || collectionStyleConfig()?.tab2Label || 'تسجيل العملية' }}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="cs-global-fields">
-                  <div class="cs-form-group">
-                    <label class="cs-form-label">البيان العام</label>
-                    <input class="cs-form-input" type="text" placeholder="مثال: توريد يوم..."
-                           [value]="csFormDescription()"
-                           (input)="csFormDescription.set($any($event.target).value)">
-                  </div>
-                  <div class="cs-form-group">
-                    <label class="cs-form-label">التاريخ</label>
-                    <input class="cs-form-input" type="date" [value]="csFormDate()"
-                           (change)="csFormDate.set($any($event.target).value)">
-                  </div>
-                </div>
-
-                <div class="cs-entries-table-wrap">
-                  <div class="cs-entries-table-header">
-                    <span>الحساب</span>
-                    <span>المبلغ</span>
-                    <span>ملاحظات</span>
-                  </div>
-                  @for (entry of csFormEntries(); track $index; let i = $index) {
-                    <div class="cs-entry-row cs-delivery-row" [class.has-amount]="+entry.amount > 0">
-                      <div class="cs-entry-account">
-                        <div class="cs-entry-account-icon cs-delivery">
-                          <span class="material-icons-round">account_balance</span>
-                        </div>
-                        <span>{{ entry.accountName }}</span>
-                      </div>
-                      <div class="cs-entry-amount-wrap">
-                        <input class="cs-entry-amount-input" type="number" placeholder="0"
-                               [value]="entry.amount"
-                               (input)="updateCsFormEntry(i, 'amount', $any($event.target).value)">
-                        <span class="cs-entry-currency">ر.ي</span>
-                      </div>
-                      <input class="cs-entry-notes-input" type="text" placeholder="ملاحظة..."
-                             [value]="entry.notes"
-                             (input)="updateCsFormEntry(i, 'notes', $any($event.target).value)">
-                    </div>
-                  }
-                </div>
-
-                <div class="cs-cf-footer">
-                  <div class="cs-total-display">
-                    <span class="cs-total-label">إجمالي:</span>
-                    <span class="cs-total-amount cs-delivery-color">{{ formatAmount(getCsFormTotal()) }}</span>
-                    <span class="cs-total-currency">ر.ي</span>
-                  </div>
-                  <button class="cs-btn-3d cs-btn-delivery" [disabled]="saving() || getCsFormTotal() === 0"
-                          (click)="saveCsOperation()">
-                    <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-                    {{ saving() ? 'جاري الحفظ...' : 'حفظ العملية' }}
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        }
-
-        <!-- ===== HISTORY VIEW ===== -->
-        @if (csActiveTab() === 'history') {
-          <div class="cs-view-section">
-            <div class="cs-history-stats">
-              <div class="cs-hs-card cs-collection">
-                <div class="cs-hs-icon"><span class="material-icons-round">call_received</span></div>
-                <div class="cs-hs-body">
-                  <div class="cs-hs-num">{{ getCsHistoryStats().receiptCount }}</div>
-                  <div class="cs-hs-label">عمليات {{ collectionStyleConfig()?.tab1Label || 'تحصيل' }}</div>
-                  <div class="cs-hs-amount">{{ formatAmount(getCsHistoryStats().totalReceipts) }} ر.ي</div>
-                </div>
-              </div>
-              <div class="cs-hs-card cs-delivery">
-                <div class="cs-hs-icon"><span class="material-icons-round">call_made</span></div>
-                <div class="cs-hs-body">
-                  <div class="cs-hs-num">{{ getCsHistoryStats().paymentCount }}</div>
-                  <div class="cs-hs-label">عمليات {{ collectionStyleConfig()?.tab2Label || 'توريد' }}</div>
-                  <div class="cs-hs-amount">{{ formatAmount(getCsHistoryStats().totalPayments) }} ر.ي</div>
-                </div>
-              </div>
-            </div>
-
-            @if (widgetLogEntries().length === 0) {
-              <div class="cs-empty-history">
-                <span class="material-icons-round">history</span>
-                <p>لا توجد عمليات مسجلة بعد</p>
-              </div>
-            } @else {
-              <div class="cs-history-list">
-                @for (entry of widgetLogEntries(); track entry.id) {
-                  <div class="cs-history-row" [class.cs-receipt-row]="entry.voucher_type === 'receipt'"
-                       [class.cs-payment-row]="entry.voucher_type === 'payment'">
-                    <div class="cs-hr-icon" [class.cs-receipt-icon]="entry.voucher_type === 'receipt'"
-                         [class.cs-payment-icon]="entry.voucher_type === 'payment'">
-                      <span class="material-icons-round">
-                        {{ entry.voucher_type === 'receipt' ? 'call_received' : 'call_made' }}
-                      </span>
-                    </div>
-                    <div class="cs-hr-main">
-                      <div class="cs-hr-desc">{{ entry.description || entry.operation_type_name || 'بدون بيان' }}</div>
-                      <div class="cs-hr-date">{{ formatDate(entry.entry_date) }}</div>
-                    </div>
-                    <div class="cs-hr-amount" [class.cs-receipt-amount]="entry.voucher_type === 'receipt'"
-                         [class.cs-payment-amount]="entry.voucher_type === 'payment'">
-                      {{ formatAmount(entry.total_debit) }}
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
-
-        <!-- ===== FUNDS VIEW ===== -->
-        @if (csActiveTab() === 'funds') {
-          <div class="cs-view-section">
-            @if (getCsAccounts().length === 0) {
-              <div class="cs-no-op-types-card">
-                <div class="cs-noopt-icon">
-                  <span class="material-icons-round">savings</span>
-                </div>
-                <h3>لا توجد حسابات</h3>
-                <p>اضغط "إعداد الشاشة" لإضافة حسابات للمراقبة</p>
-              </div>
-            } @else {
-              <div class="cs-funds-summary">
-                @for (acc of getCsAccounts(); track acc.id) {
-                  <div class="cs-fund-summary-card">
-                    <div class="cs-fsc-header">
-                      <div class="cs-fsc-icon">
-                        <span class="material-icons-round">{{ getAccountIcon(acc.account_type) }}</span>
-                      </div>
-                      <div class="cs-fsc-info">
-                        <strong>{{ acc.name }}</strong>
-                        <span class="cs-fsc-type">{{ acc.account_type || 'حساب' }}</span>
-                      </div>
-                    </div>
-                    <div class="cs-fsc-balance" [class.positive]="acc.total_balance >= 0"
-                      [class.negative]="acc.total_balance < 0">
-                      <span class="cs-fsc-balance-label">الرصيد الحالي</span>
-                      <span class="cs-fsc-balance-value">{{ formatAmount(acc.total_balance) }} ر.ي</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
-
-      }
-    </div>
-  }
-
-  <!-- ==================== COLLECTION STYLE CONFIG WIZARD MODAL ==================== -->
-  @if (showCsConfigWizard()) {
-    <div class="modal-overlay" (click)="closeCsConfigWizard()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green">
-              <span class="material-icons-round">settings</span>
-            </div>
-            <div>
-              <h2>إعداد الشاشة المخصصة</h2>
-              <p>الخطوة {{ csWizardStep() }} من 5</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeCsConfigWizard()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-
-        <!-- Wizard Steps Indicator -->
-        <div class="wizard-steps" style="padding: 0 24px;">
-          @for (step of [1,2,3,4,5]; track step) {
-            <div class="wizard-step" [class.active]="csWizardStep() === step" [class.completed]="csWizardStep() > step">
-              <div class="step-number">{{ csWizardStep() > step ? '✓' : step }}</div>
-              <span class="step-label">
-                @switch (step) {
-                  @case (1) { التبويب الأول }
-                  @case (2) { التبويب الثاني }
-                  @case (3) { السجل }
-                  @case (4) { الحسابات }
-                  @case (5) { حسابات المراقبة }
-                }
-              </span>
-            </div>
-            @if (step < 5) {
-              <div class="step-connector" [class.active]="csWizardStep() > step"></div>
-            }
-          }
-        </div>
-
-        <div class="modal-body">
-          <!-- الخطوة 1: التبويب الأول -->
-          @if (csWizardStep() === 1) {
-            <div>
-              <h3 class="section-title">إعداد التبويب الأول</h3>
-              <div class="form-group">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="csTab1Label()" (ngModelChange)="csTab1Label.set($event)" placeholder="مثلاً: تحصيل" />
-              </div>
-              <div class="form-group">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid">
-                  @for (icon of icons; track icon) {
-                    <button type="button" class="icon-option" [class.selected]="csTab1Icon() === icon" (click)="csTab1Icon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>لون التبويب</label>
-                <div class="color-grid">
-                  @for (color of colors; track color) {
-                    <button type="button" class="color-option" [class.selected]="csTab1Color() === color" [style.background]="color" (click)="csTab1Color.set(color)"></button>
-                  }
-                </div>
-              </div>
-              <h3 class="section-title" style="margin-top: 16px;">قوالب العمليات</h3>
-              <div class="binding-options-grid">
-                @for (op of operationTypes(); track op.id) {
-                  <label class="binding-option" [class.selected]="csTab1OperationTypeIds().includes(op.id)">
-                    <input type="checkbox" [checked]="csTab1OperationTypeIds().includes(op.id)" (change)="toggleCsTab1OpType(op.id)" />
-                    <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
-                    <span>{{ op.name }}</span>
-                  </label>
-                }
-                @if (operationTypes().length === 0) {
-                  <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- الخطوة 2: التبويب الثاني -->
-          @if (csWizardStep() === 2) {
-            <div>
-              <h3 class="section-title">إعداد التبويب الثاني</h3>
-              <div class="form-group">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="csTab2Label()" (ngModelChange)="csTab2Label.set($event)" placeholder="مثلاً: توريد" />
-              </div>
-              <div class="form-group">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid">
-                  @for (icon of icons; track icon) {
-                    <button type="button" class="icon-option" [class.selected]="csTab2Icon() === icon" (click)="csTab2Icon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>لون التبويب</label>
-                <div class="color-grid">
-                  @for (color of colors; track color) {
-                    <button type="button" class="color-option" [class.selected]="csTab2Color() === color" [style.background]="color" (click)="csTab2Color.set(color)"></button>
-                  }
-                </div>
-              </div>
-              <h3 class="section-title" style="margin-top: 16px;">قوالب العمليات</h3>
-              <div class="binding-options-grid">
-                @for (op of operationTypes(); track op.id) {
-                  <label class="binding-option" [class.selected]="csTab2OperationTypeIds().includes(op.id)">
-                    <input type="checkbox" [checked]="csTab2OperationTypeIds().includes(op.id)" (change)="toggleCsTab2OpType(op.id)" />
-                    <span class="material-icons-round">{{ op.icon || 'receipt' }}</span>
-                    <span>{{ op.name }}</span>
-                  </label>
-                }
-                @if (operationTypes().length === 0) {
-                  <p class="no-data-msg">لا توجد قوالب عمليات. أنشئها من صفحة أنواع العمليات.</p>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- الخطوة 3: السجل -->
-          @if (csWizardStep() === 3) {
-            <div>
-              <h3 class="section-title">إعداد تبويب السجل</h3>
-              <div class="form-group">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="csHistoryLabel()" (ngModelChange)="csHistoryLabel.set($event)" placeholder="مثلاً: السجل" />
-              </div>
-              <div class="form-group">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid">
-                  @for (icon of icons; track icon) {
-                    <button type="button" class="icon-option" [class.selected]="csHistoryIcon() === icon" (click)="csHistoryIcon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>لون التبويب</label>
-                <div class="color-grid">
-                  @for (color of colors; track color) {
-                    <button type="button" class="color-option" [class.selected]="csHistoryColor() === color" [style.background]="color" (click)="csHistoryColor.set(color)"></button>
-                  }
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- الخطوة 4: الحسابات/الصناديق -->
-          @if (csWizardStep() === 4) {
-            <div>
-              <h3 class="section-title">إعداد تبويب الحسابات/الصناديق</h3>
-              <div class="form-group">
-                <label>اسم التبويب</label>
-                <input type="text" [ngModel]="csAccountsSectionLabel()" (ngModelChange)="csAccountsSectionLabel.set($event)" placeholder="مثلاً: الصناديق" />
-              </div>
-              <div class="form-group">
-                <label>أيقونة التبويب</label>
-                <div class="icon-grid">
-                  @for (icon of icons; track icon) {
-                    <button type="button" class="icon-option" [class.selected]="csAccountsIcon() === icon" (click)="csAccountsIcon.set(icon)">
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>لون التبويب</label>
-                <div class="color-grid">
-                  @for (color of colors; track color) {
-                    <button type="button" class="color-option" [class.selected]="csAccountsColor() === color" [style.background]="color" (click)="csAccountsColor.set(color)"></button>
-                  }
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- الخطوة 5: اختيار حسابات المراقبة -->
-          @if (csWizardStep() === 5) {
-            <div>
-              <h3 class="section-title">اختر الحسابات/الصناديق لقسم {{ csAccountsSectionLabel() }}</h3>
-
-              <!-- شريط البحث -->
-              <div class="acc-filter-bar">
-                <div class="acc-search-box">
-                  <span class="material-icons-round">search</span>
-                  <input type="text" placeholder="ابحث عن حساب..." [value]="accSearchQuery()" (input)="accSearchQuery.set($any($event.target).value)" />
-                </div>
-              </div>
-
-              <!-- فلاتر الأنواع -->
-              <div class="acc-type-tabs">
-                <button class="acc-type-tab" [class.active]="accFilterType() === 'all'" [style.--tab-color]="'#64748b'" (click)="setAccFilterType('all')">
-                  <span class="material-icons-round">apps</span>
-                  الكل
-                  <span class="acc-tab-count">{{ allAccounts().length }}</span>
-                </button>
-                @for (t of accDynamicFilters(); track t.value) {
-                  <button class="acc-type-tab" [class.active]="accFilterType() === t.value" [style.--tab-color]="t.color" (click)="setAccFilterType(t.value)">
-                    <span class="material-icons-round">{{ t.icon }}</span>
-                    {{ t.label }}
-                    <span class="acc-tab-count">{{ allAccounts().filter(a => a.accountType === t.value).length }}</span>
-                  </button>
-                }
-              </div>
-
-              <!-- قائمة الحسابات المفلترة -->
-              <div class="acc-select-grid">
-                @for (acc of accFiltered(); track acc.id) {
-                  <label class="acc-select-item" [class.selected]="csAccountIds().includes(acc.id)" [style.--acc-color]="getAccTypeMeta(acc.accountType).color">
-                    <input type="checkbox" [checked]="csAccountIds().includes(acc.id)" (change)="toggleCsAccount(acc.id)" />
-                    <span class="material-icons-round acc-item-icon">{{ getAccTypeMeta(acc.accountType).icon }}</span>
-                    <div class="acc-item-info">
-                      <span class="acc-item-name">{{ acc.name }}</span>
-                      <span class="acc-item-type">{{ getAccTypeMeta(acc.accountType).label }}</span>
-                    </div>
-                    @if (csAccountIds().includes(acc.id)) {
-                      <span class="material-icons-round acc-check">check_circle</span>
-                    }
-                  </label>
-                }
-                @if (accFiltered().length === 0 && allAccounts().length > 0) {
-                  <p class="no-data-msg">لا توجد حسابات تطابق البحث</p>
-                }
-                @if (allAccounts().length === 0) {
-                  <p class="no-data-msg">لا توجد حسابات. أنشئها من صفحة الحسابات.</p>
-                }
-              </div>
-
-              @if (csAccountIds().length > 0) {
-                <div class="acc-selected-summary">
-                  <span class="material-icons-round">check_circle</span>
-                  تم اختيار {{ csAccountIds().length }} حساب
-                </div>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="modal-footer">
-          <div style="display: flex; gap: 8px; width: 100%; justify-content: space-between;">
-            <div>
-              @if (csWizardStep() > 1) {
-                <button class="btn-cancel" (click)="prevCsWizardStep()">
-                  <span class="material-icons-round">arrow_forward</span>
-                  السابق
-                </button>
-              }
-            </div>
-            <div style="display: flex; gap: 8px;">
-              @if (csWizardStep() < 5) {
-                <button class="btn-save" (click)="nextCsWizardStep()">
-                  التالي
-                  <span class="material-icons-round">arrow_back</span>
-                </button>
-              } @else {
-                <button class="btn-save" (click)="saveCsConfig()" [disabled]="saving()">
-                  <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
-                  {{ saving() ? 'جاري الحفظ...' : 'حفظ الإعداد' }}
-                </button>
-              }
-              <button class="btn-cancel" (click)="closeCsConfigWizard()">إلغاء</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ==================== OPERATION EXECUTION MODAL ==================== -->
-  @if (showOperationModal()) {
-    <div class="modal-overlay" (click)="closeOperationModal()">
-      <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green">
-              <span class="material-icons-round">{{ selectedOperationType()?.icon || 'receipt' }}</span>
-            </div>
-            <div>
-              <h2>تنفيذ عملية: {{ selectedOperationType()?.name }}</h2>
-              <p>أدخل بيانات العملية لتنفيذها</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="closeOperationModal()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label>التاريخ</label>
-              <input type="date" [ngModel]="operationDate()" (ngModelChange)="operationDate.set($event)" />
-            </div>
-            <div class="form-group flex-1">
-              <label>الوصف (اختياري)</label>
-              <input type="text" [ngModel]="operationDescription()" (ngModelChange)="operationDescription.set($event)" placeholder="وصف العملية..." />
-            </div>
-          </div>
-
-          <h4 class="section-title">المبالغ</h4>
-          <div class="operation-entries">
-            @for (entry of operationEntries(); track $index; let i = $index) {
-              <div class="operation-entry-row">
-                <div class="entry-account">
-                  <span class="material-icons-round">account_balance_wallet</span>
-                  <div class="entry-account-info">
-                    <span class="entry-account-name">{{ entry.accountName || 'حساب ' + (i + 1) }}</span>
-                    @if (entry.accountId) {
-                      <span class="entry-account-balance" [class.positive]="getAccountBalance(entry.accountId) > 0" [class.negative]="getAccountBalance(entry.accountId) < 0">
-                        الرصيد: {{ formatAmount(getAccountBalance(entry.accountId)) }}
-                      </span>
-                    }
-                  </div>
-                </div>
-                <div class="entry-amount">
-                  <input type="number" [ngModel]="entry.amount" (ngModelChange)="updateOperationEntry(i, 'amount', $event)" placeholder="المبلغ" min="0" step="0.01" />
-                </div>
-                <div class="entry-notes">
-                  <input type="text" [ngModel]="entry.notes" (ngModelChange)="updateOperationEntry(i, 'notes', $event)" placeholder="ملاحظة..." />
-                </div>
-              </div>
-            }
-          </div>
-
-          <!-- إجمالي المبالغ -->
-          @if (getOperationTotal() > 0) {
-            <div class="operation-summary">
-              <div class="summary-row">
-                <span class="summary-label">
-                  <span class="material-icons-round">functions</span>
-                  الإجمالي ({{ getFilledEntriesCount() }} حساب)
-                </span>
-                <span class="summary-amount">{{ formatAmount(getOperationTotal()) }}</span>
-              </div>
-            </div>
-          }
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="executeOperation()" [disabled]="saving() || getFilledEntriesCount() === 0">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'check' }}</span>
-            {{ saving() ? 'جاري التنفيذ...' : 'تنفيذ العملية' }}
-          </button>
-          <button class="btn-cancel" (click)="closeOperationModal()">إلغاء</button>
+          <button class="btn btn-ghost" (click)="closeSidebarModal()">إلغاء</button>
+          <button class="btn btn-primary" (click)="addToSidebar()" [disabled]="saving()">{{ saving() ? 'جاري الإضافة...' : 'إضافة' }}</button>
         </div>
       </div>
     </div>

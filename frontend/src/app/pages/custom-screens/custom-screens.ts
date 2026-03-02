@@ -1,9 +1,7 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-
-import { Gridster, GridsterItem, GridsterConfig, GridsterItemConfig, GridType, CompactType, DisplayGrid } from 'angular-gridster2';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { ColorPickerDirective } from 'ngx-color-picker';
@@ -28,6 +26,17 @@ function getAccTypeMeta(type: string) {
   return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
 }
 
+// ===== Tab Type Definitions =====
+interface TabDefinition {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  type: 'operations' | 'log' | 'accounts' | 'stats' | 'chart' | 'notes';
+  sortOrder: number;
+  config: any;
+}
+
 interface ScreenTemplate {
   id: number;
   businessId: number;
@@ -42,53 +51,6 @@ interface ScreenTemplate {
   createdBy?: number;
   createdAt: string;
   updatedAt: string;
-}
-
-interface ScreenWidget {
-  id: number;
-  screenId: number;
-  widgetType: string;
-  title: string;
-  config: any;
-  positionX: number;
-  positionY: number;
-  width: number;
-  height: number;
-  sortOrder: number;
-  isVisible: boolean;
-  createdAt: string;
-}
-
-interface GridWidget extends GridsterItemConfig {
-  widgetData: ScreenWidget;
-}
-
-interface WizardWidget {
-  widgetType: string;
-  title: string;
-  config: any;
-  positionX: number;
-  positionY: number;
-  width: number;
-  height: number;
-  sortOrder: number;
-  isVisible: boolean;
-}
-
-interface ScreenWithWidgets {
-  id: number;
-  name: string;
-  icon: string;
-  color: string;
-  widgets: ScreenWidget[];
-}
-
-// Real data interfaces
-interface WidgetStats {
-  totalReceipts: number;
-  totalPayments: number;
-  operationsCount: number;
-  netBalance: number;
 }
 
 interface LogEntry {
@@ -118,15 +80,24 @@ interface AccountData {
   last_movements: any[];
 }
 
+// ===== Tab Type Options (for wizard) =====
+const TAB_TYPE_OPTIONS = [
+  { value: 'operations', label: 'قوالب عمليات', icon: 'receipt_long', desc: 'أزرار لتنفيذ عمليات (تحصيل/توريد/تحويل)', color: '#3b82f6', defaultIcon: 'receipt_long', defaultColor: '#3b82f6' },
+  { value: 'log', label: 'سجل العمليات', icon: 'history', desc: 'جدول العمليات مع فلاتر وإحصائيات', color: '#22c55e', defaultIcon: 'history', defaultColor: '#6366f1' },
+  { value: 'accounts', label: 'مراقبة حسابات', icon: 'account_balance', desc: 'عرض أرصدة حسابات مع اتجاه وآخر حركة', color: '#f59e0b', defaultIcon: 'savings', defaultColor: '#10b981' },
+  { value: 'stats', label: 'إحصائيات', icon: 'analytics', desc: 'أرقام ملخصة (تحصيل، صرف، عدد عمليات، صافي)', color: '#8b5cf6', defaultIcon: 'analytics', defaultColor: '#8b5cf6' },
+  { value: 'chart', label: 'رسم بياني', icon: 'bar_chart', desc: 'رسم بياني للتحصيل والصرف', color: '#14b8a6', defaultIcon: 'bar_chart', defaultColor: '#14b8a6' },
+  { value: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', desc: 'منطقة نص حر مع حفظ تلقائي', color: '#f97316', defaultIcon: 'sticky_note_2', defaultColor: '#f97316' },
+];
+
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
-  imports: [CommonModule, FormsModule, Gridster, GridsterItem, BaseChartDirective, ColorPickerDirective],
+  imports: [CommonModule, FormsModule, BaseChartDirective, ColorPickerDirective],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
-
 })
-export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit {
+export class CustomScreensComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private api = inject(ApiService);
@@ -139,146 +110,100 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   // ===================== Data =====================
   screens = signal<ScreenTemplate[]>([]);
   activeScreen = signal<ScreenTemplate | null>(null);
-  widgets = signal<ScreenWidget[]>([]);
-  widgetsLoading = signal(false);
 
-  // ===================== Real Widget Data =====================
-  widgetStats = signal<WidgetStats>({ totalReceipts: 0, totalPayments: 0, operationsCount: 0, netBalance: 0 });
-  widgetLogEntries = signal<LogEntry[]>([]);
-  widgetLogTotal = signal(0);
-  widgetAccounts = signal<AccountData[]>([]);
-  widgetChartData = signal<any>(null);
-  widgetOperationTypes = signal<any[]>([]);
+  // ===================== UI State =====================
+  viewMode = signal<'list' | 'wizard' | 'screen'>('list');
+  openedFromSidebar = signal(false);
 
-  // Log filters
+  // ===================== Dynamic Tabs (Screen View) =====================
+  screenTabs = signal<TabDefinition[]>([]);
+  activeTabId = signal('');
+  screenNotes = signal('');
+  private notesSaveTimeout: any = null;
+
+  // ===================== Tab Data (loaded per tab) =====================
+  operationTypes = signal<any[]>([]);
+  allAccounts = signal<any[]>([]);
+
+  // Operations tab
+  csSelectedOpType = signal<any>(null);
+  csFormEntries = signal<any[]>([]);
+  csFormDescription = signal('');
+  csFormDate = signal(new Date().toISOString().split('T')[0]);
+
+  // Log tab
+  logEntries = signal<LogEntry[]>([]);
+  logTotal = signal(0);
   logFilterDateFrom = signal('');
   logFilterDateTo = signal('');
   logFilterOpType = signal('');
 
-  // ===================== Gridster =====================
-  gridsterOptions: GridsterConfig = {};
-  gridItems: GridWidget[] = [];
+  // Accounts tab
+  widgetAccounts = signal<AccountData[]>([]);
 
-  // ===================== UI State =====================
-  viewMode = signal<'list' | 'detail' | 'wizard' | 'collection_style'>('list');
-  editMode = signal(false);
-  showWidgetLibrary = signal(false);
-  hasUnsavedChanges = signal(false);
-  openedFromSidebar = signal(false);
+  // Stats tab
+  widgetStats = signal<any>({ totalReceipts: 0, totalPayments: 0, operationsCount: 0, netBalance: 0 });
 
-  // ===================== Wizard State (5 steps) =====================
-  wizardStep = signal(1);
+  // Chart tab
+  barChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [
+    { data: [], label: 'التحصيل', backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 6 },
+    { data: [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
+  ]};
+  barChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { font: { family: 'Tajawal', size: 12 }, padding: 16 } } },
+    scales: {
+      y: { beginAtZero: true, ticks: { font: { family: 'Tajawal', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+      x: { ticks: { font: { family: 'Tajawal', size: 11 } }, grid: { display: false } },
+    },
+  };
+
+  // ===================== Wizard State =====================
+  wizardStep = signal(1); // 1=basic info, 2=add tabs, 3+=configure each tab, last=preview
   wizardScreenName = signal('');
   wizardScreenDesc = signal('');
   wizardScreenIcon = signal('dashboard');
   wizardScreenColor = signal('#3b82f6');
-  wizardSelectedTemplate = signal<string>('collection_style');
   wizardAddToSidebar = signal(true);
   wizardSidebarSectionId = signal(0);
   wizardSidebarSortOrder = signal(0);
   wizardSidebarSections = signal<any[]>([]);
-  wizardWidgets = signal<WizardWidget[]>([]);
-  wizardEditingWidgetIdx = signal<number | null>(null);
+  wizardTabs = signal<TabDefinition[]>([]);
+  wizardConfigTabIdx = signal(0); // which tab is being configured in step 3+
+  wizardIsEditing = signal(false); // true if editing existing screen
 
-  // Wizard Step 2: Tab 1 settings
-  wizardTab1Label = signal('تحصيل');
-  wizardTab1Icon = signal('arrow_downward');
-  wizardTab1Color = signal('#22c55e');
-  wizardTab1OperationTypeIds = signal<number[]>([]);
-
-  // Wizard Step 3: Tab 2 settings
-  wizardTab2Label = signal('توريد');
-  wizardTab2Icon = signal('arrow_upward');
-  wizardTab2Color = signal('#ef4444');
-  wizardTab2OperationTypeIds = signal<number[]>([]);
-
-  // Wizard Step 4: History tab
-  wizardHistoryLabel = signal('السجل');
-  wizardHistoryIcon = signal('history');
-  wizardHistoryColor = signal('#6366f1');
-
-  // Wizard Step 5: Accounts/Funds tab
-  wizardAccountsLabel = signal('الصناديق');
-  wizardAccountsIcon = signal('savings');
-  wizardAccountsColor = signal('#10b981');
-  wizardAccountIds = signal<number[]>([]);
-
-  // ===================== Widget Customization (Step 3) =====================
-  customizingWidgetIdx = signal<number | null>(null);
-
-  // ===================== Content Binding (Step 4) =====================
-  bindingWidgetIdx = signal<number | null>(null);
-  operationTypes = signal<any[]>([]);
-  allAccounts = signal<any[]>([]);
-
-  // ===================== Account Filter State =====================
+  // ===================== Account Filter (for accounts tab config) =====================
   accFilterType = signal('all');
   accSearchQuery = signal('');
 
-  // فلاتر ديناميكية: تُحسب من البيانات الفعلية
   accDynamicFilters = computed(() => {
     const all = this.allAccounts();
     const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
     const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet', 'cash', 'custody', 'service'];
     const sorted = typesInDB.sort((a: string, b: string) => {
-      const ia = priority.indexOf(a);
-      const ib = priority.indexOf(b);
+      const ia = priority.indexOf(a); const ib = priority.indexOf(b);
       if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
+      if (ia >= 0) return -1; if (ib >= 0) return 1;
       return getAccTypeMeta(a).label.localeCompare(getAccTypeMeta(b).label, 'ar');
     });
     return sorted.map(type => ({ value: type, ...getAccTypeMeta(type) }));
   });
 
-  // الحسابات المفلترة
   accFiltered = computed(() => {
     const type = this.accFilterType();
     const q = this.accSearchQuery().toLowerCase();
     return this.allAccounts().filter(a => {
       const matchType = type === 'all' || a.accountType === type;
-      const matchQ = !q || (a.name || '').toLowerCase().includes(q) ||
-        (a.provider || '').toLowerCase().includes(q) ||
-        (a.subType || '').toLowerCase().includes(q);
+      const matchQ = !q || (a.name || '').toLowerCase().includes(q) || (a.provider || '').toLowerCase().includes(q) || (a.subType || '').toLowerCase().includes(q);
       return matchType && matchQ;
     });
   });
 
-  setAccFilterType(type: string) {
-    this.accFilterType.set(type);
-  }
-
-  getAccTypeMeta(type: string) {
-    return getAccTypeMeta(type);
-  }
-
-  // ===================== Copy Widget State =====================
-  showCopyWidgetModal = signal(false);
-  otherScreens = signal<ScreenWithWidgets[]>([]);
-  selectedCopyScreen = signal<ScreenWithWidgets | null>(null);
-
-  // ===================== Screen Form Modal =====================
-  showScreenForm = signal(false);
-  editingScreen = signal<ScreenTemplate | null>(null);
-  screenForm = signal({
-    name: '',
-    description: '',
-    icon: 'dashboard',
-    color: '#3b82f6',
-  });
-
-  // ===================== Widget Edit Modal (Detail View) =====================
-  showWidgetForm = signal(false);
-  editingWidget = signal<ScreenWidget | null>(null);
-  widgetForm = signal({
-    widgetType: 'templates',
-    title: '',
-    config: {} as any,
-  });
-
-  // ===================== Notes Widget =====================
-  notesText: { [key: number]: string } = {};
-  private notesSaveTimeout: { [key: number]: any } = {};
+  // ===================== Config Wizard (for existing screens) =====================
+  showConfigWizard = signal(false);
+  configWizardStep = signal(1);
+  configWizardTabs = signal<TabDefinition[]>([]);
+  configWizardConfigTabIdx = signal(0);
 
   // ===================== Permissions Modal =====================
   showPermissionsModal = signal(false);
@@ -287,6 +212,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   permissionsMap = signal<{ [userId: number]: string }>({});
   permissionsLoading = signal(false);
 
+  // ===================== Screen Form Modal (Edit name/icon/color) =====================
+  showScreenForm = signal(false);
+  editingScreen = signal<ScreenTemplate | null>(null);
+  screenForm = signal({ name: '', description: '', icon: 'dashboard', color: '#3b82f6' });
+
   // ===================== Add to Sidebar Modal =====================
   showSidebarModal = signal(false);
   sidebarScreen = signal<ScreenTemplate | null>(null);
@@ -294,50 +224,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   selectedSidebarSection = signal(0);
   sidebarSortOrder = signal(99);
 
-  // ===================== Collection Style Config =====================
-  collectionStyleConfig = signal<any>(null);
-  csActiveTab = signal<'tab1' | 'tab2' | 'history' | 'funds'>('tab1');
-  csConfigLoading = signal(false);
-  // Collection Style Wizard (4 steps)
-  csWizardStep = signal(1);
-  csTab1Label = signal('تحصيل');
-  csTab1Icon = signal('call_received');
-  csTab1Color = signal('#22c55e');
-  csTab2Label = signal('توريد');
-  csTab2Icon = signal('call_made');
-  csTab2Color = signal('#ef4444');
-  csHistoryLabel = signal('السجل');
-  csHistoryIcon = signal('history');
-  csHistoryColor = signal('#6366f1');
-  csAccountsSectionLabel = signal('الصناديق');
-  csAccountsIcon = signal('savings');
-  csAccountsColor = signal('#10b981');
-  csTab1OperationTypeIds = signal<number[]>([]);
-  csTab2OperationTypeIds = signal<number[]>([]);
-  csAccountIds = signal<number[]>([]);
-  showCsConfigWizard = signal(false);
-
-  // Collection Style - Operation Form
-  csSelectedOpType = signal<any>(null);
-  csFormEntries = signal<any[]>([]);
-  csFormDescription = signal('');
-  csFormDate = signal(new Date().toISOString().split('T')[0]);
-  csVouchers = signal<any[]>([]);
-
-  // ===================== Operation Execution Modal =====================
-  showOperationModal = signal(false);
-  selectedOperationType = signal<any>(null);
-  operationEntries = signal<any[]>([]);
-  operationDescription = signal('');
-  operationDate = signal(new Date().toISOString().split('T')[0]);
-
   // ===================== Options =====================
+  tabTypeOptions = TAB_TYPE_OPTIONS;
+
   icons = [
     'dashboard', 'bolt', 'receipt_long', 'receipt', 'account_balance_wallet',
     'category', 'savings', 'menu_book', 'currency_exchange', 'groups',
     'handshake', 'warehouse', 'local_shipping', 'balance', 'assessment',
     'monitor', 'grid_view', 'view_module', 'widgets', 'space_dashboard',
     'analytics', 'pie_chart', 'bar_chart', 'trending_up', 'speed',
+    'history', 'sticky_note_2', 'arrow_downward', 'arrow_upward',
+    'call_received', 'call_made', 'payments', 'lock', 'miscellaneous_services',
   ];
 
   colors = [
@@ -345,167 +242,24 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     '#14b8a6', '#f97316', '#ec4899', '#06b6d4', '#84cc16',
   ];
 
-  widgetTypes = [
-    { value: 'templates', label: 'عنصر القوالب', icon: 'receipt_long', desc: 'عرض قوالب العمليات وتنفيذها', color: '#3b82f6', defaultW: 6, defaultH: 4 },
-    { value: 'log', label: 'عنصر السجل', icon: 'history', desc: 'عرض سجل العمليات المنفذة', color: '#22c55e', defaultW: 6, defaultH: 5 },
-    { value: 'accounts', label: 'مراقبة الحسابات', icon: 'account_balance', desc: 'مراقبة أرصدة الحسابات', color: '#f59e0b', defaultW: 4, defaultH: 4 },
-    { value: 'stats', label: 'الإحصائيات', icon: 'analytics', desc: 'أرقام ملخصة وKPIs', color: '#8b5cf6', defaultW: 12, defaultH: 2 },
-    { value: 'chart', label: 'رسم بياني', icon: 'bar_chart', desc: 'تحليل بصري للبيانات', color: '#14b8a6', defaultW: 6, defaultH: 5 },
-    { value: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', desc: 'ملاحظات وتذكيرات', color: '#f97316', defaultW: 4, defaultH: 3 },
-  ];
-
-  // ===================== Screen Templates =====================
-  screenTemplateOptions = [
-    {
-      key: 'collection_style',
-      name: 'شاشة مخصصة',
-      desc: 'شاشة ثابتة بتبويبين للعمليات + سجل + مراقبة حسابات - قابلة للتخصيص',
-      icon: 'receipt_long',
-      color: '#14b8a6',
-      widgets: [],
-    },
-  ];
-
-  // Chart data (real data)
-  barChartData: ChartConfiguration<'bar'>['data'] = {
-    labels: [],
-    datasets: [
-      {
-        data: [],
-        label: 'التحصيل',
-        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-        borderRadius: 6,
-      },
-      {
-        data: [],
-        label: 'الصرف',
-        backgroundColor: 'rgba(239, 68, 68, 0.6)',
-        borderColor: 'rgba(239, 68, 68, 1)',
-        borderWidth: 1,
-        borderRadius: 6,
-      },
-    ],
-  };
-
-  barChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: { font: { family: 'Tajawal', size: 12 }, padding: 16 },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { font: { family: 'Tajawal', size: 11 } },
-        grid: { color: 'rgba(0,0,0,0.05)' },
-      },
-      x: {
-        ticks: { font: { family: 'Tajawal', size: 11 } },
-        grid: { display: false },
-      },
-    },
-  };
-
-  getWidgetTypeInfo(type: string) {
-    return this.widgetTypes.find(w => w.value === type) || this.widgetTypes[0];
-  }
-
+  // ===================== Lifecycle =====================
   async ngOnInit() {
-    this.initGridsterOptions();
     this.route.parent?.params.subscribe(async (params) => {
       this.bizId = parseInt(params['bizId']);
       await this.loadScreens();
-
-      // Check if URL has ?screen= param to open directly
       this.route.queryParams.subscribe(async (qp) => {
         if (qp['screen']) {
           this.openedFromSidebar.set(true);
           const screenId = parseInt(qp['screen']);
           const screen = this.screens().find(s => s.id === screenId);
-          if (screen) {
-            await this.openScreen(screen);
-          }
+          if (screen) await this.openScreen(screen);
         }
       });
     });
   }
 
-  ngAfterViewInit() {
-    // No animations
-  }
-
   ngOnDestroy() {
-    // Clear notes save timeouts
-    Object.values(this.notesSaveTimeout).forEach(t => clearTimeout(t));
-  }
-
-  // ===================== GSAP Animations =====================
-  // Animations removed - static design
-
-  initGridsterOptions() {
-    this.gridsterOptions = {
-      gridType: GridType.ScrollVertical,
-      compactType: CompactType.CompactUpAndLeft,
-      displayGrid: DisplayGrid.OnDragAndResize,
-      pushItems: true,
-      draggable: {
-        enabled: false,
-        ignoreContentClass: 'widget-body-content',
-      },
-      resizable: {
-        enabled: false,
-      },
-      minCols: 12,
-      maxCols: 12,
-      minRows: 4,
-      margin: 12,
-      outerMargin: true,
-      outerMarginTop: 12,
-      outerMarginRight: 12,
-      outerMarginBottom: 12,
-      outerMarginLeft: 12,
-      mobileBreakpoint: 640,
-      defaultItemCols: 4,
-      defaultItemRows: 3,
-      fixedColWidth: 0,
-      fixedRowHeight: 80,
-      itemChangeCallback: (item: GridsterItemConfig) => {
-        this.onItemChange(item as GridWidget);
-      },
-      itemResizeCallback: (item: GridsterItemConfig) => {
-        this.onItemChange(item as GridWidget);
-      },
-    };
-  }
-
-  updateGridsterEditMode(isEdit: boolean) {
-    this.gridsterOptions = {
-      ...this.gridsterOptions,
-      draggable: {
-        ...this.gridsterOptions.draggable,
-        enabled: isEdit,
-      },
-      resizable: {
-        ...this.gridsterOptions.resizable,
-        enabled: isEdit,
-      },
-      displayGrid: isEdit ? DisplayGrid.Always : DisplayGrid.None,
-    };
-  }
-
-  onItemChange(item: GridWidget) {
-    if (item.widgetData) {
-      item.widgetData.positionX = item.x;
-      item.widgetData.positionY = item.y;
-      item.widgetData.width = item.cols;
-      item.widgetData.height = item.rows;
-      this.hasUnsavedChanges.set(true);
-    }
+    if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
   }
 
   // ===================== Load Data =====================
@@ -514,7 +268,6 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     try {
       const data = await this.api.getScreens(this.bizId);
       this.screens.set(data);
-
     } catch (e: any) {
       this.toast.error(e.message || 'خطأ في تحميل الشاشات');
     } finally {
@@ -522,791 +275,148 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     }
   }
 
-  async loadWidgets(screenId: number) {
-    this.widgetsLoading.set(true);
-    try {
-      const data = await this.api.getScreenWidgets(screenId);
-      this.widgets.set(data);
-      this.buildGridItems(data);
-      // Load real data for all widget types
-      await this.loadAllWidgetData(data);
-
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل العناصر');
-    } finally {
-      this.widgetsLoading.set(false);
-    }
-  }
-
-  buildGridItems(widgets: ScreenWidget[]) {
-    this.gridItems = widgets.map(w => {
-      const item: GridWidget = {
-        x: w.positionX,
-        y: w.positionY,
-        cols: w.width,
-        rows: w.height,
-        widgetData: w,
-      };
-      return item;
-    });
-    // Initialize notes
-    widgets.forEach(w => {
-      if (w.widgetType === 'notes') {
-        this.notesText[w.id] = w.config?.text || '';
-      }
-    });
-  }
-
-  // ===================== Load Real Widget Data =====================
-  async loadAllWidgetData(widgets: ScreenWidget[]) {
-    const types = new Set(widgets.map(w => w.widgetType));
-    const promises: Promise<void>[] = [];
-
-    if (types.has('stats')) promises.push(this.loadWidgetStats());
-    if (types.has('log')) promises.push(this.loadWidgetLog());
-    if (types.has('chart')) promises.push(this.loadWidgetChart());
-    if (types.has('templates')) promises.push(this.loadWidgetTemplates(widgets));
-    if (types.has('accounts')) promises.push(this.loadWidgetAccounts(widgets));
-    if (types.has('notes')) {
-      for (const w of widgets.filter(w => w.widgetType === 'notes')) {
-        promises.push(this.loadWidgetNotes(w));
-      }
-    }
-
-    await Promise.allSettled(promises);
-  }
-
-  async loadWidgetStats() {
-    try {
-      const stats = await this.api.getWidgetStats(this.bizId);
-      this.widgetStats.set(stats);
-    } catch (e) {
-      console.error('Error loading widget stats:', e);
-    }
-  }
-
-  async loadWidgetLog() {
-    try {
-      const filters: any = { limit: 50 };
-      if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
-      if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
-      if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
-      const result = await this.api.getWidgetLog(this.bizId, filters);
-      this.widgetLogEntries.set(result.entries || []);
-      this.widgetLogTotal.set(result.total || 0);
-    } catch (e) {
-      console.error('Error loading widget log:', e);
-    }
-  }
-
-  async loadWidgetChart() {
-    try {
-      const chartData = await this.api.getWidgetChart(this.bizId, 6);
-      this.widgetChartData.set(chartData);
-      // Update chart data
-      this.barChartData = {
-        labels: chartData.labels || [],
-        datasets: [
-          {
-            data: chartData.receipts || [],
-            label: 'التحصيل',
-            backgroundColor: 'rgba(59, 130, 246, 0.6)',
-            borderColor: 'rgba(59, 130, 246, 1)',
-            borderWidth: 1,
-            borderRadius: 6,
-          },
-          {
-            data: chartData.payments || [],
-            label: 'الصرف',
-            backgroundColor: 'rgba(239, 68, 68, 0.6)',
-            borderColor: 'rgba(239, 68, 68, 1)',
-            borderWidth: 1,
-            borderRadius: 6,
-          },
-        ],
-      };
-    } catch (e) {
-      console.error('Error loading widget chart:', e);
-    }
-  }
-
-  async loadWidgetTemplates(widgets: ScreenWidget[]) {
-    try {
-      // Collect all operation type IDs from all template widgets
-      const allOpTypeIds = new Set<number>();
-      widgets.filter(w => w.widgetType === 'templates').forEach(w => {
-        (w.config?.operationTypeIds || []).forEach((id: number) => allOpTypeIds.add(id));
-      });
-
-      let opTypes: any[];
-      if (allOpTypeIds.size > 0) {
-        opTypes = await this.api.getWidgetOperationTypes(this.bizId, Array.from(allOpTypeIds));
-      } else {
-        opTypes = await this.api.getWidgetOperationTypes(this.bizId);
-      }
-      this.widgetOperationTypes.set(opTypes);
-    } catch (e) {
-      console.error('Error loading widget templates:', e);
-    }
-  }
-
-  async loadWidgetAccounts(widgets: ScreenWidget[]) {
-    try {
-      const allAccountIds = new Set<number>();
-      widgets.filter(w => w.widgetType === 'accounts').forEach(w => {
-        (w.config?.accountIds || []).forEach((id: number) => allAccountIds.add(id));
-      });
-
-      let accounts: any[];
-      if (allAccountIds.size > 0) {
-        accounts = await this.api.getWidgetAccounts(this.bizId, Array.from(allAccountIds));
-      } else {
-        accounts = await this.api.getWidgetAccounts(this.bizId);
-      }
-      this.widgetAccounts.set(accounts);
-    } catch (e) {
-      console.error('Error loading widget accounts:', e);
-    }
-  }
-
-  async loadWidgetNotes(widget: ScreenWidget) {
-    try {
-      const result = await this.api.getWidgetNotes(widget.id);
-      this.notesText[widget.id] = result.text || '';
-    } catch (e) {
-      console.error('Error loading widget notes:', e);
-    }
-  }
-
-  // ===================== Widget Data Getters =====================
-  getTemplatesForWidget(widget: ScreenWidget): any[] {
-    const opTypeIds = widget.config?.operationTypeIds || [];
-    if (opTypeIds.length === 0) return this.widgetOperationTypes();
-    return this.widgetOperationTypes().filter((ot: any) => opTypeIds.includes(ot.id));
-  }
-
-  getAccountsForWidget(widget: ScreenWidget): AccountData[] {
-    const accountIds = widget.config?.accountIds || [];
-    if (accountIds.length === 0) return this.widgetAccounts();
-    return this.widgetAccounts().filter((a: any) => accountIds.includes(a.id));
-  }
-
-  getStatsData(): { label: string; value: string; icon: string; color: string }[] {
-    const stats = this.widgetStats();
-    return [
-      { label: 'إجمالي التحصيل', value: this.formatNumber(stats.totalReceipts), icon: 'trending_up', color: '#22c55e' },
-      { label: 'إجمالي الصرف', value: this.formatNumber(stats.totalPayments), icon: 'trending_down', color: '#ef4444' },
-      { label: 'عدد العمليات', value: String(stats.operationsCount), icon: 'receipt_long', color: '#3b82f6' },
-      { label: 'صافي الرصيد', value: this.formatNumber(stats.netBalance), icon: 'account_balance', color: '#8b5cf6' },
-    ];
-  }
-
-  // ===================== Log Filter Actions =====================
-  async applyLogFilters() {
-    await this.loadWidgetLog();
-  }
-
-  async clearLogFilters() {
-    this.logFilterDateFrom.set('');
-    this.logFilterDateTo.set('');
-    this.logFilterOpType.set('');
-    await this.loadWidgetLog();
-  }
-
-  // ===================== Operation Execution =====================
-  openOperationExecution(opType: any) {
-    this.selectedOperationType.set(opType);
-    const accounts = opType.accounts || [];
-    this.operationEntries.set(
-      accounts.map((acc: any) => ({
-        accountId: acc.accountId,
-        accountName: acc.label || acc.accountName || '',
-        amount: '',
-        notes: '',
-      }))
-    );
-    if (accounts.length === 0) {
-      this.operationEntries.set([{ accountId: null, accountName: '', amount: '', notes: '' }]);
-    }
-    this.operationDescription.set('');
-    this.operationDate.set(new Date().toISOString().split('T')[0]);
-    this.showOperationModal.set(true);
-
-  }
-
-  closeOperationModal() {
-    this.showOperationModal.set(false);
-    this.selectedOperationType.set(null);
-  }
-
-  updateOperationEntry(index: number, field: string, value: string) {
-    this.operationEntries.update(entries => {
-      const updated = [...entries];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  }
-
-  // حساب إجمالي المبالغ المدخلة
-  getOperationTotal(): number {
-    return this.operationEntries().reduce((sum, e) => {
-      const amt = parseFloat(e.amount);
-      return sum + (isNaN(amt) ? 0 : amt);
-    }, 0);
-  }
-
-  // عدد الحسابات التي أدخل فيها مبلغ
-  getFilledEntriesCount(): number {
-    return this.operationEntries().filter(e => parseFloat(e.amount) > 0).length;
-  }
-
-  // جلب رصيد حساب معين من widgetAccounts
-  getAccountBalance(accountId: number): number {
-    const acc = this.widgetAccounts().find(a => a.id === accountId);
-    return acc?.total_balance || 0;
-  }
-
-  async executeOperation() {
-    const opType = this.selectedOperationType();
-    if (!opType) return;
-
-    const entries = this.operationEntries().filter(e => parseFloat(e.amount) > 0);
-    if (!entries.length) {
-      this.toast.warning('أدخل مبلغاً واحداً على الأقل');
-      return;
-    }
-
-    const total = this.getOperationTotal();
-    const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'صرف' : 'تحويل';
-
-    // === تأكيد قبل التنفيذ ===
-    const summaryLines = entries.map(e => `• ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
-    const confirmed = await this.toast.confirm({
-      title: `تأكيد ${vTypeLabel} - ${opType.name}`,
-      message: `سيتم تنفيذ ${entries.length} عملية بإجمالي ${total.toLocaleString('ar-SA')} ريال:\n${summaryLines}`,
-      type: opType.voucherType === 'payment' ? 'danger' : 'info',
-    });
-    if (!confirmed) return;
-
-    this.saving.set(true);
-    const results: any[] = [];
-    const errors: string[] = [];
+  // ===================== Open Screen (Dynamic Tabs) =====================
+  async openScreen(screen: ScreenTemplate) {
+    this.activeScreen.set(screen);
+    this.viewMode.set('screen');
+    this.loading.set(true);
 
     try {
-      for (const entry of entries) {
-        try {
-          const result = await this.api.createVoucher(this.bizId, {
-            voucherType: opType.voucherType || 'receipt',
-            operationTypeId: opType.id,
-            toAccountId: entry.accountId,
-            amount: parseFloat(entry.amount),
-            currencyId: 1,
-            description: this.operationDescription() || `${opType.name} - ${entry.accountName}`,
-            voucherDate: this.operationDate(),
-          });
-          results.push(result);
-        } catch (e: any) {
-          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
-        }
+      // Load config (tabs)
+      const config = await this.api.getCollectionStyleConfig(this.bizId, screen.id);
+      const tabs: TabDefinition[] = config.tabs || [];
+      this.screenTabs.set(tabs);
+      this.screenNotes.set(config.notes || '');
+
+      // Set first tab as active
+      if (tabs.length > 0) {
+        this.activeTabId.set(tabs[0].id);
       }
 
-      if (results.length > 0 && errors.length === 0) {
-        this.toast.success(`تم تنفيذ ${results.length} عملية بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
-      } else if (results.length > 0 && errors.length > 0) {
-        this.toast.warning(`تم تنفيذ ${results.length} عملية بنجاح، وفشلت ${errors.length} عملية`);
-      } else {
-        const firstError = errors.length > 0 ? errors[0] : '';
-        const errorDetail = firstError.includes('غير مفعّل') 
-          ? 'نوع العملية غير مفعّل - يرجى تفعيله من صفحة أنواع العمليات'
-          : firstError.includes('غير موجود')
-          ? 'نوع العملية غير موجود - يرجى التحقق من الإعدادات'
-          : firstError.includes('لا ينتمي')
-          ? 'الحساب لا ينتمي لهذا العمل - يرجى التحقق من إعدادات الحسابات'
-          : firstError.includes('المستهدف')
-          ? 'الحساب المستهدف مطلوب - يرجى التحقق من إعدادات نوع العملية'
-          : `فشلت العمليات:\n${errors.join('\n')}`;
-        this.toast.error(errorDetail);
-      }
-
-      this.closeOperationModal();
-      // Refresh widget data (أرصدة + سجل + إحصائيات)
-      await this.loadAllWidgetData(this.widgets());
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تنفيذ العملية');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // ===================== WIZARD (5 Steps) =====================
-  startWizard() {
-    this.viewMode.set('wizard');
-    this.wizardStep.set(1);
-    this.wizardScreenName.set('');
-    this.wizardScreenDesc.set('');
-    this.wizardScreenIcon.set('dashboard');
-    this.wizardScreenColor.set('#3b82f6');
-    this.wizardSelectedTemplate.set('collection_style');
-    this.wizardAddToSidebar.set(true);
-    this.wizardSidebarSectionId.set(0);
-    this.wizardSidebarSortOrder.set(0);
-    this.wizardWidgets.set([]);
-    this.customizingWidgetIdx.set(null);
-    this.bindingWidgetIdx.set(null);
-
-    // Step 2: Tab 1
-    this.wizardTab1Label.set('تحصيل');
-    this.wizardTab1Icon.set('arrow_downward');
-    this.wizardTab1Color.set('#22c55e');
-    this.wizardTab1OperationTypeIds.set([]);
-
-    // Step 3: Tab 2
-    this.wizardTab2Label.set('توريد');
-    this.wizardTab2Icon.set('arrow_upward');
-    this.wizardTab2Color.set('#ef4444');
-    this.wizardTab2OperationTypeIds.set([]);
-
-    // Step 4: History
-    this.wizardHistoryLabel.set('السجل');
-    this.wizardHistoryIcon.set('history');
-    this.wizardHistoryColor.set('#6366f1');
-
-    // Step 5: Accounts
-    this.wizardAccountsLabel.set('الصناديق');
-    this.wizardAccountsIcon.set('savings');
-    this.wizardAccountsColor.set('#10b981');
-    this.wizardAccountIds.set([]);
-
-    // تحميل أقسام السايدبار والبيانات
-    this.loadWizardSidebarSections();
-    this.loadContentBindingData();
-  }
-
-  async loadWizardSidebarSections() {
-    try {
-      const sections = await this.api.getSidebarSections(this.bizId);
-      this.wizardSidebarSections.set(sections);
-      if (sections.length > 0) {
-        this.wizardSidebarSectionId.set(sections[0].id);
-      }
-    } catch (e) {
-      console.error('خطأ في تحميل أقسام السايدبار:', e);
-    }
-  }
-
-  cancelWizard() {
-    this.viewMode.set('list');
-
-  }
-
-  selectTemplate(key: string) {
-    this.wizardSelectedTemplate.set(key);
-    const tpl = this.screenTemplateOptions.find(t => t.key === key);
-    if (tpl) {
-      this.wizardWidgets.set([]);
-      this.wizardScreenIcon.set(tpl.icon);
-      this.wizardScreenColor.set(tpl.color);
-      if (!this.wizardScreenName()) {
-        this.wizardScreenName.set('شاشة مخصصة');
-      }
-    }
-  }
-
-  nextWizardStep() {
-    const step = this.wizardStep();
-    if (step === 1) {
-      // التحقق من اسم الشاشة
-      if (!this.wizardScreenName().trim()) {
-        this.toast.warning('يرجى إدخال اسم الشاشة');
-        return;
-      }
-    }
-    if (step < 5) {
-      this.wizardStep.set(step + 1);
-    } else {
-      // الخطوة 5 → حفظ
-      this.saveWizardScreen();
-    }
-  }
-
-  prevWizardStep() {
-    const step = this.wizardStep();
-    if (step > 1) {
-      this.wizardStep.set(step - 1);
-    }
-  }
-
-  toggleWizardTab1OpType(id: number) {
-    const ids = [...this.wizardTab1OperationTypeIds()];
-    const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
-    this.wizardTab1OperationTypeIds.set(ids);
-  }
-
-  toggleWizardTab2OpType(id: number) {
-    const ids = [...this.wizardTab2OperationTypeIds()];
-    const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
-    this.wizardTab2OperationTypeIds.set(ids);
-  }
-
-  toggleWizardAccount(id: number) {
-    const ids = [...this.wizardAccountIds()];
-    const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
-    this.wizardAccountIds.set(ids);
-  }
-
-  async loadContentBindingData() {
-    try {
+      // Load shared data
       const [opTypes, accountsData] = await Promise.all([
         this.api.getOperationTypes(this.bizId),
         this.api.getAllAccounts(this.bizId),
       ]);
       this.operationTypes.set(opTypes);
       this.allAccounts.set(accountsData.accounts || []);
-    } catch (e) {
-      console.error('Error loading binding data:', e);
+
+      // Load data for each tab type
+      await this.loadTabsData(tabs);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في تحميل الشاشة');
+    } finally {
+      this.loading.set(false);
     }
   }
 
-  // Wizard Step 2: Add/Remove widgets
-  addWizardWidget(type: any) {
-    const widgets = [...this.wizardWidgets()];
-    widgets.push({
-      widgetType: type.value,
-      title: type.label,
-      config: {},
-      positionX: 0,
-      positionY: widgets.length * 3,
-      width: type.defaultW,
-      height: type.defaultH,
-      sortOrder: widgets.length,
-      isVisible: true,
-    });
-    this.wizardWidgets.set(widgets);
-  }
+  async loadTabsData(tabs: TabDefinition[]) {
+    const types = new Set(tabs.map(t => t.type));
+    const promises: Promise<void>[] = [];
 
-  removeWizardWidget(idx: number) {
-    const widgets = [...this.wizardWidgets()];
-    widgets.splice(idx, 1);
-    this.wizardWidgets.set(widgets);
-    if (this.customizingWidgetIdx() === idx) this.customizingWidgetIdx.set(null);
-    if (this.bindingWidgetIdx() === idx) this.bindingWidgetIdx.set(null);
-  }
+    if (types.has('log')) promises.push(this.loadLogData());
+    if (types.has('stats')) promises.push(this.loadStatsData());
+    if (types.has('chart')) promises.push(this.loadChartData());
 
-  // Wizard Step 3: Customize widgets
-  startCustomizing(idx: number) {
-    this.customizingWidgetIdx.set(idx);
-  }
-
-  updateWizardWidgetTitle(idx: number, title: string) {
-    const widgets = [...this.wizardWidgets()];
-    widgets[idx] = { ...widgets[idx], title };
-    this.wizardWidgets.set(widgets);
-  }
-
-  updateWizardWidgetColor(idx: number, color: string) {
-    const widgets = [...this.wizardWidgets()];
-    widgets[idx] = { ...widgets[idx], config: { ...widgets[idx].config, color } };
-    this.wizardWidgets.set(widgets);
-  }
-
-  toggleWizardWidgetVisibility(idx: number) {
-    const widgets = [...this.wizardWidgets()];
-    widgets[idx] = { ...widgets[idx], isVisible: !widgets[idx].isVisible };
-    this.wizardWidgets.set(widgets);
-  }
-
-  // Wizard Step 4: Content binding
-  startBinding(idx: number) {
-    this.bindingWidgetIdx.set(idx);
-  }
-
-  toggleOperationType(idx: number, opTypeId: number) {
-    const widgets = [...this.wizardWidgets()];
-    const w = widgets[idx];
-    const selectedOps = w.config.operationTypeIds || [];
-    const newOps = selectedOps.includes(opTypeId)
-      ? selectedOps.filter((id: number) => id !== opTypeId)
-      : [...selectedOps, opTypeId];
-    widgets[idx] = { ...w, config: { ...w.config, operationTypeIds: newOps } };
-    this.wizardWidgets.set(widgets);
-  }
-
-  toggleAccount(idx: number, accountId: number) {
-    const widgets = [...this.wizardWidgets()];
-    const w = widgets[idx];
-    const selectedAccs = w.config.accountIds || [];
-    const newAccs = selectedAccs.includes(accountId)
-      ? selectedAccs.filter((id: number) => id !== accountId)
-      : [...selectedAccs, accountId];
-    widgets[idx] = { ...w, config: { ...w.config, accountIds: newAccs } };
-    this.wizardWidgets.set(widgets);
-  }
-
-  updateLogFilter(idx: number, field: string, value: string) {
-    const widgets = [...this.wizardWidgets()];
-    const w = widgets[idx];
-    const filters = w.config.filters || {};
-    filters[field] = value;
-    widgets[idx] = { ...w, config: { ...w.config, filters } };
-    this.wizardWidgets.set(widgets);
-  }
-
-  // Wizard: Save
-  async saveWizardScreen() {
-    const name = this.wizardScreenName();
-    if (!name.trim()) {
-      this.toast.warning('يرجى إدخال اسم الشاشة');
-      return;
+    // Load accounts for accounts tabs
+    const accountTabs = tabs.filter(t => t.type === 'accounts');
+    if (accountTabs.length > 0) {
+      const allAccountIds = new Set<number>();
+      accountTabs.forEach(t => (t.config?.accountIds || []).forEach((id: number) => allAccountIds.add(id)));
+      if (allAccountIds.size > 0) {
+        promises.push(this.loadAccountsData(Array.from(allAccountIds)));
+      }
     }
 
-    this.saving.set(true);
+    await Promise.allSettled(promises);
+  }
+
+  async loadLogData() {
     try {
-      const addToSidebar = this.wizardAddToSidebar();
-      const payload: any = {
-        name,
-        description: this.wizardScreenDesc(),
-        icon: this.wizardScreenIcon(),
-        color: this.wizardScreenColor(),
-        templateKey: 'collection_style',
-        widgets: [],
-        addToSidebar,
+      const filters: any = { limit: 50 };
+      if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
+      if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
+      if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
+      const result = await this.api.getWidgetLog(this.bizId, filters);
+      this.logEntries.set(result.entries || []);
+      this.logTotal.set(result.total || 0);
+    } catch (e) { console.error('Error loading log:', e); }
+  }
+
+  async loadStatsData() {
+    try {
+      const stats = await this.api.getWidgetStats(this.bizId);
+      this.widgetStats.set(stats);
+    } catch (e) { console.error('Error loading stats:', e); }
+  }
+
+  async loadChartData() {
+    try {
+      const chartData = await this.api.getWidgetChart(this.bizId, 6);
+      this.barChartData = {
+        labels: chartData.labels || [],
+        datasets: [
+          { data: chartData.receipts || [], label: 'التحصيل', backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 6 },
+          { data: chartData.payments || [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
+        ],
       };
-      // إضافة معلومات السايدبار إذا تم اختيار الإضافة
-      if (addToSidebar) {
-        const sectionId = this.wizardSidebarSectionId();
-        if (sectionId) payload.sidebarSectionId = sectionId;
-        payload.sidebarSortOrder = this.wizardSidebarSortOrder();
-      }
-      const newScreen = await this.api.createScreen(this.bizId, payload);
-
-      // حفظ إعدادات التبويبات والحسابات مباشرة
-      if (newScreen?.id) {
-        const configPayload = {
-          tab1Label: this.wizardTab1Label(),
-          tab1Icon: this.wizardTab1Icon(),
-          tab1Color: this.wizardTab1Color(),
-          tab1OperationTypeIds: this.wizardTab1OperationTypeIds(),
-          tab2Label: this.wizardTab2Label(),
-          tab2Icon: this.wizardTab2Icon(),
-          tab2Color: this.wizardTab2Color(),
-          tab2OperationTypeIds: this.wizardTab2OperationTypeIds(),
-          historyLabel: this.wizardHistoryLabel(),
-          historyIcon: this.wizardHistoryIcon(),
-          historyColor: this.wizardHistoryColor(),
-          accountsSectionLabel: this.wizardAccountsLabel(),
-          accountsIcon: this.wizardAccountsIcon(),
-          accountsColor: this.wizardAccountsColor(),
-          accountIds: this.wizardAccountIds(),
-        };
-        await this.api.saveCollectionStyleConfig(this.bizId, newScreen.id, configPayload);
-      }
-
-      this.toast.success('تم إنشاء الشاشة بنجاح');
-      await this.loadScreens();
-
-      // فتح الشاشة مباشرة
-      if (newScreen?.id) {
-        const screen = this.screens().find(s => s.id === newScreen.id) || { ...newScreen };
-        await this.openScreen(screen);
-      } else {
-        this.viewMode.set('list');
-      }
-    } catch (e: any) {
-      this.toast.error(e.message || 'حث خطأ أثناء الإنشاء');
-    } finally {
-      this.saving.set(false);
-    }
+    } catch (e) { console.error('Error loading chart:', e); }
   }
 
-  // ===================== Screen Form (Edit existing) =====================
-  openScreenForm(screen?: ScreenTemplate) {
-    if (screen) {
-      this.editingScreen.set(screen);
-      this.screenForm.set({
-        name: screen.name,
-        description: screen.description || '',
-        icon: screen.icon || 'dashboard',
-        color: screen.color || '#3b82f6',
-      });
-      this.showScreenForm.set(true);
-  
-    } else {
-      this.startWizard();
-    }
-  }
-
-  closeScreenForm() {
-    this.showScreenForm.set(false);
-    this.editingScreen.set(null);
-  }
-
-  async saveScreen() {
-    const form = this.screenForm();
-    if (!form.name.trim()) {
-      this.toast.warning('يرجى إدخال اسم الشاشة');
-      return;
-    }
-
-    this.saving.set(true);
+  async loadAccountsData(accountIds: number[]) {
     try {
-      const editing = this.editingScreen();
-      if (editing) {
-        await this.api.updateScreen(editing.id, form);
-        this.toast.success('تم تحديث الشاشة');
-      } else {
-        await this.api.createScreen(this.bizId, form);
-        this.toast.success('تم إنشاء الشاشة');
-      }
-      this.closeScreenForm();
-      await this.loadScreens();
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    } finally {
-      this.saving.set(false);
-    }
+      const accounts = await this.api.getWidgetAccounts(this.bizId, accountIds);
+      this.widgetAccounts.set(accounts);
+    } catch (e) { console.error('Error loading accounts:', e); }
   }
 
-  // ===================== Screen CRUD =====================
-  async deleteScreen(screen: ScreenTemplate) {
-    const confirmed = await this.toast.confirm({
-      title: 'حذف الشاشة',
-      message: `هل تريد حذف الشاشة "${screen.name}"؟ سيتم حذف جميع العناصر بداخلها.`,
-      type: 'danger',
-    });
-    if (!confirmed) return;
+  // ===================== Tab Helpers =====================
+  setActiveTab(tabId: string) { this.activeTabId.set(tabId); }
 
-    try {
-      await this.api.deleteScreen(screen.id);
-      this.toast.success('تم حذف الشاشة');
-      await this.loadScreens();
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء الحذف');
-    }
+  getTabOperationTypes(tab: TabDefinition): any[] {
+    const ids = tab.config?.operationTypeIds || [];
+    if (ids.length === 0) return this.operationTypes();
+    return this.operationTypes().filter((ot: any) => ids.includes(ot.id));
   }
 
-  async cloneScreen(screen: ScreenTemplate) {
-    this.saving.set(true);
-    try {
-      await this.api.cloneScreen(screen.id, { name: `${screen.name} (نسخة)` });
-      this.toast.success('تم نسخ الشاشة بنجاح');
-      await this.loadScreens();
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء النسخ');
-    } finally {
-      this.saving.set(false);
-    }
+  getTabAccounts(tab: TabDefinition): AccountData[] {
+    const ids = tab.config?.accountIds || [];
+    if (ids.length === 0) return this.widgetAccounts();
+    return this.widgetAccounts().filter((a: any) => ids.includes(a.id));
   }
 
-  // ===================== Screen Detail View =====================
-  async openScreen(screen: ScreenTemplate) {
-    this.activeScreen.set(screen);
-    this.editMode.set(false);
-    this.hasUnsavedChanges.set(false);
-    this.updateGridsterEditMode(false);
-
-    // إذا كانت الشاشة من نوع collection_style → فتح واجهة collection-style
-    if (screen.templateKey === 'collection_style') {
-      this.viewMode.set('collection_style');
-      try {
-        await this.loadCollectionStyleScreen(screen);
-      } catch (err) {
-        console.error('loadCollectionStyleScreen error:', err);
-      }
-  
-      return;
-    }
-
-    this.viewMode.set('detail');
-    // Load operation types for log filter dropdown
-    try {
-      const opTypes = await this.api.getOperationTypes(this.bizId);
-      this.operationTypes.set(opTypes);
-    } catch (e) {}
-    await this.loadWidgets(screen.id);
-
+  getStatsCards(): { label: string; value: string; icon: string; color: string }[] {
+    const s = this.widgetStats();
+    return [
+      { label: 'إجمالي التحصيل', value: this.formatNumber(s.totalReceipts), icon: 'trending_up', color: '#22c55e' },
+      { label: 'إجمالي الصرف', value: this.formatNumber(s.totalPayments), icon: 'trending_down', color: '#ef4444' },
+      { label: 'عدد العمليات', value: String(s.operationsCount), icon: 'receipt_long', color: '#3b82f6' },
+      { label: 'صافي الرصيد', value: this.formatNumber(s.netBalance), icon: 'account_balance', color: '#8b5cf6' },
+    ];
   }
 
-  // ===================== Collection Style Screen =====================
-  async loadCollectionStyleScreen(screen: ScreenTemplate) {
-    this.csConfigLoading.set(true);
-    this.csSelectedOpType.set(null);
-    this.csFormEntries.set([]);
-    try {
-      const [config, opTypes, accountsData] = await Promise.all([
-        this.api.getCollectionStyleConfig(this.bizId, screen.id),
-        this.api.getOperationTypes(this.bizId),
-        this.api.getAllAccounts(this.bizId),
-      ]);
-      this.collectionStyleConfig.set(config);
-      this.operationTypes.set(opTypes);
-      this.allAccounts.set(accountsData.accounts || []);
-      this.csActiveTab.set('tab1');
-      // تحميل السجل
-      await this.loadWidgetLog();
-      // تحميل الفاوتشرات
-      try {
-        const vouchers = await this.api.getVouchers(this.bizId);
-        this.csVouchers.set(vouchers || []);
-      } catch (e) { this.csVouchers.set([]); }
-      // تحميل أرصدة الحسابات
-      if (config.accountIds && config.accountIds.length > 0) {
-        const accounts = await this.api.getWidgetAccounts(this.bizId, config.accountIds);
-        this.widgetAccounts.set(accounts);
-      } else {
-        this.widgetAccounts.set([]);
-      }
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل إعداد الشاشة');
-    } finally {
-      this.csConfigLoading.set(false);
-    }
+  getTotalAccountsBalance(): number {
+    return this.widgetAccounts().reduce((sum, a) => sum + (a.total_balance || 0), 0);
   }
 
-  getCsTab1Templates(): any[] {
-    const config = this.collectionStyleConfig();
-    if (!config || !config.tab1OperationTypeIds?.length) return [];
-    return this.operationTypes().filter((ot: any) => config.tab1OperationTypeIds.includes(ot.id));
-  }
-
-  getCsTab2Templates(): any[] {
-    const config = this.collectionStyleConfig();
-    if (!config || !config.tab2OperationTypeIds?.length) return [];
-    return this.operationTypes().filter((ot: any) => config.tab2OperationTypeIds.includes(ot.id));
-  }
-
-  getCsAccounts(): AccountData[] {
-    const config = this.collectionStyleConfig();
-    if (!config || !config.accountIds?.length) return [];
-    return this.widgetAccounts().filter((a: any) => config.accountIds.includes(a.id));
-  }
-
-  // ===================== Collection Style - Operation Form =====================
-  selectCsOpType(ot: any) {
+  // ===================== Operations Form =====================
+  selectOpType(ot: any) {
     this.csSelectedOpType.set(ot);
     const accounts = ot.linkedAccounts || ot.accounts || [];
     const entries = accounts.filter((la: any) => la.isActive !== false).map((la: any) => ({
       accountId: la.accountId || la.id,
       accountName: la.label || la.accountName || '',
-      amount: '',
-      notes: '',
+      amount: '', notes: '',
     }));
-    if (entries.length === 0) {
-      entries.push({ accountId: null, accountName: '', amount: '', notes: '' });
-    }
+    if (entries.length === 0) entries.push({ accountId: null, accountName: '', amount: '', notes: '' });
     this.csFormEntries.set(entries);
     this.csFormDescription.set('');
     this.csFormDate.set(new Date().toISOString().split('T')[0]);
   }
 
-  cancelCsOpType() {
-    this.csSelectedOpType.set(null);
-    this.csFormEntries.set([]);
-  }
+  cancelOpType() { this.csSelectedOpType.set(null); this.csFormEntries.set([]); }
 
-  updateCsFormEntry(index: number, field: string, value: string) {
+  updateFormEntry(index: number, field: string, value: string) {
     this.csFormEntries.update(entries => {
       const updated = [...entries];
       updated[index] = { ...updated[index], [field]: value };
@@ -1314,28 +424,26 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
-  getCsFormTotal(): number {
-    return this.csFormEntries().reduce((sum, e) => {
-      const amt = parseFloat(e.amount);
-      return sum + (isNaN(amt) ? 0 : amt);
-    }, 0);
+  getFormTotal(): number {
+    return this.csFormEntries().reduce((sum, e) => { const amt = parseFloat(e.amount); return sum + (isNaN(amt) ? 0 : amt); }, 0);
   }
 
-  getCsFilledEntriesCount(): number {
+  getFilledEntriesCount(): number {
     return this.csFormEntries().filter(e => parseFloat(e.amount) > 0).length;
   }
 
-  async saveCsOperation() {
+  getAccountBalance(accountId: number): number {
+    const acc = this.widgetAccounts().find(a => a.id === accountId);
+    return acc?.total_balance || 0;
+  }
+
+  async saveOperation() {
     const opType = this.csSelectedOpType();
     if (!opType) return;
-
     const entries = this.csFormEntries().filter(e => parseFloat(e.amount) > 0);
-    if (!entries.length) {
-      this.toast.warning('أدخل مبلغاً واحداً على الأقل');
-      return;
-    }
+    if (!entries.length) { this.toast.warning('أدخل مبلغاً واحداً على الأقل'); return; }
 
-    const total = this.getCsFormTotal();
+    const total = this.getFormTotal();
     const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'توريد' : 'عملية';
     const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
@@ -1346,411 +454,495 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!confirmed) return;
 
     this.saving.set(true);
-    const results: any[] = [];
-    const errors: string[] = [];
-
+    const results: any[] = []; const errors: string[] = [];
     try {
       for (const entry of entries) {
         try {
           const result = await this.api.createVoucher(this.bizId, {
-            voucherType: opType.voucherType || 'receipt',
-            operationTypeId: opType.id,
-            toAccountId: entry.accountId,
-            amount: parseFloat(entry.amount),
-            currencyId: 1,
+            voucherType: opType.voucherType || 'receipt', operationTypeId: opType.id,
+            toAccountId: entry.accountId, amount: parseFloat(entry.amount), currencyId: 1,
             description: this.csFormDescription() || `${opType.name} - ${entry.accountName}`,
             voucherDate: this.csFormDate(),
           });
           results.push(result);
-        } catch (e: any) {
-          const errMsg = e.message || 'خطأ غير معروف';
-          errors.push(`${entry.accountName}: ${errMsg}`);
-        }
+        } catch (e: any) { errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`); }
       }
 
       if (results.length > 0 && errors.length === 0) {
         this.toast.success(`تم تنفيذ ${results.length} عملية بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
-      } else if (results.length > 0 && errors.length > 0) {
-        this.toast.warning(`تم ${results.length} عملية بنجاح، فشلت ${errors.length} عملية:\n${errors.join('\n')}`);
+      } else if (results.length > 0) {
+        this.toast.warning(`تم ${results.length} عملية بنجاح، فشلت ${errors.length}`);
       } else {
-        // عرض تفاصيل الخطأ الأول لتوضيح السبب
-        const firstError = errors.length > 0 ? errors[0] : '';
-        const errorDetail = firstError.includes('غير مفعّل') 
-          ? 'نوع العملية غير مفعّل - يرجى تفعيله من صفحة أنواع العمليات'
-          : firstError.includes('غير موجود')
-          ? 'نوع العملية غير موجود - يرجى التحقق من الإعدادات'
-          : firstError.includes('لا ينتمي')
-          ? 'الحساب لا ينتمي لهذا العمل - يرجى التحقق من إعدادات الحسابات'
-          : firstError.includes('المبلغ')
-          ? 'المبلغ غير صالح - يرجى إدخال مبلغ صحيح'
-          : firstError.includes('المستهدف')
-          ? 'الحساب المستهدف مطلوب - يرجى التحقق من إعدادات نوع العملية'
-          : errors.length > 0 
-          ? `فشلت العمليات:\n${errors.join('\n')}`
-          : 'فشلت العمليات - خطأ غير متوقع';
-        this.toast.error(errorDetail);
+        this.toast.error(errors.length > 0 ? errors[0] : 'فشلت العمليات');
       }
 
-      if (results.length > 0) {
-        this.csSelectedOpType.set(null);
-        this.csFormEntries.set([]);
-      }
-      // إعادة تحميل البيانات
+      if (results.length > 0) { this.csSelectedOpType.set(null); this.csFormEntries.set([]); }
+      // Reload screen data
       const screen = this.activeScreen();
-      if (screen) await this.loadCollectionStyleScreen(screen);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تنفيذ العملية');
-    } finally {
-      this.saving.set(false);
-    }
+      if (screen) await this.openScreen(screen);
+    } catch (e: any) { this.toast.error(e.message || 'خطأ في تنفيذ العملية'); }
+    finally { this.saving.set(false); }
   }
 
-  getCsHistoryStats() {
-    const all = this.csVouchers();
-    const receipts = all.filter((v: any) => v.voucherType === 'receipt');
-    const payments = all.filter((v: any) => v.voucherType === 'payment');
-    return {
-      totalReceipts: receipts.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
-      totalPayments: payments.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
-      receiptCount: receipts.length,
-      paymentCount: payments.length,
-    };
-  }
-
-  getCsFundBalance(acc: AccountData): number {
-    return acc.total_balance || 0;
-  }
-
-  // فتح معالج إعداد collection-style
-  async openCsConfigWizard() {
-    const screen = this.activeScreen();
-    if (!screen) return;
-    const config = this.collectionStyleConfig();
-    this.csTab1Label.set(config?.tab1Label || 'تحصيل');
-    this.csTab1Icon.set(config?.tab1Icon || 'call_received');
-    this.csTab1Color.set(config?.tab1Color || '#22c55e');
-    this.csTab2Label.set(config?.tab2Label || 'توريد');
-    this.csTab2Icon.set(config?.tab2Icon || 'call_made');
-    this.csTab2Color.set(config?.tab2Color || '#ef4444');
-    this.csHistoryLabel.set(config?.historyLabel || 'السجل');
-    this.csHistoryIcon.set(config?.historyIcon || 'history');
-    this.csHistoryColor.set(config?.historyColor || '#6366f1');
-    this.csAccountsSectionLabel.set(config?.accountsSectionLabel || 'الصناديق');
-    this.csAccountsIcon.set(config?.accountsIcon || 'savings');
-    this.csAccountsColor.set(config?.accountsColor || '#10b981');
-    this.csTab1OperationTypeIds.set(config?.tab1OperationTypeIds || []);
-    this.csTab2OperationTypeIds.set(config?.tab2OperationTypeIds || []);
-    this.csAccountIds.set(config?.accountIds || []);
-    this.csWizardStep.set(1);
-    // تحميل البيانات
-    await this.loadContentBindingData();
-    this.showCsConfigWizard.set(true);
-  }
-
-  closeCsConfigWizard() {
-    this.showCsConfigWizard.set(false);
-  }
-
-  nextCsWizardStep() {
-    const step = this.csWizardStep();
-    if (step < 5) this.csWizardStep.set(step + 1);
-  }
-
-  prevCsWizardStep() {
-    const step = this.csWizardStep();
-    if (step > 1) this.csWizardStep.set(step - 1);
-  }
-
-  toggleCsTab1OpType(id: number) {
-    const ids = [...this.csTab1OperationTypeIds()];
-    const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
-    this.csTab1OperationTypeIds.set(ids);
-  }
-
-  toggleCsTab2OpType(id: number) {
-    const ids = [...this.csTab2OperationTypeIds()];
-    const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
-    this.csTab2OperationTypeIds.set(ids);
-  }
-
-  toggleCsAccount(id: number) {
-    const ids = [...this.csAccountIds()];
-    const idx = ids.indexOf(id);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(id);
-    this.csAccountIds.set(ids);
-  }
-
-  async saveCsConfig() {
-    const screen = this.activeScreen();
-    if (!screen) return;
-    this.saving.set(true);
-    try {
-      const payload = {
-        tab1Label: this.csTab1Label(),
-        tab1Icon: this.csTab1Icon(),
-        tab1Color: this.csTab1Color(),
-        tab1OperationTypeIds: this.csTab1OperationTypeIds(),
-        tab2Label: this.csTab2Label(),
-        tab2Icon: this.csTab2Icon(),
-        tab2Color: this.csTab2Color(),
-        tab2OperationTypeIds: this.csTab2OperationTypeIds(),
-        historyLabel: this.csHistoryLabel(),
-        historyIcon: this.csHistoryIcon(),
-        historyColor: this.csHistoryColor(),
-        accountsSectionLabel: this.csAccountsSectionLabel(),
-        accountsIcon: this.csAccountsIcon(),
-        accountsColor: this.csAccountsColor(),
-        accountIds: this.csAccountIds(),
-      };
-      await this.api.saveCollectionStyleConfig(this.bizId, screen.id, payload);
-      this.toast.success('تم حفظ الإعداد بنجاح');
-      this.closeCsConfigWizard();
-      // إعادة تحميل الشاشة
-      await this.loadCollectionStyleScreen(screen);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في حفظ الإعداد');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  backToList() {
-    this.viewMode.set('list');
-    this.activeScreen.set(null);
-    this.widgets.set([]);
-    this.gridItems = [];
-    this.editMode.set(false);
-    this.hasUnsavedChanges.set(false);
-    this.collectionStyleConfig.set(null);
-    this.openedFromSidebar.set(false);
-  }
-
-  toggleEditMode() {
-    const newMode = !this.editMode();
-    this.editMode.set(newMode);
-    this.updateGridsterEditMode(newMode);
-  }
-
-  // ===================== Widget Library (Sidebar) =====================
-  toggleWidgetLibrary() {
-    this.showWidgetLibrary.set(!this.showWidgetLibrary());
-  }
-
-  // Open widget library - auto-enables edit mode if not already enabled
-  openWidgetLibrary() {
-    if (!this.editMode()) {
-      this.editMode.set(true);
-      this.updateGridsterEditMode(true);
-    }
-    this.showWidgetLibrary.set(!this.showWidgetLibrary());
-  }
-
-  async addWidgetFromLibrary(type: any) {
-    const screen = this.activeScreen();
-    if (!screen) return;
-
-    this.saving.set(true);
-    try {
-      const newWidget = {
-        widgetType: type.value,
-        title: type.label,
-        positionX: 0,
-        positionY: 0,
-        width: type.defaultW,
-        height: type.defaultH,
-        config: {},
-      };
-      await this.api.createScreenWidget(screen.id, newWidget);
-      this.toast.success(`تم إضافة "${type.label}"`);
-      await this.loadWidgets(screen.id);
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // ===================== Copy Widget from Other Screens =====================
-  async openCopyWidgetModal() {
-    try {
-      const data = await this.api.getScreensWithWidgets(this.bizId);
-      const currentScreenId = this.activeScreen()?.id;
-      this.otherScreens.set(data.filter((s: any) => s.id !== currentScreenId && s.widgets?.length > 0));
-      this.selectedCopyScreen.set(null);
-      this.showCopyWidgetModal.set(true);
-  
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الشاشات');
-    }
-  }
-
-  closeCopyWidgetModal() {
-    this.showCopyWidgetModal.set(false);
-    this.selectedCopyScreen.set(null);
-  }
-
-  selectCopyScreen(screen: ScreenWithWidgets) {
-    this.selectedCopyScreen.set(screen);
-  }
-
-  async copyWidgetFromOtherScreen(widget: ScreenWidget) {
-    const screen = this.activeScreen();
-    if (!screen) return;
-
-    this.saving.set(true);
-    try {
-      await this.api.copyWidgetToScreen(widget.id, screen.id);
-      this.toast.success(`تم نسخ "${widget.title}" بنجاح`);
-      await this.loadWidgets(screen.id);
-      this.closeCopyWidgetModal();
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء النسخ');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // ===================== Widget CRUD =====================
-  openWidgetForm(widget?: ScreenWidget) {
-    if (widget) {
-      this.editingWidget.set(widget);
-      this.widgetForm.set({
-        widgetType: widget.widgetType,
-        title: widget.title,
-        config: widget.config || {},
-      });
-    } else {
-      this.editingWidget.set(null);
-      const typeInfo = this.widgetTypes[0];
-      this.widgetForm.set({
-        widgetType: 'templates',
-        title: typeInfo.label,
-        config: {},
-      });
-    }
-    this.showWidgetForm.set(true);
-
-  }
-
-  closeWidgetForm() {
-    this.showWidgetForm.set(false);
-    this.editingWidget.set(null);
-  }
-
-  async saveWidget() {
-    const form = this.widgetForm();
-    const screen = this.activeScreen();
-    if (!screen || !form.title.trim()) {
-      this.toast.warning('يرجى إدخال عنوان العنصر');
-      return;
-    }
-
-    this.saving.set(true);
-    try {
-      const editing = this.editingWidget();
-      if (editing) {
-        await this.api.updateWidget(editing.id, {
-          title: form.title,
-          widgetType: form.widgetType,
-          config: form.config,
-        });
-        this.toast.success('تم تحديث العنصر');
-      } else {
-        const typeInfo = this.getWidgetTypeInfo(form.widgetType);
-        await this.api.createScreenWidget(screen.id, {
-          widgetType: form.widgetType,
-          title: form.title,
-          width: typeInfo.defaultW,
-          height: typeInfo.defaultH,
-          config: form.config,
-        });
-        this.toast.success('تم إضافة العنصر');
-      }
-      this.closeWidgetForm();
-      await this.loadWidgets(screen.id);
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  async deleteWidget(widget: ScreenWidget) {
-    const confirmed = await this.toast.confirm({
-      title: 'حذف العنصر',
-      message: `هل تريد حذف العنصر "${widget.title}"؟`,
-      type: 'danger',
-    });
-    if (!confirmed) return;
-
-    try {
-      await this.api.deleteWidget(widget.id);
-      this.toast.success('تم حذف العنصر');
-      const screen = this.activeScreen();
-      if (screen) await this.loadWidgets(screen.id);
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء الحذف');
-    }
-  }
-
-  async toggleWidgetVisibility(widget: ScreenWidget) {
-    try {
-      await this.api.updateWidget(widget.id, { isVisible: !widget.isVisible });
-      const screen = this.activeScreen();
-      if (screen) await this.loadWidgets(screen.id);
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ');
-    }
-  }
-
-  // ===================== Save Layout =====================
-  async saveLayout() {
-    const screen = this.activeScreen();
-    if (!screen) return;
-
-    this.saving.set(true);
-    try {
-      const widgetUpdates = this.gridItems.map(item => ({
-        id: item.widgetData.id,
-        positionX: item.x,
-        positionY: item.y,
-        width: item.cols,
-        height: item.rows,
-      }));
-      await this.api.batchUpdateWidgets(screen.id, widgetUpdates);
-
-      // Save notes text
-      for (const item of this.gridItems) {
-        if (item.widgetData.widgetType === 'notes' && this.notesText[item.widgetData.id] !== undefined) {
-          await this.api.saveWidgetNotes(item.widgetData.id, this.notesText[item.widgetData.id]);
-        }
-      }
-
-      this.hasUnsavedChanges.set(false);
-      this.toast.success('تم حفظ التخطيط بنجاح');
-    } catch (e: any) {
-      this.toast.error(e.message || 'حدث خطأ أثناء الحفظ');
-    } finally {
-      this.saving.set(false);
-    }
+  // ===================== Log Filters =====================
+  async applyLogFilters() { await this.loadLogData(); }
+  async clearLogFilters() {
+    this.logFilterDateFrom.set(''); this.logFilterDateTo.set(''); this.logFilterOpType.set('');
+    await this.loadLogData();
   }
 
   // ===================== Notes =====================
-  onNotesChange(widgetId: number, text: string) {
-    this.notesText[widgetId] = text;
-    this.hasUnsavedChanges.set(true);
-
-    // Auto-save notes after 2 seconds of inactivity
-    if (this.notesSaveTimeout[widgetId]) clearTimeout(this.notesSaveTimeout[widgetId]);
-    this.notesSaveTimeout[widgetId] = setTimeout(async () => {
+  onNotesChange(text: string) {
+    this.screenNotes.set(text);
+    if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
+    this.notesSaveTimeout = setTimeout(async () => {
+      const screen = this.activeScreen();
+      if (!screen) return;
       try {
-        await this.api.saveWidgetNotes(widgetId, text);
-      } catch (e) {
-        console.error('Error auto-saving notes:', e);
-      }
+        const tabs = this.screenTabs();
+        await this.api.saveCollectionStyleConfig(this.bizId, screen.id, { tabs, notes: text });
+      } catch (e) { console.error('Error auto-saving notes:', e); }
     }, 2000);
+  }
+
+  // ===================== WIZARD (Create New Screen) =====================
+  startWizard() {
+    this.viewMode.set('wizard');
+    this.wizardStep.set(1);
+    this.wizardScreenName.set('');
+    this.wizardScreenDesc.set('');
+    this.wizardScreenIcon.set('dashboard');
+    this.wizardScreenColor.set('#3b82f6');
+    this.wizardAddToSidebar.set(true);
+    this.wizardSidebarSectionId.set(0);
+    this.wizardSidebarSortOrder.set(0);
+    this.wizardTabs.set([]);
+    this.wizardConfigTabIdx.set(0);
+    this.wizardIsEditing.set(false);
+    this.loadWizardData();
+  }
+
+  async loadWizardData() {
+    try {
+      const [sections, opTypes, accountsData] = await Promise.all([
+        this.api.getSidebarSections(this.bizId),
+        this.api.getOperationTypes(this.bizId),
+        this.api.getAllAccounts(this.bizId),
+      ]);
+      this.wizardSidebarSections.set(sections);
+      if (sections.length > 0) this.wizardSidebarSectionId.set(sections[0].id);
+      this.operationTypes.set(opTypes);
+      this.allAccounts.set(accountsData.accounts || []);
+    } catch (e) { console.error('Error loading wizard data:', e); }
+  }
+
+  cancelWizard() { this.viewMode.set('list'); }
+
+  // Wizard: total steps = 2 (basic + tabs) + number of tabs that need config + 1 (preview)
+  getWizardTotalSteps(): number {
+    return 2 + this.getConfigurableTabs().length + 1;
+  }
+
+  getConfigurableTabs(): TabDefinition[] {
+    return this.wizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts');
+  }
+
+  getWizardStepTitle(): string {
+    const step = this.wizardStep();
+    if (step === 1) return 'بيانات الشاشة';
+    if (step === 2) return 'إضافة التبويبات';
+    const configTabs = this.getConfigurableTabs();
+    const configIdx = step - 3;
+    if (configIdx >= 0 && configIdx < configTabs.length) {
+      return `إعداد: ${configTabs[configIdx].label}`;
+    }
+    return 'معاينة وحفظ';
+  }
+
+  nextWizardStep() {
+    const step = this.wizardStep();
+    if (step === 1 && !this.wizardScreenName().trim()) {
+      this.toast.warning('يرجى إدخال اسم الشاشة'); return;
+    }
+    if (step === 2 && this.wizardTabs().length === 0) {
+      this.toast.warning('يرجى إضافة تبويب واحد على الأقل'); return;
+    }
+    const total = this.getWizardTotalSteps();
+    if (step < total) {
+      this.wizardStep.set(step + 1);
+      // Update configTabIdx
+      const configIdx = step + 1 - 3;
+      if (configIdx >= 0) this.wizardConfigTabIdx.set(configIdx);
+    } else {
+      this.saveWizardScreen();
+    }
+  }
+
+  prevWizardStep() {
+    const step = this.wizardStep();
+    if (step > 1) this.wizardStep.set(step - 1);
+  }
+
+  // Wizard: Add tab
+  addWizardTab(typeValue: string) {
+    const typeInfo = TAB_TYPE_OPTIONS.find(t => t.value === typeValue);
+    if (!typeInfo) return;
+    const tabs = [...this.wizardTabs()];
+    const newTab: TabDefinition = {
+      id: `tab_${Date.now()}`,
+      label: typeInfo.label,
+      icon: typeInfo.defaultIcon,
+      color: typeInfo.defaultColor,
+      type: typeValue as any,
+      sortOrder: tabs.length + 1,
+      config: {},
+    };
+    tabs.push(newTab);
+    this.wizardTabs.set(tabs);
+  }
+
+  removeWizardTab(idx: number) {
+    const tabs = [...this.wizardTabs()];
+    tabs.splice(idx, 1);
+    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    this.wizardTabs.set(tabs);
+  }
+
+  moveWizardTab(idx: number, direction: 'up' | 'down') {
+    const tabs = [...this.wizardTabs()];
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= tabs.length) return;
+    [tabs[idx], tabs[targetIdx]] = [tabs[targetIdx], tabs[idx]];
+    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    this.wizardTabs.set(tabs);
+  }
+
+  updateWizardTab(idx: number, field: string, value: any) {
+    const tabs = [...this.wizardTabs()];
+    tabs[idx] = { ...tabs[idx], [field]: value };
+    this.wizardTabs.set(tabs);
+  }
+
+  // Wizard: Toggle operation type for tab config
+  toggleWizardTabOpType(tabIdx: number, opTypeId: number) {
+    const tabs = [...this.wizardTabs()];
+    const tab = tabs[tabIdx];
+    const ids = [...(tab.config?.operationTypeIds || [])];
+    const idx = ids.indexOf(opTypeId);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(opTypeId);
+    tabs[tabIdx] = { ...tab, config: { ...tab.config, operationTypeIds: ids } };
+    this.wizardTabs.set(tabs);
+  }
+
+  // Wizard: Toggle account for tab config
+  toggleWizardTabAccount(tabIdx: number, accountId: number) {
+    const tabs = [...this.wizardTabs()];
+    const tab = tabs[tabIdx];
+    const ids = [...(tab.config?.accountIds || [])];
+    const idx = ids.indexOf(accountId);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(accountId);
+    tabs[tabIdx] = { ...tab, config: { ...tab.config, accountIds: ids } };
+    this.wizardTabs.set(tabs);
+  }
+
+  setAccFilterType(type: string) { this.accFilterType.set(type); }
+  getAccTypeMeta(type: string) { return getAccTypeMeta(type); }
+
+  async saveWizardScreen() {
+    const name = this.wizardScreenName();
+    if (!name.trim()) { this.toast.warning('يرجى إدخال اسم الشاشة'); return; }
+
+    this.saving.set(true);
+    try {
+      const payload: any = {
+        name, description: this.wizardScreenDesc(),
+        icon: this.wizardScreenIcon(), color: this.wizardScreenColor(),
+        templateKey: 'collection_style', widgets: [],
+        addToSidebar: this.wizardAddToSidebar(),
+      };
+      if (this.wizardAddToSidebar()) {
+        const sectionId = this.wizardSidebarSectionId();
+        if (sectionId) payload.sidebarSectionId = sectionId;
+        payload.sidebarSortOrder = this.wizardSidebarSortOrder();
+      }
+
+      let screenId: number;
+      if (this.wizardIsEditing() && this.activeScreen()) {
+        // Update existing screen
+        screenId = this.activeScreen()!.id;
+        await this.api.updateScreen(screenId, { name, description: this.wizardScreenDesc(), icon: this.wizardScreenIcon(), color: this.wizardScreenColor() });
+      } else {
+        // Create new screen
+        const newScreen = await this.api.createScreen(this.bizId, payload);
+        screenId = newScreen.id;
+      }
+
+      // Save tabs config
+      await this.api.saveCollectionStyleConfig(this.bizId, screenId, { tabs: this.wizardTabs(), notes: '' });
+
+      this.toast.success(this.wizardIsEditing() ? 'تم تحديث الشاشة بنجاح' : 'تم إنشاء الشاشة بنجاح');
+      await this.loadScreens();
+
+      const screen = this.screens().find(s => s.id === screenId);
+      if (screen) await this.openScreen(screen);
+      else this.viewMode.set('list');
+    } catch (e: any) { this.toast.error(e.message || 'خطأ أثناء الحفظ'); }
+    finally { this.saving.set(false); }
+  }
+
+  // ===================== Config Wizard (Edit Existing Screen Tabs) =====================
+  async openConfigWizard() {
+    const screen = this.activeScreen();
+    if (!screen) return;
+    const config = await this.api.getCollectionStyleConfig(this.bizId, screen.id);
+    this.configWizardTabs.set([...(config.tabs || [])]);
+    this.configWizardStep.set(1);
+    this.configWizardConfigTabIdx.set(0);
+    await this.loadWizardData();
+    this.showConfigWizard.set(true);
+  }
+
+  closeConfigWizard() { this.showConfigWizard.set(false); }
+
+  getConfigWizardTotalSteps(): number {
+    return 1 + this.getConfigWizardConfigurableTabs().length + 1;
+  }
+
+  getConfigWizardConfigurableTabs(): TabDefinition[] {
+    return this.configWizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts');
+  }
+
+  nextConfigWizardStep() {
+    const step = this.configWizardStep();
+    const total = this.getConfigWizardTotalSteps();
+    if (step === 1 && this.configWizardTabs().length === 0) {
+      this.toast.warning('يرجى إضافة تبويب واحد على الأقل'); return;
+    }
+    if (step < total) {
+      this.configWizardStep.set(step + 1);
+      const configIdx = step + 1 - 2;
+      if (configIdx >= 0) this.configWizardConfigTabIdx.set(configIdx);
+    } else {
+      this.saveConfigWizard();
+    }
+  }
+
+  prevConfigWizardStep() {
+    const step = this.configWizardStep();
+    if (step > 1) this.configWizardStep.set(step - 1);
+  }
+
+  addConfigWizardTab(typeValue: string) {
+    const typeInfo = TAB_TYPE_OPTIONS.find(t => t.value === typeValue);
+    if (!typeInfo) return;
+    const tabs = [...this.configWizardTabs()];
+    tabs.push({
+      id: `tab_${Date.now()}`, label: typeInfo.label, icon: typeInfo.defaultIcon,
+      color: typeInfo.defaultColor, type: typeValue as any, sortOrder: tabs.length + 1, config: {},
+    });
+    this.configWizardTabs.set(tabs);
+  }
+
+  removeConfigWizardTab(idx: number) {
+    const tabs = [...this.configWizardTabs()];
+    tabs.splice(idx, 1);
+    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    this.configWizardTabs.set(tabs);
+  }
+
+  moveConfigWizardTab(idx: number, direction: 'up' | 'down') {
+    const tabs = [...this.configWizardTabs()];
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= tabs.length) return;
+    [tabs[idx], tabs[targetIdx]] = [tabs[targetIdx], tabs[idx]];
+    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    this.configWizardTabs.set(tabs);
+  }
+
+  updateConfigWizardTab(idx: number, field: string, value: any) {
+    const tabs = [...this.configWizardTabs()];
+    tabs[idx] = { ...tabs[idx], [field]: value };
+    this.configWizardTabs.set(tabs);
+  }
+
+  toggleConfigWizardTabOpType(tabIdx: number, opTypeId: number) {
+    const tabs = [...this.configWizardTabs()];
+    const tab = tabs[tabIdx];
+    const ids = [...(tab.config?.operationTypeIds || [])];
+    const idx = ids.indexOf(opTypeId);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(opTypeId);
+    tabs[tabIdx] = { ...tab, config: { ...tab.config, operationTypeIds: ids } };
+    this.configWizardTabs.set(tabs);
+  }
+
+  toggleConfigWizardTabAccount(tabIdx: number, accountId: number) {
+    const tabs = [...this.configWizardTabs()];
+    const tab = tabs[tabIdx];
+    const ids = [...(tab.config?.accountIds || [])];
+    const idx = ids.indexOf(accountId);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(accountId);
+    tabs[tabIdx] = { ...tab, config: { ...tab.config, accountIds: ids } };
+    this.configWizardTabs.set(tabs);
+  }
+
+  async saveConfigWizard() {
+    const screen = this.activeScreen();
+    if (!screen) return;
+    this.saving.set(true);
+    try {
+      await this.api.saveCollectionStyleConfig(this.bizId, screen.id, {
+        tabs: this.configWizardTabs(), notes: this.screenNotes(),
+      });
+      this.toast.success('تم حفظ الإعداد بنجاح');
+      this.closeConfigWizard();
+      await this.openScreen(screen);
+    } catch (e: any) { this.toast.error(e.message || 'خطأ في حفظ الإعداد'); }
+    finally { this.saving.set(false); }
+  }
+
+  // ===================== Screen CRUD =====================
+  backToList() {
+    this.viewMode.set('list');
+    this.activeScreen.set(null);
+    this.screenTabs.set([]);
+    this.openedFromSidebar.set(false);
+  }
+
+  openScreenForm(screen?: ScreenTemplate) {
+    if (screen) {
+      this.editingScreen.set(screen);
+      this.screenForm.set({ name: screen.name, description: screen.description || '', icon: screen.icon || 'dashboard', color: screen.color || '#3b82f6' });
+      this.showScreenForm.set(true);
+    } else {
+      this.startWizard();
+    }
+  }
+
+  closeScreenForm() { this.showScreenForm.set(false); this.editingScreen.set(null); }
+
+  async saveScreen() {
+    const form = this.screenForm();
+    if (!form.name.trim()) { this.toast.warning('يرجى إدخال اسم الشاشة'); return; }
+    this.saving.set(true);
+    try {
+      const editing = this.editingScreen();
+      if (editing) {
+        await this.api.updateScreen(editing.id, form);
+        this.toast.success('تم تحديث الشاشة');
+      }
+      this.closeScreenForm();
+      await this.loadScreens();
+      // Refresh active screen if editing
+      if (editing && this.activeScreen()?.id === editing.id) {
+        const updated = this.screens().find(s => s.id === editing.id);
+        if (updated) this.activeScreen.set(updated);
+      }
+    } catch (e: any) { this.toast.error(e.message || 'حدث خطأ'); }
+    finally { this.saving.set(false); }
+  }
+
+  async deleteScreen(screen: ScreenTemplate) {
+    const confirmed = await this.toast.confirm({
+      title: 'حذف الشاشة', message: `هل تريد حذف الشاشة "${screen.name}"؟`, type: 'danger',
+    });
+    if (!confirmed) return;
+    try {
+      await this.api.deleteScreen(screen.id);
+      this.toast.success('تم حذف الشاشة');
+      await this.loadScreens();
+      if (this.activeScreen()?.id === screen.id) this.backToList();
+    } catch (e: any) { this.toast.error(e.message || 'حدث خطأ أثناء الحذف'); }
+  }
+
+  async cloneScreen(screen: ScreenTemplate) {
+    this.saving.set(true);
+    try {
+      await this.api.cloneScreen(screen.id, { name: `${screen.name} (نسخة)` });
+      this.toast.success('تم نسخ الشاشة بنجاح');
+      await this.loadScreens();
+    } catch (e: any) { this.toast.error(e.message || 'حدث خطأ أثناء النسخ'); }
+    finally { this.saving.set(false); }
+  }
+
+  // ===================== Permissions =====================
+  async openPermissionsModal(screen: ScreenTemplate) {
+    this.permissionsScreen.set(screen);
+    this.permissionsLoading.set(true);
+    this.showPermissionsModal.set(true);
+    try {
+      const [users, perms] = await Promise.all([this.api.getUsers(), this.api.getScreenPermissions(screen.id)]);
+      this.permissionsUsers.set(users);
+      const map: { [userId: number]: string } = {};
+      for (const p of perms) map[p.userId] = p.permission;
+      this.permissionsMap.set(map);
+    } catch (e: any) { this.toast.error(e.message || 'خطأ في تحميل الصلاحيات'); }
+    finally { this.permissionsLoading.set(false); }
+  }
+
+  closePermissionsModal() { this.showPermissionsModal.set(false); this.permissionsScreen.set(null); }
+
+  setUserPermission(userId: number, permission: string) {
+    const map = { ...this.permissionsMap() };
+    if (permission === 'none') delete map[userId]; else map[userId] = permission;
+    this.permissionsMap.set(map);
+  }
+
+  getUserPermission(userId: number): string { return this.permissionsMap()[userId] || 'none'; }
+
+  async savePermissions() {
+    const screen = this.permissionsScreen();
+    if (!screen) return;
+    this.saving.set(true);
+    try {
+      const map = this.permissionsMap();
+      const permissions = Object.entries(map).map(([userId, permission]) => ({ userId: parseInt(userId), permission }));
+      await this.api.batchUpdateScreenPermissions(screen.id, permissions);
+      this.toast.success('تم حفظ الصلاحيات بنجاح');
+      this.closePermissionsModal();
+    } catch (e: any) { this.toast.error(e.message || 'خطأ أثناء حفظ الصلاحيات'); }
+    finally { this.saving.set(false); }
+  }
+
+  // ===================== Sidebar Modal =====================
+  async openSidebarModal(screen: ScreenTemplate) {
+    this.sidebarScreen.set(screen);
+    this.selectedSidebarSection.set(0);
+    this.sidebarSortOrder.set(99);
+    try {
+      const sections = await this.api.getSidebarSections(this.bizId);
+      this.sidebarSections.set(sections);
+      if (sections.length > 0) this.selectedSidebarSection.set(sections[0].id);
+      this.showSidebarModal.set(true);
+    } catch (e: any) { this.toast.error(e.message || 'خطأ في تحميل الأقسام'); }
+  }
+
+  closeSidebarModal() { this.showSidebarModal.set(false); this.sidebarScreen.set(null); }
+
+  async addToSidebar() {
+    const screen = this.sidebarScreen();
+    const sectionId = this.selectedSidebarSection();
+    if (!screen || !sectionId) { this.toast.warning('يرجى اختيار القسم'); return; }
+    this.saving.set(true);
+    try {
+      await this.api.addScreenToSidebar(this.bizId, screen.id, { sectionId, sortOrder: this.sidebarSortOrder() });
+      this.toast.success('تم إضافة الشاشة للقائمة الجانبية');
+      this.closeSidebarModal();
+    } catch (e: any) { this.toast.error(e.message || 'خطأ أثناء الإضافة'); }
+    finally { this.saving.set(false); }
+  }
+
+  // ===================== Color Picker =====================
+  onColorPickerChange(color: string, target: string, idx?: number) {
+    switch (target) {
+      case 'wizard': this.wizardScreenColor.set(color); break;
+      case 'screen': this.screenForm.set({ ...this.screenForm(), color }); break;
+      case 'wizardTab':
+        if (idx !== undefined) this.updateWizardTab(idx, 'color', color);
+        break;
+      case 'configTab':
+        if (idx !== undefined) this.updateConfigWizardTab(idx, 'color', color);
+        break;
+    }
   }
 
   // ===================== Helpers =====================
@@ -1772,198 +964,32 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   getVoucherTypeLabel(type: string): string {
-    switch (type) {
-      case 'receipt': return 'تحصيل';
-      case 'payment': return 'صرف';
-      case 'journal': return 'قيد';
-      default: return type || 'عملية';
-    }
+    switch (type) { case 'receipt': return 'تحصيل'; case 'payment': return 'صرف'; case 'journal': return 'قيد'; default: return type || 'عملية'; }
   }
 
   getVoucherTypeClass(type: string): string {
-    switch (type) {
-      case 'receipt': return 'collection';
-      case 'payment': return 'expense';
-      case 'journal': return 'transfer';
-      default: return 'collection';
-    }
+    switch (type) { case 'receipt': return 'collection'; case 'payment': return 'expense'; case 'journal': return 'transfer'; default: return 'collection'; }
   }
 
   getAccountIcon(type: string): string {
-    switch (type) {
-      case 'fund': return 'account_balance_wallet';
-      case 'bank': return 'account_balance';
-      case 'exchange': return 'currency_exchange';
-      case 'e_wallet': return 'smartphone';
-      default: return 'account_balance_wallet';
-    }
+    return getAccTypeMeta(type).icon;
   }
 
   getBalanceTrend(account: AccountData): string {
     const movements = account.last_movements || [];
     if (movements.length < 2) return 'stable';
-    const lastType = movements[0]?.line_type;
-    return lastType === 'debit' ? 'up' : 'down';
+    return movements[0]?.line_type === 'debit' ? 'up' : 'down';
   }
 
   getTrendIcon(trend: string): string {
-    switch (trend) {
-      case 'up': return 'trending_up';
-      case 'down': return 'trending_down';
-      default: return 'trending_flat';
-    }
+    switch (trend) { case 'up': return 'trending_up'; case 'down': return 'trending_down'; default: return 'trending_flat'; }
   }
 
   getTrendColor(trend: string): string {
-    switch (trend) {
-      case 'up': return '#22c55e';
-      case 'down': return '#ef4444';
-      default: return '#94a3b8';
-    }
+    switch (trend) { case 'up': return '#22c55e'; case 'down': return '#ef4444'; default: return '#94a3b8'; }
   }
 
-  getWizardWidgetColor(w: WizardWidget): string {
-    return w.config?.color || this.getWidgetTypeInfo(w.widgetType).color;
-  }
-
-  hasBindableContent(w: WizardWidget): boolean {
-    return ['templates', 'accounts', 'log'].includes(w.widgetType);
-  }
-
-  getBindingLabel(w: WizardWidget): string {
-    switch (w.widgetType) {
-      case 'templates': return `${(w.config?.operationTypeIds || []).length} قالب مرتبط`;
-      case 'accounts': return `${(w.config?.accountIds || []).length} حساب مرتبط`;
-      case 'log': return w.config?.filters ? 'فلاتر محددة' : 'بدون فلاتر';
-      default: return '';
-    }
-  }
-
-  // ===================== Permissions Modal =====================
-  async openPermissionsModal(screen: ScreenTemplate) {
-    this.permissionsScreen.set(screen);
-    this.permissionsLoading.set(true);
-    this.showPermissionsModal.set(true);
-
-    try {
-      const [users, perms] = await Promise.all([
-        this.api.getUsers(),
-        this.api.getScreenPermissions(screen.id),
-      ]);
-      this.permissionsUsers.set(users);
-      const map: { [userId: number]: string } = {};
-      for (const p of perms) {
-        map[p.userId] = p.permission;
-      }
-      this.permissionsMap.set(map);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الصلاحيات');
-    } finally {
-      this.permissionsLoading.set(false);
-    }
-  }
-
-  closePermissionsModal() {
-    this.showPermissionsModal.set(false);
-    this.permissionsScreen.set(null);
-  }
-
-  setUserPermission(userId: number, permission: string) {
-    const map = { ...this.permissionsMap() };
-    if (permission === 'none') {
-      delete map[userId];
-    } else {
-      map[userId] = permission;
-    }
-    this.permissionsMap.set(map);
-  }
-
-  getUserPermission(userId: number): string {
-    return this.permissionsMap()[userId] || 'none';
-  }
-
-  async savePermissions() {
-    const screen = this.permissionsScreen();
-    if (!screen) return;
-
-    this.saving.set(true);
-    try {
-      const map = this.permissionsMap();
-      const permissions = Object.entries(map).map(([userId, permission]) => ({
-        userId: parseInt(userId),
-        permission,
-      }));
-      await this.api.batchUpdateScreenPermissions(screen.id, permissions);
-      this.toast.success('تم حفظ الصلاحيات بنجاح');
-      this.closePermissionsModal();
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ أثناء حفظ الصلاحيات');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // ===================== Add to Sidebar Modal =====================
-  async openSidebarModal(screen: ScreenTemplate) {
-    this.sidebarScreen.set(screen);
-    this.selectedSidebarSection.set(0);
-    this.sidebarSortOrder.set(99);
-    try {
-      const sections = await this.api.getSidebarSections(this.bizId);
-      this.sidebarSections.set(sections);
-      if (sections.length > 0) {
-        this.selectedSidebarSection.set(sections[0].id);
-      }
-      this.showSidebarModal.set(true);
-  
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الأقسام');
-    }
-  }
-
-  closeSidebarModal() {
-    this.showSidebarModal.set(false);
-    this.sidebarScreen.set(null);
-  }
-
-  async addToSidebar() {
-    const screen = this.sidebarScreen();
-    const sectionId = this.selectedSidebarSection();
-    if (!screen || !sectionId) {
-      this.toast.warning('يرجى اختيار القسم');
-      return;
-    }
-
-    this.saving.set(true);
-    try {
-      await this.api.addScreenToSidebar(this.bizId, screen.id, {
-        sectionId,
-        sortOrder: this.sidebarSortOrder(),
-      });
-      this.toast.success('تم إضافة الشاشة للقائمة الجانبية');
-      this.closeSidebarModal();
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ أثناء الإضافة');
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  // ===================== Color Picker Helper =====================
-  onColorPickerChange(color: string, target: 'screen' | 'wizard' | 'widget' | 'wizardWidget', idx?: number) {
-    switch (target) {
-      case 'screen':
-        this.screenForm.set({ ...this.screenForm(), color });
-        break;
-      case 'wizard':
-        this.wizardScreenColor.set(color);
-        break;
-      case 'widget':
-        this.widgetForm.set({ ...this.widgetForm(), config: { ...this.widgetForm().config, color } });
-        break;
-      case 'wizardWidget':
-        if (idx !== undefined) this.updateWizardWidgetColor(idx, color);
-        break;
-    }
+  getTabTypeInfo(type: string) {
+    return TAB_TYPE_OPTIONS.find(t => t.value === type) || TAB_TYPE_OPTIONS[0];
   }
 }
