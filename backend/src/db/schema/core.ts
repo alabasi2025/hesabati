@@ -914,8 +914,12 @@ export const customScreenConfig = pgTable('custom_screen_config', {
   tab2OperationTypeIds: jsonb('tab2_operation_type_ids').$type<number[]>().default([]),
   // تبويب السجل
   historyLabel: varchar('history_label', { length: 200 }).notNull().default('السجل'),
+  historyIcon: varchar('history_icon', { length: 100 }).notNull().default('history'),
+  historyColor: varchar('history_color', { length: 20 }).notNull().default('#6366f1'),
   // قسم المراقبة (صناديق/محافظ/بنوك...)
   accountsSectionLabel: varchar('accounts_section_label', { length: 200 }).notNull().default('الصناديق'),
+  accountsIcon: varchar('accounts_icon', { length: 100 }).notNull().default('savings'),
+  accountsColor: varchar('accounts_color', { length: 20 }).notNull().default('#10b981'),
   accountIds: jsonb('account_ids').$type<number[]>().default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

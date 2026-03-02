@@ -448,7 +448,6 @@ api.delete('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), safeHandler('
   await db.delete(accounts).where(eq(accounts.id, id));
   return c.json({ success: true });
 }));
-
 // Legacy routes
 api.put('/accounts/:id', safeHandler('تعديل حساب (legacy)', async (c) => {
   const id = parseId(c.req.param('id'));
@@ -3039,7 +3038,11 @@ api.get('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthM
     tab2Color: '#ef4444',
     tab2OperationTypeIds: [],
     historyLabel: 'السجل',
+    historyIcon: 'history',
+    historyColor: '#6366f1',
     accountsSectionLabel: 'الصناديق',
+    accountsIcon: 'savings',
+    accountsColor: '#10b981',
     accountIds: [],
   });
 }));
@@ -3065,7 +3068,11 @@ api.put('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthM
     tab2Color: body.tab2Color || body.tab2_color || '#ef4444',
     tab2OperationTypeIds: body.tab2OperationTypeIds || body.tab2_operation_type_ids || [],
     historyLabel: body.historyLabel || body.history_label || 'السجل',
+    historyIcon: body.historyIcon || body.history_icon || 'history',
+    historyColor: body.historyColor || body.history_color || '#6366f1',
     accountsSectionLabel: body.accountsSectionLabel || body.accounts_section_label || 'الصناديق',
+    accountsIcon: body.accountsIcon || body.accounts_icon || 'savings',
+    accountsColor: body.accountsColor || body.accounts_color || '#10b981',
     accountIds: body.accountIds || body.account_ids || [],
     updatedAt: new Date(),
   };

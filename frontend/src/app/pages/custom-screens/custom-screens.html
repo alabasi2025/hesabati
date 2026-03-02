@@ -327,7 +327,7 @@
         @if (wizardStep() === 4) {
           <div class="wizard-step-content">
             <h2 class="step-title">إعداد تبويب السجل</h2>
-            <p class="step-desc">حدد اسم تبويب السجل الذي يعرض جميع العمليات المنفذة</p>
+            <p class="step-desc">حدد اسم وأيقونة ولون تبويب السجل الذي يعرض جميع العمليات المنفذة</p>
 
             <div class="form-row">
               <div class="form-group flex-1">
@@ -336,9 +336,36 @@
               </div>
             </div>
 
+            <div class="form-row" style="margin-top: 16px;">
+              <div class="form-group flex-1">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid compact">
+                  @for (icon of icons; track icon) {
+                    <button class="icon-option" [class.selected]="wizardHistoryIcon() === icon" (click)="wizardHistoryIcon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group flex-1">
+                <label>لون التبويب</label>
+                <div class="color-picker-row">
+                  <div class="color-grid">
+                    @for (color of colors; track color) {
+                      <button class="color-option" [style.background]="color" [class.selected]="wizardHistoryColor() === color" (click)="wizardHistoryColor.set(color)">
+                        @if (wizardHistoryColor() === color) {
+                          <span class="material-icons-round">check</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="history-preview" style="margin-top: 32px; padding: 24px; background: var(--bg-secondary, #f8f9fa); border-radius: 12px; text-align: center;">
-              <span class="material-icons-round" style="font-size: 48px; color: var(--text-secondary); opacity: 0.5;">history</span>
-              <h3 style="margin-top: 12px; color: var(--text-secondary);">تبويب السجل</h3>
+              <span class="material-icons-round" [style.color]="wizardHistoryColor()" style="font-size: 48px;">{{ wizardHistoryIcon() }}</span>
+              <h3 style="margin-top: 12px; color: var(--text-secondary);">{{ wizardHistoryLabel() || 'تبويب السجل' }}</h3>
               <p style="color: var(--text-secondary); opacity: 0.7;">سيعرض هذا التبويب جميع العمليات المنفذة عبر التبويبين الأول والثاني مع إمكانية الفلترة والبحث</p>
             </div>
           </div>
@@ -348,12 +375,39 @@
         @if (wizardStep() === 5) {
           <div class="wizard-step-content">
             <h2 class="step-title">إعداد تبويب الحسابات / الصناديق</h2>
-            <p class="step-desc">حدد اسم التبويب واختر الحسابات التي تريد مراقبتها</p>
+            <p class="step-desc">حدد اسم وأيقونة ولون التبويب واختر الحسابات التي تريد مراقبتها</p>
 
             <div class="form-row">
               <div class="form-group flex-1">
                 <label>اسم التبويب</label>
                 <input type="text" [ngModel]="wizardAccountsLabel()" (ngModelChange)="wizardAccountsLabel.set($event)" placeholder="مثلاً: الصناديق" />
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 16px;">
+              <div class="form-group flex-1">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid compact">
+                  @for (icon of icons; track icon) {
+                    <button class="icon-option" [class.selected]="wizardAccountsIcon() === icon" (click)="wizardAccountsIcon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group flex-1">
+                <label>لون التبويب</label>
+                <div class="color-picker-row">
+                  <div class="color-grid">
+                    @for (color of colors; track color) {
+                      <button class="color-option" [style.background]="color" [class.selected]="wizardAccountsColor() === color" (click)="wizardAccountsColor.set(color)">
+                        @if (wizardAccountsColor() === color) {
+                          <span class="material-icons-round">check</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1087,18 +1141,18 @@
             <span>{{ collectionStyleConfig()?.tab2Label || 'توريد' }}</span>
           </button>
           <button class="cs-view-tab" [class.active]="csActiveTab() === 'history'"
-                  [style.background]="csActiveTab() === 'history' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : null"
+                  [style.background]="csActiveTab() === 'history' ? (collectionStyleConfig()?.historyColor || 'linear-gradient(135deg, #6366f1, #8b5cf6)') : null"
                   (click)="csActiveTab.set('history'); cancelCsOpType()">
-            <div class="cs-vt-icon cs-history-icon">
-              <span class="material-icons-round">history</span>
+            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.historyColor ? collectionStyleConfig()!.historyColor : 'linear-gradient(135deg, #6366f1, #8b5cf6)'">
+              <span class="material-icons-round">{{ collectionStyleConfig()?.historyIcon || 'history' }}</span>
             </div>
             <span>{{ collectionStyleConfig()?.historyLabel || 'السجل' }}</span>
           </button>
           <button class="cs-view-tab" [class.active]="csActiveTab() === 'funds'"
-                  [style.background]="csActiveTab() === 'funds' ? 'linear-gradient(135deg, #10b981, #059669)' : null"
+                  [style.background]="csActiveTab() === 'funds' ? (collectionStyleConfig()?.accountsColor || 'linear-gradient(135deg, #10b981, #059669)') : null"
                   (click)="csActiveTab.set('funds'); cancelCsOpType()">
-            <div class="cs-vt-icon cs-funds-icon">
-              <span class="material-icons-round">savings</span>
+            <div class="cs-vt-icon" [style.background]="collectionStyleConfig()?.accountsColor ? collectionStyleConfig()!.accountsColor : 'linear-gradient(135deg, #10b981, #059669)'">
+              <span class="material-icons-round">{{ collectionStyleConfig()?.accountsIcon || 'savings' }}</span>
             </div>
             <span>{{ collectionStyleConfig()?.accountsSectionLabel || 'الصناديق' }}</span>
           </button>

@@ -176,9 +176,13 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Wizard Step 4: History tab
   wizardHistoryLabel = signal('السجل');
+  wizardHistoryIcon = signal('history');
+  wizardHistoryColor = signal('#6366f1');
 
   // Wizard Step 5: Accounts/Funds tab
   wizardAccountsLabel = signal('الصناديق');
+  wizardAccountsIcon = signal('savings');
+  wizardAccountsColor = signal('#10b981');
   wizardAccountIds = signal<number[]>([]);
 
   // ===================== Widget Customization (Step 3) =====================
@@ -795,9 +799,13 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
     // Step 4: History
     this.wizardHistoryLabel.set('السجل');
+    this.wizardHistoryIcon.set('history');
+    this.wizardHistoryColor.set('#6366f1');
 
     // Step 5: Accounts
     this.wizardAccountsLabel.set('الصناديق');
+    this.wizardAccountsIcon.set('savings');
+    this.wizardAccountsColor.set('#10b981');
     this.wizardAccountIds.set([]);
 
     // تحميل أقسام السايدبار والبيانات
@@ -1017,7 +1025,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
           tab2Color: this.wizardTab2Color(),
           tab2OperationTypeIds: this.wizardTab2OperationTypeIds(),
           historyLabel: this.wizardHistoryLabel(),
+          historyIcon: this.wizardHistoryIcon(),
+          historyColor: this.wizardHistoryColor(),
           accountsSectionLabel: this.wizardAccountsLabel(),
+          accountsIcon: this.wizardAccountsIcon(),
+          accountsColor: this.wizardAccountsColor(),
           accountIds: this.wizardAccountIds(),
         };
         await this.api.saveCollectionStyleConfig(this.bizId, newScreen.id, configPayload);
