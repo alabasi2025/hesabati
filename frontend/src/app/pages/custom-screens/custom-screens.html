@@ -504,9 +504,11 @@
       <!-- Detail Header -->
       <div class="detail-header">
         <div class="detail-header-right">
-          <button class="back-btn" (click)="backToList()">
-            <span class="material-icons-round">arrow_forward</span>
-          </button>
+          @if (!openedFromSidebar()) {
+            <button class="back-btn" (click)="backToList()">
+              <span class="material-icons-round">arrow_forward</span>
+            </button>
+          }
           <div class="detail-icon" [style.background]="'linear-gradient(135deg, ' + activeScreen()!.color + ', ' + activeScreen()!.color + '99)'">
             <span class="material-icons-round">{{ activeScreen()!.icon || 'dashboard' }}</span>
           </div>
@@ -1139,9 +1141,11 @@
       <!-- ===== Page Header ===== -->
       <div class="cs-page-header">
         <div class="cs-header-left">
-          <button class="cs-back-btn" (click)="backToList()">
-            <span class="material-icons-round">arrow_forward</span>
-          </button>
+          @if (!openedFromSidebar()) {
+            <button class="cs-back-btn" (click)="backToList()">
+              <span class="material-icons-round">arrow_forward</span>
+            </button>
+          }
           <div class="cs-page-icon" [style.background]="'linear-gradient(135deg, ' + (activeScreen()!.color || '#14b8a6') + ', ' + (activeScreen()!.color || '#0ea5e9') + '99)'">
             <span class="material-icons-round">{{ activeScreen()!.icon || 'dashboard' }}</span>
           </div>

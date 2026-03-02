@@ -164,6 +164,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   editMode = signal(false);
   showWidgetLibrary = signal(false);
   hasUnsavedChanges = signal(false);
+  openedFromSidebar = signal(false);
 
   // ===================== Wizard State (5 steps) =====================
   wizardStep = signal(1);
@@ -423,6 +424,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
       // Check if URL has ?screen= param to open directly
       this.route.queryParams.subscribe(async (qp) => {
         if (qp['screen']) {
+          this.openedFromSidebar.set(true);
           const screenId = parseInt(qp['screen']);
           const screen = this.screens().find(s => s.id === screenId);
           if (screen) {
@@ -1522,7 +1524,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.collectionStyleConfig.set(null);
-
+    this.openedFromSidebar.set(false);
   }
 
   toggleEditMode() {
