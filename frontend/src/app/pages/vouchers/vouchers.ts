@@ -86,19 +86,72 @@ export class VouchersComponent implements OnInit {
     voucherDate: new Date().toISOString().split('T')[0],
     reference: '',
     currencyId: 1,
-    status: 'draft',
+    status: 'confirmed',
   });
 
-  // Linked accounts from selected operation type
+  // ===================== Template-linked accounts =====================
   linkedAccounts = computed(() => {
     const ot = this.selectedOpType();
     if (!ot || !ot.accounts) return [];
     return ot.accounts;
   });
 
-  // Voucher operation types only
+  // Source account from template
+  sourceAccount = computed(() => {
+    const ot = this.selectedOpType();
+    if (!ot) return null;
+    // source_account_id هو الطرف الأول (الصندوق/البنك/الصراف/المحفظة)
+    const srcId = ot.source_account_id || ot.sourceAccountId;
+    if (!srcId) return null;
+    return this.accounts().find(a => a.id === srcId) || null;
+  });
+
+  // Source fund from template
+  sourceFund = computed(() => {
+    const ot = this.selectedOpType();
+    if (!ot) return null;
+    const fundId = ot.source_fund_id || ot.sourceFundId;
+    if (!fundId) return null;
+    return this.funds().find(f => f.id === fundId) || null;
+  });
+
+  // Filtered accounts for "to" field based on template
+  filteredToAccounts = computed(() => {
+    const linked = this.linkedAccounts();
+    if (linked.length > 0) {
+      // إذا القالب يحدد حسابات مرتبطة، نعرضها فقط
+      return linked.map((la: any) => {
+        const acc = this.accounts().find(a => a.id === (la.accountId || la.account_id));
+        return acc ? { ...acc, linkedName: la.accountName || la.account_name || acc.name } : null;
+      }).filter(Boolean);
+    }
+    // إذا لم يحدد القالب حسابات، نعرض كل الحسابات ما عدا المصدر
+    const fromId = this.form().fromAccountId;
+    return this.accounts().filter(a => a.id !== fromId);
+  });
+
+  // Voucher operation types only (receipt/payment)
+  receiptOpTypes = computed(() => {
+    return this.operationTypes().filter(ot => {
+      const cat = ot.category || ot.operationCategory;
+      const vt = ot.voucher_type || ot.voucherType;
+      return cat === 'voucher' && vt === 'receipt';
+    });
+  });
+
+  paymentOpTypes = computed(() => {
+    return this.operationTypes().filter(ot => {
+      const cat = ot.category || ot.operationCategory;
+      const vt = ot.voucher_type || ot.voucherType;
+      return cat === 'voucher' && vt === 'payment';
+    });
+  });
+
   voucherOpTypes = computed(() => {
-    return this.operationTypes().filter(ot => ot.category === 'voucher');
+    const type = this.voucherType();
+    if (type === 'receipt') return this.receiptOpTypes();
+    if (type === 'payment') return this.paymentOpTypes();
+    return this.operationTypes().filter(ot => (ot.category || ot.operationCategory) === 'voucher');
   });
 
   filteredVouchers = computed(() => {
@@ -117,7 +170,7 @@ export class VouchersComponent implements OnInit {
     const drafts = all.filter(v => v.status === 'draft').length;
     const confirmed = all.filter(v => v.status === 'confirmed').length;
     const cancelled = all.filter(v => v.status === 'cancelled').length;
-    return { total: all.length, receipts: receipts.length, payments: payments.length, totalReceipt, totalPayment, drafts, confirmed, cancelled };
+    return { total: all.length, receipts: receipts.length, payments: payments.length, totalReceipt, totalPayment, net: totalReceipt - totalPayment, drafts, confirmed, cancelled };
   });
 
   get totalPages(): number {
@@ -167,7 +220,6 @@ export class VouchersComponent implements OnInit {
       this.vouchers.set(result.vouchers || result);
       this.totalVouchers.set(result.total || (result.vouchers || result).length);
     } catch (e: any) {
-      // Fallback to old API
       try {
         const data = await this.api.getVouchers(this.bizId);
         this.vouchers.set(data);
@@ -271,7 +323,7 @@ export class VouchersComponent implements OnInit {
       voucherDate: new Date().toISOString().split('T')[0],
       reference: '',
       currencyId: 1,
-      status: 'draft',
+      status: 'confirmed',
     });
     this.showForm.set(true);
   }
@@ -302,13 +354,47 @@ export class VouchersComponent implements OnInit {
     this.showForm.set(true);
   }
 
+  // ===================== Template Selection - Auto-fill =====================
   selectOpType(ot: any) {
     this.selectedOpType.set(ot);
-    this.form.update(f => ({ ...f, operationTypeId: ot.id, fromAccountId: null, toAccountId: null }));
+
+    const srcAccId = ot.source_account_id || ot.sourceAccountId;
+    const srcFundId = ot.source_fund_id || ot.sourceFundId;
+    const vType = this.voucherType();
+
+    // تعبئة تلقائية للحسابات حسب القالب
+    if (vType === 'receipt') {
+      // سند قبض: المصدر (الطرف الأول) يستلم المبلغ
+      this.form.update(f => ({
+        ...f,
+        operationTypeId: ot.id,
+        toAccountId: srcAccId || null,   // الطرف الأول يستلم (مدين)
+        toFundId: srcFundId || null,
+        fromAccountId: null,              // الطرف الثاني يدفع (دائن) - يختاره المستخدم
+        description: ot.name || f.description,
+      }));
+    } else {
+      // سند صرف: المصدر (الطرف الأول) يدفع المبلغ
+      this.form.update(f => ({
+        ...f,
+        operationTypeId: ot.id,
+        fromAccountId: srcAccId || null,  // الطرف الأول يدفع (دائن)
+        fromFundId: srcFundId || null,
+        toAccountId: null,                // الطرف الثاني يستلم (مدين) - يختاره المستخدم
+        description: ot.name || f.description,
+      }));
+    }
+
+    // تحميل رصيد الحساب المصدر
+    if (srcAccId) this.loadAccountBalance(srcAccId);
   }
 
   setFormField(field: string, value: any) {
     this.form.update(f => ({ ...f, [field]: value }));
+    // تحميل الرصيد عند اختيار حساب
+    if ((field === 'fromAccountId' || field === 'toAccountId') && value) {
+      this.loadAccountBalance(value);
+    }
   }
 
   // ===================== Account Balance =====================
@@ -333,6 +419,7 @@ export class VouchersComponent implements OnInit {
     if (!f.description) { this.error.set('أدخل البيان'); return; }
 
     this.saving.set(true);
+    this.error.set('');
     try {
       const payload = {
         ...f,
@@ -515,6 +602,11 @@ export class VouchersComponent implements OnInit {
   getFundName(id: number): string {
     const fund = this.funds().find(f => f.id === id);
     return fund?.name || '-';
+  }
+
+  getOpTypeName(id: number): string {
+    const ot = this.operationTypes().find(o => o.id === id);
+    return ot?.name || '';
   }
 
   getTypeLabel(t: string): string {

@@ -435,6 +435,7 @@ export class OperationTypesComponent implements OnInit {
       voucherType: '', paymentMethod: '',
       sourceAccountId: null,
       sourceFundId: null,
+      sourceWarehouseId: null,
       linkedAccounts: [], screens: [],
       requiresAttachment: false, hasMultiLines: true,
       isActive: true, sortOrder: 0,
@@ -462,6 +463,7 @@ export class OperationTypesComponent implements OnInit {
       paymentMethod: ot.paymentMethod || '',
       sourceAccountId: ot.sourceAccountId || null,
       sourceFundId: ot.sourceFundId || null,
+      sourceWarehouseId: ot.sourceWarehouseId || null,
       linkedAccounts: linked,
       screens: ot.screens ? (typeof ot.screens === 'string' ? (() => { try { return JSON.parse(ot.screens); } catch { return []; } })() : ot.screens) : [],
       requiresAttachment: ot.requiresAttachment || false,
@@ -486,12 +488,20 @@ export class OperationTypesComponent implements OnInit {
     this.wiz.update(w => ({
       ...w,
       voucherType: vt,
-      paymentMethod: vt === 'journal' ? '' : w.paymentMethod,
+      paymentMethod: this.isWarehouseType(vt) ? '' : (vt === 'journal' ? '' : w.paymentMethod),
       sourceAccountId: null,
       sourceFundId: null,
+      sourceWarehouseId: null,
       linkedAccounts: [],
     }));
     this.selectedAccountType.set('');
+  }
+
+  selectWarehouse(wh: any) {
+    this.wiz.update(w => ({
+      ...w,
+      sourceWarehouseId: w.sourceWarehouseId === wh.id ? null : wh.id,
+    }));
   }
 
   selectPaymentMethod(pm: string) {
@@ -568,22 +578,11 @@ export class OperationTypesComponent implements OnInit {
     }));
   }
 
-  // ===================== Wizard Navigation - 6 خطوات (أو 4 للقيود) =====================
-  // سند قبض/صرف:
-  //   Step 1: اختيار التصنيف
-  //   Step 2: نوع السند (قبض/صرف/قيد)
-  //   Step 3: وسيلة الدفع (نقد/بنك/صراف/محفظة)
-  //   Step 4: المصدر - الطرف الأول (أي صندوق/بنك/صراف/محفظة بالتحديد)
-  //   Step 5: الحسابات المرتبطة - الطرف الثاني
-  //   Step 6: الاسم والتفاصيل
-  //
-  // قيد محاسبي:
-  //   Step 1: اختيار التصنيف
-  //   Step 2: نوع السند (قيد)
-  //   Step 3: الحسابات المرتبطة (دليل الحسابات)
-  //   Step 4: الاسم والتفاصيل
+  // ===================== Wizard Navigation =====================
+  // سند قبض/صرف: 6 خطوات (تصنيف → نوع → وسيلة → مصدر → حسابات → تفاصيل)
+  // قيد محاسبي: 4 خطوات (تصنيف → نوع → حسابات → تفاصيل)
+  // عملية مخزنية: 5 خطوات (تصنيف → نوع → مخزن → حسابات → تفاصيل)
 
-  // تحويل رقم الخطوة الحقيقي إلى رقم العرض
   getDisplayStep(): number {
     return this.wizardStep();
   }
@@ -596,9 +595,13 @@ export class OperationTypesComponent implements OnInit {
     if (step === 2) return !!w.voucherType;
 
     if (w.voucherType === 'journal') {
-      // قيد: الخطوة 3 = حسابات، الخطوة 4 = تفاصيل
       if (step === 3) return w.linkedAccounts.length > 0;
       if (step === 4) return !!w.name.trim();
+    } else if (this.isWarehouseType(w.voucherType)) {
+      // عملية مخزنية: step 3 = مخزن, step 4 = حسابات (اختياري), step 5 = تفاصيل
+      if (step === 3) return !!w.sourceWarehouseId;
+      if (step === 4) return true; // الحسابات اختيارية للعمليات المخزنية
+      if (step === 5) return !!w.name.trim();
     } else {
       // سند قبض/صرف
       if (step === 3) return !!w.paymentMethod;
@@ -613,6 +616,7 @@ export class OperationTypesComponent implements OnInit {
     const w = this.wiz();
     const step = this.wizardStep();
     if (w.voucherType === 'journal') return step === 4;
+    if (this.isWarehouseType(w.voucherType)) return step === 5;
     return step === 6;
   }
 
@@ -624,10 +628,7 @@ export class OperationTypesComponent implements OnInit {
     this.wizardStep.update(s => s - 1);
   }
 
-  // تحديد أي خطوة wizard يعرض المحتوى الحالي
-  // للقيود: step 3 = حسابات، step 4 = تفاصيل
-  // للسندات: step 3 = وسيلة، step 4 = مصدر، step 5 = حسابات، step 6 = تفاصيل
-  getContentType(): 'category' | 'voucherType' | 'paymentMethod' | 'source' | 'accounts' | 'details' {
+  getContentType(): 'category' | 'voucherType' | 'paymentMethod' | 'source' | 'warehouse' | 'accounts' | 'details' {
     const w = this.wiz();
     const step = this.wizardStep();
 
@@ -637,6 +638,10 @@ export class OperationTypesComponent implements OnInit {
     if (w.voucherType === 'journal') {
       if (step === 3) return 'accounts';
       if (step === 4) return 'details';
+    } else if (this.isWarehouseType(w.voucherType)) {
+      if (step === 3) return 'warehouse';
+      if (step === 4) return 'accounts';
+      if (step === 5) return 'details';
     } else {
       if (step === 3) return 'paymentMethod';
       if (step === 4) return 'source';
@@ -652,14 +657,23 @@ export class OperationTypesComponent implements OnInit {
     if (w.voucherType === 'journal') {
       return [
         { num: 1, label: 'التصنيف' },
-        { num: 2, label: 'نوع السند' },
+        { num: 2, label: 'نوع العملية' },
         { num: 3, label: 'الحسابات' },
         { num: 4, label: 'التفاصيل' },
       ];
     }
+    if (this.isWarehouseType(w.voucherType)) {
+      return [
+        { num: 1, label: 'التصنيف' },
+        { num: 2, label: 'نوع العملية' },
+        { num: 3, label: 'المخزن' },
+        { num: 4, label: 'الحسابات' },
+        { num: 5, label: 'التفاصيل' },
+      ];
+    }
     return [
       { num: 1, label: 'التصنيف' },
-      { num: 2, label: 'نوع السند' },
+      { num: 2, label: 'نوع العملية' },
       { num: 3, label: 'الوسيلة' },
       { num: 4, label: 'المصدر' },
       { num: 5, label: 'الحسابات' },
@@ -832,7 +846,14 @@ export class OperationTypesComponent implements OnInit {
     return this.permissions.find(x => x.value === p)?.label || p;
   }
 
+  getWarehouseName(id: number): string {
+    return this.warehouses().find((w: any) => w.id === id)?.name || '—';
+  }
+
   getSourceLabel(ot: any): string {
+    if (ot.sourceWarehouseId) {
+      return this.getWarehouseName(ot.sourceWarehouseId);
+    }
     if (ot.sourceFundId) {
       return this.getFundName(ot.sourceFundId);
     }
@@ -840,6 +861,10 @@ export class OperationTypesComponent implements OnInit {
       return this.getAccountName(ot.sourceAccountId);
     }
     return '—';
+  }
+
+  getVoucherTypeOption(value: string) {
+    return this.operationTypeOptions.find(o => o.value === value);
   }
 
   countByCategory(category: string): number {

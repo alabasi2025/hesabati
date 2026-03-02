@@ -736,15 +736,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   async loadWizardData() {
     try {
-      const [sections, opTypes, accountsData] = await Promise.all([
+      const [sections, opTypes, accountsData, warehouses] = await Promise.all([
         this.api.getSidebarSections(this.bizId),
         this.api.getOperationTypes(this.bizId),
         this.api.getAllAccounts(this.bizId),
+        this.api.getWarehouses(this.bizId),
       ]);
       this.wizardSidebarSections.set(sections);
       if (sections.length > 0) this.wizardSidebarSectionId.set(sections[0].id);
       this.operationTypes.set(opTypes);
       this.allAccounts.set(accountsData.accounts || []);
+      this.inventoryWarehouses.set(warehouses || []);
     } catch (e) { console.error('Error loading wizard data:', e); }
   }
 
@@ -756,7 +758,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   }
 
   getConfigurableTabs(): TabDefinition[] {
-    return this.wizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts');
+    return this.wizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts' || t.type === 'inventory');
   }
 
   getWizardStepTitle(): string {
@@ -860,6 +862,27 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   setAccFilterType(type: string) { this.accFilterType.set(type); }
   getAccTypeMeta(type: string) { return getAccTypeMeta(type); }
 
+  // Wizard: Toggle warehouse for inventory tab config
+  toggleWizardTabWarehouse(tabIdx: number, warehouseId: number) {
+    const tabs = [...this.wizardTabs()];
+    const tab = tabs[tabIdx];
+    const ids = [...(tab.config?.warehouseIds || [])];
+    const idx = ids.indexOf(warehouseId);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(warehouseId);
+    tabs[tabIdx] = { ...tab, config: { ...tab.config, warehouseIds: ids } };
+    this.wizardTabs.set(tabs);
+  }
+
+  toggleConfigWizardTabWarehouse(tabIdx: number, warehouseId: number) {
+    const tabs = [...this.configWizardTabs()];
+    const tab = tabs[tabIdx];
+    const ids = [...(tab.config?.warehouseIds || [])];
+    const idx = ids.indexOf(warehouseId);
+    if (idx >= 0) ids.splice(idx, 1); else ids.push(warehouseId);
+    tabs[tabIdx] = { ...tab, config: { ...tab.config, warehouseIds: ids } };
+    this.configWizardTabs.set(tabs);
+  }
+
   async saveWizardScreen() {
     const name = this.wizardScreenName();
     if (!name.trim()) { this.toast.warning('يرجى إدخال اسم الشاشة'); return; }
@@ -921,7 +944,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   }
 
   getConfigWizardConfigurableTabs(): TabDefinition[] {
-    return this.configWizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts');
+    return this.configWizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts' || t.type === 'inventory');
   }
 
   nextConfigWizardStep() {

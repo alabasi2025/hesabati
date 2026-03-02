@@ -516,6 +516,66 @@
             </div>
           }
 
+          <!-- ===== محتوى: اختيار المخزن (للعمليات المخزنية) ===== -->
+          @if (getContentType() === 'warehouse') {
+            <div class="wizard-step">
+              <h3 class="step-title">
+                <span class="material-icons-round">warehouse</span>
+                اختيار المخزن
+              </h3>
+              <p class="step-desc">
+                @if (wiz().voucherType === 'supply_invoice' || wiz().voucherType === 'supply_order') {
+                  اختر المخزن الذي سيتم التوريد إليه
+                } @else if (wiz().voucherType === 'dispatch') {
+                  اختر المخزن الذي سيتم الصرف منه
+                } @else if (wiz().voucherType === 'transfer_out') {
+                  اختر المخزن المصدر للتحويل
+                } @else {
+                  اختر المخزن الافتراضي لهذا القالب
+                }
+              </p>
+
+              <!-- بطاقة توضيحية -->
+              <div class="source-info-banner">
+                <span class="material-icons-round">lightbulb</span>
+                <div>
+                  <strong>ما هو المخزن الافتراضي؟</strong>
+                  <p>هو المخزن الذي سيتم اختياره تلقائياً عند استخدام هذا القالب. يمكن للمستخدم تغييره عند إنشاء العملية.</p>
+                </div>
+              </div>
+
+              @if (sourceWarehouses().length === 0) {
+                <div class="no-accounts-msg">
+                  <span class="material-icons-round">info</span>
+                  لا توجد مخازن متاحة. أضف مخازن أولاً من صفحة المخازن.
+                </div>
+              } @else {
+                <div class="source-accounts-list">
+                  @for (wh of sourceWarehouses(); track wh.id) {
+                    <div class="source-acc-item" [class.selected]="wiz().sourceWarehouseId === wh.id"
+                         (click)="selectWarehouse(wh)">
+                      <div class="sai-icon" style="background: #06b6d4">
+                        <span class="material-icons-round">warehouse</span>
+                      </div>
+                      <div class="sai-info">
+                        <strong>{{ wh.name }}</strong>
+                        @if (wh.compositeCode) {
+                          <span class="sai-sub">{{ wh.compositeCode }}</span>
+                        }
+                        @if (wh.location) {
+                          <span class="sai-station">{{ wh.location }}</span>
+                        }
+                      </div>
+                      @if (wiz().sourceWarehouseId === wh.id) {
+                        <span class="material-icons-round sai-check">check_circle</span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
           <!-- ===== محتوى: الحسابات المرتبطة (الطرف الثاني) ===== -->
           @if (getContentType() === 'accounts') {
             <div class="wizard-step">
@@ -639,7 +699,7 @@
                 </div>
                 <div class="ws-item">
                   <span class="material-icons-round">description</span>
-                  <span>النوع: <strong>{{ getVoucherTypeLabel(wiz().voucherType) }}</strong></span>
+                  <span>النوع: <strong>{{ getVoucherTypeOption(wiz().voucherType)?.label || getVoucherTypeLabel(wiz().voucherType) }}</strong></span>
                 </div>
                 @if (wiz().paymentMethod) {
                   <div class="ws-item">
@@ -651,6 +711,12 @@
                   <div class="ws-item">
                     <span class="material-icons-round">account_balance_wallet</span>
                     <span>المصدر: <strong>{{ selectedSourceName() }}</strong></span>
+                  </div>
+                }
+                @if (wiz().sourceWarehouseId) {
+                  <div class="ws-item">
+                    <span class="material-icons-round">warehouse</span>
+                    <span>المخزن: <strong>{{ getWarehouseName(wiz().sourceWarehouseId) }}</strong></span>
                   </div>
                 }
                 <div class="ws-item">
@@ -842,7 +908,8 @@
             <p>
               <strong>التصنيفات أولاً:</strong> أنشئ التصنيفات من تبويب "التصنيفات" قبل إنشاء القوالب.<br>
               <strong>سند قبض/صرف:</strong> اختر الوسيلة → المصدر (الطرف الأول) → الحسابات (الطرف الثاني).<br>
-              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو بنوك).
+              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو بنوك).<br>
+              <strong>عملية مخزنية:</strong> اختر المخزن الافتراضي → الحسابات المرتبطة (اختياري).
             </p>
           </div>
         </div>

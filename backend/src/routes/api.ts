@@ -3244,6 +3244,20 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHan
   const userId = c.get('userId') as number;
   const body = normalizeBody(await c.req.json());
 
+  // === جلب بيانات القالب إن وجد وتطبيق خصائصه ===
+  let opTemplate: any = null;
+  if (body.operationTypeId) {
+    const otRows = await db.execute(sql`SELECT * FROM operation_types WHERE id = ${body.operationTypeId} AND business_id = ${bizId}`);
+    const otResult = Array.isArray(otRows) ? otRows : (otRows as any).rows || [];
+    if (otResult.length > 0) {
+      opTemplate = otResult[0] as any;
+      // تطبيق خصائص القالب إذا لم يتم تحديدها يدوياً
+      if (!body.operationType && opTemplate.voucher_type) body.operationType = opTemplate.voucher_type;
+      if (!body.sourceWarehouseId && opTemplate.source_warehouse_id) body.sourceWarehouseId = opTemplate.source_warehouse_id;
+      if (!body.description && opTemplate.name) body.description = opTemplate.name;
+    }
+  }
+
   // التحقق من الحقول الإلزامية
   if (!body.operationType) return c.json({ error: 'نوع العملية المخزنية مطلوب' }, 400);
   if (!body.sourceWarehouseId && !body.destinationWarehouseId) {
@@ -3437,6 +3451,88 @@ api.get('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHand
     .where(and(...conditions))
     .orderBy(desc(warehouseOperations.operationDate), desc(warehouseOperations.id));
 
+  return c.json(rows);
+}));
+
+// === API تقارير المخزون لعدة مخازن (لتبويب التقارير في الشاشات المخصصة) ===
+api.get('/businesses/:bizId/inventory-summary', bizAuthMiddleware(), safeHandler('ملخص مخزون عدة مخازن', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const warehouseIdsParam = c.req.query('warehouseIds');
+  if (!warehouseIdsParam) return c.json({ error: 'يجب تحديد المخازن' }, 400);
+  const warehouseIds = warehouseIdsParam.split(',').map(Number).filter((n: number) => !isNaN(n) && n > 0);
+  if (warehouseIds.length === 0) return c.json({ error: 'معرّفات المخازن غير صالحة' }, 400);
+
+  const allInventory: any[] = [];
+  for (const whId of warehouseIds) {
+    const result = await db.execute(sql`
+      SELECT
+        ${whId} as warehouse_id,
+        woi.item_name,
+        woi.item_code,
+        woi.unit,
+        SUM(CASE
+          WHEN wo.destination_warehouse_id = ${whId} AND wo.status = 'confirmed'
+            THEN CAST(woi.quantity AS NUMERIC)
+          WHEN wo.source_warehouse_id = ${whId} AND wo.status = 'confirmed'
+            THEN -CAST(woi.quantity AS NUMERIC)
+          ELSE 0
+        END) as current_quantity,
+        SUM(CASE
+          WHEN wo.destination_warehouse_id = ${whId} AND wo.status = 'confirmed'
+            THEN CAST(woi.total_cost AS NUMERIC)
+          WHEN wo.source_warehouse_id = ${whId} AND wo.status = 'confirmed'
+            THEN -CAST(woi.total_cost AS NUMERIC)
+          ELSE 0
+        END) as total_cost,
+        MAX(wo.operation_date) as last_movement_date
+      FROM warehouse_operation_items woi
+      JOIN warehouse_operations wo ON wo.id = woi.operation_id
+      WHERE wo.business_id = ${bizId}
+      AND (wo.source_warehouse_id = ${whId} OR wo.destination_warehouse_id = ${whId})
+      GROUP BY woi.item_name, woi.item_code, woi.unit
+      HAVING SUM(CASE
+        WHEN wo.destination_warehouse_id = ${whId} AND wo.status = 'confirmed'
+          THEN CAST(woi.quantity AS NUMERIC)
+        WHEN wo.source_warehouse_id = ${whId} AND wo.status = 'confirmed'
+          THEN -CAST(woi.quantity AS NUMERIC)
+        ELSE 0
+      END) > 0
+      ORDER BY woi.item_name
+    `);
+    const rows = Array.isArray(result) ? result : (result as any).rows || [];
+    allInventory.push(...rows);
+  }
+
+  // ملخص إجمالي
+  const totalItems = allInventory.length;
+  const totalQuantity = allInventory.reduce((sum, r) => sum + Number(r.current_quantity || 0), 0);
+  const totalCost = allInventory.reduce((sum, r) => sum + Number(r.total_cost || 0), 0);
+
+  return c.json({ items: allInventory, summary: { totalItems, totalQuantity, totalCost, warehouseCount: warehouseIds.length } });
+}));
+
+// === API ملخص العمليات المخزنية (لتبويب التقارير) ===
+api.get('/businesses/:bizId/warehouse-operations-summary', bizAuthMiddleware(), safeHandler('ملخص العمليات المخزنية', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const from = c.req.query('from');
+  const to = c.req.query('to');
+
+  let dateFilter = '';
+  if (from) dateFilter += ` AND wo.operation_date >= '${from}'`;
+  if (to) dateFilter += ` AND wo.operation_date <= '${to}'`;
+
+  const result = await db.execute(sql.raw(`
+    SELECT
+      wo.operation_type,
+      COUNT(*) as operation_count,
+      SUM(CAST(wo.total_cost AS NUMERIC)) as total_cost,
+      SUM(wo.total_items) as total_items
+    FROM warehouse_operations wo
+    WHERE wo.business_id = ${bizId} AND wo.status = 'confirmed'${dateFilter}
+    GROUP BY wo.operation_type
+    ORDER BY operation_count DESC
+  `));
+  const rows = Array.isArray(result) ? result : (result as any).rows || [];
   return c.json(rows);
 }));
 

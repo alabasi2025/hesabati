@@ -273,6 +273,34 @@
                 </div>
                 <p class="selected-count">تم اختيار {{ (tab.config?.accountIds || []).length }} حساب</p>
               }
+
+              @if (tab.type === 'inventory') {
+                <h4>اختر المخازن لمراقبة الأصناف</h4>
+                <p class="config-hint">اختر المخازن التي تريد مراقبة أصنافها في هذا التبويب</p>
+                @if (inventoryWarehouses().length === 0) {
+                  <div class="empty-config">
+                    <span class="material-icons-round">warehouse</span>
+                    <p>لا توجد مخازن. أضف مخازن أولاً من صفحة المخازن.</p>
+                  </div>
+                } @else {
+                  <div class="accounts-grid">
+                    @for (wh of inventoryWarehouses(); track wh.id) {
+                      <button class="account-item" [class.selected]="(tab.config?.warehouseIds || []).includes(wh.id)"
+                        (click)="toggleWizardTabWarehouse(wizardTabs().indexOf(tab), wh.id)">
+                        <span class="material-icons-round acc-icon" style="color: #0ea5e9">warehouse</span>
+                        <span class="acc-name">{{ wh.name }}</span>
+                        @if (wh.compositeCode) {
+                          <span class="acc-type-label">{{ wh.compositeCode }}</span>
+                        }
+                        @if ((tab.config?.warehouseIds || []).includes(wh.id)) {
+                          <span class="material-icons-round check">check_circle</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                  <p class="selected-count">تم اختيار {{ (tab.config?.warehouseIds || []).length }} مخزن</p>
+                }
+              }
             </div>
           }
         }
@@ -750,6 +778,33 @@
                     }
                   </div>
                   <p class="selected-count">تم اختيار {{ (cfgTab.config?.accountIds || []).length }} حساب</p>
+                }
+                @if (cfgTab.type === 'inventory') {
+                  <h4>اختر المخازن لمراقبة الأصناف</h4>
+                  <p class="config-hint">اختر المخازن التي تريد مراقبة أصنافها</p>
+                  @if (inventoryWarehouses().length === 0) {
+                    <div class="empty-config">
+                      <span class="material-icons-round">warehouse</span>
+                      <p>لا توجد مخازن. أضف مخازن أولاً من صفحة المخازن.</p>
+                    </div>
+                  } @else {
+                    <div class="accounts-grid">
+                      @for (wh of inventoryWarehouses(); track wh.id) {
+                        <button class="account-item" [class.selected]="(cfgTab.config?.warehouseIds || []).includes(wh.id)"
+                          (click)="toggleConfigWizardTabWarehouse(configWizardTabs().indexOf(cfgTab), wh.id)">
+                          <span class="material-icons-round acc-icon" style="color: #0ea5e9">warehouse</span>
+                          <span class="acc-name">{{ wh.name }}</span>
+                          @if (wh.compositeCode) {
+                            <span class="acc-type-label">{{ wh.compositeCode }}</span>
+                          }
+                          @if ((cfgTab.config?.warehouseIds || []).includes(wh.id)) {
+                            <span class="material-icons-round check">check_circle</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                    <p class="selected-count">تم اختيار {{ (cfgTab.config?.warehouseIds || []).length }} مخزن</p>
+                  }
                 }
               </div>
             }

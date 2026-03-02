@@ -53,7 +53,7 @@ export function xssSanitizeMiddleware() {
 
 export const accountSchema = z.object({
   name: z.string().min(1, 'اسم الحساب مطلوب').max(200),
-  accountType: z.enum(['fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service']),
+  accountType: z.enum(['fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service', 'warehouse']),
   accountNumber: z.string().max(100).optional().nullable(),
   provider: z.string().max(200).optional().nullable(),
   subType: z.string().max(100).optional().nullable(),
@@ -107,6 +107,7 @@ export const operationTypeSchema = z.object({
   mainAccountId: z.number().int().positive().optional().nullable(),
   sourceAccountId: z.number().int().positive().optional().nullable(),
   sourceFundId: z.number().int().positive().optional().nullable(),
+  sourceWarehouseId: z.number().int().positive().optional().nullable(),
   requiresAttachment: z.boolean().optional(),
   hasMultiLines: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
