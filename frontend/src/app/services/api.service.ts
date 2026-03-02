@@ -56,7 +56,9 @@ export class ApiService {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `خطأ ${res.status}`);
+      const msg = err.error || `خطأ ${res.status}`;
+      const details = err.details ? ` (${err.details})` : '';
+      throw new Error(details ? `${msg}${details}` : msg);
     }
     return res.json();
   }
@@ -241,15 +243,19 @@ export class ApiService {
   deleteScreen(id: number)                           { return this.request<any>(`/screens/${id}`, { method: 'DELETE' }); }
   getCollectionStyleConfig(bizId: number, screenId: number) {
     return this.request<{
-      tab1Label: string; tab1OperationTypeIds: number[];
-      tab2Label: string; tab2OperationTypeIds: number[];
-      accountsSectionLabel: string; accountIds: number[];
+      tab1Label: string; tab1Color?: string; tab1Icon?: string | null; tab1OperationTypeIds: number[];
+      tab2Label: string; tab2Color?: string; tab2Icon?: string | null; tab2OperationTypeIds: number[];
+      tab3Label: string; tab3Color?: string; tab3Icon?: string | null;
+      accountsSectionLabel: string; tab4Color?: string; tab4Icon?: string | null; accountIds: number[];
     }>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`);
   }
   putCollectionStyleConfig(bizId: number, screenId: number, d: {
-    tab1Label?: string; tab1OperationTypeIds?: number[];
-    tab2Label?: string; tab2OperationTypeIds?: number[];
-    accountsSectionLabel?: string; accountIds?: number[];
+    tab1Label?: string; tab1Color?: string; tab1Icon?: string | null;
+    tab1OperationTypeIds?: number[];
+    tab2Label?: string; tab2Color?: string; tab2Icon?: string | null;
+    tab2OperationTypeIds?: number[];
+    tab3Label?: string; tab3Color?: string; tab3Icon?: string | null;
+    accountsSectionLabel?: string; tab4Color?: string; tab4Icon?: string | null; accountIds?: number[];
   }) {
     return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`, { method: 'PUT', body: JSON.stringify(d) });
   }
@@ -278,6 +284,7 @@ export class ApiService {
   updateScreenPermission(id: number, d: any)            { return this.request<any>(`/screen-permissions/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteScreenPermission(id: number)                    { return this.request<any>(`/screen-permissions/${id}`, { method: 'DELETE' }); }
   batchUpdateScreenPermissions(screenId: number, permissions: any[]) { return this.request<any>(`/screens/${screenId}/permissions/batch`, { method: 'PUT', body: JSON.stringify({ permissions }) }); }
+  getMyScreenPermission(bizId: number, screenId: number) { return this.request<{ permission: 'view' | 'execute' | 'none' }>(`/businesses/${bizId}/screens/${screenId}/my-permission`); }
 
   // ===================== إنشاء شاشة من قالب وربط بالقائمة الجانبية =====================
   createScreenFromTemplate(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }

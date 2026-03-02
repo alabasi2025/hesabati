@@ -89,7 +89,7 @@
 
             <div class="config-hint">
               <span class="material-icons-round">info</span>
-              فعّل أو عطّل الشاشات لهذا المستخدم. اسحب العناصر لإعادة ترتيبها.
+              فعّل أو عطّل الشاشات لهذا المستخدم، واختر الصلاحية (عرض فقط أو تنفيذ). اسحب العناصر لإعادة ترتيبها.
             </div>
 
             @for (sectionName of getSectionNames(); track sectionName) {
@@ -129,6 +129,15 @@
                         <span class="material-icons-round">{{ item.icon }}</span>
                       </div>
                       <span class="config-item-label">{{ item.label }}</span>
+                      <select
+                        class="permission-select"
+                        [value]="item.permission"
+                        (change)="setItemPermission(item.itemId, $any($event.target).value)"
+                        [title]="item.permission === 'execute' ? 'تنفيذ عمليات' : 'عرض فقط'"
+                      >
+                        <option value="view">عرض فقط</option>
+                        <option value="execute">تنفيذ</option>
+                      </select>
                       <button
                         class="toggle-btn"
                         [class.on]="item.isVisible"

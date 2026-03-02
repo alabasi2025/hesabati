@@ -215,6 +215,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   } | null>(null);
   showCollectionStyleConfigModal = signal(false);
   collectionStyleActiveTab = signal<'tab1' | 'tab2' | 'log' | 'accounts'>('tab1');
+  /** صلاحية المستخدم الحالي لهذه الشاشة (عرض فقط / تنفيذ) — تُجلب عند فتح الشاشة الثابتة */
+  myScreenPermission = signal<'view' | 'execute' | 'none'>('execute');
   collectionStyleAccounts = signal<any[]>([]);
   // قائمة الحسابات لاختيارها في نافذة الإعداد (تُحمّل عند فتح النافذة)
   allAccountsForConfig = signal<any[]>([]);
@@ -1468,9 +1470,16 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     if (normalized.templateKey === 'collection_style') {
       this.collectionStyleConfig.set(null);
       this.collectionStyleActiveTab.set('tab1');
+      this.myScreenPermission.set('execute');
       try {
         const config = await this.api.getCollectionStyleConfig(this.bizId, normalized.id);
         this.collectionStyleConfig.set(config);
+        try {
+          const perm = await this.api.getMyScreenPermission(this.bizId, normalized.id);
+          this.myScreenPermission.set(perm.permission === 'none' ? 'none' : perm.permission === 'view' ? 'view' : 'execute');
+        } catch (_) {
+          this.myScreenPermission.set('execute');
+        }
         await this.loadWidgetStats();
         await this.loadWidgetLog();
         if (config.accountIds?.length) {
@@ -1500,6 +1509,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
         });
       }
     } else {
+      this.myScreenPermission.set('execute');
       await this.loadWidgets(normalized.id);
     }
     this.animateViewTransition();
@@ -2039,6 +2049,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.widgets.set([]);
     this.gridItems = [];
     this.collectionStyleConfig.set(null);
+    this.myScreenPermission.set('execute');
     this.editMode.set(false);
     this.hasUnsavedChanges.set(false);
     this.animateViewTransition();

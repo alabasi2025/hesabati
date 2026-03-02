@@ -895,3 +895,27 @@ export const screenPermissions = pgTable('screen_permissions', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+// ===================== SCREEN COLLECTION STYLE CONFIG (إعداد الشاشة الثابتة) =====================
+
+export const screenCollectionStyleConfig = pgTable('screen_collection_style_config', {
+  id: serial('id').primaryKey(),
+  screenId: integer('screen_id').notNull().unique().references(() => screenTemplates.id, { onDelete: 'cascade' }),
+  tab1Label: varchar('tab1_label', { length: 200 }).notNull().default('تحصيل'),
+  tab1Color: varchar('tab1_color', { length: 20 }).default('#0d9488'),
+  tab1Icon: varchar('tab1_icon', { length: 80 }),
+  tab1OperationTypeIds: jsonb('tab1_operation_type_ids').$type<number[]>().default([]),
+  tab2Label: varchar('tab2_label', { length: 200 }).notNull().default('توريد'),
+  tab2Color: varchar('tab2_color', { length: 20 }).default('#3b82f6'),
+  tab2Icon: varchar('tab2_icon', { length: 80 }),
+  tab2OperationTypeIds: jsonb('tab2_operation_type_ids').$type<number[]>().default([]),
+  tab3Label: varchar('tab3_label', { length: 200 }).notNull().default('السجل'),
+  tab3Color: varchar('tab3_color', { length: 20 }).default('#6366f1'),
+  tab3Icon: varchar('tab3_icon', { length: 80 }),
+  accountsSectionLabel: varchar('accounts_section_label', { length: 200 }).notNull().default('الصناديق'),
+  tab4Color: varchar('tab4_color', { length: 20 }).default('#8b5cf6'),
+  tab4Icon: varchar('tab4_icon', { length: 80 }),
+  accountIds: jsonb('account_ids').$type<number[]>().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});

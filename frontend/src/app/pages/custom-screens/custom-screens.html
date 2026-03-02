@@ -648,10 +648,17 @@
             </div>
           </div>
           <div class="header-right">
-            <button class="help-btn collections-settings-btn" (click)="openCollectionStyleConfigModal()" title="إعداد الشاشة">
-              <span class="material-icons-round">tune</span>
-              إعداد الشاشة
-            </button>
+            @if (myScreenPermission() === 'execute') {
+              <button class="help-btn collections-settings-btn" (click)="openCollectionStyleConfigModal()" title="إعداد الشاشة">
+                <span class="material-icons-round">tune</span>
+                إعداد الشاشة
+              </button>
+            } @else if (myScreenPermission() === 'view') {
+              <span class="permission-badge view-only" title="صلاحية عرض فقط">
+                <span class="material-icons-round">visibility</span>
+                عرض فقط
+              </span>
+            }
           </div>
         </div>
       } @else {
@@ -746,9 +753,18 @@
                       <span class="material-icons-round">category</span>
                       {{ collectionStyleConfig()!.tab1Label }}
                     </h2>
+                    @if (myScreenPermission() === 'view') {
+                      <p class="view-only-notice">
+                        <span class="material-icons-round">visibility</span>
+                        عرض فقط — لا يمكن تنفيذ عمليات أو تعديل الإعداد.
+                      </p>
+                    }
                     <div class="ot-cards-grid cst-ot-grid">
                       @for (tpl of getCollectionStyleTab1OpTypes(); track tpl.id) {
-                        <button type="button" class="ot-card-3d cst-ot-card" [style.--card-color]="tpl.color || '#3b82f6'" (click)="openOperationExecution(tpl)">
+                        <button type="button" class="ot-card-3d cst-ot-card" [style.--card-color]="tpl.color || '#3b82f6'"
+                                [disabled]="myScreenPermission() !== 'execute'"
+                                [title]="myScreenPermission() !== 'execute' ? 'صلاحية عرض فقط' : ''"
+                                (click)="myScreenPermission() === 'execute' && openOperationExecution(tpl)">
                           <div class="ot-card-icon collection">
                             <span class="material-icons-round">{{ tpl.icon || 'call_received' }}</span>
                           </div>
@@ -773,9 +789,18 @@
                       <span class="material-icons-round">category</span>
                       {{ collectionStyleConfig()!.tab2Label }}
                     </h2>
+                    @if (myScreenPermission() === 'view') {
+                      <p class="view-only-notice">
+                        <span class="material-icons-round">visibility</span>
+                        عرض فقط — لا يمكن تنفيذ عمليات أو تعديل الإعداد.
+                      </p>
+                    }
                     <div class="ot-cards-grid cst-ot-grid">
                       @for (tpl of getCollectionStyleTab2OpTypes(); track tpl.id) {
-                        <button type="button" class="ot-card-3d cst-ot-card" [style.--card-color]="tpl.color || '#3b82f6'" (click)="openOperationExecution(tpl)">
+                        <button type="button" class="ot-card-3d cst-ot-card" [style.--card-color]="tpl.color || '#3b82f6'"
+                                [disabled]="myScreenPermission() !== 'execute'"
+                                [title]="myScreenPermission() !== 'execute' ? 'صلاحية عرض فقط' : ''"
+                                (click)="myScreenPermission() === 'execute' && openOperationExecution(tpl)">
                           <div class="ot-card-icon delivery">
                             <span class="material-icons-round">{{ tpl.icon || 'call_made' }}</span>
                           </div>

@@ -6,6 +6,8 @@
 CREATE SEQUENCE IF NOT EXISTS voucher_receipt_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS voucher_payment_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS voucher_transfer_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS voucher_collection_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS voucher_delivery_seq START 1;
 
 -- 2. إضافة UNIQUE constraint على account_balances (account_id, currency_id)
 -- مطلوب لـ ON CONFLICT في كود تحديث الأرصدة

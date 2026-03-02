@@ -240,6 +240,22 @@
   &:hover { background: rgba(245,158,11,0.15); transform: scale(1.02); }
 }
 
+.permission-badge.view-only {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 10px;
+  background: rgba(100, 116, 139, 0.12); color: #64748b;
+  font-size: 13px; font-weight: 600; font-family: 'Tajawal', sans-serif;
+  .material-icons-round { font-size: 18px; }
+}
+
+.view-only-notice {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; margin: 0 0 12px; border-radius: 10px;
+  background: rgba(100, 116, 139, 0.1); color: #64748b;
+  font-size: 13px; font-family: 'Tajawal', sans-serif;
+  .material-icons-round { font-size: 20px; }
+}
+
 /* ===================== Detail Content Layout ===================== */
 .detail-content {
   display: flex;

@@ -33,6 +33,7 @@ interface UserConfig {
   sectionId: number;
   isVisible: boolean;
   customSortOrder: number;
+  permission: 'view' | 'execute';
 }
 
 interface AppUser {
@@ -121,7 +122,8 @@ export class SidebarSettingsComponent implements OnInit {
         sectionName: c.sectionName,
         sectionId: c.sectionId,
         isVisible: c.isVisible,
-        customSortOrder: c.customSortOrder || 0,
+        customSortOrder: c.customSortOrder ?? 0,
+        permission: (c.permission === 'execute' ? 'execute' : 'view') as 'view' | 'execute',
       })));
     } catch (err) {
       console.error(err);
@@ -131,6 +133,13 @@ export class SidebarSettingsComponent implements OnInit {
   toggleItemVisibility(itemId: number) {
     const configs = this.userConfigs().map(c =>
       c.itemId === itemId ? { ...c, isVisible: !c.isVisible } : c
+    );
+    this.userConfigs.set(configs);
+  }
+
+  setItemPermission(itemId: number, permission: 'view' | 'execute') {
+    const configs = this.userConfigs().map(c =>
+      c.itemId === itemId ? { ...c, permission } : c
     );
     this.userConfigs.set(configs);
   }
@@ -231,9 +240,11 @@ export class SidebarSettingsComponent implements OnInit {
     this.savingUser.set(true);
     try {
       const items = this.userConfigs().map(c => ({
-        sidebarItemId: c.itemId,
+        id: c.configId,
+        itemId: c.itemId,
         isVisible: c.isVisible,
         customSortOrder: c.customSortOrder,
+        permission: c.permission,
       }));
       await this.api.updateUserSidebar(this.bizId, user.id, { items });
       this.showMessage('تم حفظ إعدادات التبويب بنجاح', 'success');

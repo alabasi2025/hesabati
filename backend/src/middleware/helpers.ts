@@ -120,7 +120,7 @@ export function safeHandler(
       
       return c.json({ 
         error: `حدث خطأ أثناء ${operationName} - حاول مرة أخرى`,
-        details: process.env.NODE_ENV === 'development' ? message : undefined
+        details: message || (error?.message ?? String(error))
       }, 500);
     }
   };
