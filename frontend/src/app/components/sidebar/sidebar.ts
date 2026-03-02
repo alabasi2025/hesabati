@@ -338,6 +338,58 @@ export class SidebarComponent {
     return this.expandedItems().has(label);
   }
 
+  // ============================================
+  // Icon Color System - Professional Unique Colors
+  // ============================================
+  private iconColorMap: Record<string, [string, string]> = {
+    'dashboard':              ['#3b82f6', '#60a5fa'],
+    'arrow_forward':          ['#94a3b8', '#cbd5e1'],
+    'bolt':                   ['#f59e0b', '#fbbf24'],
+    'receipt_long':           ['#10b981', '#34d399'],
+    'receipt':                ['#8b5cf6', '#a78bfa'],
+    'account_balance_wallet': ['#06b6d4', '#22d3ee'],
+    'category':               ['#f97316', '#fb923c'],
+    'savings':                ['#eab308', '#facc15'],
+    'account_balance':        ['#6366f1', '#818cf8'],
+    'currency_exchange':      ['#ec4899', '#f472b6'],
+    'wallet':                 ['#14b8a6', '#2dd4bf'],
+    'tune':                   ['#64748b', '#94a3b8'],
+    'space_dashboard':        ['#a855f7', '#c084fc'],
+    'admin_panel_settings':   ['#ef4444', '#f87171'],
+    'menu_book':              ['#0ea5e9', '#38bdf8'],
+    'groups':                 ['#22c55e', '#4ade80'],
+    'handshake':              ['#d946ef', '#e879f9'],
+    'warehouse':              ['#78716c', '#a8a29e'],
+    'local_shipping':         ['#f97316', '#fdba74'],
+    'balance':                ['#0891b2', '#22d3ee'],
+    'assessment':             ['#7c3aed', '#a78bfa'],
+    'analytics':              ['#2563eb', '#60a5fa'],
+    'warning':                ['#ef4444', '#fca5a5'],
+    'summarize':              ['#059669', '#34d399'],
+    'shopping_cart':          ['#e11d48', '#fb7185'],
+    'settings':               ['#64748b', '#94a3b8'],
+    'person':                 ['#f59e0b', '#fbbf24'],
+    'logout':                 ['#ef4444', '#f87171'],
+    'payments':               ['#10b981', '#34d399'],
+    'shopping_bag':           ['#f97316', '#fb923c'],
+    'open_in_new':            ['#3b82f6', '#60a5fa'],
+    'edit':                   ['#f59e0b', '#fbbf24'],
+    'delete':                 ['#ef4444', '#f87171'],
+    'lock':                   ['#64748b', '#94a3b8'],
+    'content_copy':           ['#8b5cf6', '#a78bfa'],
+    'add_to_home_screen':     ['#06b6d4', '#22d3ee'],
+  };
+
+  getIconColor(icon: string): string {
+    const colors = this.iconColorMap[icon];
+    return colors ? colors[0] : '#94a3b8';
+  }
+
+  getIconGlow(icon: string): string {
+    const colors = this.iconColorMap[icon];
+    return colors ? colors[1] : '#cbd5e1';
+  }
+
   getRoleLabel(): string {
     const role = this.auth.user()?.role;
     switch (role) {

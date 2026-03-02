@@ -24,8 +24,9 @@
         @for (item of section.items; track item.label) {
           @if (item.children) {
             <div class="nav-item-group" [class.expanded]="isExpanded(item.label)">
-              <button class="nav-item has-children" (click)="toggleItem(item.label)" [title]="item.label">
-                <div class="nav-icon">
+              <button class="nav-item has-children" (click)="toggleItem(item.label)" [title]="item.label"
+                [attr.data-icon]="item.icon">
+                <div class="nav-icon" [style.--icon-color]="getIconColor(item.icon)" [style.--icon-glow]="getIconGlow(item.icon)">
                   <span class="material-icons-round">{{ item.icon }}</span>
                 </div>
                 @if (!isCollapsed()) {
@@ -36,8 +37,9 @@
               @if (isExpanded(item.label) && !isCollapsed()) {
                 <div class="nav-children">
                   @for (child of item.children; track child.label) {
-                    <a class="nav-child-item" [routerLink]="child.route" routerLinkActive="active">
-                      <span class="material-icons-round child-icon">{{ child.icon }}</span>
+                    <a class="nav-child-item" [routerLink]="child.route" routerLinkActive="active"
+                      [attr.data-icon]="child.icon">
+                      <span class="material-icons-round child-icon" [style.color]="getIconColor(child.icon)">{{ child.icon }}</span>
                       <span class="child-label">{{ child.label }}</span>
                     </a>
                   }
@@ -46,7 +48,6 @@
             </div>
           } @else {
             @if (hasQueryParams(item.route)) {
-              <!-- عنصر يحتوي على query params - نستخدم routerLink مع queryParams -->
               <a
                 class="nav-item"
                 [class.active]="isItemActive(item.route)"
@@ -54,10 +55,11 @@
                 [queryParams]="getQueryParams(item.route)"
                 [title]="item.label"
                 [attr.hint]="item.label"
+                [attr.data-icon]="item.icon"
               >
-                <div class="nav-icon">
+                <div class="nav-icon" [style.--icon-color]="getIconColor(item.icon)" [style.--icon-glow]="getIconGlow(item.icon)">
                   @if (item.icon && item.icon.startsWith('pi ')) {
-                    <i [class]="item.icon"></i>
+                    <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
                   } @else {
                     <span class="material-icons-round">{{ item.icon }}</span>
                   }
@@ -65,12 +67,11 @@
                 @if (!isCollapsed()) {
                   <span class="nav-label">{{ item.label }}</span>
                   @if (item.badge) {
-                    <span class="nav-badge" [style.background-color]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                    <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{ item.badge }}</span>
                   }
                 }
               </a>
             } @else {
-              <!-- عنصر عادي بدون query params -->
               <a
                 class="nav-item"
                 [routerLink]="item.route"
@@ -78,10 +79,11 @@
                 [routerLinkActiveOptions]="{exact: item.route === '/biz/' + biz.currentBusinessId()}"
                 [title]="item.label"
                 [attr.hint]="item.label"
+                [attr.data-icon]="item.icon"
               >
-                <div class="nav-icon">
+                <div class="nav-icon" [style.--icon-color]="getIconColor(item.icon)" [style.--icon-glow]="getIconGlow(item.icon)">
                   @if (item.icon && item.icon.startsWith('pi ')) {
-                    <i [class]="item.icon"></i>
+                    <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
                   } @else {
                     <span class="material-icons-round">{{ item.icon }}</span>
                   }
@@ -89,7 +91,7 @@
                 @if (!isCollapsed()) {
                   <span class="nav-label">{{ item.label }}</span>
                   @if (item.badge) {
-                    <span class="nav-badge" [style.background-color]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                    <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{ item.badge }}</span>
                   }
                 }
               </a>
