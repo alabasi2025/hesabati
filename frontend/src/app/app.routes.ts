@@ -44,6 +44,8 @@ export const routes: Routes = [
       { path: 'exchange-rates', loadComponent: () => import('./pages/exchange-rates/exchange-rates').then(m => m.ExchangeRatesComponent) },
       { path: 'roles', loadComponent: () => import('./pages/roles/roles').then(m => m.RolesComponent) },
       { path: 'reports-advanced', loadComponent: () => import('./pages/reports-advanced/reports-advanced').then(m => m.ReportsAdvancedComponent) },
+      { path: 'journal-categories', loadComponent: () => import('./pages/journal-categories/journal-categories').then(m => m.JournalCategoriesComponent) },
+      { path: 'warehouse-operations', loadComponent: () => import('./pages/warehouse-operations/warehouse-operations').then(m => m.WarehouseOperationsComponent) },
     ],
   },
   { path: '', redirectTo: 'login', pathMatch: 'full' },

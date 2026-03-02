@@ -56,9 +56,37 @@ export class ApiService {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `خطأ ${res.status}`);
+      // بناء رسالة خطأ عربية مفصلة
+      let errorMsg = err.error || this.getArabicHttpError(res.status);
+      if (err.details) {
+        errorMsg += ` (التفاصيل: ${err.details})`;
+      }
+      if (err.location) {
+        errorMsg += ` [الموقع: ${err.location}]`;
+      }
+      const error: any = new Error(errorMsg);
+      error.status = res.status;
+      error.details = err.details;
+      error.location = err.location;
+      error.originalError = err;
+      throw error;
     }
     return res.json();
+  }
+
+  private getArabicHttpError(status: number): string {
+    const errors: Record<number, string> = {
+      400: 'طلب غير صحيح — تأكد من البيانات المدخلة',
+      401: 'غير مصرح — يرجى تسجيل الدخول مرة أخرى',
+      403: 'ليس لديك صلاحية لهذه العملية',
+      404: 'العنصر المطلوب غير موجود',
+      409: 'تعارض في البيانات — العنصر موجود مسبقاً',
+      422: 'بيانات غير صالحة — تأكد من جميع الحقول المطلوبة',
+      500: 'خطأ في الخادم — يرجى المحاولة لاحقاً',
+      502: 'الخادم غير متاح حالياً',
+      503: 'الخدمة متوقفة مؤقتاً',
+    };
+    return errors[status] || `خطأ غير متوقع (رمز: ${status})`;
   }
 
   // ===================== Dashboard =====================
@@ -484,5 +512,45 @@ export class ApiService {
     if (dateTo) params.push(`dateTo=${dateTo}`);
     if (params.length) url += '?' + params.join('&');
     return this.request<any>(url);
+  }
+
+  // ===================== تصنيفات المخازن =====================
+  getWarehouseTypes(bizId: number)                { return this.request<any[]>(`/businesses/${bizId}/warehouse-types`); }
+  createWarehouseType(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/warehouse-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateWarehouseType(id: number, d: any)         { return this.request<any>(`/warehouse-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteWarehouseType(id: number)                 { return this.request<any>(`/warehouse-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== تصنيفات قيود اليومية =====================
+  getJournalEntryCategories(bizId: number)        { return this.request<any[]>(`/businesses/${bizId}/journal-entry-categories`); }
+  createJournalEntryCategory(bizId: number, d: any) { return this.request<any>(`/businesses/${bizId}/journal-entry-categories`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateJournalEntryCategory(id: number, d: any)  { return this.request<any>(`/journal-entry-categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteJournalEntryCategory(id: number)          { return this.request<any>(`/journal-entry-categories/${id}`, { method: 'DELETE' }); }
+
+  // ===================== العمليات المخزنية =====================
+  getWarehouseOperations(bizId: number, type?: string, warehouseId?: number) {
+    let url = `/businesses/${bizId}/warehouse-operations`;
+    const params: string[] = [];
+    if (type) params.push(`type=${type}`);
+    if (warehouseId) params.push(`warehouseId=${warehouseId}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any[]>(url);
+  }
+  getWarehouseOperationsByWarehouse(bizId: number, warehouseId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/warehouses/${warehouseId}/operations`);
+  }
+  createWarehouseOperation(bizId: number, d: any) { return this.request<any>(`/businesses/${bizId}/warehouse-operations`, { method: 'POST', body: JSON.stringify(d) }); }
+  getWarehouseOperation(id: number)               { return this.request<any>(`/warehouse-operations/${id}`); }
+  getWarehouseInventory(bizId: number, warehouseId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/warehouses/${warehouseId}/inventory`);
+  }
+
+  // ===================== فحص الاتصال =====================
+  async checkDbHealth(): Promise<{ status: string; message: string; latency?: string }> {
+    try {
+      const res = await fetch('/health/db');
+      return await res.json();
+    } catch {
+      return { status: 'disconnected', message: 'فشل الاتصال بالخادم' };
+    }
   }
 }

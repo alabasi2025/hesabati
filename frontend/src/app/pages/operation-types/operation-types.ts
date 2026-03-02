@@ -65,6 +65,7 @@ export class OperationTypesComponent implements OnInit {
     paymentMethod: '',
     sourceAccountId: null as number | null,
     sourceFundId: null as number | null,
+    sourceWarehouseId: null as number | null,
     linkedAccounts: [] as { accountId: number; accountName: string; accountType: string; permission: string }[],
     screens: [] as string[],
     requiresAttachment: false,
@@ -110,9 +111,14 @@ export class OperationTypesComponent implements OnInit {
   });
 
   operationTypeOptions = [
-    { value: 'receipt', label: 'سند قبض', icon: 'call_received', desc: 'استلام أموال', color: '#10b981' },
-    { value: 'payment', label: 'سند صرف', icon: 'call_made', desc: 'صرف أموال', color: '#ef4444' },
-    { value: 'journal', label: 'قيد محاسبي', icon: 'book', desc: 'تحويل بين حسابات بدون صندوق', color: '#f59e0b' },
+    { value: 'receipt', label: 'سند قبض', icon: 'call_received', desc: 'استلام أموال', color: '#10b981', group: 'مالية' },
+    { value: 'payment', label: 'سند صرف', icon: 'call_made', desc: 'صرف أموال', color: '#ef4444', group: 'مالية' },
+    { value: 'journal', label: 'قيد محاسبي', icon: 'book', desc: 'تحويل بين حسابات بدون صندوق', color: '#f59e0b', group: 'مالية' },
+    { value: 'supply_invoice', label: 'توريد مخزني - فاتورة', icon: 'local_shipping', desc: 'إدخال أصناف من فاتورة مشتريات', color: '#06b6d4', group: 'مخزنية' },
+    { value: 'supply_order', label: 'توريد مخزني - أمر توريد', icon: 'move_to_inbox', desc: 'إدخال أصناف بأمر توريد', color: '#0891b2', group: 'مخزنية' },
+    { value: 'dispatch', label: 'صرف مخزني', icon: 'outbox', desc: 'إخراج أصناف من المخزن', color: '#f97316', group: 'مخزنية' },
+    { value: 'transfer_out', label: 'تحويل مخزني', icon: 'swap_horiz', desc: 'نقل أصناف بين مخازن', color: '#8b5cf6', group: 'مخزنية' },
+    { value: 'receive_transfer', label: 'استلام تحويل مخزني', icon: 'inventory', desc: 'استلام أصناف من تحويل مخزني', color: '#14b8a6', group: 'مخزنية' },
   ];
 
   paymentMethods = [
@@ -151,7 +157,7 @@ export class OperationTypesComponent implements OnInit {
     wallet: 'محفظة', cash: 'نقد', service: 'خدمة', custody: 'عهدة',
     accounting: 'محاسبي', intermediary: 'وسيط', e_wallet: 'محفظة إلكترونية',
     client: 'عميل', supplier: 'مورد', expense: 'مصاريف', revenue: 'إيرادات',
-    loan: 'قرض', partner: 'شريك', employee: 'موظف', other: 'أخرى',
+    loan: 'قرض', partner: 'شريك', employee: 'موظف', warehouse: 'مخزن', other: 'أخرى',
   };
 
   // أيقونات أنواع الحسابات
@@ -162,7 +168,7 @@ export class OperationTypesComponent implements OnInit {
     client: 'person', supplier: 'local_shipping', expense: 'trending_down',
     revenue: 'trending_up', loan: 'credit_card', partner: 'handshake',
     employee: 'badge', accounting: 'book', intermediary: 'swap_horiz',
-    other: 'more_horiz',
+    warehouse: 'warehouse', other: 'more_horiz',
   };
 
   // ===================== Computed: حسابات المصدر (الطرف الأول) =====================
@@ -250,8 +256,22 @@ export class OperationTypesComponent implements OnInit {
     const w = this.wiz();
     // قيد محاسبي: 4 خطوات (تصنيف → نوع → حسابات → تفاصيل)
     if (w.voucherType === 'journal') return 4;
+    // عمليات مخزنية: 5 خطوات (تصنيف → نوع → مخزن → حسابات → تفاصيل)
+    if (this.isWarehouseType(w.voucherType)) return 5;
     // سند قبض/صرف: 6 خطوات (تصنيف → نوع → وسيلة → مصدر → حسابات → تفاصيل)
     return 6;
+  });
+
+  // ===================== المخازن =====================
+  warehouses = signal<any[]>([]);
+
+  isWarehouseType(voucherType: string): boolean {
+    return ['supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer'].includes(voucherType);
+  }
+
+  // المخازن المتاحة كمصدر
+  sourceWarehouses = computed(() => {
+    return this.warehouses();
   });
 
   // ===================== Computed: اسم المصدر المختار =====================
@@ -278,14 +298,16 @@ export class OperationTypesComponent implements OnInit {
   async loadAll() {
     this.loading.set(true);
     try {
-      const [ots, allAccs, fnds] = await Promise.all([
+      const [ots, allAccs, fnds, whs] = await Promise.all([
         this.api.getOperationTypes(this.bizId),
         this.api.getAllAccounts(this.bizId),
         this.api.getFunds(this.bizId),
+        this.api.getWarehouses(this.bizId),
       ]);
       this.operationTypes.set(ots);
       this.accounts.set(allAccs.accounts);
       this.funds.set(fnds);
+      this.warehouses.set(whs);
     } catch (e: any) {
       this.error.set(e.message);
     } finally {
@@ -672,6 +694,7 @@ export class OperationTypesComponent implements OnInit {
         paymentMethod: w.paymentMethod || null,
         sourceAccountId: w.sourceAccountId || null,
         sourceFundId: w.sourceFundId || null,
+        sourceWarehouseId: w.sourceWarehouseId || null,
         screens: w.screens.length > 0 ? w.screens : [w.category],
         requiresAttachment: w.requiresAttachment,
         hasMultiLines: w.hasMultiLines,

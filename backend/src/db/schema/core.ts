@@ -6,7 +6,7 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'accountant', 'manager
 export const currencyCodeEnum = pgEnum('currency_code', ['YER', 'SAR', 'USD']);
 
 export const accountTypeEnum = pgEnum('account_type', [
-  'fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service',
+  'fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service', 'warehouse',
 ]);
 
 export const fundTypeEnum = pgEnum('fund_type', [
@@ -15,12 +15,13 @@ export const fundTypeEnum = pgEnum('fund_type', [
 
 export const voucherTypeEnum = pgEnum('voucher_type', [
   'receipt', 'payment', 'transfer', 'collection', 'delivery',
+  'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer',
 ]);
 
 export const voucherStatusEnum = pgEnum('voucher_status', ['draft', 'confirmed', 'cancelled']);
 export const expenseTypeEnum = pgEnum('expense_type', ['fixed', 'variable', 'annual']);
-export const warehouseTypeEnum = pgEnum('warehouse_type', ['main', 'station']);
-export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment']);
+export const warehouseTypeEnum = pgEnum('warehouse_type', ['main', 'station', 'sub']);
+export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment', 'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer']);
 export const employeeStatusEnum = pgEnum('employee_status', ['active', 'inactive', 'suspended']);
 export const voucherReversalStatusEnum = pgEnum('voucher_reversal_status', ['original', 'reversed', 'reversal']);
 
@@ -191,6 +192,8 @@ export const accounts = pgTable('accounts', {
   accountNumber: varchar('account_number', { length: 100 }),
   provider: varchar('provider', { length: 200 }),
   subType: varchar('sub_type', { length: 100 }),
+  sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
+  code: varchar('code', { length: 30 }), // الرمز المركب (مثل BNK-LOC-01)
   responsiblePerson: varchar('responsible_person', { length: 200 }),
   parentAccountId: integer('parent_account_id'),
   supportedCurrencies: jsonb('supported_currencies').$type<string[]>().default(['YER', 'SAR', 'USD']),
@@ -287,6 +290,9 @@ export const funds = pgTable('funds', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   fundType: fundTypeEnum('fund_type').notNull(),
+  subType: varchar('sub_type', { length: 100 }), // التصنيف الفرعي (يربط بجدول fundTypes)
+  sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
+  code: varchar('code', { length: 30 }), // الرمز المركب (مثل FND-COL-01)
   stationId: integer('station_id').references(() => stations.id),
   responsiblePerson: varchar('responsible_person', { length: 200 }),
   description: text('description'),
@@ -373,6 +379,10 @@ export const vouchers = pgTable('vouchers', {
   description: text('description'),
   reference: varchar('reference', { length: 200 }),
   voucherDate: timestamp('voucher_date').notNull().defaultNow(),
+
+  // حقول الترقيم الذكي
+  accountSequence: varchar('account_sequence', { length: 50 }), // تسلسل الحساب (سنة-رمز-رقم)
+  templateSequence: varchar('template_sequence', { length: 50 }), // تسلسل القالب (سنة-رمز-رقم)
 
   createdBy: integer('created_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
@@ -491,6 +501,9 @@ export const warehouses = pgTable('warehouses', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   warehouseType: warehouseTypeEnum('warehouse_type').notNull(),
+  subType: varchar('sub_type', { length: 100 }), // التصنيف الفرعي (يربط بجدول warehouseTypes)
+  sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
+  code: varchar('code', { length: 30 }), // الرمز المركب (مثل WH-MAIN-01)
   stationId: integer('station_id').references(() => stations.id),
   responsiblePerson: varchar('responsible_person', { length: 200 }),
   location: varchar('location', { length: 300 }),
@@ -665,10 +678,13 @@ export const operationTypes = pgTable('operation_types', {
   icon: varchar('icon', { length: 50 }).default('receipt_long'),
   color: varchar('color', { length: 20 }).default('#3b82f6'),
   category: varchar('category', { length: 50 }).notNull().default('عام'), // تصنيف ديناميكي ينشئه المستخدم
+  sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
+  code: varchar('code', { length: 30 }), // الرمز المركب (مثل RCV-COL-01)
   voucherType: varchar('voucher_type', { length: 30 }), // 'payment' | 'receipt' | 'journal'
   paymentMethod: varchar('payment_method', { length: 30 }), // 'cash' | 'bank' | 'exchange' | 'e_wallet'
   sourceAccountId: integer('source_account_id').references(() => accounts.id), // الطرف الأول (المصدر) - حساب بنك/صراف/محفظة
   sourceFundId: integer('source_fund_id').references(() => funds.id), // الطرف الأول (المصدر) - صندوق
+  sourceWarehouseId: integer('source_warehouse_id').references(() => warehouses.id), // الطرف الأول (المصدر) - مخزن
   screens: text('screens').default('{}'), // PostgreSQL text[] stored as text for Drizzle compat
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),
@@ -704,6 +720,9 @@ export const journalEntries = pgTable('journal_entries', {
   entryDate: date('entry_date').notNull(),
   reference: varchar('reference', { length: 100 }),
   operationTypeId: integer('operation_type_id').references(() => operationTypes.id),
+  category: varchar('category', { length: 100 }), // تصنيف القيد (مستقل عن تصنيف القالب)
+  categorySequence: varchar('category_sequence', { length: 50 }), // تسلسل التصنيف (سنة-رمز-رقم)
+  templateSequence: varchar('template_sequence', { length: 50 }), // تسلسل القالب
   createdBy: integer('created_by').references(() => users.id),
   isBalanced: boolean('is_balanced').notNull().default(false),
   totalDebit: decimal('total_debit', { precision: 20, scale: 2 }).notNull().default('0'),
@@ -851,7 +870,7 @@ export const screenTemplates = pgTable('screen_templates', {
 export const screenWidgets = pgTable('screen_widgets', {
   id: serial('id').primaryKey(),
   screenId: integer('screen_id').notNull().references(() => screenTemplates.id),
-  widgetType: varchar('widget_type', { length: 50 }).notNull(), // templates | log | accounts | stats | chart | notes
+  widgetType: varchar('widget_type', { length: 50 }).notNull(), // templates | log | accounts | inventory | stats | chart | reports | notes
   title: varchar('title', { length: 200 }).notNull(),
   config: jsonb('config').$type<any>().default({}),
   positionX: integer('position_x').notNull().default(0),
@@ -883,6 +902,18 @@ export const screenWidgetAccounts = pgTable('screen_widget_accounts', {
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ===================== SCREEN WIDGET WAREHOUSES (ربط تبويب مراقبة الأصناف بالمخازن) =====================
+
+export const screenWidgetWarehouses = pgTable('screen_widget_warehouses', {
+  id: serial('id').primaryKey(),
+  widgetId: integer('widget_id').notNull().references(() => screenWidgets.id),
+  warehouseId: integer('warehouse_id').notNull().references(() => warehouses.id),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ==============
 
 // ===================== SCREEN PERMISSIONS (صلاحيات الشاشات المخصصة) =====================
 
@@ -923,4 +954,97 @@ export const customScreenConfig = pgTable('custom_screen_config', {
   accountIds: jsonb('account_ids').$type<number[]>().default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== SEQUENCE COUNTERS (عدادات التسلسل الذكي) =====================
+
+export const sequenceCounters = pgTable('sequence_counters', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  counterType: varchar('counter_type', { length: 50 }).notNull(), // 'account' | 'template' | 'journal_category' | 'warehouse'
+  entityId: integer('entity_id').notNull(), // معرف الحساب أو القالب أو التصنيف
+  year: integer('year').notNull(), // السنة الميلادية
+  lastNumber: integer('last_number').notNull().default(0), // آخر رقم تسلسلي
+  prefix: varchar('prefix', { length: 30 }), // البادئة (مثل FND01, RCV01)
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== WAREHOUSE TYPES (أنواع/تصنيفات المخازن) =====================
+
+export const warehouseTypes = pgTable('warehouse_types', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 100 }).default('warehouse'),
+  color: varchar('color', { length: 50 }).default('#4CAF50'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== JOURNAL ENTRY CATEGORIES (تصنيفات قيود اليومية - مستقلة) =====================
+
+export const journalEntryCategories = pgTable('journal_entry_categories', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  categoryKey: varchar('category_key', { length: 100 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 100 }).default('book'),
+  color: varchar('color', { length: 50 }).default('#6366f1'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== WAREHOUSE OPERATIONS (عمليات المخازن) =====================
+
+export const warehouseOperations = pgTable('warehouse_operations', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  operationNumber: varchar('operation_number', { length: 50 }).notNull(),
+  operationType: varchar('operation_type', { length: 30 }).notNull(), // supply_invoice | supply_order | dispatch | transfer_out | receive_transfer
+  operationTypeId: integer('operation_type_id').references(() => operationTypes.id), // القالب المستخدم
+  sourceWarehouseId: integer('source_warehouse_id').references(() => warehouses.id), // المخزن المصدر
+  destinationWarehouseId: integer('destination_warehouse_id').references(() => warehouses.id), // المخزن الوجهة
+  relatedOperationId: integer('related_operation_id'), // العملية المرتبطة (استلام ← تحويل)
+  relatedVoucherId: integer('related_voucher_id').references(() => vouchers.id), // السند المرتبط
+  supplierId: integer('supplier_id').references(() => suppliers.id), // المورد (لفاتورة المشتريات)
+  totalCost: decimal('total_cost', { precision: 20, scale: 2 }).notNull().default('0'),
+  totalItems: integer('total_items').notNull().default(0),
+  currencyId: integer('currency_id').references(() => currencies.id),
+  operationDate: varchar('operation_date', { length: 20 }).notNull(), // YYYY-MM-DD
+  description: text('description'),
+  reference: varchar('reference', { length: 200 }),
+  status: varchar('status', { length: 20 }).notNull().default('confirmed'), // draft | confirmed | cancelled
+
+  // حقول الترقيم الذكي
+  warehouseSequence: integer('warehouse_sequence'), // تسلسل المخزن
+  templateSequence: integer('template_sequence'), // تسلسل القالب
+
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== WAREHOUSE OPERATION ITEMS (أصناف عملية المخزن) =====================
+
+export const warehouseOperationItems = pgTable('warehouse_operation_items', {
+  id: serial('id').primaryKey(),
+  operationId: integer('operation_id').notNull().references(() => warehouseOperations.id),
+  itemName: varchar('item_name', { length: 200 }).notNull(), // اسم الصنف
+  itemCode: varchar('item_code', { length: 50 }), // رمز الصنف
+  quantity: decimal('quantity', { precision: 15, scale: 2 }).notNull(),
+  unitCost: decimal('unit_cost', { precision: 15, scale: 2 }),
+  totalCost: decimal('total_cost', { precision: 20, scale: 2 }),
+  unit: varchar('unit', { length: 50 }), // الوحدة
+  currencyId: integer('currency_id').references(() => currencies.id),
+  notes: text('notes'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });

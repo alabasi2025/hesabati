@@ -87,37 +87,95 @@ export function safeHandler(
     } catch (error: any) {
       console.error(`خطأ في ${operationName}:`, error);
       
-      // التعامل مع أخطاء قاعدة البيانات المحددة
       const message = error?.message || '';
+      const stack = error?.stack || '';
       
+      // استخراج مكان الخطأ من الـ stack trace
+      const locationMatch = stack.match(/at\s+.*?\((.*?):(\d+):(\d+)\)/);
+      const errorLocation = locationMatch ? `${locationMatch[1]}:${locationMatch[2]}` : undefined;
+      
+      // التعامل مع أخطاء قاعدة البيانات المحددة
       if (message.includes('duplicate key') || message.includes('unique constraint')) {
-        return c.json({ error: 'البيانات موجودة مسبقاً - يوجد تكرار في القيم الفريدة' }, 409);
+        const tableMatch = message.match(/constraint "([^"]+)"/);
+        const constraintName = tableMatch ? tableMatch[1] : '';
+        return c.json({ 
+          error: `فشل في ${operationName}: البيانات موجودة مسبقاً - يوجد تكرار في القيم الفريدة`,
+          details: constraintName ? `القيد المكرر: ${constraintName}` : undefined,
+          location: errorLocation
+        }, 409);
       }
       if (message.includes('foreign key') || message.includes('violates foreign key')) {
-        return c.json({ error: 'لا يمكن تنفيذ العملية - يوجد ارتباط مع بيانات أخرى' }, 409);
+        const refMatch = message.match(/constraint "([^"]+)"/);
+        const refName = refMatch ? refMatch[1] : '';
+        return c.json({ 
+          error: `فشل في ${operationName}: لا يمكن تنفيذ العملية - يوجد ارتباط مع بيانات أخرى`,
+          details: refName ? `الارتباط: ${refName}` : 'توجد بيانات مرتبطة تمنع الحذف أو التعديل',
+          location: errorLocation
+        }, 409);
       }
       if (message.includes('not-null constraint') || message.includes('null value in column')) {
-        // استخراج اسم العمود من رسالة الخطأ
         const colMatch = message.match(/column "([^"]+)"/);
         const colName = colMatch ? colMatch[1] : 'غير محدد';
-        return c.json({ error: `حقل إلزامي مفقود: ${colName}` }, 400);
+        return c.json({ 
+          error: `فشل في ${operationName}: حقل إلزامي مفقود`,
+          details: `الحقل المفقود: ${colName}`,
+          location: errorLocation
+        }, 400);
       }
       if (message.includes('invalid input syntax')) {
-        return c.json({ error: 'صيغة البيانات غير صحيحة - تأكد من القيم المدخلة' }, 400);
+        const typeMatch = message.match(/for type (\w+)/);
+        const typeName = typeMatch ? typeMatch[1] : '';
+        return c.json({ 
+          error: `فشل في ${operationName}: صيغة البيانات غير صحيحة`,
+          details: typeName ? `النوع المتوقع: ${typeName}` : 'تأكد من القيم المدخلة',
+          location: errorLocation
+        }, 400);
       }
       if (message.includes('value too long')) {
-        return c.json({ error: 'النص المدخل أطول من الحد المسموح' }, 400);
+        const colMatch = message.match(/for type character varying\((\d+)\)/);
+        const maxLen = colMatch ? colMatch[1] : 'غير محدد';
+        return c.json({ 
+          error: `فشل في ${operationName}: النص المدخل أطول من الحد المسموح`,
+          details: `الحد الأقصى: ${maxLen} حرف`,
+          location: errorLocation
+        }, 400);
       }
       if (message.includes('invalid input value for enum')) {
-        return c.json({ error: 'القيمة المدخلة غير مسموحة - تأكد من اختيار قيمة صحيحة' }, 400);
+        const enumMatch = message.match(/for enum (\w+)/);
+        const enumName = enumMatch ? enumMatch[1] : '';
+        return c.json({ 
+          error: `فشل في ${operationName}: القيمة المدخلة غير مسموحة`,
+          details: enumName ? `النوع: ${enumName}` : 'تأكد من اختيار قيمة صحيحة من القائمة',
+          location: errorLocation
+        }, 400);
       }
       if (message.includes('Unexpected end of JSON') || message.includes('JSON')) {
-        return c.json({ error: 'صيغة البيانات المرسلة غير صحيحة (JSON غير صالح)' }, 400);
+        return c.json({ 
+          error: `فشل في ${operationName}: صيغة البيانات المرسلة غير صحيحة`,
+          details: 'تأكد من أن البيانات بصيغة JSON صالحة',
+          location: errorLocation
+        }, 400);
+      }
+      if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+        return c.json({ 
+          error: `فشل في ${operationName}: انتهت مهلة الاتصال بقاعدة البيانات`,
+          details: 'حاول مرة أخرى بعد قليل',
+          location: errorLocation
+        }, 504);
+      }
+      if (message.includes('ECONNREFUSED') || message.includes('connection')) {
+        return c.json({ 
+          error: `فشل في ${operationName}: تعذر الاتصال بقاعدة البيانات`,
+          details: 'تحقق من حالة الخادم وقاعدة البيانات',
+          location: errorLocation
+        }, 503);
       }
       
       return c.json({ 
-        error: `حدث خطأ أثناء ${operationName} - حاول مرة أخرى`,
-        details: process.env.NODE_ENV === 'development' ? message : undefined
+        error: `حدث خطأ أثناء ${operationName}`,
+        details: message || 'خطأ غير معروف - حاول مرة أخرى',
+        location: errorLocation,
+        stack: process.env.NODE_ENV === 'development' ? stack : undefined
       }, 500);
     }
   };

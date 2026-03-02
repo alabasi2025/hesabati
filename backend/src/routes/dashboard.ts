@@ -5,6 +5,15 @@ import { eq, sql, count } from 'drizzle-orm';
 
 const dashboardRoutes = new Hono();
 
+// دالة مساعدة لاستخراج العدد بأمان
+const num = (arr: any[], def = 0): number => {
+  try {
+    return Number(arr?.[0]?.count) || def;
+  } catch {
+    return def;
+  }
+};
+
 // إصلاح #8: N+1 - استعلام واحد مجمع
 dashboardRoutes.get('/stats', async (c) => {
   try {
@@ -36,21 +45,25 @@ dashboardRoutes.get('/stats', async (c) => {
     ]);
 
     return c.json({
-      businesses: bizCount[0].count,
-      stations: stationCount[0].count,
-      employees: employeeCount[0].count,
-      accounts: accountCount[0].count,
-      funds: fundCount[0].count,
-      suppliers: supplierCount[0].count,
-      partners: partnerCount[0].count,
-      vouchers: voucherCount[0].count,
-      pendingAccounts: pendingCount[0].count,
-      warehouses: warehouseCount[0].count,
-      totalSalaries: salaryResult[0]?.total || '0',
+      businesses: num(bizCount),
+      stations: num(stationCount),
+      employees: num(employeeCount),
+      accounts: num(accountCount),
+      funds: num(fundCount),
+      suppliers: num(supplierCount),
+      partners: num(partnerCount),
+      vouchers: num(voucherCount),
+      pendingAccounts: num(pendingCount),
+      warehouses: num(warehouseCount),
+      totalSalaries: salaryResult?.[0]?.total || '0',
     });
   } catch (error) {
-    console.error('Dashboard stats error:', error);
-    return c.json({ error: 'حدث خطأ في جلب الإحصائيات' }, 500);
+    console.error('خطأ في جلب إحصائيات لوحة التحكم:', error);
+    return c.json({
+      error: 'حدث خطأ في جلب الإحصائيات',
+      details: error instanceof Error ? error.message : 'خطأ غير معروف',
+      location: 'dashboard/stats',
+    }, 500);
   }
 });
 

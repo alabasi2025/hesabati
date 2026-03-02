@@ -20,6 +20,7 @@ const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: st
   cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
   custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
   service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
+  warehouse:    { label: 'مخزن',     icon: 'warehouse',                color: '#0ea5e9' },
 };
 
 function getAccTypeMeta(type: string) {
@@ -32,7 +33,7 @@ interface TabDefinition {
   label: string;
   icon: string;
   color: string;
-  type: 'operations' | 'log' | 'accounts' | 'stats' | 'chart' | 'notes';
+  type: 'operations' | 'log' | 'accounts' | 'stats' | 'chart' | 'notes' | 'inventory' | 'reports';
   sortOrder: number;
   config: any;
 }
@@ -85,8 +86,10 @@ const TAB_TYPE_OPTIONS = [
   { value: 'operations', label: 'قوالب عمليات', icon: 'receipt_long', desc: 'أزرار لتنفيذ عمليات (تحصيل/توريد/تحويل)', color: '#3b82f6', defaultIcon: 'receipt_long', defaultColor: '#3b82f6' },
   { value: 'log', label: 'سجل العمليات', icon: 'history', desc: 'جدول العمليات مع فلاتر وإحصائيات', color: '#22c55e', defaultIcon: 'history', defaultColor: '#6366f1' },
   { value: 'accounts', label: 'مراقبة حسابات', icon: 'account_balance', desc: 'عرض أرصدة حسابات مع اتجاه وآخر حركة', color: '#f59e0b', defaultIcon: 'savings', defaultColor: '#10b981' },
+  { value: 'inventory', label: 'مراقبة أصناف', icon: 'inventory_2', desc: 'عرض أصناف المخازن مع الكميات والتكاليف وآخر حركة', color: '#0ea5e9', defaultIcon: 'inventory_2', defaultColor: '#0ea5e9' },
   { value: 'stats', label: 'إحصائيات', icon: 'analytics', desc: 'أرقام ملخصة (تحصيل، صرف، عدد عمليات، صافي)', color: '#8b5cf6', defaultIcon: 'analytics', defaultColor: '#8b5cf6' },
   { value: 'chart', label: 'رسم بياني', icon: 'bar_chart', desc: 'رسم بياني للتحصيل والصرف', color: '#14b8a6', defaultIcon: 'bar_chart', defaultColor: '#14b8a6' },
+  { value: 'reports', label: 'تقارير', icon: 'summarize', desc: 'استخراج تقارير للحسابات المختارة', color: '#ec4899', defaultIcon: 'summarize', defaultColor: '#ec4899' },
   { value: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', desc: 'منطقة نص حر مع حفظ تلقائي', color: '#f97316', defaultIcon: 'sticky_note_2', defaultColor: '#f97316' },
 ];
 
@@ -169,6 +172,10 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   // Accounts tab
   widgetAccounts = signal<AccountData[]>([]);
+
+  // Inventory tab (مراقبة الأصناف)
+  widgetInventory = signal<any[]>([]);
+  inventoryWarehouses = signal<any[]>([]);
 
   // Stats tab
   widgetStats = signal<any>({ totalReceipts: 0, totalPayments: 0, operationsCount: 0, netBalance: 0 });
@@ -358,6 +365,16 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Load inventory for inventory tabs
+    const inventoryTabs = tabs.filter(t => t.type === 'inventory');
+    if (inventoryTabs.length > 0) {
+      const allWarehouseIds = new Set<number>();
+      inventoryTabs.forEach(t => (t.config?.warehouseIds || []).forEach((id: number) => allWarehouseIds.add(id)));
+      if (allWarehouseIds.size > 0) {
+        promises.push(this.loadInventoryData(Array.from(allWarehouseIds)));
+      }
+    }
+
     await Promise.allSettled(promises);
   }
 
@@ -543,6 +560,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     } catch (e) { console.error('Error loading accounts:', e); }
   }
 
+  async loadInventoryData(warehouseIds: number[]) {
+    try {
+      const results: any[] = [];
+      for (const whId of warehouseIds) {
+        const inventory = await this.api.getWarehouseInventory(this.bizId, whId);
+        results.push(...(inventory || []));
+      }
+      this.widgetInventory.set(results);
+    } catch (e) { console.error('خطأ في تحميل بيانات المخزون:', e); }
+  }
+
   // ===================== Tab Helpers =====================
   setActiveTab(tabId: string) { this.activeTabId.set(tabId); }
 
@@ -556,6 +584,12 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     const ids = tab.config?.accountIds || [];
     if (ids.length === 0) return this.widgetAccounts();
     return this.widgetAccounts().filter((a: any) => ids.includes(a.id));
+  }
+
+  getTabInventory(tab: TabDefinition): any[] {
+    const ids = tab.config?.warehouseIds || [];
+    if (ids.length === 0) return this.widgetInventory();
+    return this.widgetInventory().filter((item: any) => ids.includes(item.warehouseId));
   }
 
   getStatsCards(): { label: string; value: string; icon: string; color: string }[] {
@@ -1169,5 +1203,33 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   getTabTypeInfo(type: string) {
     return TAB_TYPE_OPTIONS.find(t => t.value === type) || TAB_TYPE_OPTIONS[0];
+  }
+
+  // ===== Inventory Helpers =====
+  getInventoryTotalCost(tab: TabDefinition): number {
+    return this.getTabInventory(tab).reduce((sum: number, item: any) => sum + (Number(item.total_cost) || 0), 0);
+  }
+
+  // ===== Reports =====
+  async generateReport(reportType: string, tab: TabDefinition) {
+    this.toast.info('جاري إعداد التقرير...');
+    // سيتم ربطه بنظام التقارير لاحقاً
+    try {
+      if (reportType === 'account_statement') {
+        const accountIds = tab.config?.accountIds || [];
+        if (accountIds.length === 0) {
+          this.toast.error('يرجى تحديد حسابات للتقرير');
+          return;
+        }
+        this.router.navigate(['biz', this.bizId, 'reports-advanced'], { queryParams: { type: 'account_statement', accountIds: accountIds.join(',') } });
+      } else if (reportType === 'inventory_report') {
+        const warehouseIds = tab.config?.warehouseIds || [];
+        this.router.navigate(['biz', this.bizId, 'reports-advanced'], { queryParams: { type: 'inventory', warehouseIds: warehouseIds.join(',') } });
+      } else if (reportType === 'operations_summary') {
+        this.router.navigate(['biz', this.bizId, 'reports-advanced'], { queryParams: { type: 'operations_summary' } });
+      }
+    } catch (e: any) {
+      this.toast.error(e?.message || 'حدث خطأ');
+    }
   }
 }

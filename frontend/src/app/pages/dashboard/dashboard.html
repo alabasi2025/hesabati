@@ -5,6 +5,17 @@
       <p>جاري تحميل البيانات...</p>
     </div>
   } @else {
+    <!-- Error Banner -->
+    @if (loadError()) {
+      <div class="error-banner">
+        <span class="material-icons-round">warning</span>
+        <span>{{ loadError() }}</span>
+        <button class="retry-btn" (click)="retry()">
+          <span class="material-icons-round">refresh</span> إعادة المحاولة
+        </button>
+      </div>
+    }
+
     <!-- Stats Row -->
     <div class="stats-row">
       <div class="stat-card stat-1" (click)="navigate('stations')">
@@ -49,6 +60,13 @@
           <span class="stat-label">مورد</span>
         </div>
       </div>
+      <div class="stat-card stat-7" (click)="navigate('warehouse')">
+        <div class="stat-icon"><span class="material-icons-round">warehouse</span></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ warehouses().length }}</span>
+          <span class="stat-label">مخزن</span>
+        </div>
+      </div>
     </div>
 
     <!-- Quick Actions -->
@@ -66,6 +84,9 @@
         </button>
         <button class="action-btn action-blue" (click)="navigate('employees')">
           <span class="material-icons-round">person_add</span> إضافة موظف
+        </button>
+        <button class="action-btn action-amber" (click)="navigate('warehouse')">
+          <span class="material-icons-round">warehouse</span> المخازن
         </button>
       </div>
     </div>
@@ -122,6 +143,31 @@
         </div>
       </div>
     </div>
+
+    <!-- Warehouses Section -->
+    @if (warehouses().length > 0) {
+      <div class="section-card">
+        <h3 class="section-title"><span class="material-icons-round">warehouse</span> المخازن ({{ warehouses().length }})</h3>
+        <div class="items-list">
+          @for (w of warehouses(); track w.id) {
+            <div class="list-item" (click)="navigate('warehouse')">
+              <div class="item-icon" style="background: #f59e0b18; color: #f59e0b;">
+                <span class="material-icons-round">{{ w.warehouseType === 'main' ? 'store' : 'local_gas_station' }}</span>
+              </div>
+              <div class="item-info">
+                <span class="item-name">{{ w.name }}</span>
+                <span class="item-detail">{{ getWarehouseTypeLabel(w.warehouseType) }}{{ w.code ? ' — ' + w.code : '' }}</span>
+              </div>
+              @if (w.isActive) {
+                <span class="badge badge-active">نشط</span>
+              } @else {
+                <span class="badge badge-inactive">غير نشط</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
 
     <!-- Pending Accounts -->
     @if (pendingAccounts().length > 0) {

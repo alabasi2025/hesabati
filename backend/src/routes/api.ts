@@ -17,6 +17,8 @@ import {
   customScreenConfig,
   auditLog,
   exchangeRates, roles, rolePermissions, userRoles,
+  sequenceCounters, warehouseTypes, journalEntryCategories,
+  warehouseOperations, warehouseOperationItems, screenWidgetWarehouses,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import {
@@ -28,6 +30,7 @@ import {
   employeeBillingAccountSchema,
 } from '../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired } from '../middleware/helpers.ts';
+import { getNextSequence, formatSequenceNumber, generateOperationSequences, TYPE_PREFIXES, generateItemCode, getNextItemSequence } from '../middleware/sequencing.ts';
 
 const api = new Hono();
 
@@ -403,6 +406,15 @@ api.post('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandler('إضا
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const { ...accountData } = validation.data as any;
   const allowedLinks = body.allowedLinks;
+  
+  // ترقيم تلقائي داخل التصنيف
+  if (accountData.subTypeId) {
+    const seq = await getNextSequence(bizId, 'account_in_type', accountData.subTypeId, 0);
+    accountData.sequenceNumber = seq;
+    const prefix = TYPE_PREFIXES[accountData.accountType] || 'ACC';
+    accountData.code = generateItemCode(prefix, seq);
+  }
+  
   const [created] = await db.insert(accounts).values({ ...accountData, businessId: bizId }).returning();
   
   if (allowedLinks && allowedLinks.length > 0) {
@@ -555,7 +567,19 @@ api.post('/businesses/:bizId/funds', bizAuthMiddleware(), safeHandler('إضاف�
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(fundSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(funds).values({ ...validation.data, businessId: bizId }).returning();
+  const data = validation.data as any;
+  
+  // ترقيم تلقائي داخل التصنيف
+  if (data.subType) {
+    const subTypeId = parseInt(data.subType);
+    if (!isNaN(subTypeId)) {
+      const seq = await getNextSequence(bizId, 'fund_in_type', subTypeId, 0);
+      data.sequenceNumber = seq;
+      data.code = generateItemCode(TYPE_PREFIXES.fund || 'FND', seq);
+    }
+  }
+  
+  const [created] = await db.insert(funds).values({ ...data, businessId: bizId }).returning();
   return c.json(created, 201);
 }));
 
@@ -652,17 +676,30 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
     // لا نمنع الصرف إذا كان الحساب المصدر (contra) - فقط نحذر
   }
 
+  // === تحديد الحساب الرئيسي للترقيم (الصندوق أو الحساب) ===
+  const primaryAccountId = debitAccountId || creditAccountId;
+  const templateId = voucherData.operationTypeId || null;
+
   // === تنفيذ العملية داخل transaction ===
   const result = await db.transaction(async (tx) => {
-    // 1. توليد رقم السند بـ sequence
+    // 1. توليد رقم السند بـ sequence (النظام القديم للتوافق)
     let voucherNumber = voucherData.voucherNumber;
     if (!voucherNumber) {
-      const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : vType === 'collection' ? 'voucher_collection_seq' : vType === 'delivery' ? 'voucher_delivery_seq' : 'voucher_transfer_seq';
-      const prefix = vType === 'receipt' ? 'RCV' : vType === 'payment' ? 'PAY' : vType === 'transfer' ? 'TRF' : vType === 'collection' ? 'COL' : vType === 'delivery' ? 'DLV' : 'VCH';
+      const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
+      const prefix = TYPE_PREFIXES[vType] || 'VCH';
       const seqResult = await tx.execute(sql.raw(`SELECT nextval('${seqName}')`));
       const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
       const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
       voucherNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
+    }
+
+    // 1.1 توليد الأرقام التسلسلية الذكية (حساب + قالب)
+    let accountSequence: string | null = null;
+    let templateSequence: string | null = null;
+    if (primaryAccountId) {
+      const seqs = await generateOperationSequences(bizId, primaryAccountId, templateId, 'voucher');
+      accountSequence = seqs.accountSequence ? String(seqs.accountSequence) : null;
+      templateSequence = seqs.templateSequence ? String(seqs.templateSequence) : null;
     }
 
     // 2. إنشاء السند
@@ -685,6 +722,8 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
       reference: voucherData.reference || null,
       voucherDate: voucherData.voucherDate || new Date(),
       createdBy: userId,
+      accountSequence,
+      templateSequence,
     }).returning();
 
     // 3. إنشاء القيد المحاسبي المتوازن
@@ -981,7 +1020,19 @@ api.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('إض
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(warehouseSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(warehouses).values({ ...validation.data, businessId: bizId }).returning();
+  const data = validation.data as any;
+  
+  // ترقيم تلقائي داخل التصنيف
+  if (data.subType) {
+    const subTypeId = parseInt(data.subType);
+    if (!isNaN(subTypeId)) {
+      const seq = await getNextSequence(bizId, 'warehouse_in_type', subTypeId, 0);
+      data.sequenceNumber = seq;
+      data.code = generateItemCode(TYPE_PREFIXES.warehouse || 'WHS', seq);
+    }
+  }
+  
+  const [created] = await db.insert(warehouses).values({ ...data, businessId: bizId }).returning();
   return c.json(created, 201);
 }));
 
@@ -1198,7 +1249,14 @@ api.post('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler(
   // تحويل screens من string إلى array إذا لزم
   if (typeof data.screens === 'string') data.screens = [data.screens];
   const { linkedAccounts: laList, ...otData } = data;
-  const [created] = await db.insert(operationTypes).values({ ...otData, businessId: bizId }).returning();
+  // === ترقيم تلقائي للقالب داخل تصنيفه ===
+  const category = otData.category || 'عام';
+  const [seqResult] = await db.select({ cnt: count() }).from(operationTypes)
+    .where(and(eq(operationTypes.businessId, bizId), eq(operationTypes.category, category)));
+  const seqNum = (seqResult?.cnt || 0) + 1;
+  const categoryPrefix = category.substring(0, 3).toUpperCase();
+  const autoCode = `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
+  const [created] = await db.insert(operationTypes).values({ ...otData, businessId: bizId, sequenceNumber: seqNum, code: otData.code || autoCode }).returning();
   // حفظ الحسابات المرتبطة إن وُجدت
   if (Array.isArray(laList) && laList.length > 0) {
     await db.insert(operationTypeAccounts).values(
@@ -1704,7 +1762,19 @@ api.get('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHan
   }
 
   const configs = await fetchConfigs();
-  return c.json(configs);
+
+  // === فلتر العناصر الوهمية: استبعاد عناصر الشاشات المخصصة المحذوفة ===
+  const existingScreens = await db.select({ id: screenTemplates.id }).from(screenTemplates)
+    .where(eq(screenTemplates.businessId, bizId));
+  const existingScreenIds = new Set(existingScreens.map(s => s.id));
+  
+  const filteredConfigs = configs.filter((cfg: any) => {
+    if (!cfg.screenKey || !cfg.screenKey.startsWith('custom-screen-')) return true;
+    const screenId = parseInt(cfg.screenKey.replace('custom-screen-', ''));
+    return !isNaN(screenId) && existingScreenIds.has(screenId);
+  });
+
+  return c.json(filteredConfigs);
 }));
 
 api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHandler('تحديث سايدبار المستخدم', async (c) => {
@@ -3068,6 +3138,306 @@ api.put('/businesses/:bizId/screens/:screenId/collection-style-config', bizAuthM
   }).where(eq(screenTemplates.id, screenId)).returning();
 
   return c.json({ screenId, tabs, notes });
+}));
+
+// ===================== تصنيفات المخازن =====================
+api.get('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler('جلب تصنيفات المخازن', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(warehouseTypes).where(eq(warehouseTypes.businessId, bizId)).orderBy(warehouseTypes.sortOrder);
+  return c.json(rows);
+}));
+
+api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler('إضافة تصنيف مخزن', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = normalizeBody(await c.req.json());
+  const validation = validateBody(typeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const [created] = await db.insert(warehouseTypes).values({ ...validation.data, businessId: bizId }).returning();
+  return c.json(created, 201);
+}));
+
+api.put('/warehouse-types/:id', safeHandler('تعديل تصنيف مخزن', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
+  const body = normalizeBody(await c.req.json());
+  const [updated] = await db.update(warehouseTypes).set({ ...body, updatedAt: new Date() }).where(eq(warehouseTypes.id, id)).returning();
+  if (!updated) return c.json({ error: 'التصنيف غير موجود' }, 404);
+  return c.json(updated);
+}));
+
+api.delete('/warehouse-types/:id', safeHandler('حذف تصنيف مخزن', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
+  await db.delete(warehouseTypes).where(eq(warehouseTypes.id, id));
+  return c.json({ success: true });
+}));
+
+// ===================== تصنيفات قيود اليومية =====================
+api.get('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('جلب تصنيفات قيود اليومية', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const rows = await db.select().from(journalEntryCategories).where(eq(journalEntryCategories.businessId, bizId)).orderBy(journalEntryCategories.sortOrder);
+  return c.json(rows);
+}));
+
+api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('إضافة تصنيف قيد يومية', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = normalizeBody(await c.req.json());
+  const validation = validateBody(typeSchema, body);
+  if (!validation.success) return c.json({ error: validation.error }, 400);
+  const { subTypeKey, ...rest } = validation.data;
+  const [created] = await db.insert(journalEntryCategories).values({ ...rest, categoryKey: subTypeKey, businessId: bizId }).returning();
+  return c.json(created, 201);
+}));
+
+api.put('/journal-entry-categories/:id', safeHandler('تعديل تصنيف قيد يومية', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
+  const body = normalizeBody(await c.req.json());
+  const [updated] = await db.update(journalEntryCategories).set({ ...body, updatedAt: new Date() }).where(eq(journalEntryCategories.id, id)).returning();
+  if (!updated) return c.json({ error: 'التصنيف غير موجود' }, 404);
+  return c.json(updated);
+}));
+
+api.delete('/journal-entry-categories/:id', safeHandler('حذف تصنيف قيد يومية', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
+  await db.delete(journalEntryCategories).where(eq(journalEntryCategories.id, id));
+  return c.json({ success: true });
+}));
+
+// ===================== العمليات المخزنية =====================
+
+// جلب عمليات مخزن معين
+api.get('/businesses/:bizId/warehouses/:warehouseId/operations', bizAuthMiddleware(), safeHandler('جلب عمليات المخزن', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const warehouseId = parseId(c.req.param('warehouseId'));
+  if (!warehouseId) return c.json({ error: 'معرّف المخزن غير صالح' }, 400);
+
+  const rows = await db.select({
+    id: warehouseOperations.id,
+    operationType: warehouseOperations.operationType,
+    operationNumber: warehouseOperations.operationNumber,
+    warehouseSequence: warehouseOperations.warehouseSequence,
+    templateSequence: warehouseOperations.templateSequence,
+    operationDate: warehouseOperations.operationDate,
+    description: warehouseOperations.description,
+    status: warehouseOperations.status,
+    totalCost: warehouseOperations.totalCost,
+    totalItems: warehouseOperations.totalItems,
+    operationTypeName: operationTypes.name,
+    operationTypeIcon: operationTypes.icon,
+    operationTypeColor: operationTypes.color,
+  }).from(warehouseOperations)
+    .leftJoin(operationTypes, eq(warehouseOperations.operationTypeId, operationTypes.id))
+    .where(and(
+      eq(warehouseOperations.businessId, bizId),
+      sql`(${warehouseOperations.sourceWarehouseId} = ${warehouseId} OR ${warehouseOperations.destinationWarehouseId} = ${warehouseId})`
+    ))
+    .orderBy(desc(warehouseOperations.operationDate), desc(warehouseOperations.id));
+
+  return c.json(rows);
+}));
+
+// إنشاء عملية مخزنية
+api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHandler('إنشاء عملية مخزنية', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const userId = c.get('userId') as number;
+  const body = normalizeBody(await c.req.json());
+
+  // التحقق من الحقول الإلزامية
+  if (!body.operationType) return c.json({ error: 'نوع العملية المخزنية مطلوب' }, 400);
+  if (!body.sourceWarehouseId && !body.destinationWarehouseId) {
+    return c.json({ error: 'يجب تحديد مخزن مصدر أو مخزن وجهة' }, 400);
+  }
+  if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
+    return c.json({ error: 'يجب إضافة صنف واحد على الأقل' }, 400);
+  }
+
+  // التحقق من نوع العملية
+  const validTypes = ['supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer'];
+  if (!validTypes.includes(body.operationType)) {
+    return c.json({ error: `نوع العملية غير صالح. الأنواع المتاحة: ${validTypes.join(', ')}` }, 400);
+  }
+
+  // استلام التحويل يجب أن يكون مرتبط بتحويل سابق
+  if (body.operationType === 'receive_transfer' && !body.relatedOperationId) {
+    return c.json({ error: 'استلام التحويل يتطلب تحديد عملية التحويل المرتبطة (relatedOperationId)' }, 400);
+  }
+
+  // حساب الإجماليات
+  let totalCost = 0;
+  let totalItems = 0;
+  for (const item of body.items) {
+    totalCost += (Number(item.quantity) || 0) * (Number(item.unitCost) || 0);
+    totalItems += Number(item.quantity) || 0;
+  }
+
+  // === ترقيم ذكي ===
+  const year = new Date().getFullYear();
+  const mainWarehouseId = body.sourceWarehouseId || body.destinationWarehouseId;
+
+  // تسلسل المخزن
+  const whSeq = await getNextSequence(bizId, 'warehouse', mainWarehouseId, year);
+
+  // تسلسل القالب
+  let tmplSeq: number | null = null;
+  if (body.operationTypeId) {
+    tmplSeq = await getNextSequence(bizId, 'template', body.operationTypeId, year);
+  }
+
+  // رقم العملية
+  const prefix = TYPE_PREFIXES[body.operationType] || 'WH';
+  const operationNumber = formatSequenceNumber(year, prefix, mainWarehouseId, whSeq);
+
+  const [created] = await db.insert(warehouseOperations).values({
+    businessId: bizId,
+    operationType: body.operationType,
+    operationNumber,
+    sourceWarehouseId: body.sourceWarehouseId || null,
+    destinationWarehouseId: body.destinationWarehouseId || null,
+    operationTypeId: body.operationTypeId || null,
+    operationDate: body.operationDate || new Date().toISOString().split('T')[0],
+    description: body.description || null,
+    reference: body.reference || null,
+    supplierId: body.supplierId || null,
+    relatedOperationId: body.relatedOperationId || null,
+    relatedVoucherId: body.relatedVoucherId || null,
+    status: body.status || 'confirmed',
+    totalCost: String(totalCost),
+    totalItems,
+    warehouseSequence: whSeq,
+    templateSequence: tmplSeq,
+    createdBy: userId,
+  }).returning();
+
+  // إضافة الأصناف
+  if (body.items.length > 0) {
+    await db.insert(warehouseOperationItems).values(
+      body.items.map((item: any, i: number) => ({
+        operationId: created.id,
+        itemName: item.itemName || item.name,
+        itemCode: item.itemCode || null,
+        quantity: String(item.quantity),
+        unitCost: String(item.unitCost || 0),
+        totalCost: String((Number(item.quantity) || 0) * (Number(item.unitCost) || 0)),
+        unit: item.unit || null,
+        notes: item.notes || null,
+        sortOrder: i,
+      }))
+    );
+  }
+
+  return c.json(created, 201);
+}));
+
+// جلب تفاصيل عملية مخزنية مع الأصناف
+api.get('/warehouse-operations/:id', safeHandler('جلب تفاصيل عملية مخزنية', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف العملية غير صالح' }, 400);
+
+  const [operation] = await db.select().from(warehouseOperations).where(eq(warehouseOperations.id, id));
+  if (!operation) return c.json({ error: 'العملية المخزنية غير موجودة' }, 404);
+
+  const items = await db.select().from(warehouseOperationItems)
+    .where(eq(warehouseOperationItems.operationId, id))
+    .orderBy(warehouseOperationItems.sortOrder);
+
+  // جلب معلومات القالب إن وجد
+  let operationType = null;
+  if (operation.operationTypeId) {
+    const [ot] = await db.select().from(operationTypes).where(eq(operationTypes.id, operation.operationTypeId));
+    operationType = ot || null;
+  }
+
+  // جلب معلومات المخازن
+  let sourceWarehouse = null, destinationWarehouse = null;
+  if (operation.sourceWarehouseId) {
+    const [w] = await db.select().from(warehouses).where(eq(warehouses.id, operation.sourceWarehouseId));
+    sourceWarehouse = w || null;
+  }
+  if (operation.destinationWarehouseId) {
+    const [w] = await db.select().from(warehouses).where(eq(warehouses.id, operation.destinationWarehouseId));
+    destinationWarehouse = w || null;
+  }
+
+  return c.json({ ...operation, items, operationType, sourceWarehouse, destinationWarehouse });
+}));
+
+// جلب مخزون مخزن (لتبويب مراقبة الأصناف)
+api.get('/businesses/:bizId/warehouses/:warehouseId/inventory', bizAuthMiddleware(), safeHandler('جلب مخزون المخزن', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const warehouseId = parseId(c.req.param('warehouseId'));
+  if (!warehouseId) return c.json({ error: 'معرّف المخزن غير صالح' }, 400);
+
+  // حساب المخزون من العمليات المؤكدة
+  const result = await db.execute(sql`
+    SELECT
+      woi.item_name,
+      woi.item_code,
+      woi.unit,
+      SUM(CASE
+        WHEN wo.destination_warehouse_id = ${warehouseId} AND wo.status = 'confirmed'
+          THEN CAST(woi.quantity AS NUMERIC)
+        WHEN wo.source_warehouse_id = ${warehouseId} AND wo.status = 'confirmed'
+          THEN -CAST(woi.quantity AS NUMERIC)
+        ELSE 0
+      END) as current_quantity,
+      SUM(CASE
+        WHEN wo.destination_warehouse_id = ${warehouseId} AND wo.status = 'confirmed'
+          THEN CAST(woi.total_cost AS NUMERIC)
+        WHEN wo.source_warehouse_id = ${warehouseId} AND wo.status = 'confirmed'
+          THEN -CAST(woi.total_cost AS NUMERIC)
+        ELSE 0
+      END) as total_cost,
+      MAX(wo.operation_date) as last_movement_date
+    FROM warehouse_operation_items woi
+    JOIN warehouse_operations wo ON wo.id = woi.operation_id
+    WHERE wo.business_id = ${bizId}
+    AND (wo.source_warehouse_id = ${warehouseId} OR wo.destination_warehouse_id = ${warehouseId})
+    GROUP BY woi.item_name, woi.item_code, woi.unit
+    HAVING SUM(CASE
+      WHEN wo.destination_warehouse_id = ${warehouseId} AND wo.status = 'confirmed'
+        THEN CAST(woi.quantity AS NUMERIC)
+      WHEN wo.source_warehouse_id = ${warehouseId} AND wo.status = 'confirmed'
+        THEN -CAST(woi.quantity AS NUMERIC)
+      ELSE 0
+    END) > 0
+    ORDER BY woi.item_name
+  `);
+  const rows = Array.isArray(result) ? result : (result as any).rows || [];
+  return c.json(rows);
+}));
+
+// جلب كل العمليات المخزنية للعمل
+api.get('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHandler('جلب كل العمليات المخزنية', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const opType = c.req.query('type');
+  const warehouseId = c.req.query('warehouseId');
+
+  const conditions = [eq(warehouseOperations.businessId, bizId)];
+  if (opType) conditions.push(eq(warehouseOperations.operationType, opType as any));
+  if (warehouseId) {
+    const whId = parseInt(warehouseId);
+    conditions.push(sql`(${warehouseOperations.sourceWarehouseId} = ${whId} OR ${warehouseOperations.destinationWarehouseId} = ${whId})`);
+  }
+
+  const rows = await db.select({
+    id: warehouseOperations.id,
+    operationType: warehouseOperations.operationType,
+    operationNumber: warehouseOperations.operationNumber,
+    operationDate: warehouseOperations.operationDate,
+    description: warehouseOperations.description,
+    status: warehouseOperations.status,
+    totalCost: warehouseOperations.totalCost,
+    totalItems: warehouseOperations.totalItems,
+    operationTypeName: operationTypes.name,
+    operationTypeIcon: operationTypes.icon,
+  }).from(warehouseOperations)
+    .leftJoin(operationTypes, eq(warehouseOperations.operationTypeId, operationTypes.id))
+    .where(and(...conditions))
+    .orderBy(desc(warehouseOperations.operationDate), desc(warehouseOperations.id));
+
+  return c.json(rows);
 }));
 
 export default api;

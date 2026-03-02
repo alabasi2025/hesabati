@@ -538,6 +538,66 @@
                 </div>
               }
 
+              <!-- ===== INVENTORY TAB (مراقبة أصناف) ===== -->
+              @if (tab.type === 'inventory') {
+                <div class="inventory-content">
+                  @if (getTabInventory(tab).length > 0) {
+                    <div class="inventory-table-wrapper">
+                      <table class="inventory-table">
+                        <thead>
+                          <tr>
+                            <th>الصنف</th>
+                            <th>الرمز</th>
+                            <th>الوحدة</th>
+                            <th>الكمية الحالية</th>
+                            <th>إجمالي التكلفة</th>
+                            <th>آخر حركة</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (item of getTabInventory(tab); track item.item_name) {
+                            <tr>
+                              <td class="item-name">{{ item.item_name }}</td>
+                              <td class="item-code">{{ item.item_code || '-' }}</td>
+                              <td>{{ item.unit || '-' }}</td>
+                              <td class="item-qty" [class.low-stock]="item.current_quantity < 5">{{ item.current_quantity }}</td>
+                              <td class="item-cost">{{ formatAmount(item.total_cost || 0) }}</td>
+                              <td class="item-date">{{ item.last_movement_date ? formatDate(item.last_movement_date) : '-' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="inventory-summary">
+                      <span>إجمالي الأصناف: <strong>{{ getTabInventory(tab).length }}</strong></span>
+                      <span>إجمالي التكلفة: <strong>{{ formatAmount(getInventoryTotalCost(tab)) }}</strong></span>
+                    </div>
+                  } @else {
+                    <div class="empty-tab"><span class="material-icons-round">inventory_2</span><p>لا توجد أصناف في المخازن المحددة</p></div>
+                  }
+                </div>
+              }
+
+              <!-- ===== REPORTS TAB ===== -->
+              @if (tab.type === 'reports') {
+                <div class="reports-content">
+                  <div class="reports-grid">
+                    <div class="report-card" (click)="generateReport('account_statement', tab)">
+                      <span class="material-icons-round" style="color: #3b82f6">description</span>
+                      <div><strong>كشف حساب</strong><small>تقرير تفصيلي لحركة الحسابات</small></div>
+                    </div>
+                    <div class="report-card" (click)="generateReport('inventory_report', tab)">
+                      <span class="material-icons-round" style="color: #22c55e">inventory_2</span>
+                      <div><strong>تقرير المخزون</strong><small>جرد الأصناف والكميات والتكاليف</small></div>
+                    </div>
+                    <div class="report-card" (click)="generateReport('operations_summary', tab)">
+                      <span class="material-icons-round" style="color: #f59e0b">summarize</span>
+                      <div><strong>ملخص العمليات</strong><small>إحصائيات العمليات حسب النوع والفترة</small></div>
+                    </div>
+                  </div>
+                </div>
+              }
+
               <!-- ===== NOTES TAB ===== -->
               @if (tab.type === 'notes') {
                 <div class="notes-content">

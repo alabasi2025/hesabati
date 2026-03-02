@@ -1,20 +1,76 @@
 <div class="page-content">
   <div class="page-header">
     <h2><span class="material-icons-round">warehouse</span> المخازن</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة مخزن</button>
+    <div class="header-actions">
+      <button class="add-btn secondary" (click)="openAddType()">
+        <span class="material-icons-round">category</span> إدارة التصنيفات
+      </button>
+      <button class="add-btn" (click)="openAdd()">
+        <span class="material-icons-round">add</span> إضافة مخزن
+      </button>
+    </div>
   </div>
 
+  <!-- ملخص الإحصائيات -->
   <div class="summary-row">
-    <div class="summary-card amber"><span class="material-icons-round">warehouse</span><div><span class="num">{{ warehouses().length }}</span><span class="lbl">إجمالي المخازن</span></div></div>
-    <div class="summary-card blue"><span class="material-icons-round">store</span><div><span class="num">{{ mainCount() }}</span><span class="lbl">مخازن رئيسية</span></div></div>
-    <div class="summary-card green"><span class="material-icons-round">local_gas_station</span><div><span class="num">{{ stationCount() }}</span><span class="lbl">مخازن محطات</span></div></div>
+    <div class="summary-card amber">
+      <span class="material-icons-round">warehouse</span>
+      <div><span class="num">{{ warehouses().length }}</span><span class="lbl">إجمالي المخازن</span></div>
+    </div>
+    <div class="summary-card blue">
+      <span class="material-icons-round">store</span>
+      <div><span class="num">{{ mainCount() }}</span><span class="lbl">مخازن رئيسية</span></div>
+    </div>
+    <div class="summary-card green">
+      <span class="material-icons-round">local_gas_station</span>
+      <div><span class="num">{{ stationCount() }}</span><span class="lbl">مخازن محطات</span></div>
+    </div>
+    @if (subCount() > 0) {
+      <div class="summary-card purple">
+        <span class="material-icons-round">inventory_2</span>
+        <div><span class="num">{{ subCount() }}</span><span class="lbl">مخازن فرعية</span></div>
+      </div>
+    }
+    @if (warehouseTypes().length > 0) {
+      <div class="summary-card teal">
+        <span class="material-icons-round">category</span>
+        <div><span class="num">{{ warehouseTypes().length }}</span><span class="lbl">تصنيف</span></div>
+      </div>
+    }
   </div>
 
+  <!-- فلاتر النوع -->
   <div class="filter-tabs">
-    <button class="filter-tab" [class.active]="filterType() === 'all'" (click)="filterType.set('all')">الكل ({{ warehouses().length }})</button>
-    <button class="filter-tab" [class.active]="filterType() === 'main'" (click)="filterType.set('main')">رئيسي ({{ mainCount() }})</button>
-    <button class="filter-tab" [class.active]="filterType() === 'station'" (click)="filterType.set('station')">محطة ({{ stationCount() }})</button>
+    <button class="filter-tab" [class.active]="filterType() === 'all'" (click)="filterType.set('all'); filterSubType.set('all')">
+      الكل ({{ warehouses().length }})
+    </button>
+    <button class="filter-tab" [class.active]="filterType() === 'main'" (click)="filterType.set('main'); filterSubType.set('all')">
+      رئيسي ({{ mainCount() }})
+    </button>
+    <button class="filter-tab" [class.active]="filterType() === 'station'" (click)="filterType.set('station'); filterSubType.set('all')">
+      محطة ({{ stationCount() }})
+    </button>
+    @if (subCount() > 0) {
+      <button class="filter-tab" [class.active]="filterType() === 'sub'" (click)="filterType.set('sub'); filterSubType.set('all')">
+        فرعي ({{ subCount() }})
+      </button>
+    }
   </div>
+
+  <!-- فلاتر التصنيف الفرعي -->
+  @if (subTypeFilters().length > 0) {
+    <div class="sub-filter-row">
+      <span class="sub-filter-label"><span class="material-icons-round">category</span> التصنيف:</span>
+      <button class="sub-filter-chip" [class.active]="filterSubType() === 'all'" (click)="filterSubType.set('all')">الكل</button>
+      @for (sf of subTypeFilters(); track sf.key) {
+        <button class="sub-filter-chip" [class.active]="filterSubType() === sf.key" (click)="filterSubType.set(sf.key)"
+          [style.--chip-color]="sf.color">
+          <span class="material-icons-round" style="font-size: 14px;">{{ sf.icon }}</span>
+          {{ sf.label }} ({{ sf.count }})
+        </button>
+      }
+    </div>
+  }
 
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
@@ -23,10 +79,10 @@
   } @else {
     <div class="warehouse-grid">
       @for (w of filteredWarehouses(); track w.id) {
-        <div class="warehouse-card" [class.main]="w.warehouseType === 'main'" [class.station]="w.warehouseType === 'station'">
+        <div class="warehouse-card" [class]="w.warehouseType">
           <div class="wh-header">
-            <div class="wh-icon" [class.main]="w.warehouseType === 'main'" [class.station]="w.warehouseType === 'station'">
-              <span class="material-icons-round">{{ w.warehouseType === 'main' ? 'store' : 'local_gas_station' }}</span>
+            <div class="wh-icon" [style.background]="'linear-gradient(135deg, ' + getTypeColor(w.warehouseType) + ', ' + getTypeColor(w.warehouseType) + 'cc)'">
+              <span class="material-icons-round">{{ getTypeIcon(w.warehouseType) }}</span>
             </div>
             <div class="wh-actions">
               <button class="action-btn edit" (click)="openEdit(w)"><span class="material-icons-round">edit</span></button>
@@ -34,50 +90,187 @@
             </div>
           </div>
           <h3 class="wh-name">{{ w.name }}</h3>
-          <span class="status-badge" [class]="getTypeClass(w.warehouseType)">{{ getTypeLabel(w.warehouseType) }}</span>
+          <div class="wh-badges">
+            <span class="status-badge" [class]="getTypeClass(w.warehouseType)">{{ getTypeLabel(w.warehouseType) }}</span>
+            @if (w.code) {
+              <span class="code-badge">{{ w.code }}</span>
+            }
+            @if (w.sequenceNumber) {
+              <span class="seq-badge">#{{ w.sequenceNumber }}</span>
+            }
+            @if (w.subType) {
+              <span class="sub-type-badge">{{ getSubTypeName(w.subType) }}</span>
+            }
+          </div>
           <div class="wh-details">
-            @if (w.stationId) { <div class="wh-detail"><span class="material-icons-round">local_gas_station</span> {{ getStationName(w.stationId) }}</div> }
-            @if (w.responsiblePerson) { <div class="wh-detail"><span class="material-icons-round">person</span> {{ w.responsiblePerson }}</div> }
-            @if (w.location) { <div class="wh-detail"><span class="material-icons-round">location_on</span> {{ w.location }}</div> }
-            @if (w.notes) { <div class="wh-detail notes"><span class="material-icons-round">notes</span> {{ w.notes }}</div> }
+            @if (w.stationId) {
+              <div class="wh-detail"><span class="material-icons-round">local_gas_station</span> {{ getStationName(w.stationId) }}</div>
+            }
+            @if (w.responsiblePerson) {
+              <div class="wh-detail"><span class="material-icons-round">person</span> {{ w.responsiblePerson }}</div>
+            }
+            @if (w.location) {
+              <div class="wh-detail"><span class="material-icons-round">location_on</span> {{ w.location }}</div>
+            }
+            @if (w.notes) {
+              <div class="wh-detail notes"><span class="material-icons-round">notes</span> {{ w.notes }}</div>
+            }
           </div>
         </div>
       }
     </div>
   }
 
+  <!-- نموذج إضافة/تعديل مخزن -->
   @if (showForm()) {
     <div class="modal-overlay" (click)="showForm.set(false)">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon amber"><span class="material-icons-round">warehouse</span></div><div><h2>{{ editingId() ? 'تعديل مخزن' : 'إضافة مخزن جديد' }}</h2><p>بيانات المخزن والموقع</p></div></div>
+          <div class="modal-title-row">
+            <div class="modal-icon amber"><span class="material-icons-round">warehouse</span></div>
+            <div>
+              <h2>{{ editingId() ? 'تعديل مخزن' : 'إضافة مخزن جديد' }}</h2>
+              <p>بيانات المخزن والموقع والتصنيف</p>
+            </div>
+          </div>
           <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
-            <div class="form-group"><label>اسم المخزن</label><input [(ngModel)]="form.name" placeholder="اسم المخزن" /></div>
-            <div class="form-group"><label>النوع</label>
+            <div class="form-group">
+              <label>اسم المخزن <span class="required">*</span></label>
+              <input [(ngModel)]="form.name" placeholder="اسم المخزن" />
+            </div>
+            <div class="form-group">
+              <label>النوع</label>
               <select [(ngModel)]="form.warehouseType">
                 <option value="main">رئيسي</option>
                 <option value="station">محطة</option>
+                <option value="sub">فرعي</option>
               </select>
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>المحطة (اختياري)</label>
-              <select [(ngModel)]="form.stationId">
-                <option [ngValue]="null">بدون محطة</option>
-                @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            <div class="form-group">
+              <label>التصنيف الفرعي</label>
+              <select [(ngModel)]="form.subType">
+                <option value="">بدون تصنيف</option>
+                @for (t of warehouseTypes(); track t.id) {
+                  <option [value]="t.subTypeKey">{{ t.name }}</option>
+                }
               </select>
             </div>
-            <div class="form-group"><label>المسؤول</label><input [(ngModel)]="form.responsiblePerson" placeholder="اسم المسؤول" /></div>
+            <div class="form-group">
+              <label>المحطة (اختياري)</label>
+              <select [(ngModel)]="form.stationId">
+                <option [ngValue]="null">بدون محطة</option>
+                @for (s of stations(); track s.id) {
+                  <option [ngValue]="s.id">{{ s.name }}</option>
+                }
+              </select>
+            </div>
           </div>
-          <div class="form-group"><label>الموقع</label><input [(ngModel)]="form.location" placeholder="موقع المخزن" /></div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المسؤول</label>
+              <input [(ngModel)]="form.responsiblePerson" placeholder="اسم المسؤول" />
+            </div>
+            <div class="form-group">
+              <label>الموقع</label>
+              <input [(ngModel)]="form.location" placeholder="موقع المخزن" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>ملاحظات</label>
+            <textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة المخزن' }}</button>
           <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- نموذج إدارة التصنيفات -->
+  @if (showTypeForm()) {
+    <div class="modal-overlay" (click)="showTypeForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon teal"><span class="material-icons-round">category</span></div>
+            <div>
+              <h2>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h2>
+              <p>تصنيفات المخازن تساعد في تنظيم وتصنيف المخازن</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <!-- قائمة التصنيفات الحالية -->
+          @if (!editingTypeId() && warehouseTypes().length > 0) {
+            <div class="existing-types">
+              <h4>التصنيفات الحالية</h4>
+              <div class="types-list">
+                @for (t of warehouseTypes(); track t.id) {
+                  <div class="type-item">
+                    <span class="material-icons-round" [style.color]="t.color">{{ t.icon || 'warehouse' }}</span>
+                    <div class="type-info">
+                      <span class="type-name">{{ t.name }}</span>
+                      <span class="type-key">{{ t.subTypeKey }}</span>
+                    </div>
+                    <div class="type-actions">
+                      <button class="action-btn edit" (click)="openEditType(t)"><span class="material-icons-round">edit</span></button>
+                      <button class="action-btn delete" (click)="removeType(t)"><span class="material-icons-round">delete</span></button>
+                    </div>
+                  </div>
+                }
+              </div>
+              <hr class="divider" />
+              <h4>{{ editingTypeId() ? 'تعديل التصنيف' : 'إضافة تصنيف جديد' }}</h4>
+            </div>
+          }
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم التصنيف <span class="required">*</span></label>
+              <input [(ngModel)]="typeForm.name" placeholder="مثال: مخزن وقود" />
+            </div>
+            <div class="form-group">
+              <label>المفتاح <span class="required">*</span></label>
+              <input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: fuel" dir="ltr" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <input [(ngModel)]="typeForm.description" placeholder="وصف مختصر للتصنيف" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اللون</label>
+              <div class="color-picker-row">
+                <input type="color" [(ngModel)]="typeForm.color" />
+                <span class="color-preview" [style.background]="typeForm.color"></span>
+                <span>{{ typeForm.color }}</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>الأيقونة</label>
+              <div class="icon-grid">
+                @for (ic of availableIcons; track ic) {
+                  <button class="icon-btn" [class.selected]="typeForm.icon === ic" (click)="typeForm.icon = ic"
+                    [style.color]="typeForm.icon === ic ? typeForm.color : ''">
+                    <span class="material-icons-round">{{ ic }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="saveType()">{{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
+          <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
         </div>
       </div>
     </div>

@@ -8,6 +8,8 @@ import dashboardRoutes from './routes/dashboard.ts';
 import apiRoutes from './routes/api.ts';
 import enhancementRoutes from './routes/enhancements.ts';
 import { authMiddleware } from './middleware/auth.ts';
+import { db } from './db/index.ts';
+import { sql } from 'drizzle-orm';
 import { rateLimitMiddleware, loginRateLimitMiddleware } from './middleware/rateLimit.ts';
 import { xssSanitizeMiddleware } from './middleware/validation.ts';
 
@@ -71,6 +73,28 @@ app.notFound((c) => {
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', message: 'حساباتي - النظام يعمل بنجاح' }));
+
+// فحص اتصال قاعدة البيانات
+app.get('/health/db', async (c) => {
+  try {
+    const start = Date.now();
+    await db.execute(sql`SELECT 1`);
+    const latency = Date.now() - start;
+    return c.json({
+      status: 'connected',
+      message: 'قاعدة البيانات متصلة وتعمل بنجاح',
+      latency: `${latency}ms`,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    return c.json({
+      status: 'disconnected',
+      message: 'فشل الاتصال بقاعدة البيانات',
+      error: err.message,
+      timestamp: new Date().toISOString(),
+    }, 503);
+  }
+});
 
 // Root
 app.get('/', (c) => c.json({

@@ -18,6 +18,7 @@ const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: st
   cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
   custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
   service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
+  warehouse:    { label: 'مخزن',     icon: 'warehouse',                color: '#f59e0b' },
 };
 
 // ترجمة أنواع الصناديق

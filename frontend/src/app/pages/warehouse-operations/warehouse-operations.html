@@ -1,0 +1,378 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">inventory_2</span> العمليات المخزنية</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> عملية جديدة</button>
+  </div>
+
+  <!-- بطاقات أنواع العمليات -->
+  <div class="type-cards">
+    @for (t of allTypes; track t.key) {
+      <div class="type-card" [style.border-top-color]="t.color" (click)="openAdd(t.key)">
+        <div class="type-icon" [style.background]="t.color + '18'" [style.color]="t.color">
+          <span class="material-icons-round">{{ t.icon }}</span>
+        </div>
+        <div class="type-info">
+          <span class="type-label">{{ t.label }}</span>
+          <span class="type-count">{{ countByType(t.key) }} عملية</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- فلاتر -->
+  <div class="filter-row">
+    <div class="filter-tabs">
+      <button class="filter-tab" [class.active]="filterType() === 'all'" (click)="filterType.set('all')">
+        الكل ({{ operations().length }})
+      </button>
+      @for (t of allTypes; track t.key) {
+        @if (countByType(t.key) > 0) {
+          <button class="filter-tab" [class.active]="filterType() === t.key" (click)="filterType.set(t.key)"
+            [style.--tab-color]="t.color">
+            {{ t.label }} ({{ countByType(t.key) }})
+          </button>
+        }
+      }
+    </div>
+    @if (warehouses().length > 0) {
+      <select class="filter-select" [ngModel]="filterWarehouse()" (ngModelChange)="filterWarehouse.set($event)">
+        <option [ngValue]="null">كل المخازن</option>
+        @for (w of warehouses(); track w.id) {
+          <option [ngValue]="w.id">{{ w.name }}</option>
+        }
+      </select>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!filteredOperations().length) {
+    <div class="empty-state">
+      <span class="material-icons-round">inventory_2</span>
+      <p>لا توجد عمليات مخزنية</p>
+      <p class="empty-hint">أنشئ عملية جديدة باستخدام الزر أعلاه أو بالضغط على أحد أنواع العمليات</p>
+    </div>
+  } @else {
+    <div class="operations-list">
+      @for (op of filteredOperations(); track op.id) {
+        <div class="operation-row" (click)="viewDetail(op)">
+          <div class="op-icon" [style.background]="getTypeMeta(op.operationType).color + '18'" [style.color]="getTypeMeta(op.operationType).color">
+            <span class="material-icons-round">{{ getTypeMeta(op.operationType).icon }}</span>
+          </div>
+          <div class="op-info">
+            <div class="op-title">
+              <span class="op-number">{{ op.operationNumber }}</span>
+              <span class="op-type-label" [style.color]="getTypeMeta(op.operationType).color">{{ getTypeMeta(op.operationType).label }}</span>
+            </div>
+            <div class="op-meta">
+              @if (op.operationTypeName) {
+                <span class="op-template"><span class="material-icons-round">{{ op.operationTypeIcon || 'receipt_long' }}</span> {{ op.operationTypeName }}</span>
+              }
+              <span class="op-date"><span class="material-icons-round">event</span> {{ formatDate(op.operationDate) }}</span>
+              @if (op.description) {
+                <span class="op-desc">{{ op.description }}</span>
+              }
+            </div>
+          </div>
+          <div class="op-stats">
+            <span class="op-amount">{{ formatNumber(op.totalCost || 0) }}</span>
+            <span class="op-items">{{ op.totalItems || 0 }} صنف</span>
+          </div>
+          <span class="status-badge" [class]="getStatusClass(op.status)">{{ getStatusLabel(op.status) }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- نموذج إنشاء عملية مخزنية -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon" [style.background]="getTypeMeta(form.operationType).color + '18'" [style.color]="getTypeMeta(form.operationType).color">
+              <span class="material-icons-round">{{ getTypeMeta(form.operationType).icon }}</span>
+            </div>
+            <div>
+              <h2>عملية مخزنية جديدة</h2>
+              <p>{{ getTypeMeta(form.operationType).description }}</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <!-- نوع العملية -->
+          <div class="form-group">
+            <label>نوع العملية <span class="required">*</span></label>
+            <div class="type-selector">
+              @for (t of allTypes; track t.key) {
+                <button class="type-option" [class.selected]="form.operationType === t.key"
+                  (click)="form.operationType = t.key" [style.--opt-color]="t.color">
+                  <span class="material-icons-round">{{ t.icon }}</span>
+                  <span>{{ t.label }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-row">
+            <!-- المخزن المصدر -->
+            @if (needsSource()) {
+              <div class="form-group">
+                <label>المخزن المصدر <span class="required">*</span></label>
+                <select [(ngModel)]="form.sourceWarehouseId">
+                  <option [ngValue]="null">اختر المخزن...</option>
+                  @for (w of warehouses(); track w.id) {
+                    <option [ngValue]="w.id">{{ w.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- المخزن الوجهة -->
+            @if (needsDestination()) {
+              <div class="form-group">
+                <label>المخزن الوجهة <span class="required">*</span></label>
+                <select [(ngModel)]="form.destinationWarehouseId">
+                  <option [ngValue]="null">اختر المخزن...</option>
+                  @for (w of warehouses(); track w.id) {
+                    <option [ngValue]="w.id">{{ w.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+
+          <div class="form-row">
+            <!-- المورد -->
+            @if (needsSupplier()) {
+              <div class="form-group">
+                <label>المورد <span class="required">*</span></label>
+                <select [(ngModel)]="form.supplierId">
+                  <option [ngValue]="null">اختر المورد...</option>
+                  @for (s of suppliers(); track s.id) {
+                    <option [ngValue]="s.id">{{ s.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- عملية التحويل المرتبطة -->
+            @if (needsRelated()) {
+              <div class="form-group">
+                <label>عملية التحويل المرتبطة <span class="required">*</span></label>
+                <select [(ngModel)]="form.relatedOperationId">
+                  <option [ngValue]="null">اختر عملية التحويل...</option>
+                  @for (t of pendingTransfers(); track t.id) {
+                    <option [ngValue]="t.id">{{ t.operationNumber }} - {{ formatDate(t.operationDate) }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- القالب -->
+            <div class="form-group">
+              <label>القالب (اختياري)</label>
+              <select [(ngModel)]="form.operationTypeId">
+                <option [ngValue]="null">بدون قالب</option>
+                @for (ot of warehouseTemplates(); track ot.id) {
+                  <option [ngValue]="ot.id">{{ ot.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>التاريخ</label>
+              <input type="date" [(ngModel)]="form.operationDate" />
+            </div>
+            <div class="form-group">
+              <label>المرجع</label>
+              <input [(ngModel)]="form.reference" placeholder="رقم الفاتورة أو المرجع" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea [(ngModel)]="form.description" rows="2" placeholder="وصف العملية..."></textarea>
+          </div>
+
+          <!-- جدول الأصناف -->
+          <div class="items-section">
+            <div class="items-header">
+              <h4><span class="material-icons-round">list</span> الأصناف</h4>
+              <button class="add-item-btn" (click)="addItem()">
+                <span class="material-icons-round">add</span> إضافة صنف
+              </button>
+            </div>
+            <div class="items-table-wrapper">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>اسم الصنف</th>
+                    <th>الرمز</th>
+                    <th>الكمية</th>
+                    <th>الوحدة</th>
+                    <th>سعر الوحدة</th>
+                    <th>الإجمالي</th>
+                    <th>ملاحظات</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of form.items; track $index; let i = $index) {
+                    <tr>
+                      <td class="row-num">{{ i + 1 }}</td>
+                      <td><input [(ngModel)]="item.itemName" placeholder="اسم الصنف" class="table-input" /></td>
+                      <td><input [(ngModel)]="item.itemCode" placeholder="الرمز" class="table-input code-input" dir="ltr" /></td>
+                      <td><input type="number" [(ngModel)]="item.quantity" min="0" class="table-input num-input" /></td>
+                      <td><input [(ngModel)]="item.unit" placeholder="وحدة" class="table-input unit-input" /></td>
+                      <td><input type="number" [(ngModel)]="item.unitCost" min="0" class="table-input num-input" /></td>
+                      <td class="total-cell">{{ formatNumber(getItemTotal(item)) }}</td>
+                      <td><input [(ngModel)]="item.notes" placeholder="ملاحظات" class="table-input" /></td>
+                      <td>
+                        @if (form.items.length > 1) {
+                          <button class="remove-item-btn" (click)="removeItem(i)">
+                            <span class="material-icons-round">close</span>
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="totals-row">
+                    <td colspan="3" class="totals-label">الإجمالي</td>
+                    <td class="totals-value">{{ getTotalQuantity() }}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="totals-value grand-total">{{ formatNumber(getGrandTotal()) }}</td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()" [disabled]="saving()">
+            @if (saving()) { <span class="material-icons-round spin">sync</span> جاري الحفظ... }
+            @else { <span class="material-icons-round">check</span> إنشاء العملية }
+          </button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- عرض تفاصيل العملية -->
+  @if (showDetail() && selectedOperation()) {
+    <div class="modal-overlay" (click)="showDetail.set(false)">
+      <div class="modal-card modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon" [style.background]="getTypeMeta(selectedOperation().operationType).color + '18'"
+              [style.color]="getTypeMeta(selectedOperation().operationType).color">
+              <span class="material-icons-round">{{ getTypeMeta(selectedOperation().operationType).icon }}</span>
+            </div>
+            <div>
+              <h2>{{ selectedOperation().operationNumber }}</h2>
+              <p>{{ getTypeMeta(selectedOperation().operationType).label }}</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showDetail.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">نوع العملية</span>
+              <span class="detail-value" [style.color]="getTypeMeta(selectedOperation().operationType).color">
+                {{ getTypeMeta(selectedOperation().operationType).label }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">الحالة</span>
+              <span class="status-badge" [class]="getStatusClass(selectedOperation().status)">{{ getStatusLabel(selectedOperation().status) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">التاريخ</span>
+              <span class="detail-value">{{ formatDate(selectedOperation().operationDate) }}</span>
+            </div>
+            @if (selectedOperation().sourceWarehouse) {
+              <div class="detail-item">
+                <span class="detail-label">المخزن المصدر</span>
+                <span class="detail-value">{{ selectedOperation().sourceWarehouse.name }}</span>
+              </div>
+            }
+            @if (selectedOperation().destinationWarehouse) {
+              <div class="detail-item">
+                <span class="detail-label">المخزن الوجهة</span>
+                <span class="detail-value">{{ selectedOperation().destinationWarehouse.name }}</span>
+              </div>
+            }
+            @if (selectedOperation().operationType) {
+              <div class="detail-item">
+                <span class="detail-label">القالب</span>
+                <span class="detail-value">{{ selectedOperation().operationType?.name || '-' }}</span>
+              </div>
+            }
+            @if (selectedOperation().reference) {
+              <div class="detail-item">
+                <span class="detail-label">المرجع</span>
+                <span class="detail-value">{{ selectedOperation().reference }}</span>
+              </div>
+            }
+            @if (selectedOperation().description) {
+              <div class="detail-item full-width">
+                <span class="detail-label">الوصف</span>
+                <span class="detail-value">{{ selectedOperation().description }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- أصناف العملية -->
+          @if (selectedOperation().items?.length) {
+            <div class="items-section">
+              <h4><span class="material-icons-round">list</span> الأصناف ({{ selectedOperation().items.length }})</h4>
+              <div class="items-table-wrapper">
+                <table class="items-table detail-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>اسم الصنف</th>
+                      <th>الرمز</th>
+                      <th>الكمية</th>
+                      <th>الوحدة</th>
+                      <th>سعر الوحدة</th>
+                      <th>الإجمالي</th>
+                      <th>ملاحظات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of selectedOperation().items; track item.id; let i = $index) {
+                      <tr>
+                        <td>{{ i + 1 }}</td>
+                        <td>{{ item.itemName }}</td>
+                        <td class="code-cell">{{ item.itemCode || '-' }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.unit || '-' }}</td>
+                        <td>{{ formatNumber(item.unitCost || 0) }}</td>
+                        <td class="total-cell">{{ formatNumber(item.totalCost || 0) }}</td>
+                        <td>{{ item.notes || '-' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" (click)="showDetail.set(false)">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -80,3 +80,59 @@
   border-radius: 50%;
   border: 2px solid var(--bg-header);
 }
+
+.db-status-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+
+  &:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-strong);
+    transform: scale(1.05);
+  }
+
+  .material-icons-round {
+    font-size: 20px;
+    transition: color 0.3s ease;
+  }
+
+  .spin {
+    animation: spin 1.5s linear infinite;
+  }
+}
+
+.theme-toggle-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  .material-icons-round { font-size: 20px; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

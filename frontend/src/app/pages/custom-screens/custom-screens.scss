@@ -1699,6 +1699,68 @@ $transition: all 0.35s $ease-out;
 }
 
 // ============================================
+// INVENTORY TAB
+// ============================================
+.inventory-content {
+  padding: 8px 0;
+}
+.inventory-table-wrapper {
+  overflow-x: auto;
+  border-radius: $radius-xs;
+  border: 1px solid var(--border-color);
+}
+.inventory-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  th {
+    padding: 12px 14px; background: var(--bg-surface); color: var(--text-secondary);
+    font-weight: 700; text-align: right; white-space: nowrap;
+    border-bottom: 2px solid var(--border-color);
+  }
+  td {
+    padding: 10px 14px; border-bottom: 1px solid var(--border-color);
+    vertical-align: middle; font-weight: 600;
+  }
+  tbody tr:hover { background: var(--bg-hover); }
+}
+.item-name { font-weight: 700; color: var(--text-primary); }
+.item-code { font-family: monospace; direction: ltr; color: var(--text-secondary); font-size: 12px; }
+.item-qty {
+  font-weight: 800; color: var(--text-primary); text-align: center;
+  &.low-stock { color: #ef4444; background: rgba(239,68,68,0.08); border-radius: 6px; padding: 4px 8px; }
+}
+.item-cost { font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.item-date { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.inventory-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; margin-top: 12px;
+  background: var(--bg-surface); border-radius: $radius-xs;
+  border: 1px solid var(--border-color);
+  span { font-size: 13px; color: var(--text-secondary); font-weight: 600;
+    strong { color: var(--text-primary); font-weight: 800; margin-right: 4px; }
+  }
+}
+
+// ============================================
+// REPORTS TAB
+// ============================================
+.reports-content { padding: 8px 0; }
+.reports-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;
+}
+.report-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px; border-radius: $radius-sm;
+  border: 1px solid var(--border-color); background: var(--bg-card);
+  cursor: pointer; transition: all 0.3s $ease-out;
+  .material-icons-round { font-size: 28px; }
+  div { display: flex; flex-direction: column;
+    strong { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    small { font-size: 12px; color: var(--text-secondary); font-weight: 600; margin-top: 2px; }
+  }
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+}
+
+// ============================================
 // RESPONSIVE
 // ============================================
 @media (max-width: 768px) {
