@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,6 +10,23 @@ import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 
+// ===== Account Type Metadata =====
+const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
+  billing:      { label: 'فوترة',    icon: 'receipt',                  color: '#a855f7' },
+  fund:         { label: 'صندوق',    icon: 'savings',                  color: '#22c55e' },
+  bank:         { label: 'بنك',      icon: 'account_balance',          color: '#3b82f6' },
+  e_wallet:     { label: 'محفظة',    icon: 'account_balance_wallet',   color: '#8b5cf6' },
+  exchange:     { label: 'صراف',     icon: 'currency_exchange',        color: '#f59e0b' },
+  accounting:   { label: 'محاسبي',   icon: 'book',                     color: '#14b8a6' },
+  intermediary: { label: 'وسيط',     icon: 'swap_horiz',               color: '#f97316' },
+  cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
+  custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
+  service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
+};
+
+function getAccTypeMeta(type: string) {
+  return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
+}
 
 interface ScreenTemplate {
   id: number;
@@ -192,6 +209,47 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   bindingWidgetIdx = signal<number | null>(null);
   operationTypes = signal<any[]>([]);
   allAccounts = signal<any[]>([]);
+
+  // ===================== Account Filter State =====================
+  accFilterType = signal('all');
+  accSearchQuery = signal('');
+
+  // فلاتر ديناميكية: تُحسب من البيانات الفعلية
+  accDynamicFilters = computed(() => {
+    const all = this.allAccounts();
+    const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
+    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet', 'cash', 'custody', 'service'];
+    const sorted = typesInDB.sort((a: string, b: string) => {
+      const ia = priority.indexOf(a);
+      const ib = priority.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return getAccTypeMeta(a).label.localeCompare(getAccTypeMeta(b).label, 'ar');
+    });
+    return sorted.map(type => ({ value: type, ...getAccTypeMeta(type) }));
+  });
+
+  // الحسابات المفلترة
+  accFiltered = computed(() => {
+    const type = this.accFilterType();
+    const q = this.accSearchQuery().toLowerCase();
+    return this.allAccounts().filter(a => {
+      const matchType = type === 'all' || a.accountType === type;
+      const matchQ = !q || (a.name || '').toLowerCase().includes(q) ||
+        (a.provider || '').toLowerCase().includes(q) ||
+        (a.subType || '').toLowerCase().includes(q);
+      return matchType && matchQ;
+    });
+  });
+
+  setAccFilterType(type: string) {
+    this.accFilterType.set(type);
+  }
+
+  getAccTypeMeta(type: string) {
+    return getAccTypeMeta(type);
+  }
 
   // ===================== Copy Widget State =====================
   showCopyWidgetModal = signal(false);
