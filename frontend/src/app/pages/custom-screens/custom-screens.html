@@ -37,7 +37,7 @@
 
       <div class="screens-grid">
         @for (screen of screens(); track screen.id) {
-          <div class="screen-card" [style.border-top-color]="screen.color || '#3b82f6'">
+          <div class="screen-card" [style.--card-color]="screen.color || '#3b82f6'">
             <div class="card-header" (click)="openScreen(screen)">
               <div class="card-icon" [style.background]="screen.color || '#3b82f6'">
                 <span class="material-icons-round">{{ screen.icon || 'dashboard' }}</span>
@@ -327,7 +327,7 @@
   <!-- ======================== SCREEN VIEW (Dynamic Tabs) ======================== -->
   @if (viewMode() === 'screen' && activeScreen()) {
     <div class="screen-view">
-      <div class="screen-header" [style.border-bottom-color]="activeScreen()!.color || '#3b82f6'">
+      <div class="screen-header" [style.--screen-color]="activeScreen()!.color || '#3b82f6'">
         <div class="header-right">
           @if (!openedFromSidebar()) {
             <button class="btn-icon" (click)="backToList()" title="رجوع">
@@ -353,7 +353,8 @@
         <div class="tabs-bar">
           @for (tab of screenTabs(); track tab.id) {
             <button class="tab-btn" [class.active]="activeTabId() === tab.id" (click)="setActiveTab(tab.id)"
-              [style.--tab-color]="tab.color">
+              [style.--tab-color]="tab.color" [style.background]="activeTabId() === tab.id ? tab.color : 'transparent'">
+
               <span class="material-icons-round">{{ tab.icon }}</span>
               <span>{{ tab.label }}</span>
             </button>
