@@ -242,8 +242,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   // Collection Style Wizard (4 steps)
   csWizardStep = signal(1);
   csTab1Label = signal('تحصيل');
+  csTab1Icon = signal('call_received');
+  csTab1Color = signal('#22c55e');
   csTab2Label = signal('توريد');
+  csTab2Icon = signal('call_made');
+  csTab2Color = signal('#ef4444');
+  csHistoryLabel = signal('السجل');
+  csHistoryIcon = signal('history');
+  csHistoryColor = signal('#6366f1');
   csAccountsSectionLabel = signal('الصناديق');
+  csAccountsIcon = signal('savings');
+  csAccountsColor = signal('#10b981');
   csTab1OperationTypeIds = signal<number[]>([]);
   csTab2OperationTypeIds = signal<number[]>([]);
   csAccountIds = signal<number[]>([]);
@@ -1358,8 +1367,17 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     if (!screen) return;
     const config = this.collectionStyleConfig();
     this.csTab1Label.set(config?.tab1Label || 'تحصيل');
+    this.csTab1Icon.set(config?.tab1Icon || 'call_received');
+    this.csTab1Color.set(config?.tab1Color || '#22c55e');
     this.csTab2Label.set(config?.tab2Label || 'توريد');
+    this.csTab2Icon.set(config?.tab2Icon || 'call_made');
+    this.csTab2Color.set(config?.tab2Color || '#ef4444');
+    this.csHistoryLabel.set(config?.historyLabel || 'السجل');
+    this.csHistoryIcon.set(config?.historyIcon || 'history');
+    this.csHistoryColor.set(config?.historyColor || '#6366f1');
     this.csAccountsSectionLabel.set(config?.accountsSectionLabel || 'الصناديق');
+    this.csAccountsIcon.set(config?.accountsIcon || 'savings');
+    this.csAccountsColor.set(config?.accountsColor || '#10b981');
     this.csTab1OperationTypeIds.set(config?.tab1OperationTypeIds || []);
     this.csTab2OperationTypeIds.set(config?.tab2OperationTypeIds || []);
     this.csAccountIds.set(config?.accountIds || []);
@@ -1367,7 +1385,6 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     // تحميل البيانات
     await this.loadContentBindingData();
     this.showCsConfigWizard.set(true);
-
   }
 
   closeCsConfigWizard() {
@@ -1376,7 +1393,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
 
   nextCsWizardStep() {
     const step = this.csWizardStep();
-    if (step < 4) this.csWizardStep.set(step + 1);
+    if (step < 5) this.csWizardStep.set(step + 1);
   }
 
   prevCsWizardStep() {
@@ -1412,10 +1429,19 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     try {
       const payload = {
         tab1Label: this.csTab1Label(),
+        tab1Icon: this.csTab1Icon(),
+        tab1Color: this.csTab1Color(),
         tab1OperationTypeIds: this.csTab1OperationTypeIds(),
         tab2Label: this.csTab2Label(),
+        tab2Icon: this.csTab2Icon(),
+        tab2Color: this.csTab2Color(),
         tab2OperationTypeIds: this.csTab2OperationTypeIds(),
+        historyLabel: this.csHistoryLabel(),
+        historyIcon: this.csHistoryIcon(),
+        historyColor: this.csHistoryColor(),
         accountsSectionLabel: this.csAccountsSectionLabel(),
+        accountsIcon: this.csAccountsIcon(),
+        accountsColor: this.csAccountsColor(),
         accountIds: this.csAccountIds(),
       };
       await this.api.saveCollectionStyleConfig(this.bizId, screen.id, payload);

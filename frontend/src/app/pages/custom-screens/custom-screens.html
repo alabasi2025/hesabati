@@ -1496,7 +1496,7 @@
             </div>
             <div>
               <h2>إعداد الشاشة المخصصة</h2>
-              <p>الخطوة {{ csWizardStep() }} من 4</p>
+              <p>الخطوة {{ csWizardStep() }} من 5</p>
             </div>
           </div>
           <button class="close-btn" (click)="closeCsConfigWizard()">
@@ -1506,48 +1506,53 @@
 
         <!-- Wizard Steps Indicator -->
         <div class="wizard-steps" style="padding: 0 24px;">
-          @for (step of [1,2,3,4]; track step) {
+          @for (step of [1,2,3,4,5]; track step) {
             <div class="wizard-step" [class.active]="csWizardStep() === step" [class.completed]="csWizardStep() > step">
               <div class="step-number">{{ csWizardStep() > step ? '✓' : step }}</div>
               <span class="step-label">
                 @switch (step) {
-                  @case (1) { التسميات }
-                  @case (2) { قوالب التبويب الأول }
-                  @case (3) { قوالب التبويب الثاني }
-                  @case (4) { حسابات المراقبة }
+                  @case (1) { التبويب الأول }
+                  @case (2) { التبويب الثاني }
+                  @case (3) { السجل }
+                  @case (4) { الحسابات }
+                  @case (5) { حسابات المراقبة }
                 }
               </span>
             </div>
-            @if (step < 4) {
+            @if (step < 5) {
               <div class="step-connector" [class.active]="csWizardStep() > step"></div>
             }
           }
         </div>
 
         <div class="modal-body">
-          <!-- الخطوة 1: التسميات -->
+          <!-- الخطوة 1: التبويب الأول -->
           @if (csWizardStep() === 1) {
             <div>
-              <h3 class="section-title">تسميات الأقسام</h3>
+              <h3 class="section-title">إعداد التبويب الأول</h3>
               <div class="form-group">
-                <label>اسم التبويب الأول</label>
+                <label>اسم التبويب</label>
                 <input type="text" [ngModel]="csTab1Label()" (ngModelChange)="csTab1Label.set($event)" placeholder="مثلاً: تحصيل" />
               </div>
               <div class="form-group">
-                <label>اسم التبويب الثاني</label>
-                <input type="text" [ngModel]="csTab2Label()" (ngModelChange)="csTab2Label.set($event)" placeholder="مثلاً: توريد" />
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid">
+                  @for (icon of icons; track icon) {
+                    <button type="button" class="icon-option" [class.selected]="csTab1Icon() === icon" (click)="csTab1Icon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
               </div>
               <div class="form-group">
-                <label>اسم قسم المراقبة</label>
-                <input type="text" [ngModel]="csAccountsSectionLabel()" (ngModelChange)="csAccountsSectionLabel.set($event)" placeholder="مثلاً: الصناديق" />
+                <label>لون التبويب</label>
+                <div class="color-grid">
+                  @for (color of colors; track color) {
+                    <button type="button" class="color-option" [class.selected]="csTab1Color() === color" [style.background]="color" (click)="csTab1Color.set(color)"></button>
+                  }
+                </div>
               </div>
-            </div>
-          }
-
-          <!-- الخطوة 2: قوالب التبويب الأول -->
-          @if (csWizardStep() === 2) {
-            <div>
-              <h3 class="section-title">اختر قوالب العمليات للتبويب الأول ({{ csTab1Label() }})</h3>
+              <h3 class="section-title" style="margin-top: 16px;">قوالب العمليات</h3>
               <div class="binding-options-grid">
                 @for (op of operationTypes(); track op.id) {
                   <label class="binding-option" [class.selected]="csTab1OperationTypeIds().includes(op.id)">
@@ -1563,10 +1568,33 @@
             </div>
           }
 
-          <!-- الخطوة 3: قوالب التبويب الثاني -->
-          @if (csWizardStep() === 3) {
+          <!-- الخطوة 2: التبويب الثاني -->
+          @if (csWizardStep() === 2) {
             <div>
-              <h3 class="section-title">اختر قوالب العمليات للتبويب الثاني ({{ csTab2Label() }})</h3>
+              <h3 class="section-title">إعداد التبويب الثاني</h3>
+              <div class="form-group">
+                <label>اسم التبويب</label>
+                <input type="text" [ngModel]="csTab2Label()" (ngModelChange)="csTab2Label.set($event)" placeholder="مثلاً: توريد" />
+              </div>
+              <div class="form-group">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid">
+                  @for (icon of icons; track icon) {
+                    <button type="button" class="icon-option" [class.selected]="csTab2Icon() === icon" (click)="csTab2Icon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
+                <label>لون التبويب</label>
+                <div class="color-grid">
+                  @for (color of colors; track color) {
+                    <button type="button" class="color-option" [class.selected]="csTab2Color() === color" [style.background]="color" (click)="csTab2Color.set(color)"></button>
+                  }
+                </div>
+              </div>
+              <h3 class="section-title" style="margin-top: 16px;">قوالب العمليات</h3>
               <div class="binding-options-grid">
                 @for (op of operationTypes(); track op.id) {
                   <label class="binding-option" [class.selected]="csTab2OperationTypeIds().includes(op.id)">
@@ -1582,8 +1610,66 @@
             </div>
           }
 
-          <!-- الخطوة 4: حسابات المراقبة -->
+          <!-- الخطوة 3: السجل -->
+          @if (csWizardStep() === 3) {
+            <div>
+              <h3 class="section-title">إعداد تبويب السجل</h3>
+              <div class="form-group">
+                <label>اسم التبويب</label>
+                <input type="text" [ngModel]="csHistoryLabel()" (ngModelChange)="csHistoryLabel.set($event)" placeholder="مثلاً: السجل" />
+              </div>
+              <div class="form-group">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid">
+                  @for (icon of icons; track icon) {
+                    <button type="button" class="icon-option" [class.selected]="csHistoryIcon() === icon" (click)="csHistoryIcon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
+                <label>لون التبويب</label>
+                <div class="color-grid">
+                  @for (color of colors; track color) {
+                    <button type="button" class="color-option" [class.selected]="csHistoryColor() === color" [style.background]="color" (click)="csHistoryColor.set(color)"></button>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- الخطوة 4: الحسابات/الصناديق -->
           @if (csWizardStep() === 4) {
+            <div>
+              <h3 class="section-title">إعداد تبويب الحسابات/الصناديق</h3>
+              <div class="form-group">
+                <label>اسم التبويب</label>
+                <input type="text" [ngModel]="csAccountsSectionLabel()" (ngModelChange)="csAccountsSectionLabel.set($event)" placeholder="مثلاً: الصناديق" />
+              </div>
+              <div class="form-group">
+                <label>أيقونة التبويب</label>
+                <div class="icon-grid">
+                  @for (icon of icons; track icon) {
+                    <button type="button" class="icon-option" [class.selected]="csAccountsIcon() === icon" (click)="csAccountsIcon.set(icon)">
+                      <span class="material-icons-round">{{ icon }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
+                <label>لون التبويب</label>
+                <div class="color-grid">
+                  @for (color of colors; track color) {
+                    <button type="button" class="color-option" [class.selected]="csAccountsColor() === color" [style.background]="color" (click)="csAccountsColor.set(color)"></button>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- الخطوة 5: اختيار حسابات المراقبة -->
+          @if (csWizardStep() === 5) {
             <div>
               <h3 class="section-title">اختر الحسابات/الصناديق لقسم {{ csAccountsSectionLabel() }}</h3>
               <div class="binding-options-grid">
@@ -1613,7 +1699,7 @@
               }
             </div>
             <div style="display: flex; gap: 8px;">
-              @if (csWizardStep() < 4) {
+              @if (csWizardStep() < 5) {
                 <button class="btn-save" (click)="nextCsWizardStep()">
                   التالي
                   <span class="material-icons-round">arrow_back</span>
