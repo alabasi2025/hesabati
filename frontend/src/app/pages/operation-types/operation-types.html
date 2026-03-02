@@ -16,6 +16,10 @@
         <span class="material-icons-round">help_outline</span>
       </button>
       @if (activeTab() === 'templates') {
+        <button class="btn-3d btn-secondary" (click)="loadStats()" title="إحصائيات الاستخدام">
+          <span class="material-icons-round">analytics</span>
+          إحصائيات
+        </button>
         <button class="btn-3d btn-primary" (click)="openWizard()">
           <span class="material-icons-round">add</span>
           قالب جديد
@@ -117,6 +121,20 @@
   <!-- =================== تبويب القوالب ========================== -->
   <!-- ============================================================ -->
   @if (!loading() && activeTab() === 'templates') {
+    <!-- شريط البحث -->
+    <div class="search-bar-row">
+      <div class="search-input-wrapper">
+        <span class="material-icons-round">search</span>
+        <input type="text" placeholder="بحث في القوالب..." [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
+        @if (searchQuery()) {
+          <button class="clear-search" (click)="searchQuery.set('')">
+            <span class="material-icons-round">close</span>
+          </button>
+        }
+      </div>
+      <span class="results-count">{{ filteredTypes().length }} قالب</span>
+    </div>
+
     <!-- فلاتر الفئات -->
     @if (categoryFilters().length > 1) {
       <div class="category-tabs">
@@ -178,6 +196,12 @@
                     }
                   </div>
                   <div class="ot-actions-top">
+                    <button class="icon-btn" (click)="cloneOT(ot)" title="نسخ القالب">
+                      <span class="material-icons-round">content_copy</span>
+                    </button>
+                    <button class="icon-btn" [class.active-toggle]="ot.isActive" (click)="toggleOT(ot)" [title]="ot.isActive ? 'تعطيل' : 'تفعيل'">
+                      <span class="material-icons-round">{{ ot.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                    </button>
                     <button class="icon-btn edit-btn" (click)="openEditWizard(ot)" title="تعديل">
                       <span class="material-icons-round">edit</span>
                     </button>

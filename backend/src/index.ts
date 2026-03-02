@@ -6,6 +6,7 @@ import { logger } from 'hono/logger';
 import authRoutes from './routes/auth.ts';
 import dashboardRoutes from './routes/dashboard.ts';
 import apiRoutes from './routes/api.ts';
+import enhancementRoutes from './routes/enhancements.ts';
 import { authMiddleware } from './middleware/auth.ts';
 import { rateLimitMiddleware, loginRateLimitMiddleware } from './middleware/rateLimit.ts';
 import { xssSanitizeMiddleware } from './middleware/validation.ts';
@@ -52,6 +53,7 @@ app.route('/api/auth', authRoutes);
 app.use('/api/*', authMiddleware());
 app.route('/api/dashboard', dashboardRoutes);
 app.route('/api', apiRoutes);
+app.route('/api', enhancementRoutes);
 
 // ===================== Global Error Handler =====================
 app.onError((err, c) => {

@@ -39,6 +39,11 @@ export class OperationTypesComponent implements OnInit {
   activeCategory = signal('all');
   selectedOT = signal<any>(null);
   showAccountsModal = signal(false);
+  showStatsView = signal(false);
+  operationStats = signal<any[]>([]);
+  searchQuery = signal('');
+  nameCheckResult = signal<{exists: boolean; name: string} | null>(null);
+  nameCheckTimeout: any = null;
 
   // ===================== إدارة التصنيفات (تبويب مستقل) =====================
   showCategoryForm = signal(false);
@@ -218,9 +223,11 @@ export class OperationTypesComponent implements OnInit {
 
   filteredTypes = computed(() => {
     const cat = this.activeCategory();
-    const all = this.operationTypes();
-    if (cat === 'all') return all;
-    return all.filter(ot => ot.category === cat);
+    const q = this.searchQuery().toLowerCase().trim();
+    let all = this.operationTypes();
+    if (cat !== 'all') all = all.filter(ot => ot.category === cat);
+    if (q) all = all.filter(ot => (ot.name || '').toLowerCase().includes(q) || (ot.description || '').toLowerCase().includes(q) || (ot.category || '').toLowerCase().includes(q));
+    return all;
   });
 
   groupedByCategory = computed(() => {
@@ -691,6 +698,61 @@ export class OperationTypesComponent implements OnInit {
       this.showError(e.message || 'خطأ في الحفظ');
     }
     this.saving.set(false);
+  }
+
+  // ===================== Clone Template =====================
+  async cloneOT(ot: any) {
+    const cfm = await this.toast.confirm({ title: 'نسخ القالب', message: `هل تريد نسخ القالب "${ot.name}"؟`, type: 'info' });
+    if (!cfm) return;
+    this.saving.set(true);
+    try {
+      await this.api.cloneOperationType(this.bizId, ot.id);
+      this.showSuccess(`تم نسخ القالب "${ot.name}" بنجاح`);
+      await this.loadAll();
+    } catch (e: any) {
+      this.showError(e.message || 'خطأ في نسخ القالب');
+    }
+    this.saving.set(false);
+  }
+
+  // ===================== Toggle Active =====================
+  async toggleOT(ot: any) {
+    this.saving.set(true);
+    try {
+      await this.api.toggleOperationType(this.bizId, ot.id);
+      this.showSuccess(ot.isActive ? `تم تعطيل "${ot.name}"` : `تم تفعيل "${ot.name}"`);
+      await this.loadAll();
+    } catch (e: any) {
+      this.showError(e.message || 'خطأ في تغيير الحالة');
+    }
+    this.saving.set(false);
+  }
+
+  // ===================== Stats View =====================
+  async loadStats() {
+    try {
+      const stats = await this.api.getOperationTypesStats(this.bizId);
+      this.operationStats.set(stats);
+      this.showStatsView.set(true);
+    } catch (e: any) {
+      this.showError(e.message || 'خطأ في جلب الإحصائيات');
+    }
+  }
+
+  getStatForOT(otId: number): any {
+    return this.operationStats().find((s: any) => s.id === otId) || { usage_count: 0, total_amount: 0 };
+  }
+
+  // ===================== Check Name Duplicate =====================
+  checkNameDuplicate(name: string) {
+    if (this.nameCheckTimeout) clearTimeout(this.nameCheckTimeout);
+    if (!name.trim()) { this.nameCheckResult.set(null); return; }
+    this.nameCheckTimeout = setTimeout(async () => {
+      try {
+        const result = await this.api.checkOperationTypeName(this.bizId, name, this.editingId() || undefined);
+        this.nameCheckResult.set(result);
+      } catch { this.nameCheckResult.set(null); }
+    }, 500);
   }
 
   // ===================== Delete Template =====================

@@ -381,4 +381,108 @@ export class ApiService {
   saveCollectionStyleConfig(bizId: number, screenId: number, d: any) {
     return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`, { method: 'PUT', body: JSON.stringify(d) });
   }
+
+  // ===================== تحسينات السندات =====================
+  getVouchersEnhanced(bizId: number, filters?: {
+    type?: string; status?: string; dateFrom?: string; dateTo?: string;
+    search?: string; minAmount?: number; maxAmount?: number;
+    operationTypeId?: number; limit?: number; offset?: number;
+    sortBy?: string; sortDir?: string;
+  }) {
+    let url = `/businesses/${bizId}/vouchers-enhanced`;
+    const params: string[] = [];
+    if (filters?.type) params.push(`type=${filters.type}`);
+    if (filters?.status) params.push(`status=${filters.status}`);
+    if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
+    if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
+    if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters?.minAmount) params.push(`minAmount=${filters.minAmount}`);
+    if (filters?.maxAmount) params.push(`maxAmount=${filters.maxAmount}`);
+    if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
+    if (filters?.limit) params.push(`limit=${filters.limit}`);
+    if (filters?.offset !== undefined) params.push(`offset=${filters.offset}`);
+    if (filters?.sortBy) params.push(`sortBy=${filters.sortBy}`);
+    if (filters?.sortDir) params.push(`sortDir=${filters.sortDir}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  updateVoucher(bizId: number, id: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/vouchers/${id}`, { method: 'PUT', body: JSON.stringify(d) });
+  }
+  changeVoucherStatus(bizId: number, id: number, status: string) {
+    return this.request<any>(`/businesses/${bizId}/vouchers/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
+  }
+  getAccountBalance(bizId: number, accountId: number) {
+    return this.request<any>(`/businesses/${bizId}/account-balance/${accountId}`);
+  }
+  getVoucherDetails(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/vouchers/${id}/details`);
+  }
+  createVoucherDraft(bizId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/vouchers-draft`, { method: 'POST', body: JSON.stringify(d) });
+  }
+
+  // ===================== تحسينات أنواع العمليات =====================
+  cloneOperationType(bizId: number, id: number, d?: any) {
+    return this.request<any>(`/businesses/${bizId}/operation-types/${id}/clone`, { method: 'POST', body: JSON.stringify(d || {}) });
+  }
+  toggleOperationType(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/operation-types/${id}/toggle`, { method: 'POST', body: '{}' });
+  }
+  getOperationTypesStats(bizId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/operation-types-stats`);
+  }
+  checkOperationTypeName(bizId: number, name: string, excludeId?: number) {
+    let url = `/businesses/${bizId}/operation-types/check-name?name=${encodeURIComponent(name)}`;
+    if (excludeId) url += `&excludeId=${excludeId}`;
+    return this.request<{ exists: boolean; name: string }>(url);
+  }
+
+  // ===================== تحسينات إعدادات السايدبار =====================
+  copySidebarConfig(bizId: number, fromUserId: number, toUserId: number) {
+    return this.request<any>(`/businesses/${bizId}/sidebar-config/copy`, { method: 'POST', body: JSON.stringify({ fromUserId, toUserId }) });
+  }
+  resetSidebarConfig(bizId: number, userId: number) {
+    return this.request<any>(`/businesses/${bizId}/sidebar-config/reset/${userId}`, { method: 'POST', body: '{}' });
+  }
+
+  // ===================== تحسينات الشاشات المخصصة =====================
+  getWidgetLogEnhanced(bizId: number, filters?: {
+    dateFrom?: string; dateTo?: string; operationTypeId?: number;
+    search?: string; minAmount?: number; maxAmount?: number;
+    status?: string; limit?: number; offset?: number;
+  }) {
+    let url = `/businesses/${bizId}/widget-log-enhanced`;
+    const params: string[] = [];
+    if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
+    if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
+    if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
+    if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters?.minAmount) params.push(`minAmount=${filters.minAmount}`);
+    if (filters?.maxAmount) params.push(`maxAmount=${filters.maxAmount}`);
+    if (filters?.status) params.push(`status=${filters.status}`);
+    if (filters?.limit) params.push(`limit=${filters.limit}`);
+    if (filters?.offset !== undefined) params.push(`offset=${filters.offset}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  getWidgetStatsEnhanced(bizId: number, period?: string, dateFrom?: string, dateTo?: string) {
+    let url = `/businesses/${bizId}/widget-stats-enhanced`;
+    const params: string[] = [];
+    if (period) params.push(`period=${period}`);
+    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
+    if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
+  getWidgetChartEnhanced(bizId: number, groupBy?: string, months?: number, dateFrom?: string, dateTo?: string) {
+    let url = `/businesses/${bizId}/widget-chart-enhanced`;
+    const params: string[] = [];
+    if (groupBy) params.push(`groupBy=${groupBy}`);
+    if (months) params.push(`months=${months}`);
+    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
+    if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (params.length) url += '?' + params.join('&');
+    return this.request<any>(url);
+  }
 }

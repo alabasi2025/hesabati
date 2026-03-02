@@ -137,6 +137,35 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   logFilterDateFrom = signal('');
   logFilterDateTo = signal('');
   logFilterOpType = signal('');
+  logSearchQuery = signal('');
+  logMinAmount = signal<number | null>(null);
+  logMaxAmount = signal<number | null>(null);
+  logPage = signal(1);
+  logPageSize = signal(20);
+  logSortBy = signal('entry_date');
+  logSortDir = signal<'asc' | 'desc'>('desc');
+
+  // Auto-refresh
+  autoRefreshEnabled = signal(false);
+  private autoRefreshInterval: any = null;
+  autoRefreshCountdown = signal(30);
+  private countdownInterval: any = null;
+
+  // Chart period filter
+  chartGroupBy = signal<'weekly' | 'monthly' | 'yearly'>('monthly');
+  chartMonths = signal(6);
+  chartDateFrom = signal('');
+  chartDateTo = signal('');
+
+  // Stats period filter
+  statsPeriod = signal<'all' | 'today' | 'week' | 'month' | 'year'>('all');
+  statsDateFrom = signal('');
+  statsDateTo = signal('');
+
+  // Voucher details modal
+  showVoucherDetails = signal(false);
+  selectedVoucherDetails = signal<any>(null);
+  voucherDetailsLoading = signal(false);
 
   // Accounts tab
   widgetAccounts = signal<AccountData[]>([]);
@@ -260,6 +289,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
+    this.stopAutoRefresh();
   }
 
   // ===================== Load Data =====================
@@ -333,26 +363,148 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   async loadLogData() {
     try {
-      const filters: any = { limit: 50 };
+      const filters: any = {
+        limit: this.logPageSize(),
+        offset: (this.logPage() - 1) * this.logPageSize(),
+      };
       if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
       if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
       if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
-      const result = await this.api.getWidgetLog(this.bizId, filters);
+      if (this.logSearchQuery()) filters.search = this.logSearchQuery();
+      if (this.logMinAmount()) filters.minAmount = this.logMinAmount();
+      if (this.logMaxAmount()) filters.maxAmount = this.logMaxAmount();
+      const result = await this.api.getWidgetLogEnhanced(this.bizId, filters);
       this.logEntries.set(result.entries || []);
       this.logTotal.set(result.total || 0);
-    } catch (e) { console.error('Error loading log:', e); }
+    } catch (e) {
+      // fallback to old API
+      try {
+        const filters: any = { limit: 50 };
+        if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
+        if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
+        if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
+        const result = await this.api.getWidgetLog(this.bizId, filters);
+        this.logEntries.set(result.entries || []);
+        this.logTotal.set(result.total || 0);
+      } catch (e2) { console.error('Error loading log:', e2); }
+    }
+  }
+
+  // Pagination
+  get logTotalPages(): number {
+    return Math.ceil(this.logTotal() / this.logPageSize()) || 1;
+  }
+
+  async goToLogPage(page: number) {
+    if (page < 1 || page > this.logTotalPages) return;
+    this.logPage.set(page);
+    await this.loadLogData();
+  }
+
+  getLogPageNumbers(): number[] {
+    const total = this.logTotalPages;
+    const current = this.logPage();
+    const pages: number[] = [];
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, current + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }
+
+  // Sort
+  toggleLogSort(column: string) {
+    if (this.logSortBy() === column) {
+      this.logSortDir.set(this.logSortDir() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.logSortBy.set(column);
+      this.logSortDir.set('desc');
+    }
+    this.logPage.set(1);
+    this.loadLogData();
+  }
+
+  // Auto-refresh
+  toggleAutoRefresh() {
+    if (this.autoRefreshEnabled()) {
+      this.stopAutoRefresh();
+    } else {
+      this.startAutoRefresh();
+    }
+  }
+
+  private startAutoRefresh() {
+    this.autoRefreshEnabled.set(true);
+    this.autoRefreshCountdown.set(30);
+    this.countdownInterval = setInterval(() => {
+      this.autoRefreshCountdown.update(c => c - 1);
+    }, 1000);
+    this.autoRefreshInterval = setInterval(async () => {
+      this.autoRefreshCountdown.set(30);
+      const screen = this.activeScreen();
+      if (screen) {
+        const tabs = this.screenTabs();
+        await this.loadTabsData(tabs);
+      }
+    }, 30000);
+  }
+
+  private stopAutoRefresh() {
+    this.autoRefreshEnabled.set(false);
+    if (this.autoRefreshInterval) { clearInterval(this.autoRefreshInterval); this.autoRefreshInterval = null; }
+    if (this.countdownInterval) { clearInterval(this.countdownInterval); this.countdownInterval = null; }
+  }
+
+  // Voucher Details
+  async openVoucherDetails(entryId: number) {
+    this.voucherDetailsLoading.set(true);
+    this.showVoucherDetails.set(true);
+    try {
+      const details = await this.api.getVoucherDetails(this.bizId, entryId);
+      this.selectedVoucherDetails.set(details);
+    } catch (e: any) {
+      this.toast.error(e.message || 'خطأ في جلب التفاصيل');
+      this.showVoucherDetails.set(false);
+    } finally {
+      this.voucherDetailsLoading.set(false);
+    }
+  }
+
+  closeVoucherDetails() {
+    this.showVoucherDetails.set(false);
+    this.selectedVoucherDetails.set(null);
   }
 
   async loadStatsData() {
     try {
-      const stats = await this.api.getWidgetStats(this.bizId);
+      const stats = await this.api.getWidgetStatsEnhanced(
+        this.bizId,
+        this.statsPeriod() !== 'all' ? this.statsPeriod() : undefined,
+        this.statsDateFrom() || undefined,
+        this.statsDateTo() || undefined
+      );
       this.widgetStats.set(stats);
-    } catch (e) { console.error('Error loading stats:', e); }
+    } catch (e) {
+      try {
+        const stats = await this.api.getWidgetStats(this.bizId);
+        this.widgetStats.set(stats);
+      } catch (e2) { console.error('Error loading stats:', e2); }
+    }
+  }
+
+  async changeStatsPeriod(period: string) {
+    this.statsPeriod.set(period as any);
+    await this.loadStatsData();
   }
 
   async loadChartData() {
     try {
-      const chartData = await this.api.getWidgetChart(this.bizId, 6);
+      const chartData = await this.api.getWidgetChartEnhanced(
+        this.bizId,
+        this.chartGroupBy(),
+        this.chartMonths(),
+        this.chartDateFrom() || undefined,
+        this.chartDateTo() || undefined
+      );
       this.barChartData = {
         labels: chartData.labels || [],
         datasets: [
@@ -360,7 +512,28 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
           { data: chartData.payments || [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
         ],
       };
-    } catch (e) { console.error('Error loading chart:', e); }
+    } catch (e) {
+      try {
+        const chartData = await this.api.getWidgetChart(this.bizId, 6);
+        this.barChartData = {
+          labels: chartData.labels || [],
+          datasets: [
+            { data: chartData.receipts || [], label: 'التحصيل', backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 6 },
+            { data: chartData.payments || [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
+          ],
+        };
+      } catch (e2) { console.error('Error loading chart:', e2); }
+    }
+  }
+
+  async changeChartGroupBy(groupBy: string) {
+    this.chartGroupBy.set(groupBy as any);
+    await this.loadChartData();
+  }
+
+  async changeChartMonths(months: number) {
+    this.chartMonths.set(months);
+    await this.loadChartData();
   }
 
   async loadAccountsData(accountIds: number[]) {
@@ -485,9 +658,14 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   }
 
   // ===================== Log Filters =====================
-  async applyLogFilters() { await this.loadLogData(); }
+  async applyLogFilters() {
+    this.logPage.set(1);
+    await this.loadLogData();
+  }
   async clearLogFilters() {
     this.logFilterDateFrom.set(''); this.logFilterDateTo.set(''); this.logFilterOpType.set('');
+    this.logSearchQuery.set(''); this.logMinAmount.set(null); this.logMaxAmount.set(null);
+    this.logPage.set(1);
     await this.loadLogData();
   }
 

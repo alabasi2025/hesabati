@@ -80,6 +80,17 @@ export class SidebarSettingsComponent implements OnInit {
   draggedIndex = signal<number | null>(null);
   dragOverIndex = signal<number | null>(null);
 
+  // Copy & Reset
+  showCopyModal = signal(false);
+  copyFromUserId = signal<number | null>(null);
+  copyToUserId = signal<number | null>(null);
+  copying = signal(false);
+  resetting = signal(false);
+
+  // Search & Filter
+  searchQuery = signal('');
+  filterSection = signal('all');
+
   loading = signal(true);
   message = signal('');
   messageType = signal<'success' | 'error'>('success');
@@ -455,6 +466,96 @@ export class SidebarSettingsComponent implements OnInit {
     'warning', 'tune', 'settings', 'home', 'folder', 'circle',
     'payments', 'people', 'summarize', 'arrow_forward',
   ];
+
+  // ==================== Copy Config ====================
+  openCopyModal() {
+    this.copyFromUserId.set(null);
+    this.copyToUserId.set(null);
+    this.showCopyModal.set(true);
+  }
+
+  async copyConfig() {
+    const from = this.copyFromUserId();
+    const to = this.copyToUserId();
+    if (!from || !to) return;
+    if (from === to) { this.showMessage('لا يمكن النسخ لنفس المستخدم', 'error'); return; }
+
+    const confirmed = await this.toast.confirm({
+      title: 'تأكيد النسخ',
+      message: 'سيتم استبدال إعدادات المستخدم المستهدف بالكامل. هل تريد المتابعة؟',
+      type: 'warning'
+    });
+    if (!confirmed) return;
+
+    this.copying.set(true);
+    try {
+      const result = await this.api.copySidebarConfig(this.bizId, from, to);
+      this.showMessage(`تم نسخ ${result.copiedCount} إعداد بنجاح`, 'success');
+      this.showCopyModal.set(false);
+      // إعادة تحميل إعدادات المستخدم المحدد إذا كان هو المستهدف
+      const sel = this.selectedUser();
+      if (sel && sel.id === to) await this.selectUser(sel);
+    } catch (e: any) {
+      this.showMessage(e.message || 'خطأ في نسخ الإعدادات', 'error');
+    } finally {
+      this.copying.set(false);
+    }
+  }
+
+  // ==================== Reset Config ====================
+  async resetConfig(userId: number) {
+    const user = this.users().find(u => u.id === userId);
+    const confirmed = await this.toast.confirm({
+      title: 'إعادة تعيين',
+      message: `هل تريد إعادة تعيين إعدادات التبويب لـ "${user?.fullName || user?.username}"؟ سيتم إظهار جميع العناصر بالترتيب الافتراضي.`,
+      type: 'warning'
+    });
+    if (!confirmed) return;
+
+    this.resetting.set(true);
+    try {
+      const result = await this.api.resetSidebarConfig(this.bizId, userId);
+      this.showMessage(`تم إعادة التعيين بنجاح (${result.itemCount} عنصر)`, 'success');
+      const sel = this.selectedUser();
+      if (sel && sel.id === userId) await this.selectUser(sel);
+    } catch (e: any) {
+      this.showMessage(e.message || 'خطأ في إعادة التعيين', 'error');
+    } finally {
+      this.resetting.set(false);
+    }
+  }
+
+  // ==================== Search & Filter ====================
+  getFilteredItemsForSection(sectionName: string): UserConfig[] {
+    let items = this.getItemsForSection(sectionName);
+    const q = this.searchQuery().toLowerCase().trim();
+    if (q) {
+      items = items.filter(c => c.label.toLowerCase().includes(q) || c.screenKey.toLowerCase().includes(q));
+    }
+    return items;
+  }
+
+  getFilteredSectionNames(): string[] {
+    const filter = this.filterSection();
+    let names = this.getSectionNames();
+    if (filter !== 'all') {
+      names = names.filter(n => n === filter);
+    }
+    // إذا كان هناك بحث، أظهر فقط الأقسام التي فيها نتائج
+    const q = this.searchQuery().toLowerCase().trim();
+    if (q) {
+      names = names.filter(n => this.getFilteredItemsForSection(n).length > 0);
+    }
+    return names;
+  }
+
+  getVisibleCount(): number {
+    return this.userConfigs().filter(c => c.isVisible).length;
+  }
+
+  getHiddenCount(): number {
+    return this.userConfigs().filter(c => !c.isVisible).length;
+  }
 
   private showMessage(text: string, type: 'success' | 'error') {
     this.message.set(text);
