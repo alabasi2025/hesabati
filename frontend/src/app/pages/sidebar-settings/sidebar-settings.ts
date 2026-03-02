@@ -111,18 +111,79 @@ export class SidebarSettingsComponent implements OnInit {
   async selectUser(user: AppUser) {
     this.selectedUser.set(user);
     try {
-      const configs = await this.api.getUserSidebar(this.bizId, user.id);
-      this.userConfigs.set(configs.map((c: any) => ({
-        configId: c.configId,
-        itemId: c.itemId,
-        label: c.label,
-        icon: c.icon,
-        screenKey: c.screenKey,
-        sectionName: c.sectionName,
-        sectionId: c.sectionId,
-        isVisible: c.isVisible,
-        customSortOrder: c.customSortOrder || 0,
-      })));
+      const rawConfigs = await this.api.getUserSidebar(this.bizId, user.id);
+
+      // بناء القائمة من الأقسام والشاشات الحقيقية (مصدر الحقيقة)
+      const realSections = this.sections();
+      const realItems = this.allItems();
+
+      // تحويل configs من الخادم إلى Map للبحث السريع
+      const configByItemId = new Map<number, any>();
+      const configByScreenKey = new Map<string, any>();
+      for (const c of rawConfigs) {
+        if (c.itemId) configByItemId.set(c.itemId, c);
+        if (c.screenKey) configByScreenKey.set(c.screenKey, c);
+      }
+
+      const mergedConfigs: UserConfig[] = [];
+
+      // لكل قسم حقيقي → لكل عنصر حقيقي يتبعه
+      for (const section of realSections) {
+        const sectionItems = realItems.filter(item => item.sectionId === section.id);
+        for (const item of sectionItems) {
+          // البحث عن config موجود لهذا العنصر
+          const existing = configByItemId.get(item.id) || configByScreenKey.get(item.screenKey);
+          if (existing) {
+            mergedConfigs.push({
+              configId: existing.configId || 0,
+              itemId: existing.itemId || item.id,
+              label: item.label, // نستخدم الاسم الحقيقي من العنصر
+              icon: item.icon,
+              screenKey: item.screenKey,
+              sectionName: section.name, // نستخدم اسم القسم الحقيقي
+              sectionId: section.id,
+              isVisible: existing.isVisible ?? true,
+              customSortOrder: existing.customSortOrder ?? item.sortOrder ?? 0,
+            });
+            // حذف من الـ maps لتتبع العناصر الإضافية
+            configByItemId.delete(item.id);
+            if (item.screenKey) configByScreenKey.delete(item.screenKey);
+          } else {
+            // عنصر حقيقي ليس له config بعد → عرض كافتراضي
+            mergedConfigs.push({
+              configId: 0,
+              itemId: item.id,
+              label: item.label,
+              icon: item.icon,
+              screenKey: item.screenKey,
+              sectionName: section.name,
+              sectionId: section.id,
+              isVisible: true, // افتراضي: ظاهر
+              customSortOrder: item.sortOrder || 0,
+            });
+          }
+        }
+      }
+
+      // أي عناصر إضافية من getUserSidebar لا تطابق عنصراً في allItems (مثل شاشات مخصصة قديمة)
+      for (const [, cfg] of configByItemId) {
+        // البحث عن القسم المناسب
+        const sectionName = cfg.sectionName || 'أخرى';
+        const sectionId = cfg.sectionId || 0;
+        mergedConfigs.push({
+          configId: cfg.configId || 0,
+          itemId: cfg.itemId,
+          label: cfg.label || 'عنصر غير معروف',
+          icon: cfg.icon || 'circle',
+          screenKey: cfg.screenKey || '',
+          sectionName,
+          sectionId,
+          isVisible: cfg.isVisible ?? true,
+          customSortOrder: cfg.customSortOrder ?? 0,
+        });
+      }
+
+      this.userConfigs.set(mergedConfigs);
     } catch (err) {
       console.error(err);
     }
@@ -230,11 +291,16 @@ export class SidebarSettingsComponent implements OnInit {
 
     this.savingUser.set(true);
     try {
-      const items = this.userConfigs().map(c => ({
-        sidebarItemId: c.itemId,
-        isVisible: c.isVisible,
-        customSortOrder: c.customSortOrder,
-      }));
+      // إرسال فقط العناصر التي لها configId > 0 (موجودة في الخادم)
+      // العناصر ذات configId === 0 تبقى للعرض فقط حتى يُنشأ لها سجل
+      const items = this.userConfigs()
+        .filter(c => c.configId > 0)
+        .map(c => ({
+          id: c.configId,
+          sidebarItemId: c.itemId,
+          isVisible: c.isVisible,
+          customSortOrder: c.customSortOrder,
+        }));
       await this.api.updateUserSidebar(this.bizId, user.id, { items });
       this.showMessage('تم حفظ إعدادات التبويب بنجاح', 'success');
     } catch (err) {

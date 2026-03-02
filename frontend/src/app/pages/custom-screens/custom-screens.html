@@ -165,6 +165,35 @@
               }
             </div>
 
+            <!-- Sidebar Options -->
+            <div class="sidebar-options" style="margin-top: 24px; padding: 16px; background: var(--bg-secondary, #f8f9fa); border-radius: 12px;">
+              <label class="sidebar-toggle" style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px;">
+                <input type="checkbox" [checked]="wizardAddToSidebar()" (change)="wizardAddToSidebar.set(!wizardAddToSidebar())" style="width: 18px; height: 18px;" />
+                <span class="material-icons-round" style="font-size: 20px; color: var(--primary);">menu</span>
+                <span style="font-weight: 600;">إضافة الشاشة للقائمة الجانبية</span>
+              </label>
+
+              @if (wizardAddToSidebar()) {
+                <div class="form-row" style="gap: 16px;">
+                  <div class="form-group flex-1">
+                    <label>القسم في القائمة الجانبية</label>
+                    <select [ngModel]="wizardSidebarSectionId()" (ngModelChange)="wizardSidebarSectionId.set(+$event)">
+                      @for (sec of wizardSidebarSections(); track sec.id) {
+                        <option [value]="sec.id">{{ sec.name }}</option>
+                      }
+                      @if (wizardSidebarSections().length === 0) {
+                        <option value="0" disabled>لا توجد أقسام - سيتم إنشاء قسم "شاشات مخصصة"</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group" style="width: 120px;">
+                    <label>الترتيب</label>
+                    <input type="number" [ngModel]="wizardSidebarSortOrder()" (ngModelChange)="wizardSidebarSortOrder.set(+$event)" min="0" placeholder="0" />
+                  </div>
+                </div>
+              }
+            </div>
+
             <!-- Icon & Color Selection -->
             <div class="form-row" style="margin-top: 24px;">
               <div class="form-group flex-1">

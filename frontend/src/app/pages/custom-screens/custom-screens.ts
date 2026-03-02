@@ -194,6 +194,10 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
   wizardScreenIcon = signal('dashboard');
   wizardScreenColor = signal('#3b82f6');
   wizardSelectedTemplate = signal<string>('blank');
+  wizardAddToSidebar = signal(true);
+  wizardSidebarSectionId = signal(0);
+  wizardSidebarSortOrder = signal(0);
+  wizardSidebarSections = signal<any[]>([]);
   wizardWidgets = signal<WizardWidget[]>([]);
   wizardEditingWidgetIdx = signal<number | null>(null);
 
@@ -901,10 +905,27 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.wizardScreenIcon.set('dashboard');
     this.wizardScreenColor.set('#3b82f6');
     this.wizardSelectedTemplate.set('blank');
+    this.wizardAddToSidebar.set(true);
+    this.wizardSidebarSectionId.set(0);
+    this.wizardSidebarSortOrder.set(0);
     this.wizardWidgets.set([]);
     this.customizingWidgetIdx.set(null);
     this.bindingWidgetIdx.set(null);
     this.animateViewTransition();
+    // تحميل أقسام السايدبار
+    this.loadWizardSidebarSections();
+  }
+
+  async loadWizardSidebarSections() {
+    try {
+      const sections = await this.api.getSidebarSections(this.bizId);
+      this.wizardSidebarSections.set(sections);
+      if (sections.length > 0) {
+        this.wizardSidebarSectionId.set(sections[0].id);
+      }
+    } catch (e) {
+      console.error('خطأ في تحميل أقسام السايدبار:', e);
+    }
   }
 
   cancelWizard() {
@@ -1063,15 +1084,22 @@ export class CustomScreensComponent implements OnInit, OnDestroy, AfterViewInit 
     this.saving.set(true);
     try {
       const isCollectionStyle = this.wizardSelectedTemplate() === 'collection_style';
-      const payload = {
+      const addToSidebar = this.wizardAddToSidebar();
+      const payload: any = {
         name,
         description: this.wizardScreenDesc(),
         icon: this.wizardScreenIcon(),
         color: this.wizardScreenColor(),
         templateKey: this.wizardSelectedTemplate(),
         widgets: isCollectionStyle ? [] : this.wizardWidgets(),
-        addToSidebar: true,
+        addToSidebar,
       };
+      // إضافة معلومات السايدبار إذا تم اختيار الإضافة
+      if (addToSidebar) {
+        const sectionId = this.wizardSidebarSectionId();
+        if (sectionId) payload.sidebarSectionId = sectionId;
+        payload.sidebarSortOrder = this.wizardSidebarSortOrder();
+      }
       const newScreen = await this.api.createScreen(this.bizId, payload);
       this.toast.success('تم إنشاء الشاشة بنجاح');
       await this.loadScreens();
