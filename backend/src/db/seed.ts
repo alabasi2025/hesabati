@@ -138,6 +138,11 @@ async function seed() {
     // عهد
     { businessId: b1.id, name: 'عهدة أكرم العباسي', accountType: 'custody' },
     { businessId: b1.id, name: 'عهدة كمال العباسي', accountType: 'custody' },
+    // مخازن
+    { businessId: b1.id, name: 'حساب المخزن الرئيسي', accountType: 'warehouse', subType: 'رئيسي', responsiblePerson: 'علي الصعدي' },
+    { businessId: b1.id, name: 'حساب مخزن الدهمية', accountType: 'warehouse', subType: 'محطة' },
+    { businessId: b1.id, name: 'حساب مخزن الصبالية وجمال', accountType: 'warehouse', subType: 'محطة' },
+    { businessId: b1.id, name: 'حساب مخزن غليل', accountType: 'warehouse', subType: 'محطة' },
     // معبر
     { businessId: b2.id, name: 'جوالي - معبر', accountType: 'e_wallet', provider: 'جوالي', receivesFromStations: true },
     { businessId: b2.id, name: 'ون كاش - معبر', accountType: 'e_wallet', provider: 'ون كاش', receivesFromStations: true },
