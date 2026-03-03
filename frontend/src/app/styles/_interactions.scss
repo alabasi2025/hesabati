@@ -1,0 +1,537 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║              HESABATI DESIGN SYSTEM — INTERACTIONS v2.0                   ║
+// ║        Advanced 3D Micro-Interactions & Hover Effects Library              ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+@use 'tokens' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 1. MAGNETIC HOVER — Cards follow cursor subtly
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.magnetic-hover {
+  transition: transform $duration-normal $ease-spring;
+  transform-style: preserve-3d;
+
+  &:hover {
+    transform: perspective($perspective-near) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 2. RIPPLE EFFECT — Material-style click ripple
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.ripple {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.25) 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform 0.5s, opacity 0.8s;
+  }
+
+  &:active::after {
+    transform: scale(0, 0);
+    opacity: 0.3;
+    transition: 0s;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 3. PRESS EFFECT — 3D button press
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.press-3d {
+  transition: all $duration-fast $ease-spring;
+  transform-style: preserve-3d;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: $shadow-dark-md, $bevel-highlight;
+  }
+
+  &:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: $shadow-dark-xs;
+    transition-duration: 0.05s;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 4. TILT CARD — 3D tilt on hover
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform $duration-normal $ease-spring;
+
+  &:hover {
+    transform: perspective($perspective-near) rotateX(-2deg) rotateY(3deg) translateZ(8px);
+  }
+
+  .tilt-content {
+    transform: translateZ(20px);
+    transition: transform $duration-normal $ease-spring;
+  }
+
+  &:hover .tilt-content {
+    transform: translateZ(40px);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 5. GLOW ON HOVER — Neon glow effect
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.glow-hover {
+  transition: box-shadow $duration-normal $ease-default;
+
+  &.glow-blue:hover   { box-shadow: $glow-blue, $shadow-dark-md; }
+  &.glow-green:hover  { box-shadow: $glow-green, $shadow-dark-md; }
+  &.glow-red:hover    { box-shadow: $glow-red, $shadow-dark-md; }
+  &.glow-amber:hover  { box-shadow: $glow-amber, $shadow-dark-md; }
+  &.glow-purple:hover { box-shadow: $glow-purple, $shadow-dark-md; }
+  &.glow-cyan:hover   { box-shadow: $glow-cyan, $shadow-dark-md; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 6. SLIDE REVEAL — Content slides in on scroll/view
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.reveal-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all $duration-slow $ease-spring;
+
+  &.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-right {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: all $duration-slow $ease-spring;
+
+  &.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.reveal-left {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: all $duration-slow $ease-spring;
+
+  &.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all $duration-slow $ease-spring;
+
+  &.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 7. FOCUS RING — Accessible 3D focus indicator
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-base),
+                0 0 0 4px $color-blue,
+                0 0 12px rgba($color-blue, 0.25);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 8. PARALLAX LAYERS — Multi-depth parallax
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.parallax-container {
+  perspective: $perspective-far;
+  overflow: hidden;
+  position: relative;
+}
+
+.parallax-layer {
+  transform-style: preserve-3d;
+
+  &.depth-1 { transform: translateZ(-50px) scale(1.05); }
+  &.depth-2 { transform: translateZ(-100px) scale(1.1); }
+  &.depth-3 { transform: translateZ(-200px) scale(1.2); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 9. FLIP CARD — 3D card flip interaction
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.flip-card {
+  perspective: $perspective-near;
+  cursor: pointer;
+
+  .flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform $duration-slow $ease-spring;
+    transform-style: preserve-3d;
+  }
+
+  .flip-front,
+  .flip-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: $card-radius;
+    box-shadow: $shadow-dark-md;
+  }
+
+  .flip-back {
+    transform: rotateY(180deg);
+  }
+
+  &:hover .flip-inner,
+  &.flipped .flip-inner {
+    transform: rotateY(180deg);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 10. MORPH TRANSITION — Shape morphing
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.morph {
+  transition: all $duration-slow $ease-spring;
+  
+  &.circle-to-rect {
+    border-radius: $radius-full;
+    
+    &:hover {
+      border-radius: $radius-xl;
+    }
+  }
+
+  &.expand {
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: $shadow-dark-lg;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 11. DRAG HANDLE — Visual drag indicator
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.drag-handle {
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--text-muted);
+  transition: color $duration-fast $ease-default;
+
+  &::before {
+    content: '⠿';
+    font-size: 18px;
+  }
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+
+  &:active {
+    cursor: grabbing;
+    color: $color-blue;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 12. SWIPE ACTIONS — Mobile swipe-to-reveal
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.swipe-container {
+  position: relative;
+  overflow: hidden;
+
+  .swipe-content {
+    transition: transform $duration-normal $ease-spring;
+  }
+
+  .swipe-actions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+    transform: translateX(100%);
+
+    .swipe-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 $space-4;
+      color: white;
+      font-weight: $font-weight-bold;
+      font-size: $font-size-sm;
+
+      &.delete { background: $color-red; }
+      &.edit   { background: $color-blue; }
+      &.archive { background: $color-amber; }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 13. COUNTER ANIMATION — Number count-up effect
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.counter-animate {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  transition: all $duration-normal $ease-spring;
+  
+  &.counting {
+    animation: hesabati-pulse-glow 0.3s $ease-spring;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 14. SCROLL SHADOW — Dynamic scroll indicators
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.scroll-shadow {
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 24px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity $duration-fast $ease-default;
+  }
+
+  &::before {
+    top: 0;
+    background: linear-gradient(to bottom, var(--bg-card), transparent);
+  }
+
+  &::after {
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg-card), transparent);
+  }
+
+  &.scrolled-top::before { opacity: 1; }
+  &.scrolled-bottom::after { opacity: 1; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 15. HOVER UNDERLINE — Animated underline effect
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.hover-underline {
+  position: relative;
+  display: inline-block;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: 0;
+    width: 0;
+    height: 2px;
+    background: $gradient-blue;
+    border-radius: $radius-full;
+    transition: width $duration-normal $ease-spring;
+  }
+
+  &:hover::after {
+    width: 100%;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 16. ELASTIC BOUNCE — Bouncy interaction feedback
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.elastic {
+  transition: transform $duration-normal $ease-bounce;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+    transition-duration: 0.1s;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 17. SWITCH / TOGGLE — 3D toggle switch
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: $radius-full;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  box-shadow: $shadow-dark-inner;
+  position: relative;
+  cursor: pointer;
+  transition: all $duration-fast $ease-spring;
+
+  .toggle-knob {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: $radius-full;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2),
+                $bevel-highlight;
+    transition: all $duration-fast $ease-spring;
+  }
+
+  &.active {
+    background: $gradient-blue;
+    border-color: transparent;
+    box-shadow: $glow-blue;
+
+    .toggle-knob {
+      right: calc(100% - 20px);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 18. BREADCRUMB — 3D breadcrumb navigation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-sm;
+  color: var(--text-muted);
+  margin-bottom: $space-4;
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    transition: color $duration-fast $ease-default;
+
+    a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: $font-weight-semibold;
+
+      &:hover {
+        color: $color-blue;
+      }
+    }
+
+    &.active {
+      color: var(--text-primary);
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  .breadcrumb-separator {
+    font-size: 12px;
+    opacity: 0.4;
+    margin: 0 2px;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 19. PAGINATION — 3D pagination
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  margin-top: $space-6;
+
+  .page-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-lg;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    font-family: $font-family-mono;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $duration-fast $ease-default;
+    box-shadow: $shadow-dark-xs;
+
+    &:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    &.active {
+      background: $gradient-blue;
+      color: white;
+      border-color: transparent;
+      box-shadow: $glow-blue;
+      transform: translateY(-2px);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+
+  .page-info {
+    font-size: $font-size-xs;
+    color: var(--text-muted);
+    padding: 0 $space-2;
+  }
+}

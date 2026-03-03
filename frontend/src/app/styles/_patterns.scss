@@ -1,0 +1,800 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║             HESABATI DESIGN SYSTEM — PATTERNS v2.0                        ║
+// ║     Domain-Specific Patterns for Accounting & Inventory System            ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 1. ACCOUNT TREE — Hierarchical account display
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.account-tree {
+  .tree-node {
+    position: relative;
+    padding-right: $space-6;
+
+    &::before {
+      content: '';
+      position: absolute;
+      right: $space-2;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--border-color), transparent);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: $space-2;
+      top: 50%;
+      width: 16px;
+      height: 2px;
+      background: var(--border-color);
+    }
+
+    &:last-child::before {
+      bottom: 50%;
+    }
+  }
+
+  .tree-item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2 $space-3;
+    border-radius: $radius-lg;
+    transition: all $duration-fast $ease-default;
+    cursor: pointer;
+    margin-bottom: 2px;
+
+    &:hover {
+      background: var(--bg-card-hover);
+    }
+
+    &.active {
+      background: rgba($color-blue, 0.08);
+      border-right: 3px solid $color-blue;
+    }
+
+    .tree-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: $radius-md;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: $shadow-dark-xs, $bevel-highlight;
+
+      .material-icons-round { font-size: 16px; }
+    }
+
+    .tree-label {
+      flex: 1;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: var(--text-primary);
+    }
+
+    .tree-balance {
+      font-family: $font-family-mono;
+      font-size: $font-size-sm;
+      font-weight: $font-weight-bold;
+      color: var(--text-secondary);
+      direction: ltr;
+    }
+
+    .tree-toggle {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: $radius-sm;
+      transition: transform $duration-fast $ease-spring;
+
+      &.expanded {
+        transform: rotate(90deg);
+      }
+    }
+  }
+
+  .tree-children {
+    padding-right: $space-6;
+    overflow: hidden;
+    transition: max-height $duration-normal $ease-default;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 2. VOUCHER CARD — 3D voucher display
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.voucher-card {
+  @include card-3d;
+  padding: 0;
+  overflow: hidden;
+
+  .voucher-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $space-4 $space-5;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(
+      135deg,
+      rgba(var(--accent-blue-rgb, 59, 130, 246), 0.04),
+      transparent
+    );
+
+    .voucher-number {
+      font-family: $font-family-mono;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-black;
+      color: var(--text-primary);
+      direction: ltr;
+    }
+
+    .voucher-date {
+      font-size: $font-size-xs;
+      color: var(--text-muted);
+      font-family: $font-family-mono;
+    }
+  }
+
+  .voucher-body {
+    padding: $space-5;
+  }
+
+  .voucher-lines {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-bold;
+      color: var(--text-secondary);
+      text-align: right;
+      padding: $space-2 $space-3;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    td {
+      padding: $space-2-5 $space-3;
+      font-size: $font-size-sm;
+      border-bottom: 1px solid rgba(var(--border-rgb, 148, 163, 184), 0.08);
+    }
+
+    .amount {
+      font-family: $font-family-mono;
+      font-weight: $font-weight-bold;
+      direction: ltr;
+      text-align: left;
+    }
+
+    .debit { color: $color-red; }
+    .credit { color: $color-green; }
+  }
+
+  .voucher-totals {
+    display: flex;
+    justify-content: space-between;
+    padding: $space-4 $space-5;
+    background: var(--bg-surface);
+    border-top: 2px solid var(--border-color);
+
+    .total-item {
+      text-align: center;
+
+      .total-label {
+        font-size: $font-size-xs;
+        color: var(--text-muted);
+        margin-bottom: $space-1;
+      }
+
+      .total-value {
+        font-family: $font-family-mono;
+        font-size: $font-size-xl;
+        font-weight: $font-weight-black;
+      }
+
+      &.debit .total-value { color: $color-red; }
+      &.credit .total-value { color: $color-green; }
+      &.balance .total-value { color: $color-blue; }
+    }
+  }
+
+  // Type indicator strip
+  &.receipt {
+    border-top: 3px solid $color-green;
+    .voucher-header { background: linear-gradient(135deg, rgba($color-green, 0.04), transparent); }
+  }
+
+  &.payment {
+    border-top: 3px solid $color-red;
+    .voucher-header { background: linear-gradient(135deg, rgba($color-red, 0.04), transparent); }
+  }
+
+  &.transfer {
+    border-top: 3px solid $color-blue;
+    .voucher-header { background: linear-gradient(135deg, rgba($color-blue, 0.04), transparent); }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 3. BALANCE DISPLAY — Debit/Credit balance with 3D
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.balance-display {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+  padding: $space-4;
+  background: var(--bg-card);
+  border-radius: $radius-xl;
+  border: 1px solid var(--border-color);
+  box-shadow: $shadow-dark-sm;
+
+  .balance-item {
+    flex: 1;
+    text-align: center;
+    padding: $space-3;
+    border-radius: $radius-lg;
+    position: relative;
+
+    .balance-label {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-bold;
+      color: var(--text-secondary);
+      margin-bottom: $space-1;
+      letter-spacing: $letter-spacing-wide;
+    }
+
+    .balance-value {
+      font-family: $font-family-mono;
+      font-size: $font-size-2xl;
+      font-weight: $font-weight-black;
+      direction: ltr;
+    }
+
+    &.debit {
+      background: rgba($color-red, 0.06);
+      .balance-value { color: $color-red; }
+    }
+
+    &.credit {
+      background: rgba($color-green, 0.06);
+      .balance-value { color: $color-green; }
+    }
+
+    &.net {
+      background: rgba($color-blue, 0.06);
+      .balance-value { color: $color-blue; }
+    }
+  }
+
+  .balance-separator {
+    width: 1px;
+    height: 48px;
+    background: var(--border-color);
+    flex-shrink: 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 4. INVENTORY ITEM — 3D inventory card
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.inventory-item {
+  @include card-3d;
+  padding: $space-4;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+
+  .item-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-xl;
+    background: $gradient-blue;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba($color-blue, 0.25),
+                $bevel-highlight;
+
+    .material-icons-round {
+      font-size: 24px;
+      color: white;
+    }
+  }
+
+  .item-info {
+    flex: 1;
+
+    .item-name {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-bold;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .item-code {
+      font-size: $font-size-xs;
+      font-family: $font-family-mono;
+      color: var(--text-muted);
+    }
+  }
+
+  .item-quantity {
+    text-align: left;
+
+    .qty-value {
+      font-family: $font-family-mono;
+      font-size: $font-size-xl;
+      font-weight: $font-weight-black;
+      color: var(--text-primary);
+      direction: ltr;
+    }
+
+    .qty-unit {
+      font-size: $font-size-xs;
+      color: var(--text-muted);
+    }
+  }
+
+  // Stock level indicator
+  .stock-level {
+    width: 4px;
+    height: 40px;
+    border-radius: $radius-full;
+    flex-shrink: 0;
+
+    &.high   { background: $gradient-green; box-shadow: 0 0 6px rgba($color-green, 0.3); }
+    &.medium { background: $gradient-amber; box-shadow: 0 0 6px rgba($color-amber, 0.3); }
+    &.low    { background: $gradient-red; box-shadow: 0 0 6px rgba($color-red, 0.3); }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 5. STATION CARD — 3D station/branch display
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.station-card {
+  @include card-3d;
+  padding: $space-5;
+  position: relative;
+  overflow: hidden;
+
+  .station-header {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    margin-bottom: $space-4;
+
+    .station-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: $radius-xl;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: $font-size-xl;
+      font-weight: $font-weight-black;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2),
+                  $bevel-highlight;
+    }
+
+    .station-info {
+      flex: 1;
+
+      .station-name {
+        font-size: $font-size-base;
+        font-weight: $font-weight-black;
+        color: var(--text-primary);
+      }
+
+      .station-type {
+        font-size: $font-size-xs;
+        color: var(--text-muted);
+      }
+    }
+  }
+
+  .station-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space-2;
+
+    .station-stat {
+      text-align: center;
+      padding: $space-2;
+      border-radius: $radius-lg;
+      background: var(--bg-surface);
+
+      .stat-num {
+        font-family: $font-family-mono;
+        font-size: $font-size-lg;
+        font-weight: $font-weight-black;
+        color: var(--text-primary);
+      }
+
+      .stat-lbl {
+        font-size: 10px;
+        font-weight: $font-weight-bold;
+        color: var(--text-muted);
+        letter-spacing: $letter-spacing-wide;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 6. TIMELINE — Transaction/activity timeline
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.timeline {
+  position: relative;
+  padding-right: $space-8;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, $color-blue, var(--border-color), transparent);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: $space-5;
+    animation: hesabati-fade-in $duration-normal $ease-out both;
+
+    .timeline-dot {
+      position: absolute;
+      right: calc(-#{$space-8} - 4px);
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: $radius-full;
+      background: $gradient-blue;
+      box-shadow: 0 0 0 4px var(--bg-base),
+                  0 0 8px rgba($color-blue, 0.3);
+
+      &.green  { background: $gradient-green; box-shadow: 0 0 0 4px var(--bg-base), 0 0 8px rgba($color-green, 0.3); }
+      &.red    { background: $gradient-red; box-shadow: 0 0 0 4px var(--bg-base), 0 0 8px rgba($color-red, 0.3); }
+      &.amber  { background: $gradient-amber; box-shadow: 0 0 0 4px var(--bg-base), 0 0 8px rgba($color-amber, 0.3); }
+    }
+
+    .timeline-content {
+      @include card-3d;
+      padding: $space-3 $space-4;
+
+      .timeline-title {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-bold;
+        color: var(--text-primary);
+        margin-bottom: 2px;
+      }
+
+      .timeline-desc {
+        font-size: $font-size-xs;
+        color: var(--text-muted);
+        line-height: $line-height-relaxed;
+      }
+
+      .timeline-time {
+        font-size: 11px;
+        font-family: $font-family-mono;
+        color: var(--text-muted);
+        margin-top: $space-1;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 7. SUMMARY ROW — Financial summary bar
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.summary-bar {
+  display: flex;
+  align-items: stretch;
+  gap: $space-3;
+  padding: $space-4;
+  background: var(--bg-card);
+  border-radius: $radius-2xl;
+  border: 1px solid var(--border-color);
+  box-shadow: $shadow-dark-sm, $bevel-highlight;
+  margin-bottom: $space-5;
+
+  .summary-item {
+    flex: 1;
+    text-align: center;
+    padding: $space-3;
+    border-radius: $radius-xl;
+    background: var(--bg-surface);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 3px;
+      border-radius: $radius-full $radius-full 0 0;
+    }
+
+    .summary-label {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-bold;
+      color: var(--text-muted);
+      margin-bottom: $space-1;
+      letter-spacing: $letter-spacing-normal;
+    }
+
+    .summary-value {
+      font-family: $font-family-mono;
+      font-size: $font-size-xl;
+      font-weight: $font-weight-black;
+      direction: ltr;
+    }
+
+    &.debit {
+      &::before { background: $gradient-red; }
+      .summary-value { color: $color-red; }
+    }
+
+    &.credit {
+      &::before { background: $gradient-green; }
+      .summary-value { color: $color-green; }
+    }
+
+    &.total {
+      &::before { background: $gradient-blue; }
+      .summary-value { color: $color-blue; }
+    }
+
+    &.balance {
+      &::before { background: $gradient-amber; }
+      .summary-value { color: $color-amber; }
+    }
+  }
+
+  @include respond-below($breakpoint-sm) {
+    flex-direction: column;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 8. PRINT LAYOUT — Print-optimized styles
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .card, .stat-card, .voucher-card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    break-inside: avoid;
+  }
+
+  .data-table {
+    box-shadow: none !important;
+
+    th { background: #f5f5f5 !important; color: black !important; }
+    td { border-color: #ddd !important; }
+  }
+
+  .sidebar, .header, .filter-bar, .page-header .header-actions {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 9. DASHBOARD WIDGET — 3D widget container
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.widget {
+  @include card-3d;
+  padding: 0;
+  overflow: hidden;
+
+  .widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $space-4 $space-5;
+    border-bottom: 1px solid var(--border-color);
+
+    .widget-title {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-black;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+
+      .material-icons-round {
+        font-size: 18px;
+        color: var(--accent-blue);
+      }
+    }
+
+    .widget-actions {
+      display: flex;
+      gap: $space-1;
+    }
+  }
+
+  .widget-body {
+    padding: $space-5;
+  }
+
+  .widget-footer {
+    padding: $space-3 $space-5;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    font-size: $font-size-xs;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 10. COLLECTION CARD — Daily collection display
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.collection-card {
+  @include card-3d;
+  padding: $space-4;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  border-right: 4px solid transparent;
+
+  &.pending   { border-right-color: $color-amber; }
+  &.approved  { border-right-color: $color-green; }
+  &.rejected  { border-right-color: $color-red; }
+
+  .collection-info {
+    flex: 1;
+
+    .collection-employee {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-bold;
+      color: var(--text-primary);
+    }
+
+    .collection-date {
+      font-size: $font-size-xs;
+      font-family: $font-family-mono;
+      color: var(--text-muted);
+    }
+  }
+
+  .collection-amount {
+    font-family: $font-family-mono;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    color: var(--text-primary);
+    direction: ltr;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 11. CURRENCY DISPLAY — Multi-currency amount
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.currency-amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  direction: ltr;
+
+  .amount-value {
+    font-family: $font-family-mono;
+    font-weight: $font-weight-black;
+  }
+
+  .amount-currency {
+    font-size: 0.75em;
+    font-weight: $font-weight-bold;
+    color: var(--text-muted);
+    letter-spacing: $letter-spacing-wide;
+  }
+
+  &.positive { .amount-value { color: $color-green; } }
+  &.negative { .amount-value { color: $color-red; } }
+  &.neutral  { .amount-value { color: var(--text-primary); } }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 12. SIDEBAR ITEM — 3D sidebar navigation item
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2-5;
+  padding: $space-2-5 $space-3;
+  border-radius: $radius-xl;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  transition: all $duration-fast $ease-default;
+  position: relative;
+  margin-bottom: 2px;
+
+  .material-icons-round {
+    font-size: 20px;
+    transition: all $duration-fast $ease-default;
+  }
+
+  &:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  &.active {
+    background: rgba($color-blue, 0.10);
+    color: $color-blue;
+    box-shadow: $shadow-dark-xs;
+
+    .material-icons-round {
+      color: $color-blue;
+      filter: drop-shadow(0 0 4px rgba($color-blue, 0.3));
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: $radius-full;
+      background: $gradient-blue;
+      box-shadow: 0 0 6px rgba($color-blue, 0.4);
+    }
+  }
+
+  .nav-badge {
+    margin-right: auto;
+    margin-left: 0;
+    font-size: 10px;
+    font-weight: $font-weight-black;
+    padding: 1px 6px;
+    border-radius: $radius-full;
+    background: $gradient-red;
+    color: white;
+    box-shadow: 0 2px 4px rgba($color-red, 0.3);
+  }
+}

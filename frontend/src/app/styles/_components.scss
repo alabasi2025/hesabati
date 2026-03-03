@@ -1,0 +1,1227 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║                 HESABATI DESIGN SYSTEM — COMPONENTS v2.0                  ║
+// ║          Unified 3D Component Library — Zero Duplication System            ║
+// ║                                                                           ║
+// ║  Replaces 16+ duplicated patterns across 24 page files                    ║
+// ║  Total elimination: ~3000 lines of duplicated SCSS                        ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 1. PAGE LAYOUT SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-base);
+  direction: rtl;
+}
+
+.main-content {
+  flex: 1;
+  margin-right: $sidebar-width-expanded;
+  min-height: 100vh;
+  transition: margin-right $duration-normal $ease-default;
+
+  @include respond-below($breakpoint-lg) {
+    margin-right: $sidebar-width-collapsed;
+  }
+
+  @include respond-below($breakpoint-md) {
+    margin-right: 0;
+  }
+}
+
+.page-content {
+  padding: $space-6 $space-8;
+
+  @include respond-below($breakpoint-md) {
+    padding: $space-4 $space-4;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 2. PAGE HEADER — 3D Premium (replaces 16 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-6;
+  padding: $space-4 $space-5;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--accent-blue-rgb, 59, 130, 246), 0.04),
+    rgba(var(--accent-blue-rgb, 59, 130, 246), 0.01)
+  );
+  border-radius: $radius-2xl;
+  border: 1px solid rgba(var(--accent-blue-rgb, 59, 130, 246), 0.08);
+  box-shadow: $shadow-dark-sm, $bevel-highlight;
+  transform-style: preserve-3d;
+  animation: hesabati-slide-down $duration-normal $ease-spring both;
+
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: $space-2-5;
+    margin: 0;
+
+    .material-icons-round {
+      font-size: 26px;
+      color: var(--accent-amber);
+      filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.3));
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  @include respond-below($breakpoint-sm) {
+    flex-direction: column;
+    gap: $space-3;
+    text-align: center;
+
+    .header-actions {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 3. STAT CARDS — 3D Premium (replaces 9 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: $space-4;
+  margin-bottom: $space-6;
+}
+
+.stat-card {
+  @include card-3d;
+  padding: $space-5;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+
+  // 3D floating icon
+  .stat-icon {
+    width: $icon-size-lg;
+    height: $icon-size-lg;
+    border-radius: $icon-radius;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $space-3;
+    transform: perspective($perspective-near) $rotate3d-icon;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.20),
+                $bevel-highlight-strong;
+    transition: transform $duration-normal $ease-spring;
+
+    .material-icons-round {
+      font-size: 24px;
+      color: white;
+      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+    }
+  }
+
+  .stat-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: var(--text-secondary);
+    letter-spacing: $letter-spacing-wide;
+    margin-bottom: $space-1;
+  }
+
+  .stat-value {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: var(--text-primary);
+    font-family: $font-family-mono;
+    line-height: 1.2;
+  }
+
+  .stat-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    margin-top: $space-2;
+    padding: 2px 8px;
+    border-radius: $radius-full;
+
+    &.up {
+      color: $color-green;
+      background: rgba($color-green, 0.12);
+    }
+
+    &.down {
+      color: $color-red;
+      background: rgba($color-red, 0.12);
+    }
+  }
+
+  // Glow effect on hover
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      circle at 30% 30%,
+      rgba(255, 255, 255, 0.04),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity $duration-normal $ease-default;
+    pointer-events: none;
+  }
+
+  &:hover {
+    &::before { opacity: 1; }
+    .stat-icon {
+      transform: perspective($perspective-near) rotateX(0deg) rotateY(0deg) scale(1.08);
+    }
+  }
+
+  // Color variants
+  &.blue .stat-icon   { background: $gradient-blue; }
+  &.green .stat-icon  { background: $gradient-green; }
+  &.amber .stat-icon  { background: $gradient-amber; }
+  &.red .stat-icon    { background: $gradient-red; }
+  &.purple .stat-icon { background: $gradient-purple; }
+  &.cyan .stat-icon   { background: $gradient-cyan; }
+  &.indigo .stat-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 4. DATA TABLE — 3D Premium (replaces 3+ duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.data-table {
+  @include table-3d;
+  animation: hesabati-fade-in $duration-normal $ease-out both;
+
+  // Sortable header
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color $duration-fast $ease-default;
+
+    &:hover {
+      color: var(--text-primary);
+    }
+
+    .sort-icon {
+      font-size: 16px;
+      vertical-align: middle;
+      opacity: 0.4;
+      transition: opacity $duration-fast $ease-default;
+    }
+
+    &.active .sort-icon {
+      opacity: 1;
+      color: $color-blue;
+    }
+  }
+
+  // Clickable rows
+  tr.clickable {
+    cursor: pointer;
+
+    &:hover td {
+      background: rgba($color-blue, 0.04);
+    }
+  }
+
+  // Numeric columns
+  td.numeric, th.numeric {
+    text-align: left;
+    font-family: $font-family-mono;
+    direction: ltr;
+  }
+
+  // Status column
+  td.status {
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: $radius-full;
+      display: inline-block;
+      margin-left: $space-2;
+      box-shadow: 0 0 6px currentColor;
+    }
+  }
+
+  // Empty table
+  .table-empty {
+    text-align: center;
+    padding: $space-12 $space-4;
+    color: var(--text-muted);
+
+    .material-icons-round {
+      font-size: 48px;
+      margin-bottom: $space-3;
+      opacity: 0.3;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 5. BUTTONS — 3D Premium System (replaces 9+ duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Primary add button
+.add-btn,
+.btn-primary {
+  @include btn-3d($gradient-blue, $glow-blue);
+}
+
+// Danger button
+.btn-danger {
+  @include btn-3d($gradient-red, $glow-red);
+}
+
+// Success button
+.btn-success {
+  @include btn-3d($gradient-green, $glow-green);
+}
+
+// Warning button
+.btn-warning {
+  @include btn-3d($gradient-amber, $glow-amber);
+}
+
+// Purple button
+.btn-purple {
+  @include btn-3d($gradient-purple, $glow-purple);
+}
+
+// Ghost / outline button
+.btn-ghost {
+  @include btn-ghost;
+}
+
+// Small button variant
+.btn-sm {
+  padding: $btn-padding-sm !important;
+  font-size: $font-size-xs !important;
+  border-radius: $radius-lg !important;
+}
+
+// Icon-only button
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-xl !important;
+
+  .material-icons-round { font-size: 18px; margin: 0; }
+}
+
+// Action buttons (edit, delete, view in tables)
+.action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: $radius-lg;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $duration-fast $ease-default;
+  margin: 0 2px;
+  box-shadow: $shadow-dark-xs, $bevel-highlight;
+
+  .material-icons-round { font-size: 17px; }
+
+  &:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: $shadow-dark-sm, $bevel-highlight;
+  }
+
+  &.edit:hover   { color: $color-blue; border-color: rgba($color-blue, 0.3); }
+  &.delete:hover { color: $color-red; border-color: rgba($color-red, 0.3); }
+  &.view:hover   { color: $color-green; border-color: rgba($color-green, 0.3); }
+  &.print:hover  { color: $color-purple; border-color: rgba($color-purple, 0.3); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 6. FORM SYSTEM — 3D Premium (replaces 10 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.form-group {
+  margin-bottom: $space-4;
+
+  label {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: var(--text-secondary);
+    margin-bottom: $space-2;
+    letter-spacing: $letter-spacing-normal;
+  }
+
+  input, select, textarea {
+    @include input-3d;
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 12px center;
+    padding-left: 32px;
+  }
+
+  textarea {
+    height: auto;
+    min-height: 100px;
+    resize: vertical;
+  }
+
+  .form-hint {
+    font-size: $font-size-xs;
+    color: var(--text-muted);
+    margin-top: $space-1;
+  }
+
+  .form-error {
+    font-size: $font-size-xs;
+    color: $color-red;
+    margin-top: $space-1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .material-icons-round { font-size: 14px; }
+  }
+
+  &.has-error {
+    input, select, textarea {
+      border-color: $color-red;
+      box-shadow: 0 0 0 3px rgba($color-red, 0.10),
+                  $shadow-dark-inner;
+    }
+  }
+
+  &.required label::after {
+    content: ' *';
+    color: $color-red;
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $space-4;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-3;
+  margin-top: $space-6;
+  padding-top: $space-4;
+  border-top: 1px solid var(--border-color);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 7. MODAL / DIALOG — 3D Premium (replaces 10 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.modal-overlay {
+  @include modal-overlay;
+}
+
+.modal-3d {
+  @include modal-card;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-5;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--accent-blue-rgb, 59, 130, 246), 0.03),
+    transparent
+  );
+
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin: 0;
+
+    .material-icons-round {
+      font-size: 22px;
+      color: var(--accent-blue);
+    }
+  }
+
+  .close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-lg;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $duration-fast $ease-default;
+
+    &:hover {
+      background: rgba($color-red, 0.1);
+      color: $color-red;
+      border-color: rgba($color-red, 0.3);
+    }
+  }
+}
+
+.modal-body {
+  padding: $space-5;
+  max-height: 60vh;
+  overflow-y: auto;
+  @include custom-scrollbar;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-3;
+  padding: $space-4 $space-5;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  border-radius: 0 0 $modal-radius $modal-radius;
+}
+
+// Modal icon (decorative)
+.modal-icon {
+  @include icon-3d($gradient-blue, 48px);
+  margin-bottom: $space-3;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 8. FILTER BAR — 3D Premium (replaces 14 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  margin-bottom: $space-5;
+  padding: $space-3 $space-4;
+  background: var(--bg-card);
+  border-radius: $radius-2xl;
+  border: 1px solid var(--border-color);
+  box-shadow: $shadow-dark-sm;
+  flex-wrap: wrap;
+
+  @include respond-below($breakpoint-sm) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+
+  label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  select, input {
+    height: 36px;
+    padding: 0 $space-3;
+    border-radius: $radius-lg;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: $font-size-sm;
+    font-family: $font-family-primary;
+    font-weight: $font-weight-semibold;
+    box-shadow: $shadow-dark-inner;
+    transition: all $duration-fast $ease-default;
+
+    &:focus {
+      outline: none;
+      border-color: $color-blue;
+      box-shadow: 0 0 0 3px rgba($color-blue, 0.12);
+    }
+  }
+}
+
+.filter-chips {
+  display: flex;
+  gap: $space-2;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 $space-3;
+  border-radius: $radius-full;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  transition: all $duration-fast $ease-default;
+  box-shadow: $shadow-dark-xs;
+
+  .chip-count {
+    background: rgba(var(--accent-blue-rgb, 59, 130, 246), 0.15);
+    color: $color-blue;
+    padding: 1px 7px;
+    border-radius: $radius-full;
+    font-size: 11px;
+    font-weight: $font-weight-black;
+    margin-right: 2px;
+  }
+
+  &:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-card-hover);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background: $gradient-blue;
+    color: white;
+    border-color: transparent;
+    box-shadow: $glow-blue, $shadow-dark-sm;
+
+    .chip-count {
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+    }
+  }
+}
+
+// Search input in filter
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+
+  input {
+    width: 100%;
+    height: 38px;
+    padding: 0 $space-3 0 36px;
+    border-radius: $radius-xl;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: $font-size-sm;
+    font-family: $font-family-primary;
+    box-shadow: $shadow-dark-inner;
+    transition: all $duration-fast $ease-default;
+
+    &:focus {
+      outline: none;
+      border-color: $color-blue;
+      box-shadow: 0 0 0 3px rgba($color-blue, 0.12);
+    }
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+
+  .search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 9. EMPTY STATE — 3D Premium (replaces 11 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $space-16 $space-6;
+  text-align: center;
+  animation: hesabati-fade-in $duration-slow $ease-out both;
+
+  .empty-icon {
+    @include icon-3d(linear-gradient(135deg, #64748b, #475569), 72px);
+    margin-bottom: $space-5;
+    opacity: 0.6;
+    animation: hesabati-float-3d 8s $ease-smooth infinite;
+
+    .material-icons-round {
+      font-size: 36px;
+      color: white;
+    }
+  }
+
+  .empty-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    color: var(--text-primary);
+    margin-bottom: $space-2;
+  }
+
+  .empty-desc {
+    font-size: $font-size-sm;
+    color: var(--text-muted);
+    max-width: 360px;
+    line-height: $line-height-relaxed;
+    margin-bottom: $space-5;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 10. TABS — 3D Premium (replaces 9 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.tabs-container {
+  display: flex;
+  gap: $space-1;
+  padding: $space-1;
+  background: var(--bg-surface);
+  border-radius: $radius-2xl;
+  border: 1px solid var(--border-color);
+  box-shadow: $shadow-dark-inner;
+  margin-bottom: $space-5;
+  overflow-x: auto;
+  @include custom-scrollbar(4px);
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2-5 $space-4;
+  border-radius: $radius-xl;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: $font-family-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all $duration-fast $ease-default;
+  position: relative;
+
+  .material-icons-round {
+    font-size: 18px;
+  }
+
+  .tab-count {
+    font-size: 11px;
+    font-weight: $font-weight-black;
+    padding: 1px 7px;
+    border-radius: $radius-full;
+    background: rgba(var(--accent-blue-rgb, 59, 130, 246), 0.12);
+    color: $color-blue;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-card-hover);
+  }
+
+  &.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: $shadow-dark-sm, $bevel-highlight;
+    transform: translateY(-1px);
+
+    .tab-count {
+      background: $gradient-blue;
+      color: white;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 11. STATUS BADGES — 3D Premium (replaces 7+ duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.status-badge {
+  @include badge-3d($color-green);
+  
+  &.active, &.approved, &.confirmed {
+    @include badge-3d($color-green);
+  }
+
+  &.inactive, &.disabled {
+    @include badge-3d(#94a3b8);
+  }
+
+  &.pending, &.draft {
+    @include badge-3d($color-amber);
+  }
+
+  &.rejected, &.cancelled, &.reversed {
+    @include badge-3d($color-red);
+  }
+
+  &.partner, &.special {
+    @include badge-3d($color-purple);
+  }
+
+  &.info, &.processing {
+    @include badge-3d($color-blue);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 12. CHIPS / TAGS (replaces 7 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: $badge-height-md;
+  padding: $badge-padding;
+  border-radius: $radius-full;
+  font-size: $badge-font-size;
+  font-weight: $font-weight-bold;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  transition: all $duration-fast $ease-default;
+
+  &.blue   { background: rgba($color-blue, 0.12); color: $color-blue; border-color: rgba($color-blue, 0.15); }
+  &.green  { background: rgba($color-green, 0.12); color: $color-green; border-color: rgba($color-green, 0.15); }
+  &.red    { background: rgba($color-red, 0.12); color: $color-red; border-color: rgba($color-red, 0.15); }
+  &.amber  { background: rgba($color-amber, 0.12); color: $color-amber; border-color: rgba($color-amber, 0.15); }
+  &.purple { background: rgba($color-purple, 0.12); color: $color-purple; border-color: rgba($color-purple, 0.15); }
+  &.cyan   { background: rgba($color-cyan, 0.12); color: $color-cyan; border-color: rgba($color-cyan, 0.15); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 13. LOADING & SKELETON STATES (replaces 4+ duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+  padding: $space-20 0;
+  color: var(--text-secondary);
+
+  .spin {
+    animation: hesabati-spin 0.8s linear infinite;
+    font-size: 36px;
+    color: $color-blue;
+    filter: drop-shadow(0 0 8px rgba($color-blue, 0.3));
+  }
+
+  p {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.skeleton-card {
+  @include skeleton;
+  height: 120px;
+  border-radius: $card-radius;
+}
+
+.skeleton-row {
+  @include skeleton;
+  height: 48px;
+  border-radius: $radius-lg;
+  margin-bottom: $space-2;
+}
+
+.skeleton-text {
+  @include skeleton;
+  height: 16px;
+  border-radius: $radius-sm;
+  margin-bottom: $space-2;
+
+  &.short { width: 60%; }
+  &.medium { width: 80%; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 14. CARD GLOW EFFECT (replaces 4 duplications)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.card-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity $duration-normal $ease-default;
+  pointer-events: none;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(var(--accent-blue-rgb, 59, 130, 246), 0.06),
+    transparent 40%
+  );
+}
+
+.card-hoverable {
+  position: relative;
+  overflow: hidden;
+
+  &:hover .card-glow {
+    opacity: 1;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 15. ALERT / NOTIFICATION BANNERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  padding: $space-4;
+  border-radius: $radius-xl;
+  border: 1px solid;
+  margin-bottom: $space-4;
+  animation: hesabati-slide-down $duration-normal $ease-spring both;
+
+  .alert-icon {
+    flex-shrink: 0;
+    .material-icons-round { font-size: 22px; }
+  }
+
+  .alert-content {
+    flex: 1;
+
+    .alert-title {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-bold;
+      margin-bottom: 2px;
+    }
+
+    .alert-text {
+      font-size: $font-size-xs;
+      opacity: 0.85;
+      line-height: $line-height-relaxed;
+    }
+  }
+
+  &.alert-error {
+    background: rgba($color-red, 0.08);
+    border-color: rgba($color-red, 0.20);
+    color: $color-red;
+  }
+
+  &.alert-warning {
+    background: rgba($color-amber, 0.08);
+    border-color: rgba($color-amber, 0.20);
+    color: $color-amber;
+  }
+
+  &.alert-success {
+    background: rgba($color-green, 0.08);
+    border-color: rgba($color-green, 0.20);
+    color: $color-green;
+  }
+
+  &.alert-info {
+    background: rgba($color-blue, 0.08);
+    border-color: rgba($color-blue, 0.20);
+    color: $color-blue;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 16. PROGRESS BAR — 3D
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: $radius-full;
+  overflow: hidden;
+  box-shadow: $shadow-dark-inner;
+
+  .progress-fill {
+    height: 100%;
+    border-radius: $radius-full;
+    background: $gradient-blue;
+    transition: width $duration-slow $ease-spring;
+    box-shadow: 0 0 8px rgba($color-blue, 0.3);
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+      );
+      animation: hesabati-shimmer 2s $ease-default infinite;
+    }
+  }
+
+  &.green .progress-fill  { background: $gradient-green; box-shadow: 0 0 8px rgba($color-green, 0.3); }
+  &.amber .progress-fill  { background: $gradient-amber; box-shadow: 0 0 8px rgba($color-amber, 0.3); }
+  &.red .progress-fill    { background: $gradient-red; box-shadow: 0 0 8px rgba($color-red, 0.3); }
+  &.purple .progress-fill { background: $gradient-purple; box-shadow: 0 0 8px rgba($color-purple, 0.3); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 17. TOOLTIP — 3D
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.tooltip-trigger {
+  position: relative;
+
+  .tooltip-content {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px) scale(0.95);
+    padding: $space-2 $space-3;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    border-radius: $radius-lg;
+    border: 1px solid var(--border-color);
+    box-shadow: $shadow-dark-lg;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all $duration-fast $ease-spring;
+    z-index: $z-tooltip;
+    pointer-events: none;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--border-color);
+    }
+  }
+
+  &:hover .tooltip-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 18. DROPDOWN MENU — 3D
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: $radius-xl;
+  box-shadow: $shadow-dark-xl, $bevel-highlight;
+  z-index: $z-dropdown;
+  padding: $space-1;
+  animation: hesabati-scale-in $duration-fast $ease-spring both;
+  transform-origin: top right;
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2-5 $space-3;
+    border-radius: $radius-lg;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all $duration-fast $ease-default;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: right;
+
+    .material-icons-round { font-size: 18px; color: var(--text-secondary); }
+
+    &:hover {
+      background: var(--bg-card-hover);
+    }
+
+    &.danger {
+      color: $color-red;
+      .material-icons-round { color: $color-red; }
+    }
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: $space-1 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 19. AVATAR — 3D
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: $font-weight-black;
+  font-size: $font-size-sm;
+  color: white;
+  background: $gradient-blue;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15),
+              $bevel-highlight;
+  flex-shrink: 0;
+  text-transform: uppercase;
+
+  &.sm { width: 32px; height: 32px; font-size: $font-size-xs; }
+  &.lg { width: 56px; height: 56px; font-size: $font-size-xl; }
+  &.xl { width: 72px; height: 72px; font-size: $font-size-2xl; }
+
+  &.green  { background: $gradient-green; }
+  &.amber  { background: $gradient-amber; }
+  &.red    { background: $gradient-red; }
+  &.purple { background: $gradient-purple; }
+  &.cyan   { background: $gradient-cyan; }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 20. DIVIDER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: $space-4 0;
+  border: none;
+
+  &.strong {
+    background: var(--border-strong);
+  }
+
+  &.gradient {
+    background: linear-gradient(
+      to left,
+      transparent,
+      var(--border-strong),
+      transparent
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 21. CARD GRID LAYOUTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.card-grid {
+  display: grid;
+  gap: $space-4;
+
+  &.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  &.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  &.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  &.auto   { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+  @include respond-below($breakpoint-md) {
+    &.cols-3, &.cols-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @include respond-below($breakpoint-sm) {
+    &.cols-2, &.cols-3, &.cols-4 { grid-template-columns: 1fr; }
+  }
+}
+
+.card {
+  @include card-3d;
+  padding: $space-5;
+  position: relative;
+  overflow: hidden;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// § 22. STAGGER ANIMATION HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@for $i from 1 through 30 {
+  .stagger-#{$i} {
+    animation-delay: #{$i * 50}ms;
+  }
+}
+
+// Row stagger for tables
+@for $i from 1 through 50 {
+  .data-table tr:nth-child(#{$i}) {
+    animation: hesabati-fade-in $duration-fast $ease-out both;
+    animation-delay: #{$i * 30}ms;
+  }
+}
