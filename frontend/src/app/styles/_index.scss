@@ -1,0 +1,13 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║                    HESABATI DESIGN SYSTEM — INDEX v2.0                     ║
+// ║                Central entry point for the design system                   ║
+// ║                                                                            ║
+// ║  Usage in component SCSS files:                                            ║
+// ║    @use '../../styles' as *;                                               ║
+// ║                                                                            ║
+// ║  This forwards all tokens, mixins, and animations.                         ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+@forward 'tokens';
+@forward 'mixins';
+@forward 'animations';

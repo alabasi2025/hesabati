@@ -1,0 +1,439 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║                    HESABATI DESIGN SYSTEM — TOKENS v2.0                    ║
+// ║              Centralized Design Tokens with Premium 3D System              ║
+// ║                         Author: Manus AI — 2026                            ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 1. TYPOGRAPHY SCALE
+// ─────────────────────────────────────────────────────────────────────────────
+$font-family-primary:   'Tajawal', 'Segoe UI', system-ui, sans-serif;
+$font-family-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+// Modular scale (1.250 — Major Third)
+$font-size-2xs:   0.625rem;   // 10px
+$font-size-xs:    0.75rem;    // 12px
+$font-size-sm:    0.875rem;   // 14px
+$font-size-base:  1rem;       // 16px
+$font-size-md:    1.125rem;   // 18px
+$font-size-lg:    1.25rem;    // 20px
+$font-size-xl:    1.5rem;     // 24px
+$font-size-2xl:   1.875rem;   // 30px
+$font-size-3xl:   2.25rem;    // 36px
+$font-size-4xl:   3rem;       // 48px
+$font-size-5xl:   3.75rem;    // 60px
+
+$font-weight-light:     300;
+$font-weight-regular:   400;
+$font-weight-medium:    500;
+$font-weight-semibold:  600;
+$font-weight-bold:      700;
+$font-weight-extrabold: 800;
+$font-weight-black:     900;
+
+$line-height-tight:     1.2;
+$line-height-snug:      1.375;
+$line-height-normal:    1.5;
+$line-height-relaxed:   1.625;
+$line-height-loose:     2;
+
+$letter-spacing-tight:  -0.025em;
+$letter-spacing-normal:  0;
+$letter-spacing-wide:    0.025em;
+$letter-spacing-wider:   0.05em;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 2. SPACING SYSTEM (8px grid)
+// ─────────────────────────────────────────────────────────────────────────────
+$space-0:    0;
+$space-px:   1px;
+$space-0-5:  0.125rem;   // 2px
+$space-1:    0.25rem;    // 4px
+$space-1-5:  0.375rem;   // 6px
+$space-2:    0.5rem;     // 8px
+$space-2-5:  0.625rem;   // 10px
+$space-3:    0.75rem;    // 12px
+$space-3-5:  0.875rem;   // 14px
+$space-4:    1rem;       // 16px
+$space-5:    1.25rem;    // 20px
+$space-6:    1.5rem;     // 24px
+$space-7:    1.75rem;    // 28px
+$space-8:    2rem;       // 32px
+$space-9:    2.25rem;    // 36px
+$space-10:   2.5rem;     // 40px
+$space-12:   3rem;       // 48px
+$space-14:   3.5rem;     // 56px
+$space-16:   4rem;       // 64px
+$space-20:   5rem;       // 80px
+$space-24:   6rem;       // 96px
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 3. BORDER RADIUS
+// ─────────────────────────────────────────────────────────────────────────────
+$radius-none:   0;
+$radius-sm:     0.375rem;   // 6px
+$radius-md:     0.5rem;     // 8px
+$radius-lg:     0.75rem;    // 12px
+$radius-xl:     1rem;       // 16px
+$radius-2xl:    1.25rem;    // 20px
+$radius-3xl:    1.5rem;     // 24px
+$radius-4xl:    2rem;       // 32px
+$radius-full:   9999px;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 4. COLOR PALETTE — DARK THEME (Default)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 4.1 Background Layers (depth system)
+$dark-bg-void:       #000810;
+$dark-bg-base:       #020617;
+$dark-bg-depth-1:    #0a1128;
+$dark-bg-depth-2:    #0f172a;
+$dark-bg-depth-3:    #1e293b;
+$dark-bg-depth-4:    #263348;
+$dark-bg-depth-5:    #334155;
+$dark-bg-elevated:   #1a2744;
+$dark-bg-overlay:    rgba(0, 8, 16, 0.85);
+
+// 4.2 Text Hierarchy
+$dark-text-primary:    #f1f5f9;
+$dark-text-secondary:  #cbd5e1;
+$dark-text-tertiary:   #94a3b8;
+$dark-text-muted:      #64748b;
+$dark-text-disabled:   #475569;
+
+// 4.3 Border System
+$dark-border-subtle:    rgba(148, 163, 184, 0.06);
+$dark-border-default:   rgba(148, 163, 184, 0.10);
+$dark-border-strong:    rgba(148, 163, 184, 0.18);
+$dark-border-focus:     rgba(59, 130, 246, 0.50);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 5. COLOR PALETTE — LIGHT THEME
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 5.1 Background Layers
+$light-bg-void:      #e8ecf4;
+$light-bg-base:      #f0f2f5;
+$light-bg-depth-1:   #f5f7fa;
+$light-bg-depth-2:   #ffffff;
+$light-bg-depth-3:   #ffffff;
+$light-bg-depth-4:   #f5f7ff;
+$light-bg-depth-5:   #eef2ff;
+$light-bg-elevated:  #ffffff;
+$light-bg-overlay:   rgba(255, 255, 255, 0.92);
+
+// 5.2 Text Hierarchy
+$light-text-primary:    #0c1222;
+$light-text-secondary:  #1a2744;
+$light-text-tertiary:   #2d3a56;
+$light-text-muted:      #4a5568;
+$light-text-disabled:   #9ca3af;
+
+// 5.3 Border System
+$light-border-subtle:    rgba(60, 80, 150, 0.06);
+$light-border-default:   rgba(60, 80, 150, 0.12);
+$light-border-strong:    rgba(60, 80, 150, 0.25);
+$light-border-focus:     rgba(59, 130, 246, 0.50);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 6. ACCENT COLORS (Semantic)
+// ─────────────────────────────────────────────────────────────────────────────
+$color-blue:      #3b82f6;
+$color-blue-light:#60a5fa;
+$color-blue-dark: #2563eb;
+
+$color-indigo:      #6366f1;
+$color-indigo-light:#818cf8;
+$color-indigo-dark: #4f46e5;
+
+$color-purple:      #a855f7;
+$color-purple-light:#c084fc;
+$color-purple-dark: #9333ea;
+
+$color-pink:      #ec4899;
+$color-pink-light:#f472b6;
+$color-pink-dark: #db2777;
+
+$color-red:       #ef4444;
+$color-red-light: #f87171;
+$color-red-dark:  #dc2626;
+
+$color-orange:      #f97316;
+$color-orange-light:#fb923c;
+$color-orange-dark: #ea580c;
+
+$color-amber:      #f59e0b;
+$color-amber-light:#fbbf24;
+$color-amber-dark: #d97706;
+
+$color-green:      #22c55e;
+$color-green-light:#4ade80;
+$color-green-dark: #16a34a;
+
+$color-teal:      #14b8a6;
+$color-teal-light:#2dd4bf;
+$color-teal-dark: #0d9488;
+
+$color-cyan:      #06b6d4;
+$color-cyan-light:#22d3ee;
+$color-cyan-dark: #0891b2;
+
+// Accent map for programmatic access
+$accent-colors: (
+  'blue':    $color-blue,
+  'indigo':  $color-indigo,
+  'purple':  $color-purple,
+  'pink':    $color-pink,
+  'red':     $color-red,
+  'orange':  $color-orange,
+  'amber':   $color-amber,
+  'green':   $color-green,
+  'teal':    $color-teal,
+  'cyan':    $color-cyan,
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 7. 3D DEPTH SYSTEM — SHADOWS & ELEVATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 7.1 Dark theme shadows (layered for realism)
+$shadow-dark-xs:     0 1px 2px rgba(0, 0, 0, 0.30);
+$shadow-dark-sm:     0 2px 4px rgba(0, 0, 0, 0.25),
+                     0 1px 2px rgba(0, 0, 0, 0.20);
+$shadow-dark-md:     0 4px 8px rgba(0, 0, 0, 0.30),
+                     0 2px 4px rgba(0, 0, 0, 0.20),
+                     inset 0 1px 0 rgba(255, 255, 255, 0.03);
+$shadow-dark-lg:     0 8px 24px rgba(0, 0, 0, 0.35),
+                     0 4px 8px rgba(0, 0, 0, 0.25),
+                     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+$shadow-dark-xl:     0 16px 48px rgba(0, 0, 0, 0.40),
+                     0 8px 16px rgba(0, 0, 0, 0.30),
+                     inset 0 1px 0 rgba(255, 255, 255, 0.05);
+$shadow-dark-2xl:    0 24px 64px rgba(0, 0, 0, 0.50),
+                     0 12px 24px rgba(0, 0, 0, 0.35),
+                     inset 0 2px 0 rgba(255, 255, 255, 0.06);
+$shadow-dark-inner:  inset 0 2px 6px rgba(0, 0, 0, 0.40),
+                     inset 0 1px 2px rgba(0, 0, 0, 0.30);
+
+// 7.2 Light theme shadows
+$shadow-light-xs:    0 1px 2px rgba(60, 80, 150, 0.06);
+$shadow-light-sm:    0 2px 6px rgba(60, 80, 150, 0.08),
+                     0 1px 2px rgba(60, 80, 150, 0.06);
+$shadow-light-md:    0 4px 12px rgba(60, 80, 150, 0.10),
+                     0 2px 4px rgba(60, 80, 150, 0.06);
+$shadow-light-lg:    0 8px 28px rgba(60, 80, 150, 0.12),
+                     0 4px 8px rgba(60, 80, 150, 0.08);
+$shadow-light-xl:    0 16px 48px rgba(60, 80, 150, 0.14),
+                     0 8px 16px rgba(60, 80, 150, 0.10);
+$shadow-light-2xl:   0 24px 64px rgba(60, 80, 150, 0.16),
+                     0 12px 24px rgba(60, 80, 150, 0.12);
+$shadow-light-inner: inset 0 2px 6px rgba(60, 80, 150, 0.10),
+                     inset 0 1px 2px rgba(60, 80, 150, 0.08);
+
+// 7.3 3D Perspective & Transform tokens
+$perspective-near:    400px;
+$perspective-default: 800px;
+$perspective-far:     1200px;
+$perspective-ultra:   2000px;
+
+$rotate3d-subtle:     rotateX(2deg) rotateY(-1deg);
+$rotate3d-card:       rotateX(4deg) rotateY(-2deg);
+$rotate3d-icon:       rotateX(8deg) rotateY(-4deg);
+$rotate3d-tilt-left:  rotateX(3deg) rotateY(5deg);
+$rotate3d-tilt-right: rotateX(3deg) rotateY(-5deg);
+$rotate3d-float:      rotateX(6deg) rotateY(-3deg) rotateZ(1deg);
+
+// 7.4 3D Highlight & Bevel (inner light simulation)
+$bevel-highlight:     inset 0 1px 0 rgba(255, 255, 255, 0.12),
+                      inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+$bevel-highlight-strong: inset 0 2px 0 rgba(255, 255, 255, 0.20),
+                         inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+$bevel-shadow:        inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+                      inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+// 7.5 Color Glow (neon-style 3D glow)
+$glow-blue:    0 0 20px rgba(59, 130, 246, 0.30),
+               0 0 60px rgba(59, 130, 246, 0.10);
+$glow-green:   0 0 20px rgba(34, 197, 94, 0.30),
+               0 0 60px rgba(34, 197, 94, 0.10);
+$glow-purple:  0 0 20px rgba(168, 85, 247, 0.30),
+               0 0 60px rgba(168, 85, 247, 0.10);
+$glow-amber:   0 0 20px rgba(245, 158, 11, 0.30),
+               0 0 60px rgba(245, 158, 11, 0.10);
+$glow-red:     0 0 20px rgba(239, 68, 68, 0.30),
+               0 0 60px rgba(239, 68, 68, 0.10);
+$glow-teal:    0 0 20px rgba(20, 184, 166, 0.30),
+               0 0 60px rgba(20, 184, 166, 0.10);
+$glow-cyan:    0 0 20px rgba(6, 182, 212, 0.30),
+               0 0 60px rgba(6, 182, 212, 0.10);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 8. GRADIENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 8.1 Surface gradients (dark)
+$gradient-dark-surface:    linear-gradient(145deg, rgba(30, 41, 59, 0.70), rgba(15, 23, 42, 0.85));
+$gradient-dark-elevated:   linear-gradient(145deg, rgba(30, 41, 59, 0.45), rgba(15, 23, 42, 0.55));
+$gradient-dark-glass:      linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+
+// 8.2 Surface gradients (light)
+$gradient-light-surface:   linear-gradient(145deg, #ffffff, #f8fafc);
+$gradient-light-elevated:  linear-gradient(145deg, #ffffff, #f0f4ff);
+$gradient-light-glass:     linear-gradient(135deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.40));
+
+// 8.3 Accent gradients (shared)
+$gradient-blue:     linear-gradient(135deg, $color-blue, $color-indigo);
+$gradient-green:    linear-gradient(135deg, $color-green, $color-teal);
+$gradient-amber:    linear-gradient(135deg, $color-amber, $color-orange);
+$gradient-purple:   linear-gradient(135deg, $color-purple, $color-pink);
+$gradient-red:      linear-gradient(135deg, $color-red, $color-orange);
+$gradient-teal:     linear-gradient(135deg, $color-teal, $color-cyan);
+$gradient-cyan:     linear-gradient(135deg, $color-cyan, $color-blue);
+$gradient-sunset:   linear-gradient(135deg, $color-orange, $color-pink, $color-purple);
+$gradient-aurora:   linear-gradient(135deg, $color-green, $color-cyan, $color-blue);
+$gradient-fire:     linear-gradient(135deg, $color-red, $color-orange, $color-amber);
+$gradient-ocean:    linear-gradient(135deg, $color-blue, $color-teal, $color-green);
+
+// 8.4 Mesh gradient (premium background)
+$gradient-mesh-dark:  radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+                      radial-gradient(ellipse at 50% 80%, rgba(20, 184, 166, 0.05) 0%, transparent 50%);
+$gradient-mesh-light: radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
+                      radial-gradient(ellipse at 50% 80%, rgba(20, 184, 166, 0.03) 0%, transparent 50%);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 9. TRANSITIONS & EASING
+// ─────────────────────────────────────────────────────────────────────────────
+$ease-default:    cubic-bezier(0.4, 0, 0.2, 1);
+$ease-in:         cubic-bezier(0.4, 0, 1, 1);
+$ease-out:        cubic-bezier(0, 0, 0.2, 1);
+$ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+$ease-bounce:     cubic-bezier(0.34, 1.56, 0.64, 1);
+$ease-elastic:    cubic-bezier(0.68, -0.55, 0.265, 1.55);
+$ease-spring:     cubic-bezier(0.175, 0.885, 0.32, 1.275);
+$ease-smooth:     cubic-bezier(0.25, 0.1, 0.25, 1);
+
+$duration-instant:  50ms;
+$duration-fast:     150ms;
+$duration-normal:   250ms;
+$duration-slow:     400ms;
+$duration-slower:   600ms;
+$duration-slowest:  1000ms;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 10. GLASSMORPHISM TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+$glass-blur-sm:     blur(8px);
+$glass-blur-md:     blur(16px);
+$glass-blur-lg:     blur(24px);
+$glass-blur-xl:     blur(40px);
+$glass-blur-ultra:  blur(64px);
+
+$glass-bg-dark:     rgba(15, 23, 42, 0.60);
+$glass-bg-light:    rgba(255, 255, 255, 0.60);
+$glass-border-dark: rgba(255, 255, 255, 0.06);
+$glass-border-light:rgba(255, 255, 255, 0.30);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 11. Z-INDEX SCALE
+// ─────────────────────────────────────────────────────────────────────────────
+$z-behind:       -1;
+$z-base:          0;
+$z-dropdown:      10;
+$z-sticky:        20;
+$z-sidebar:       30;
+$z-header:        40;
+$z-overlay:       50;
+$z-modal:         100;
+$z-popover:       200;
+$z-toast:         300;
+$z-tooltip:       400;
+$z-max:           9999;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 12. BREAKPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+$breakpoint-xs:    480px;
+$breakpoint-sm:    640px;
+$breakpoint-md:    768px;
+$breakpoint-lg:    1024px;
+$breakpoint-xl:    1280px;
+$breakpoint-2xl:   1536px;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 13. LAYOUT TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+$sidebar-width-expanded:  280px;
+$sidebar-width-collapsed: 76px;
+$header-height:           64px;
+$page-max-width:          1400px;
+$page-padding:            $space-8;
+$page-padding-mobile:     $space-4;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 14. COMPONENT TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 14.1 Buttons
+$btn-height-sm:     32px;
+$btn-height-md:     40px;
+$btn-height-lg:     48px;
+$btn-padding-sm:    $space-2 $space-4;
+$btn-padding-md:    $space-2-5 $space-5;
+$btn-padding-lg:    $space-3 $space-6;
+$btn-radius:        $radius-lg;
+$btn-font-size:     $font-size-sm;
+$btn-font-weight:   $font-weight-bold;
+
+// 14.2 Inputs
+$input-height:      44px;
+$input-padding:     $space-3 $space-3-5;
+$input-radius:      $radius-lg;
+$input-font-size:   $font-size-sm;
+$input-font-weight: $font-weight-semibold;
+
+// 14.3 Cards
+$card-radius:       $radius-xl;
+$card-padding:      $space-6;
+$card-padding-sm:   $space-4;
+
+// 14.4 Tables
+$table-radius:      $radius-xl;
+$table-header-height: 48px;
+$table-row-height:    52px;
+$table-cell-padding:  $space-3-5 $space-4;
+
+// 14.5 Modals
+$modal-radius:      $radius-2xl;
+$modal-max-width:   640px;
+$modal-padding:     $space-7;
+
+// 14.6 Badges
+$badge-height-sm:   22px;
+$badge-height-md:   28px;
+$badge-padding:     $space-1-5 $space-3-5;
+$badge-radius:      $radius-md;
+$badge-font-size:   $font-size-xs;
+
+// 14.7 Icons (3D)
+$icon-size-sm:      32px;
+$icon-size-md:      44px;
+$icon-size-lg:      52px;
+$icon-size-xl:      64px;
+$icon-radius:       $radius-lg;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 15. STAT CARD PALETTE (8 variants)
+// ─────────────────────────────────────────────────────────────────────────────
+$stat-palette: (
+  1: (color: $color-blue,   light: $color-blue-light),
+  2: (color: $color-green,  light: $color-green-light),
+  3: (color: $color-amber,  light: $color-amber-light),
+  4: (color: $color-purple, light: $color-purple-light),
+  5: (color: $color-teal,   light: $color-teal-light),
+  6: (color: $color-red,    light: $color-red-light),
+  7: (color: $color-orange, light: $color-orange-light),
+  8: (color: $color-cyan,   light: $color-cyan-light),
+);

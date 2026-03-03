@@ -3683,8 +3683,8 @@ api.get('/businesses/:bizId/inventory-summary', bizAuthMiddleware(), safeHandler
 // === API ملخص العمليات المخزنية (لتبويب التقارير) ===
 api.get('/businesses/:bizId/warehouse-operations-summary', bizAuthMiddleware(), safeHandler('ملخص العمليات المخزنية', async (c) => {
   const bizId = c.get('bizId') as number;
-  const from = c.req.query('from');
-  const to = c.req.query('to');
+  const from = c.req.query('from') || c.req.query('dateFrom');
+  const to = c.req.query('to') || c.req.query('dateTo');
 
   // التحقق من صحة التواريخ لمنع SQL Injection
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;

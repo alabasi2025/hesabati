@@ -1,0 +1,382 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║                    HESABATI DESIGN SYSTEM — MIXINS v2.0                    ║
+// ║                  Premium 3D Mixins, Utilities & Helpers                    ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+@use 'tokens' as *;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 1. RESPONSIVE BREAKPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+@mixin respond-below($bp) {
+  @media (max-width: $bp) { @content; }
+}
+@mixin respond-above($bp) {
+  @media (min-width: $bp) { @content; }
+}
+@mixin respond-between($min, $max) {
+  @media (min-width: $min) and (max-width: $max) { @content; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 2. 3D CARD SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Premium 3D card with depth, bevel, and hover lift
+@mixin card-3d($radius: $card-radius, $shadow: $shadow-dark-md) {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: $radius;
+  backdrop-filter: $glass-blur-lg;
+  box-shadow: $shadow, $bevel-highlight;
+  transition: transform $duration-normal $ease-spring,
+              box-shadow $duration-normal $ease-default,
+              border-color $duration-normal $ease-default;
+
+  &:hover {
+    transform: translateY(-4px) scale(1.005);
+    box-shadow: $shadow-dark-xl, $bevel-highlight-strong;
+    border-color: var(--border-strong);
+  }
+}
+
+/// Floating 3D card with perspective tilt
+@mixin card-3d-tilt($direction: 'right') {
+  @include card-3d;
+  transform-style: preserve-3d;
+
+  @if $direction == 'right' {
+    transform: perspective($perspective-default) $rotate3d-tilt-right;
+    &:hover {
+      transform: perspective($perspective-default) rotateX(0deg) rotateY(0deg) translateY(-6px) scale(1.01);
+    }
+  } @else {
+    transform: perspective($perspective-default) $rotate3d-tilt-left;
+    &:hover {
+      transform: perspective($perspective-default) rotateX(0deg) rotateY(0deg) translateY(-6px) scale(1.01);
+    }
+  }
+}
+
+/// Glass-morphism card
+@mixin card-glass($blur: $glass-blur-lg) {
+  background: $glass-bg-dark;
+  backdrop-filter: $blur;
+  -webkit-backdrop-filter: $blur;
+  border: 1px solid $glass-border-dark;
+  border-radius: $card-radius;
+  box-shadow: $shadow-dark-md, $bevel-highlight;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 3. 3D ICON SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Premium 3D icon container with gradient, depth shadow, and bevel
+@mixin icon-3d($gradient: $gradient-blue, $size: $icon-size-lg) {
+  width: $size;
+  height: $size;
+  border-radius: $icon-radius;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $gradient;
+  transform: perspective($perspective-near) $rotate3d-icon;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25),
+              0 4px 8px rgba(0, 0, 0, 0.15),
+              $bevel-highlight-strong;
+  transition: transform $duration-normal $ease-spring,
+              box-shadow $duration-normal $ease-default;
+
+  .material-icons-round {
+    font-size: calc(#{$size} * 0.5);
+    color: white;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+
+  &:hover {
+    transform: perspective($perspective-near) rotateX(0deg) rotateY(0deg) scale(1.08);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.30),
+                0 6px 12px rgba(0, 0, 0, 0.20),
+                $bevel-highlight-strong;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 4. 3D BUTTON SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Primary 3D button with gradient, shadow, and press effect
+@mixin btn-3d($gradient: $gradient-blue, $glow: $glow-blue) {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $btn-padding-md;
+  border-radius: $btn-radius;
+  border: none;
+  background: $gradient;
+  color: white;
+  font-family: $font-family-primary;
+  font-weight: $btn-font-weight;
+  font-size: $btn-font-size;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25),
+              $bevel-highlight;
+  transform: perspective($perspective-near) translateZ(0);
+  transition: all $duration-normal $ease-spring;
+
+  .material-icons-round { font-size: 20px; }
+
+  &:hover {
+    transform: perspective($perspective-near) translateY(-3px) translateZ(4px);
+    box-shadow: $glow, 0 8px 25px rgba(0, 0, 0, 0.30),
+                $bevel-highlight-strong;
+  }
+
+  &:active {
+    transform: perspective($perspective-near) translateY(0px) translateZ(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.20),
+                $bevel-shadow;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/// Ghost button (outline)
+@mixin btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $btn-padding-md;
+  border-radius: $btn-radius;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface, $dark-bg-depth-2);
+  color: var(--text-primary);
+  font-family: $font-family-primary;
+  font-weight: $font-weight-semibold;
+  font-size: $btn-font-size;
+  cursor: pointer;
+  transition: all $duration-fast $ease-default;
+
+  &:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-strong);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 5. 3D INPUT SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Premium 3D input with inner shadow and focus glow
+@mixin input-3d {
+  width: 100%;
+  height: $input-height;
+  padding: $input-padding;
+  border-radius: $input-radius;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: $font-family-primary;
+  font-size: $input-font-size;
+  font-weight: $input-font-weight;
+  box-shadow: $shadow-dark-inner;
+  transition: all $duration-normal $ease-default;
+
+  &:focus {
+    outline: none;
+    border-color: $color-blue;
+    box-shadow: 0 0 0 3px rgba($color-blue, 0.15),
+                $shadow-dark-inner;
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+    font-weight: $font-weight-regular;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 6. 3D TABLE SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin table-3d {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-card);
+  border-radius: $table-radius;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: $shadow-dark-md, $bevel-highlight;
+
+  th {
+    padding: $table-cell-padding;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border-bottom: 2px solid var(--border-strong);
+    text-align: right;
+    text-transform: none;
+    letter-spacing: $letter-spacing-wide;
+  }
+
+  td {
+    padding: $table-cell-padding;
+    font-size: $font-size-sm;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: $font-weight-semibold;
+    transition: background $duration-fast $ease-default;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover td {
+    background: var(--bg-card-hover);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 7. 3D MODAL SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  background: rgba(0, 0, 0, 0.60);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: $glass-blur-md;
+  -webkit-backdrop-filter: $glass-blur-md;
+  animation: hesabati-fade-in $duration-fast $ease-out;
+}
+
+@mixin modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: $modal-radius;
+  width: 90%;
+  max-width: $modal-max-width;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: $shadow-dark-2xl, $bevel-highlight;
+  animation: hesabati-slide-up $duration-normal $ease-spring;
+  transform-style: preserve-3d;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 8. 3D BADGE SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin badge-3d($color: $color-green) {
+  display: inline-flex;
+  align-items: center;
+  height: $badge-height-md;
+  padding: $badge-padding;
+  border-radius: $badge-radius;
+  font-size: $badge-font-size;
+  font-weight: $font-weight-bold;
+  background: rgba($color, 0.15);
+  color: $color;
+  box-shadow: inset 0 1px 0 rgba($color, 0.10),
+              0 1px 3px rgba($color, 0.08);
+  border: 1px solid rgba($color, 0.12);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 9. PAGE HEADER 3D
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin page-header-3d($accent-color: $color-blue) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-6;
+  padding: $space-4-5 $space-5-5;
+  background: linear-gradient(135deg, rgba($accent-color, 0.06), rgba($accent-color, 0.02));
+  border-radius: $radius-2xl;
+  border: 1px solid rgba($accent-color, 0.12);
+  box-shadow: $shadow-dark-sm, $bevel-highlight;
+}
+
+// Spacing helpers used in page-header
+$space-4-5: 1.125rem;
+$space-5-5: 1.375rem;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 10. GRADIENT TEXT
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin gradient-text($gradient: $gradient-blue) {
+  background: $gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 11. SCROLLBAR
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin custom-scrollbar($width: 6px) {
+  &::-webkit-scrollbar { width: $width; height: $width; }
+  &::-webkit-scrollbar-track { background: var(--bg-surface); }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: calc(#{$width} / 2);
+  }
+  &::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 12. TRUNCATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin truncate($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 13. FOCUS RING
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin focus-ring($color: $color-blue) {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-card),
+                0 0 0 4px rgba($color, 0.50);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 14. SKELETON LOADING
+// ─────────────────────────────────────────────────────────────────────────────
+
+@mixin skeleton {
+  background: linear-gradient(90deg,
+    var(--bg-surface) 25%,
+    var(--bg-card-hover) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: hesabati-skeleton $duration-slowest $ease-default infinite;
+  border-radius: $radius-md;
+}
