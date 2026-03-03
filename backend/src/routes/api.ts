@@ -489,6 +489,34 @@ api.delete('/accounts/:id', safeHandler('حذف حساب (legacy)', async (c) =>
   return c.json({ success: true });
 }));
 
+// ===================== جلب سجل واحد =====================
+api.get('/accounts/:id', safeHandler('جلب حساب بالمعرّف', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
+  if (!account) return c.json({ error: 'الحساب غير موجود' }, 404);
+  // جلب الرصيد
+  const balRows = await db.select().from(accountBalances).where(eq(accountBalances.accountId, id));
+  return c.json({ ...account, balances: balRows });
+}));
+
+api.get('/warehouses/:id', safeHandler('جلب مخزن بالمعرّف', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف المخزن غير صالح' }, 400);
+  const [warehouse] = await db.select().from(warehouses).where(eq(warehouses.id, id));
+  if (!warehouse) return c.json({ error: 'المخزن غير موجود' }, 404);
+  return c.json(warehouse);
+}));
+
+api.get('/funds/:id', safeHandler('جلب صندوق بالمعرّف', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف الصندوق غير صالح' }, 400);
+  const [fund] = await db.select().from(funds).where(eq(funds.id, id));
+  if (!fund) return c.json({ error: 'الصندوق غير موجود' }, 404);
+  const balRows = await db.select().from(fundBalances).where(eq(fundBalances.fundId, id));
+  return c.json({ ...fund, balances: balRows });
+}));
+
 // ===================== ربط الحسابات المسموحة =====================
 api.get('/accounts/:id/allowed-links', safeHandler('جلب روابط الحسابات', async (c) => {
   const id = parseId(c.req.param('id'));
@@ -853,11 +881,60 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
 
 api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('حذف سند', async (c) => {
   const bizId = c.get('bizId') as number;
+  const userId = (c.get('user') as any)?.userId;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
   if (!existing) return c.json({ error: 'سند غير موجود أو لا ينتمي لهذا العمل' }, 404);
-  await db.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
+  if (existing.status === 'cancelled') return c.json({ error: 'السند ملغي مسبقاً' }, 400);
+
+  const amount = parseFloat(String(existing.amount));
+  const currencyId = existing.currencyId || 1;
+
+  await db.transaction(async (tx) => {
+    // 1. إلغاء السند
+    await tx.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
+
+    // 2. عكس أرصدة الحسابات
+    if (existing.toAccountId) {
+      await tx.execute(sql`
+        UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW()
+        WHERE account_id = ${existing.toAccountId} AND currency_id = ${currencyId}
+      `);
+    }
+    if (existing.fromAccountId) {
+      await tx.execute(sql`
+        UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW()
+        WHERE account_id = ${existing.fromAccountId} AND currency_id = ${currencyId}
+      `);
+    }
+
+    // 3. عكس أرصدة الصناديق
+    if (existing.toFundId) {
+      await tx.execute(sql`
+        UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW()
+        WHERE fund_id = ${existing.toFundId} AND currency_id = ${currencyId}
+      `);
+    }
+    if (existing.fromFundId) {
+      await tx.execute(sql`
+        UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW()
+        WHERE fund_id = ${existing.fromFundId} AND currency_id = ${currencyId}
+      `);
+    }
+
+    // 4. سجل التدقيق
+    await tx.insert(auditLog).values({
+      userId,
+      businessId: bizId,
+      action: 'cancel_voucher',
+      tableName: 'vouchers',
+      recordId: id,
+      oldData: { voucherNumber: existing.voucherNumber, amount: String(amount), status: 'confirmed' },
+      newData: { status: 'cancelled' },
+    });
+  });
+
   return c.json({ success: true });
 }));
 
@@ -865,7 +942,29 @@ api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('
 api.delete('/vouchers/:id', safeHandler('حذف سند (legacy)', async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
-  await db.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
+  const [existing] = await db.select().from(vouchers).where(eq(vouchers.id, id));
+  if (!existing) return c.json({ error: 'سند غير موجود' }, 404);
+  if (existing.status === 'cancelled') return c.json({ error: 'السند ملغي مسبقاً' }, 400);
+
+  const amount = parseFloat(String(existing.amount));
+  const currencyId = existing.currencyId || 1;
+
+  await db.transaction(async (tx) => {
+    await tx.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
+    if (existing.toAccountId) {
+      await tx.execute(sql`UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW() WHERE account_id = ${existing.toAccountId} AND currency_id = ${currencyId}`);
+    }
+    if (existing.fromAccountId) {
+      await tx.execute(sql`UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW() WHERE account_id = ${existing.fromAccountId} AND currency_id = ${currencyId}`);
+    }
+    if (existing.toFundId) {
+      await tx.execute(sql`UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW() WHERE fund_id = ${existing.toFundId} AND currency_id = ${currencyId}`);
+    }
+    if (existing.fromFundId) {
+      await tx.execute(sql`UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW() WHERE fund_id = ${existing.fromFundId} AND currency_id = ${currencyId}`);
+    }
+  });
+
   return c.json({ success: true });
 }));
 
@@ -1398,6 +1497,21 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), safeHandler(
   
   const entryDate = entryData.entryDate || entryData.date || new Date().toISOString().split('T')[0];
   
+  // حساب المجاميع والتوازن قبل الإدخال
+  let totalDebit = 0;
+  let totalCredit = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.accountId) return c.json({ error: `السطر ${i + 1}: معرّف الحساب مطلوب` }, 400);
+    if (!line.amount || parseFloat(String(line.amount)) <= 0) return c.json({ error: `السطر ${i + 1}: المبلغ مطلوب ويجب أن يكون أكبر من صفر` }, 400);
+    const lineType = line.lineType || line.type;
+    if (!lineType || !['debit', 'credit'].includes(lineType)) return c.json({ error: `السطر ${i + 1}: نوع السطر يجب أن يكون debit أو credit` }, 400);
+    const amt = parseFloat(String(line.amount));
+    if (lineType === 'debit') totalDebit += amt;
+    else totalCredit += amt;
+  }
+  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
   const [entry] = await db.insert(journalEntries).values({
     businessId: bizId,
     entryNumber: entryData.reference || `JE-${Date.now()}`,
@@ -1405,16 +1519,15 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), safeHandler(
     description: entryData.description || '',
     reference: entryData.reference || null,
     operationTypeId: entryData.operationTypeId || null,
+    totalDebit: String(totalDebit),
+    totalCredit: String(totalCredit),
+    isBalanced,
     createdBy: (c.get('user') as any)?.userId,
   }).returning();
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.accountId) return c.json({ error: `السطر ${i + 1}: معرّف الحساب مطلوب` }, 400);
-    if (!line.amount) return c.json({ error: `السطر ${i + 1}: المبلغ مطلوب` }, 400);
     const lineType = line.lineType || line.type;
-    if (!lineType) return c.json({ error: `السطر ${i + 1}: نوع السطر (مدين/دائن) مطلوب` }, 400);
-    
     await db.insert(journalEntryLines).values({
       journalEntryId: entry.id,
       accountId: line.accountId,
@@ -3292,12 +3405,23 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHan
   }
 
   // التحقق من الحقول الإلزامية
+  if (!body.operationTypeId) return c.json({ error: 'معرّف نوع العملية (القالب) مطلوب' }, 400);
   if (!body.operationType) return c.json({ error: 'نوع العملية المخزنية مطلوب' }, 400);
   if (!body.sourceWarehouseId && !body.destinationWarehouseId) {
     return c.json({ error: 'يجب تحديد مخزن مصدر أو مخزن وجهة' }, 400);
   }
   if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
     return c.json({ error: 'يجب إضافة صنف واحد على الأقل' }, 400);
+  }
+
+  // التحقق من ملكية المخازن (يجب أن تتبع نفس الشركة)
+  if (body.sourceWarehouseId) {
+    const [srcWh] = await db.select().from(warehouses).where(and(eq(warehouses.id, body.sourceWarehouseId), eq(warehouses.businessId, bizId)));
+    if (!srcWh) return c.json({ error: 'المخزن المصدر غير موجود أو لا ينتمي لهذا العمل' }, 400);
+  }
+  if (body.destinationWarehouseId) {
+    const [destWh] = await db.select().from(warehouses).where(and(eq(warehouses.id, body.destinationWarehouseId), eq(warehouses.businessId, bizId)));
+    if (!destWh) return c.json({ error: 'المخزن الوجهة غير موجود أو لا ينتمي لهذا العمل' }, 400);
   }
 
   // التحقق من نوع العملية
@@ -3562,21 +3686,26 @@ api.get('/businesses/:bizId/warehouse-operations-summary', bizAuthMiddleware(), 
   const from = c.req.query('from');
   const to = c.req.query('to');
 
-  let dateFilter = '';
-  if (from) dateFilter += ` AND wo.operation_date >= '${from}'`;
-  if (to) dateFilter += ` AND wo.operation_date <= '${to}'`;
+  // التحقق من صحة التواريخ لمنع SQL Injection
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (from && !dateRegex.test(from)) return c.json({ error: 'تنسيق تاريخ البداية غير صالح (YYYY-MM-DD)' }, 400);
+  if (to && !dateRegex.test(to)) return c.json({ error: 'تنسيق تاريخ النهاية غير صالح (YYYY-MM-DD)' }, 400);
 
-  const result = await db.execute(sql.raw(`
+  // استخدام parameterized queries بدلاً من دمج النصوص
+  let query = sql`
     SELECT
       wo.operation_type,
       COUNT(*) as operation_count,
       SUM(CAST(wo.total_cost AS NUMERIC)) as total_cost,
       SUM(wo.total_items) as total_items
     FROM warehouse_operations wo
-    WHERE wo.business_id = ${bizId} AND wo.status = 'confirmed'${dateFilter}
-    GROUP BY wo.operation_type
-    ORDER BY operation_count DESC
-  `));
+    WHERE wo.business_id = ${bizId} AND wo.status = 'confirmed'
+  `;
+  if (from) query = sql`${query} AND wo.operation_date >= ${from}`;
+  if (to) query = sql`${query} AND wo.operation_date <= ${to}`;
+  query = sql`${query} GROUP BY wo.operation_type ORDER BY operation_count DESC`;
+
+  const result = await db.execute(query);
   const rows = Array.isArray(result) ? result : (result as any).rows || [];
   return c.json(rows);
 }));

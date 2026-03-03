@@ -415,6 +415,7 @@ export class VouchersComponent implements OnInit {
   // ===================== Save Voucher =====================
   async saveVoucher() {
     const f = this.form();
+    if (!f.operationTypeId) { this.error.set('يجب اختيار نوع العملية (القالب) أولاً'); return; }
     if (!f.amount || parseFloat(f.amount) <= 0) { this.error.set('أدخل المبلغ'); return; }
     if (!f.description) { this.error.set('أدخل البيان'); return; }
 

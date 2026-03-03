@@ -3,7 +3,7 @@ import { db } from '../db/index.ts';
 import { users } from '../db/schema/index.ts';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { generateToken } from '../middleware/auth.ts';
+import { generateToken, authMiddleware } from '../middleware/auth.ts';
 
 const authRoutes = new Hono();
 
@@ -79,6 +79,28 @@ authRoutes.post('/register', async (c) => {
   } catch (error) {
     console.error('Register error:', error);
     return c.json({ error: 'حدث خطأ في التسجيل' }, 500);
+  }
+});
+
+// === GET /me - جلب بيانات المستخدم الحالي ===
+authRoutes.get('/me', authMiddleware(), async (c: any) => {
+  try {
+    const decoded = c.get('user') as any;
+    if (!decoded?.userId) return c.json({ error: 'توكن غير صالح' }, 401);
+
+    const [user] = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
+    if (!user) return c.json({ error: 'المستخدم غير موجود' }, 404);
+
+    return c.json({
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
+      isActive: user.isActive,
+    });
+  } catch (error) {
+    console.error('Auth me error:', error);
+    return c.json({ error: 'حدث خطأ في جلب بيانات المستخدم' }, 500);
   }
 });
 
