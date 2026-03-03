@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-exchange-rates",
+      "workflowId": "frontend/exchange-rates",
+      "title": "Load Exchange Rates",
+      "description": "pages/exchange-rates/exchange-rates.ts: Calls api.getCurrencies() and api.getExchangeRates(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-exchange-rates",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-exchange-rates",
+      "workflowId": "frontend/exchange-rates",
+      "title": "CRUD Exchange Rates",
+      "description": "pages/exchange-rates/exchange-rates.ts: Calls api.createExchangeRate, updateExchangeRate, deleteExchangeRate.",
+      "nodeType": "feature",
+      "fileName": "crud-exchange-rates",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-exchange-rates"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "convert-currency-ui",
+      "workflowId": "frontend/exchange-rates",
+      "title": "Convert Currency",
+      "description": "pages/exchange-rates/exchange-rates.ts: Calls api.convertCurrency(bizId, from, to, amount).",
+      "nodeType": "feature",
+      "fileName": "convert-currency-ui",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-exchange-rates"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-exchange-rates-to-crud-exchange-rates",
+      "source": "load-exchange-rates",
+      "target": "crud-exchange-rates"
+    },
+    {
+      "id": "load-exchange-rates-to-convert-currency-ui",
+      "source": "load-exchange-rates",
+      "target": "convert-currency-ui"
+    }
+  ]
+}

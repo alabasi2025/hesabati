@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-settlements",
+      "workflowId": "frontend/settlements",
+      "title": "Load Settlements",
+      "description": "pages/settlements/settlements.ts: Calls api.getSettlements, getAccounts, getFunds, getStations.",
+      "nodeType": "feature",
+      "fileName": "load-settlements",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-settlements",
+      "workflowId": "frontend/settlements",
+      "title": "CRUD Settlements",
+      "description": "pages/settlements/settlements.ts: Calls api.createSettlement, updateSettlement, deleteSettlement.",
+      "nodeType": "feature",
+      "fileName": "crud-settlements",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-settlements"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-settlements-to-crud-settlements",
+      "source": "load-settlements",
+      "target": "crud-settlements"
+    }
+  ]
+}

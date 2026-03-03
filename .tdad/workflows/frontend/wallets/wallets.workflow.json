@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-wallets",
+      "workflowId": "frontend/wallets",
+      "title": "Load Wallets",
+      "description": "pages/wallets/wallets.ts: Calls api.getAccounts(bizId) and api.getEWalletTypes(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-wallets",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-wallets",
+      "workflowId": "frontend/wallets",
+      "title": "CRUD Wallet Accounts & Types",
+      "description": "pages/wallets/wallets.ts: Calls api.createAccount, updateAccount, deleteAccount, createEWalletType, updateEWalletType, deleteEWalletType.",
+      "nodeType": "feature",
+      "fileName": "crud-wallets",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-wallets"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-wallets-to-crud-wallets",
+      "source": "load-wallets",
+      "target": "crud-wallets"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-stations-page",
+      "workflowId": "frontend/stations",
+      "title": "Load Stations",
+      "description": "pages/stations/stations.ts: Calls api.getStations(bizId). Display only, no CRUD in this page.",
+      "nodeType": "feature",
+      "fileName": "load-stations-page",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": []
+}

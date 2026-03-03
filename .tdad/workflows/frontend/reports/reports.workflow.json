@@ -2,53 +2,22 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "display-report-selector",
+      "id": "load-reports-data",
       "workflowId": "frontend/reports",
-      "title": "Display Report Selector",
-      "description": "When /biz/:bizId/reports page loads, display report type selector with options: Profit/Loss, Account Statement, Daily Summary, Trial Balance. Each option shows icon and description. User selects report type and date parameters.",
+      "title": "Load Reports Data",
+      "description": "pages/reports/reports.ts: Calls api.getAccounts, getFunds, getEmployees, getVouchers, getJournalEntries.",
       "nodeType": "feature",
-      "fileName": "display-report-selector",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "load-reports-data",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["ui"]
-    },
-    {
-      "id": "display-profit-loss-report",
-      "workflowId": "frontend/reports",
-      "title": "Display Profit Loss Report",
-      "description": "When user selects Profit/Loss report and clicks 'عرض', fetch GET /api/businesses/:bizId/reports/profit-loss with date range. Display revenue, expenses, and net profit in formatted table. Shows empty state if no data.",
-      "nodeType": "feature",
-      "fileName": "display-profit-loss-report",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["display-report-selector"],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "display-account-statement",
-      "workflowId": "frontend/reports",
-      "title": "Display Account Statement",
-      "description": "When user selects Account Statement, picks account from dropdown, and clicks 'عرض', fetch GET /api/businesses/:bizId/reports/account-statement/:accountId. Display transactions table with running balance. Shows opening and closing balance.",
-      "nodeType": "feature",
-      "fileName": "display-account-statement",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["display-report-selector"],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "display-trial-balance",
-      "workflowId": "frontend/reports",
-      "title": "Display Trial Balance",
-      "description": "When user selects Trial Balance and clicks 'عرض', fetch GET /api/businesses/:bizId/reports/trial-balance. Display table with account name, code, debit balance, credit balance. Shows totals row at bottom verifying debits equal credits.",
-      "nodeType": "feature",
-      "fileName": "display-trial-balance",
-      "position": { "x": 500, "y": 250 },
-      "dependencies": ["display-report-selector"],
-      "testLayers": ["ui", "api"]
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     }
   ],
-  "edges": [
-    { "id": "selector-to-pl", "source": "display-report-selector", "target": "display-profit-loss-report" },
-    { "id": "selector-to-statement", "source": "display-report-selector", "target": "display-account-statement" },
-    { "id": "selector-to-trial", "source": "display-report-selector", "target": "display-trial-balance" }
-  ]
+  "edges": []
 }

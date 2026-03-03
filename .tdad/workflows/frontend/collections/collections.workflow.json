@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-collections",
+      "workflowId": "frontend/collections",
+      "title": "Load Collections",
+      "description": "pages/collections/collections.ts: Calls api.getOperationTypes, getAccounts, getFunds, getVouchers.",
+      "nodeType": "feature",
+      "fileName": "load-collections",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "create-voucher-from-collection",
+      "workflowId": "frontend/collections",
+      "title": "Create Voucher from Collection",
+      "description": "pages/collections/collections.ts: Calls api.createVoucher(bizId, {...}) to create vouchers from collection data.",
+      "nodeType": "feature",
+      "fileName": "create-voucher-from-collection",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-collections"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-collections-to-create-voucher-from-collection",
+      "source": "load-collections",
+      "target": "create-voucher-from-collection"
+    }
+  ]
+}

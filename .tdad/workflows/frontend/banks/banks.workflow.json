@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-banks",
+      "workflowId": "frontend/banks",
+      "title": "Load Banks",
+      "description": "pages/banks/banks.ts: Calls api.getAccounts(bizId) and api.getBankTypes(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-banks",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-banks",
+      "workflowId": "frontend/banks",
+      "title": "CRUD Bank Accounts & Types",
+      "description": "pages/banks/banks.ts: Calls api.createAccount, updateAccount, deleteAccount, createBankType, updateBankType, deleteBankType.",
+      "nodeType": "feature",
+      "fileName": "crud-banks",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-banks"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-banks-to-crud-banks",
+      "source": "load-banks",
+      "target": "crud-banks"
+    }
+  ]
+}

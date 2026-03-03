@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-screens",
+      "workflowId": "frontend/custom-screens",
+      "title": "Load Custom Screens",
+      "description": "pages/custom-screens/custom-screens.ts: Calls api.getScreens(bizId). Loads screen config via api.getCollectionStyleConfig.",
+      "nodeType": "feature",
+      "fileName": "load-screens",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "render-widgets",
+      "workflowId": "frontend/custom-screens",
+      "title": "Render Screen Widgets",
+      "description": "pages/custom-screens/custom-screens.ts: For each widget type calls appropriate API: getWidgetLogEnhanced/getWidgetLog for logs, getWidgetStatsEnhanced/getWidgetStats for stats, getWidgetChartEnhanced/getWidgetChart for charts, getWidgetAccounts for monitoring, getWarehouseInventory for inventory.",
+      "nodeType": "feature",
+      "fileName": "render-widgets",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-screens"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "execute-operation-from-screen",
+      "workflowId": "frontend/custom-screens",
+      "title": "Execute Operation from Screen",
+      "description": "pages/custom-screens/custom-screens.ts: Calls api.createVoucher(bizId, {...}) to execute operations directly from custom screen.",
+      "nodeType": "feature",
+      "fileName": "execute-operation-from-screen",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "render-widgets"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "save-screen-config",
+      "workflowId": "frontend/custom-screens",
+      "title": "Save Screen Config",
+      "description": "pages/custom-screens/custom-screens.ts: Calls api.saveCollectionStyleConfig(bizId, screenId, {tabs, notes}).",
+      "nodeType": "feature",
+      "fileName": "save-screen-config",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "load-screens"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "view-voucher-details",
+      "workflowId": "frontend/custom-screens",
+      "title": "View Voucher Details",
+      "description": "pages/custom-screens/custom-screens.ts: Calls api.getVoucherDetails(bizId, entryId) to show transaction details.",
+      "nodeType": "feature",
+      "fileName": "view-voucher-details",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "render-widgets"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-screens-to-render-widgets",
+      "source": "load-screens",
+      "target": "render-widgets"
+    },
+    {
+      "id": "render-widgets-to-execute-operation-from-screen",
+      "source": "render-widgets",
+      "target": "execute-operation-from-screen"
+    },
+    {
+      "id": "load-screens-to-save-screen-config",
+      "source": "load-screens",
+      "target": "save-screen-config"
+    },
+    {
+      "id": "render-widgets-to-view-voucher-details",
+      "source": "render-widgets",
+      "target": "view-voucher-details"
+    }
+  ]
+}

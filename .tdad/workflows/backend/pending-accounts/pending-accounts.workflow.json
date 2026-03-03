@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-pending-accounts",
+      "workflowId": "backend/pending-accounts",
+      "title": "GET /businesses/:bizId/pending-accounts",
+      "description": "api.ts line 1184: Returns all pending accounts for business.",
+      "nodeType": "feature",
+      "fileName": "list-pending-accounts",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-pending-account",
+      "workflowId": "backend/pending-accounts",
+      "title": "POST /businesses/:bizId/pending-accounts",
+      "description": "api.ts line 1190: Creates pending account.",
+      "nodeType": "feature",
+      "fileName": "create-pending-account",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-pending-accounts"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-pending-account",
+      "workflowId": "backend/pending-accounts",
+      "title": "PUT /pending-accounts/:id",
+      "description": "api.ts line 1199: Updates pending account.",
+      "nodeType": "feature",
+      "fileName": "update-pending-account",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-pending-accounts"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-pending-account",
+      "workflowId": "backend/pending-accounts",
+      "title": "DELETE /pending-accounts/:id",
+      "description": "api.ts line 1208: Deletes pending account.",
+      "nodeType": "feature",
+      "fileName": "delete-pending-account",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-pending-accounts"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-pending-accounts-to-create-pending-account",
+      "source": "list-pending-accounts",
+      "target": "create-pending-account"
+    },
+    {
+      "id": "list-pending-accounts-to-update-pending-account",
+      "source": "list-pending-accounts",
+      "target": "update-pending-account"
+    },
+    {
+      "id": "list-pending-accounts-to-delete-pending-account",
+      "source": "list-pending-accounts",
+      "target": "delete-pending-account"
+    }
+  ]
+}

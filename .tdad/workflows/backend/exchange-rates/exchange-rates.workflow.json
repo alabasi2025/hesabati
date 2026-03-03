@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-exchange-rates",
+      "workflowId": "backend/exchange-rates",
+      "title": "GET /businesses/:bizId/exchange-rates",
+      "description": "api.ts line 2709: Returns all exchange rates for business.",
+      "nodeType": "feature",
+      "fileName": "list-exchange-rates",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-exchange-rate",
+      "workflowId": "backend/exchange-rates",
+      "title": "POST /businesses/:bizId/exchange-rates",
+      "description": "api.ts line 2731: Creates exchange rate.",
+      "nodeType": "feature",
+      "fileName": "create-exchange-rate",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-exchange-rates"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-exchange-rate",
+      "workflowId": "backend/exchange-rates",
+      "title": "PUT /businesses/:bizId/exchange-rates/:id",
+      "description": "api.ts line 2746: Updates exchange rate.",
+      "nodeType": "feature",
+      "fileName": "update-exchange-rate",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-exchange-rates"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-exchange-rate",
+      "workflowId": "backend/exchange-rates",
+      "title": "DELETE /businesses/:bizId/exchange-rates/:id",
+      "description": "api.ts line 2759: Deletes exchange rate.",
+      "nodeType": "feature",
+      "fileName": "delete-exchange-rate",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-exchange-rates"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "convert-currency",
+      "workflowId": "backend/exchange-rates",
+      "title": "GET /businesses/:bizId/exchange-rates/convert",
+      "description": "api.ts line 2768: Converts amount between currencies using stored exchange rates.",
+      "nodeType": "feature",
+      "fileName": "convert-currency",
+      "position": {
+        "x": 200,
+        "y": 400
+      },
+      "dependencies": [
+        "list-exchange-rates"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-exchange-rates-to-create-exchange-rate",
+      "source": "list-exchange-rates",
+      "target": "create-exchange-rate"
+    },
+    {
+      "id": "list-exchange-rates-to-update-exchange-rate",
+      "source": "list-exchange-rates",
+      "target": "update-exchange-rate"
+    },
+    {
+      "id": "list-exchange-rates-to-delete-exchange-rate",
+      "source": "list-exchange-rates",
+      "target": "delete-exchange-rate"
+    },
+    {
+      "id": "list-exchange-rates-to-convert-currency",
+      "source": "list-exchange-rates",
+      "target": "convert-currency"
+    }
+  ]
+}

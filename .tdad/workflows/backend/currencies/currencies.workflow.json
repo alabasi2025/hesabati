@@ -4,86 +4,89 @@
     {
       "id": "list-currencies",
       "workflowId": "backend/currencies",
-      "title": "List Currencies",
-      "description": "GET /api/businesses/:bizId/currencies with Authorization header. Returns array of currencies with {id, name, code, symbol, isDefault}.",
+      "title": "GET /businesses/:bizId/currencies",
+      "description": "api.ts: Returns all currencies for business.",
       "nodeType": "feature",
       "fileName": "list-currencies",
-      "position": { "x": 100, "y": 100 },
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "create-currency",
       "workflowId": "backend/currencies",
-      "title": "Create Currency",
-      "description": "POST /api/businesses/:bizId/currencies with {name, code, symbol, isDefault?}. Creates currency record. Returns created currency. Returns 400 if code already exists.",
+      "title": "POST /businesses/:bizId/currencies",
+      "description": "api.ts: Creates currency.",
       "nodeType": "feature",
       "fileName": "create-currency",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-currencies"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "list-exchange-rates",
+      "id": "update-currency",
       "workflowId": "backend/currencies",
-      "title": "List Exchange Rates",
-      "description": "GET /api/businesses/:bizId/exchange-rates with Authorization header. Returns array of exchange rates with {id, fromCurrencyId, toCurrencyId, rate, date}.",
+      "title": "PUT /businesses/:bizId/currencies/:id",
+      "description": "api.ts: Updates currency.",
       "nodeType": "feature",
-      "fileName": "list-exchange-rates",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["create-currency"],
-      "testLayers": ["api"]
+      "fileName": "update-currency",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-currencies"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "create-exchange-rate",
+      "id": "delete-currency",
       "workflowId": "backend/currencies",
-      "title": "Create Exchange Rate",
-      "description": "POST /api/businesses/:bizId/exchange-rates with {fromCurrencyId, toCurrencyId, rate, date}. Creates exchange rate record. Returns created rate.",
+      "title": "DELETE /businesses/:bizId/currencies/:id",
+      "description": "api.ts: Deletes currency.",
       "nodeType": "feature",
-      "fileName": "create-exchange-rate",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["create-currency"],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "update-exchange-rate",
-      "workflowId": "backend/currencies",
-      "title": "Update Exchange Rate",
-      "description": "PUT /api/businesses/:bizId/exchange-rates/:id with {rate?, date?}. Updates exchange rate. Returns updated rate.",
-      "nodeType": "feature",
-      "fileName": "update-exchange-rate",
-      "position": { "x": 100, "y": 400 },
-      "dependencies": ["create-exchange-rate"],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "delete-exchange-rate",
-      "workflowId": "backend/currencies",
-      "title": "Delete Exchange Rate",
-      "description": "DELETE /api/businesses/:bizId/exchange-rates/:id. Removes exchange rate. Returns 200 with {message: 'تم الحذف'}.",
-      "nodeType": "feature",
-      "fileName": "delete-exchange-rate",
-      "position": { "x": 300, "y": 400 },
-      "dependencies": ["create-exchange-rate"],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "convert-currency",
-      "workflowId": "backend/currencies",
-      "title": "Convert Currency",
-      "description": "GET /api/businesses/:bizId/exchange-rates/convert?from=1&to=2&amount=100 with Authorization header. Converts amount using latest exchange rate. Returns {fromAmount, toAmount, rate, fromCurrency, toCurrency}. Returns 404 if no rate found.",
-      "nodeType": "feature",
-      "fileName": "convert-currency",
-      "position": { "x": 500, "y": 250 },
-      "dependencies": ["create-exchange-rate"],
-      "testLayers": ["api"]
+      "fileName": "delete-currency",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-currencies"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "currency-to-rates", "source": "create-currency", "target": "list-exchange-rates" },
-    { "id": "currency-to-create-rate", "source": "create-currency", "target": "create-exchange-rate" },
-    { "id": "rate-to-update", "source": "create-exchange-rate", "target": "update-exchange-rate" },
-    { "id": "rate-to-delete", "source": "create-exchange-rate", "target": "delete-exchange-rate" },
-    { "id": "rate-to-convert", "source": "create-exchange-rate", "target": "convert-currency" }
+    {
+      "id": "list-currencies-to-create-currency",
+      "source": "list-currencies",
+      "target": "create-currency"
+    },
+    {
+      "id": "list-currencies-to-update-currency",
+      "source": "list-currencies",
+      "target": "update-currency"
+    },
+    {
+      "id": "list-currencies-to-delete-currency",
+      "source": "list-currencies",
+      "target": "delete-currency"
+    }
   ]
 }

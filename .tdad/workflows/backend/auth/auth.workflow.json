@@ -2,40 +2,68 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "login-user",
+      "id": "login",
       "workflowId": "backend/auth",
-      "title": "Login User",
-      "description": "POST /api/auth/login with {username, password}. Validates credentials against database. Returns {token, user: {id, username, fullName}} on success. Returns 401 with {error: 'اسم المستخدم أو كلمة المرور غير صحيحة'} on failure.",
+      "title": "POST /auth/login",
+      "description": "auth.ts line 10: Accepts {username, password}. Queries users table by username. Compares password with bcrypt. Returns JWT token with {userId, username} payload. Uses JWT_SECRET from env. Returns 401 on invalid credentials.",
       "nodeType": "feature",
-      "fileName": "login-user",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "login",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "register-user",
+      "id": "register",
       "workflowId": "backend/auth",
-      "title": "Register User",
-      "description": "POST /api/auth/register with {username, password, fullName}. Hashes password with bcrypt, inserts user record. Returns {id, username, fullName} on success. Returns 400 with {error: 'اسم المستخدم مستخدم بالفعل'} if username exists.",
+      "title": "POST /auth/register",
+      "description": "auth.ts line 54: Accepts {username, password, name}. Checks if username already exists (returns 409 if duplicate). Hashes password with bcrypt (10 rounds). Inserts into users table. Returns JWT token.",
       "nodeType": "feature",
-      "fileName": "register-user",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "fileName": "register",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "login"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "fetch-current-user",
+      "id": "get-me",
       "workflowId": "backend/auth",
-      "title": "Fetch Current User",
-      "description": "GET /api/auth/me with Authorization Bearer token. Decodes JWT and returns {userId, username, fullName}. Returns 401 with {error: 'غير مصرح'} if token invalid or missing.",
+      "title": "GET /auth/me",
+      "description": "auth.ts line 86: Protected by authMiddleware(). Extracts userId from JWT via c.get('user'). Queries users table by id. Returns {id, username, name}. Returns 404 if user not found.",
       "nodeType": "feature",
-      "fileName": "fetch-current-user",
-      "position": { "x": 200, "y": 250 },
-      "dependencies": ["login-user"],
-      "testLayers": ["api"]
+      "fileName": "get-me",
+      "position": {
+        "x": 200,
+        "y": 250
+      },
+      "dependencies": [
+        "login"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "login-to-me", "source": "login-user", "target": "fetch-current-user" }
+    {
+      "id": "login-to-register",
+      "source": "login",
+      "target": "register"
+    },
+    {
+      "id": "login-to-get-me",
+      "source": "login",
+      "target": "get-me"
+    }
   ]
 }

@@ -2,53 +2,46 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "display-dashboard-layout",
+      "id": "load-dashboard-data",
       "workflowId": "frontend/dashboard",
-      "title": "Display Dashboard Layout",
-      "description": "When /biz/:bizId page loads, display dashboard with sidebar navigation, header with business name, and main content area with widget grid. Sidebar shows sections and items from GET /api/businesses/:bizId/sidebar-sections.",
+      "title": "Load Dashboard Data",
+      "description": "pages/dashboard/dashboard.ts: Calls 8 APIs in parallel: getStations, getEmployees, getAccounts, getFunds, getSuppliers, getPendingAccounts, getBusiness, getWarehouses.",
       "nodeType": "feature",
-      "fileName": "display-dashboard-layout",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "load-dashboard-data",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["ui", "api"]
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "display-stats-widget",
+      "id": "display-dashboard",
       "workflowId": "frontend/dashboard",
-      "title": "Display Stats Widget",
-      "description": "When dashboard loads, fetch GET /api/businesses/:bizId/widget-stats-enhanced and display summary cards showing totalReceipts, totalPayments, netCashFlow, and comparison with previous period. Shows percentage change with up/down arrows.",
+      "title": "Display Dashboard",
+      "description": "pages/dashboard/dashboard.ts: Renders loaded data in dashboard layout.",
       "nodeType": "feature",
-      "fileName": "display-stats-widget",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": ["display-dashboard-layout"],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "display-chart-widget",
-      "workflowId": "frontend/dashboard",
-      "title": "Display Chart Widget",
-      "description": "When dashboard loads, fetch GET /api/businesses/:bizId/widget-chart-enhanced and render bar/line chart showing receipts vs payments over time. Chart supports period selection (6 months, 12 months, year).",
-      "nodeType": "feature",
-      "fileName": "display-chart-widget",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["display-dashboard-layout"],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "display-activity-log",
-      "workflowId": "frontend/dashboard",
-      "title": "Display Activity Log",
-      "description": "When dashboard loads, fetch GET /api/businesses/:bizId/widget-log-enhanced and display scrollable list of recent activities. Each entry shows type icon, description, amount, and timestamp. Supports lazy loading on scroll.",
-      "nodeType": "feature",
-      "fileName": "display-activity-log",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["display-dashboard-layout"],
-      "testLayers": ["ui", "api"]
+      "fileName": "display-dashboard",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-dashboard-data"
+      ],
+      "testLayers": [
+        "ui"
+      ]
     }
   ],
   "edges": [
-    { "id": "layout-to-stats", "source": "display-dashboard-layout", "target": "display-stats-widget" },
-    { "id": "layout-to-chart", "source": "display-dashboard-layout", "target": "display-chart-widget" },
-    { "id": "layout-to-log", "source": "display-dashboard-layout", "target": "display-activity-log" }
+    {
+      "id": "load-dashboard-data-to-display-dashboard",
+      "source": "load-dashboard-data",
+      "target": "display-dashboard"
+    }
   ]
 }

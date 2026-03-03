@@ -4,153 +4,561 @@
     {
       "id": "auth",
       "workflowId": "backend",
-      "title": "Authentication",
-      "description": "User login, registration, and session management",
+      "title": "Auth",
+      "description": "auth.ts: POST /login, POST /register, GET /me",
       "nodeType": "folder",
-      "folderPath": "backend/auth",
-      "position": { "x": 100, "y": 100 },
+      "folderPath": "auth",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": []
+    },
+    {
+      "id": "businesses",
+      "workflowId": "backend",
+      "title": "Businesses",
+      "description": "api.ts: GET /businesses, POST /businesses, GET /businesses/:bizId",
+      "nodeType": "folder",
+      "folderPath": "businesses",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "auth"
+      ]
     },
     {
       "id": "accounts",
       "workflowId": "backend",
-      "title": "Accounts Management",
-      "description": "Chart of accounts CRUD and account linking",
+      "title": "Accounts",
+      "description": "api.ts lines 285-546: CRUD accounts, account links, allowed targets. Tables: accounts, account_allowed_links, account_balances",
       "nodeType": "folder",
-      "folderPath": "backend/accounts",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": []
+      "folderPath": "accounts",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
       "id": "funds",
       "workflowId": "backend",
-      "title": "Funds Management",
-      "description": "Safes, banks, wallets, and exchangers CRUD",
+      "title": "Funds",
+      "description": "api.ts lines 566-647: CRUD funds with fund_types. Tables: funds, fund_balances, fund_types",
       "nodeType": "folder",
-      "folderPath": "backend/funds",
-      "position": { "x": 500, "y": 100 },
-      "dependencies": []
+      "folderPath": "funds",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
       "id": "vouchers",
       "workflowId": "backend",
       "title": "Vouchers",
-      "description": "Receipt, payment, and transfer vouchers with balance tracking",
+      "description": "api.ts lines 647-972 + enhancements.ts: CRUD vouchers, reverse, draft, status change, enhanced list. Tables: vouchers, voucher_categories",
       "nodeType": "folder",
-      "folderPath": "backend/vouchers",
-      "position": { "x": 100, "y": 300 },
-      "dependencies": []
+      "folderPath": "vouchers",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "accounts",
+        "funds"
+      ]
     },
     {
       "id": "journal",
       "workflowId": "backend",
       "title": "Journal Entries",
-      "description": "Accounting journal entries with debit/credit balancing",
+      "description": "api.ts lines 1316-1617: CRUD journal entries with balance validation. Tables: journal_entries, journal_entry_lines",
       "nodeType": "folder",
-      "folderPath": "backend/journal",
-      "position": { "x": 300, "y": 300 },
-      "dependencies": []
-    },
-    {
-      "id": "warehouse",
-      "workflowId": "backend",
-      "title": "Warehouse & Inventory",
-      "description": "Warehouse operations, inventory tracking, and stock management",
-      "nodeType": "folder",
-      "folderPath": "backend/warehouse",
-      "position": { "x": 500, "y": 300 },
-      "dependencies": []
+      "folderPath": "journal",
+      "position": {
+        "x": 100,
+        "y": 400
+      },
+      "dependencies": [
+        "accounts"
+      ]
     },
     {
       "id": "operation-types",
       "workflowId": "backend",
       "title": "Operation Types",
-      "description": "Templates for voucher and warehouse operations",
+      "description": "api.ts + enhancements.ts: CRUD operation types, clone, toggle, check-name, stats. Tables: operation_types, operation_type_accounts",
       "nodeType": "folder",
-      "folderPath": "backend/operation-types",
-      "position": { "x": 100, "y": 500 },
-      "dependencies": []
+      "folderPath": "operation-types",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
-      "id": "custom-screens",
+      "id": "screens-widgets",
       "workflowId": "backend",
-      "title": "Custom Screens",
-      "description": "User-defined screens with tabs and widgets",
+      "title": "Screens & Widgets",
+      "description": "api.ts lines 1959-2662: CRUD screens, widgets, widget templates/accounts, permissions, clone, copy, notes, stats, log, chart. Tables: screen_widgets, screen_widget_templates, screen_widget_accounts, screen_permissions, custom_screen_config",
       "nodeType": "folder",
-      "folderPath": "backend/custom-screens",
-      "position": { "x": 300, "y": 500 },
-      "dependencies": []
-    },
-    {
-      "id": "currencies",
-      "workflowId": "backend",
-      "title": "Currencies & Exchange",
-      "description": "Multi-currency support and exchange rate management",
-      "nodeType": "folder",
-      "folderPath": "backend/currencies",
-      "position": { "x": 500, "y": 500 },
-      "dependencies": []
-    },
-    {
-      "id": "roles",
-      "workflowId": "backend",
-      "title": "Roles & Permissions",
-      "description": "Role-based access control and user role assignment",
-      "nodeType": "folder",
-      "folderPath": "backend/roles",
-      "position": { "x": 100, "y": 700 },
-      "dependencies": []
-    },
-    {
-      "id": "reports",
-      "workflowId": "backend",
-      "title": "Financial Reports",
-      "description": "Profit/loss, trial balance, account statements, and daily summaries",
-      "nodeType": "folder",
-      "folderPath": "backend/reports",
-      "position": { "x": 300, "y": 700 },
-      "dependencies": []
+      "folderPath": "screens-widgets",
+      "position": {
+        "x": 500,
+        "y": 400
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
       "id": "sidebar",
       "workflowId": "backend",
-      "title": "Sidebar Configuration",
-      "description": "Dynamic sidebar sections, items, and user-specific configuration",
+      "title": "Sidebar",
+      "description": "api.ts + enhancements.ts: CRUD sections/items, user sidebar, copy/reset config. Tables: sidebar_sections, sidebar_items, user_sidebar_config",
       "nodeType": "folder",
-      "folderPath": "backend/sidebar",
-      "position": { "x": 500, "y": 700 },
-      "dependencies": []
+      "folderPath": "sidebar",
+      "position": {
+        "x": 700,
+        "y": 400
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "warehouse",
+      "workflowId": "backend",
+      "title": "Warehouse",
+      "description": "api.ts lines 1140-1176 + 3290-3713: CRUD warehouses, operations, inventory, summary. Tables: warehouses, warehouse_types, warehouse_operations, warehouse_operation_items, inventory_items, inventory_movements, inventory_stock",
+      "nodeType": "folder",
+      "folderPath": "warehouse",
+      "position": {
+        "x": 100,
+        "y": 550
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "partners",
+      "workflowId": "backend",
+      "title": "Partners",
+      "description": "api.ts lines 1076-1107: CRUD partners. Table: business_partners",
+      "nodeType": "folder",
+      "folderPath": "partners",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "suppliers",
+      "workflowId": "backend",
+      "title": "Suppliers",
+      "description": "api.ts lines 1108-1139: CRUD suppliers. Tables: suppliers, supplier_balances",
+      "nodeType": "folder",
+      "folderPath": "suppliers",
+      "position": {
+        "x": 500,
+        "y": 550
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
       "id": "employees",
       "workflowId": "backend",
       "title": "Employees",
-      "description": "Employee management and billing accounts",
+      "description": "api.ts lines 175-230: CRUD employees. Table: employees",
       "nodeType": "folder",
-      "folderPath": "backend/employees",
-      "position": { "x": 100, "y": 900 },
-      "dependencies": []
+      "folderPath": "employees",
+      "position": {
+        "x": 700,
+        "y": 550
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
       "id": "stations",
       "workflowId": "backend",
       "title": "Stations",
-      "description": "Station CRUD operations",
+      "description": "api.ts lines 127-170: CRUD stations. Table: stations",
       "nodeType": "folder",
-      "folderPath": "backend/stations",
-      "position": { "x": 300, "y": 900 },
-      "dependencies": []
+      "folderPath": "stations",
+      "position": {
+        "x": 100,
+        "y": 700
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "settlements",
+      "workflowId": "backend",
+      "title": "Settlements",
+      "description": "api.ts: CRUD settlements. Table: reconciliations",
+      "nodeType": "folder",
+      "folderPath": "settlements",
+      "position": {
+        "x": 300,
+        "y": 700
+      },
+      "dependencies": [
+        "accounts",
+        "funds"
+      ]
+    },
+    {
+      "id": "currencies",
+      "workflowId": "backend",
+      "title": "Currencies",
+      "description": "api.ts: CRUD currencies. Table: currencies",
+      "nodeType": "folder",
+      "folderPath": "currencies",
+      "position": {
+        "x": 500,
+        "y": 700
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "exchange-rates",
+      "workflowId": "backend",
+      "title": "Exchange Rates",
+      "description": "api.ts lines 2709-2790: CRUD exchange rates + convert. Table: exchange_rates",
+      "nodeType": "folder",
+      "folderPath": "exchange-rates",
+      "position": {
+        "x": 700,
+        "y": 700
+      },
+      "dependencies": [
+        "currencies"
+      ]
+    },
+    {
+      "id": "roles",
+      "workflowId": "backend",
+      "title": "Roles",
+      "description": "api.ts lines 2793-2910: CRUD roles, user-roles. Tables: roles, role_permissions, user_roles",
+      "nodeType": "folder",
+      "folderPath": "roles",
+      "position": {
+        "x": 100,
+        "y": 850
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "attachments",
+      "workflowId": "backend",
+      "title": "Attachments",
+      "description": "api.ts lines 2907-2938: upload/delete attachments. Table: attachments",
+      "nodeType": "folder",
+      "folderPath": "attachments",
+      "position": {
+        "x": 300,
+        "y": 850
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "reports",
+      "workflowId": "backend",
+      "title": "Reports",
+      "description": "api.ts lines 3057-3228: profit-loss, account-statement, daily-summary, trial-balance",
+      "nodeType": "folder",
+      "folderPath": "reports",
+      "position": {
+        "x": 500,
+        "y": 850
+      },
+      "dependencies": [
+        "accounts",
+        "vouchers",
+        "journal"
+      ]
+    },
+    {
+      "id": "collections",
+      "workflowId": "backend",
+      "title": "Collections",
+      "description": "api.ts lines 972-1075: CRUD collections, deliveries. Tables: daily_collections, collection_details, delivery_records",
+      "nodeType": "folder",
+      "folderPath": "collections",
+      "position": {
+        "x": 700,
+        "y": 850
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "billing",
+      "workflowId": "backend",
+      "title": "Billing Systems",
+      "description": "api.ts: CRUD billing accounts, billing config, billing account types. Tables: employee_billing_accounts, billing_systems_config, billing_account_types",
+      "nodeType": "folder",
+      "folderPath": "billing",
+      "position": {
+        "x": 100,
+        "y": 1000
+      },
+      "dependencies": [
+        "employees"
+      ]
+    },
+    {
+      "id": "pending-accounts",
+      "workflowId": "backend",
+      "title": "Pending Accounts",
+      "description": "api.ts lines 1184-1215: CRUD pending accounts. Table: pending_accounts",
+      "nodeType": "folder",
+      "folderPath": "pending-accounts",
+      "position": {
+        "x": 300,
+        "y": 1000
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "fund-types",
+      "workflowId": "backend",
+      "title": "Fund/Bank/Exchange/Wallet Types",
+      "description": "api.ts lines 1619-1747: CRUD fund_types, bank_types, exchange_types, e_wallet_types",
+      "nodeType": "folder",
+      "folderPath": "fund-types",
+      "position": {
+        "x": 500,
+        "y": 1000
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "categories",
+      "workflowId": "backend",
+      "title": "Categories",
+      "description": "api.ts: CRUD warehouse_types, journal_entry_categories, voucher_categories",
+      "nodeType": "folder",
+      "folderPath": "categories",
+      "position": {
+        "x": 700,
+        "y": 1000
+      },
+      "dependencies": [
+        "businesses"
+      ]
     },
     {
       "id": "dashboard",
       "workflowId": "backend",
-      "title": "Dashboard Widgets",
-      "description": "Enhanced dashboard statistics, logs, and charts",
+      "title": "Dashboard",
+      "description": "dashboard.ts: GET /stats. enhancements.ts: widget-log-enhanced, widget-stats-enhanced, widget-chart-enhanced",
       "nodeType": "folder",
-      "folderPath": "backend/dashboard",
-      "position": { "x": 500, "y": 900 },
-      "dependencies": []
+      "folderPath": "dashboard",
+      "position": {
+        "x": 100,
+        "y": 1150
+      },
+      "dependencies": [
+        "businesses"
+      ]
+    },
+    {
+      "id": "users",
+      "workflowId": "backend",
+      "title": "Users",
+      "description": "api.ts line 1950: GET /users",
+      "nodeType": "folder",
+      "folderPath": "users",
+      "position": {
+        "x": 300,
+        "y": 1150
+      },
+      "dependencies": [
+        "auth"
+      ]
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "auth-to-businesses",
+      "source": "auth",
+      "target": "businesses"
+    },
+    {
+      "id": "businesses-to-accounts",
+      "source": "businesses",
+      "target": "accounts"
+    },
+    {
+      "id": "businesses-to-funds",
+      "source": "businesses",
+      "target": "funds"
+    },
+    {
+      "id": "accounts-to-vouchers",
+      "source": "accounts",
+      "target": "vouchers"
+    },
+    {
+      "id": "funds-to-vouchers",
+      "source": "funds",
+      "target": "vouchers"
+    },
+    {
+      "id": "accounts-to-journal",
+      "source": "accounts",
+      "target": "journal"
+    },
+    {
+      "id": "businesses-to-operation-types",
+      "source": "businesses",
+      "target": "operation-types"
+    },
+    {
+      "id": "businesses-to-screens-widgets",
+      "source": "businesses",
+      "target": "screens-widgets"
+    },
+    {
+      "id": "businesses-to-sidebar",
+      "source": "businesses",
+      "target": "sidebar"
+    },
+    {
+      "id": "businesses-to-warehouse",
+      "source": "businesses",
+      "target": "warehouse"
+    },
+    {
+      "id": "businesses-to-partners",
+      "source": "businesses",
+      "target": "partners"
+    },
+    {
+      "id": "businesses-to-suppliers",
+      "source": "businesses",
+      "target": "suppliers"
+    },
+    {
+      "id": "businesses-to-employees",
+      "source": "businesses",
+      "target": "employees"
+    },
+    {
+      "id": "businesses-to-stations",
+      "source": "businesses",
+      "target": "stations"
+    },
+    {
+      "id": "accounts-to-settlements",
+      "source": "accounts",
+      "target": "settlements"
+    },
+    {
+      "id": "funds-to-settlements",
+      "source": "funds",
+      "target": "settlements"
+    },
+    {
+      "id": "businesses-to-currencies",
+      "source": "businesses",
+      "target": "currencies"
+    },
+    {
+      "id": "currencies-to-exchange-rates",
+      "source": "currencies",
+      "target": "exchange-rates"
+    },
+    {
+      "id": "businesses-to-roles",
+      "source": "businesses",
+      "target": "roles"
+    },
+    {
+      "id": "businesses-to-attachments",
+      "source": "businesses",
+      "target": "attachments"
+    },
+    {
+      "id": "accounts-to-reports",
+      "source": "accounts",
+      "target": "reports"
+    },
+    {
+      "id": "vouchers-to-reports",
+      "source": "vouchers",
+      "target": "reports"
+    },
+    {
+      "id": "journal-to-reports",
+      "source": "journal",
+      "target": "reports"
+    },
+    {
+      "id": "businesses-to-collections",
+      "source": "businesses",
+      "target": "collections"
+    },
+    {
+      "id": "employees-to-billing",
+      "source": "employees",
+      "target": "billing"
+    },
+    {
+      "id": "businesses-to-pending-accounts",
+      "source": "businesses",
+      "target": "pending-accounts"
+    },
+    {
+      "id": "businesses-to-fund-types",
+      "source": "businesses",
+      "target": "fund-types"
+    },
+    {
+      "id": "businesses-to-categories",
+      "source": "businesses",
+      "target": "categories"
+    },
+    {
+      "id": "businesses-to-dashboard",
+      "source": "businesses",
+      "target": "dashboard"
+    },
+    {
+      "id": "auth-to-users",
+      "source": "auth",
+      "target": "users"
+    }
+  ]
 }

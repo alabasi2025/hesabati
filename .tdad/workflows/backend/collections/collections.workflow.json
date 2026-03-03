@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-collections",
+      "workflowId": "backend/collections",
+      "title": "GET /businesses/:bizId/collections",
+      "description": "api.ts line 972: Returns all daily collections for business.",
+      "nodeType": "feature",
+      "fileName": "list-collections",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "get-collection",
+      "workflowId": "backend/collections",
+      "title": "GET /collections/:id",
+      "description": "api.ts line 993: Returns single collection with details.",
+      "nodeType": "feature",
+      "fileName": "get-collection",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-collections"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-collection",
+      "workflowId": "backend/collections",
+      "title": "POST /businesses/:bizId/collections",
+      "description": "api.ts line 1023: Creates daily collection with details.",
+      "nodeType": "feature",
+      "fileName": "create-collection",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-collections"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "add-delivery",
+      "workflowId": "backend/collections",
+      "title": "POST /collections/:id/deliveries",
+      "description": "api.ts line 1052: Adds delivery record to collection.",
+      "nodeType": "feature",
+      "fileName": "add-delivery",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "get-collection"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-collections-to-get-collection",
+      "source": "list-collections",
+      "target": "get-collection"
+    },
+    {
+      "id": "list-collections-to-create-collection",
+      "source": "list-collections",
+      "target": "create-collection"
+    },
+    {
+      "id": "get-collection-to-add-delivery",
+      "source": "get-collection",
+      "target": "add-delivery"
+    }
+  ]
+}

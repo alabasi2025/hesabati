@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-summary",
+      "workflowId": "frontend/summary",
+      "title": "Load Summary",
+      "description": "pages/summary/summary.ts: Calls api.getBusinesses() to display business summary.",
+      "nodeType": "feature",
+      "fileName": "load-summary",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": []
+}

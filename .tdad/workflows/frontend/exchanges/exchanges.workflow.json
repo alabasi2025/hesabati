@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-exchanges",
+      "workflowId": "frontend/exchanges",
+      "title": "Load Exchanges",
+      "description": "pages/exchanges/exchanges.ts: Calls api.getAccounts(bizId) and api.getExchangeTypes(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-exchanges",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-exchanges",
+      "workflowId": "frontend/exchanges",
+      "title": "CRUD Exchange Accounts & Types",
+      "description": "pages/exchanges/exchanges.ts: Calls api.createAccount, updateAccount, deleteAccount, createExchangeType, updateExchangeType, deleteExchangeType.",
+      "nodeType": "feature",
+      "fileName": "crud-exchanges",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-exchanges"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-exchanges-to-crud-exchanges",
+      "source": "load-exchanges",
+      "target": "crud-exchanges"
+    }
+  ]
+}

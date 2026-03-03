@@ -4,62 +4,89 @@
     {
       "id": "list-partners",
       "workflowId": "backend/partners",
-      "title": "List Partners",
-      "description": "GET /api/businesses/:bizId/partners with Authorization header. Returns array of partners with {id, name, type, phone, accountId}. Partner types include: customer, supplier, agent.",
+      "title": "GET /businesses/:bizId/partners",
+      "description": "api.ts line 1076: Returns all partners for business from business_partners table.",
       "nodeType": "feature",
       "fileName": "list-partners",
-      "position": { "x": 100, "y": 100 },
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "create-partner",
       "workflowId": "backend/partners",
-      "title": "Create Partner",
-      "description": "POST /api/businesses/:bizId/partners with {name, type, phone?, accountId?}. Creates partner record. Returns created partner.",
+      "title": "POST /businesses/:bizId/partners",
+      "description": "api.ts line 1082: Creates partner.",
       "nodeType": "feature",
       "fileName": "create-partner",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-partners"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "update-partner",
       "workflowId": "backend/partners",
-      "title": "Update Partner",
-      "description": "PUT /api/businesses/:bizId/partners/:id with {name?, type?, phone?, accountId?}. Updates partner fields. Returns updated partner.",
+      "title": "PUT /partners/:id",
+      "description": "api.ts line 1091: Updates partner.",
       "nodeType": "feature",
       "fileName": "update-partner",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["create-partner"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-partners"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "delete-partner",
       "workflowId": "backend/partners",
-      "title": "Delete Partner",
-      "description": "DELETE /api/businesses/:bizId/partners/:id. Removes partner record. Returns 200 with {message: 'تم الحذف'}.",
+      "title": "DELETE /partners/:id",
+      "description": "api.ts line 1100: Deletes partner.",
       "nodeType": "feature",
       "fileName": "delete-partner",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["create-partner"],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "manage-settlements",
-      "workflowId": "backend/partners",
-      "title": "Manage Settlements",
-      "description": "GET /api/businesses/:bizId/settlements returns partner settlement records. POST /api/businesses/:bizId/settlements with {partnerId, amount, date, description} creates settlement. PUT and DELETE also supported.",
-      "nodeType": "feature",
-      "fileName": "manage-settlements",
-      "position": { "x": 200, "y": 400 },
-      "dependencies": ["create-partner"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-partners"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "create-to-update", "source": "create-partner", "target": "update-partner" },
-    { "id": "create-to-delete", "source": "create-partner", "target": "delete-partner" },
-    { "id": "create-to-settlements", "source": "create-partner", "target": "manage-settlements" }
+    {
+      "id": "list-partners-to-create-partner",
+      "source": "list-partners",
+      "target": "create-partner"
+    },
+    {
+      "id": "list-partners-to-update-partner",
+      "source": "list-partners",
+      "target": "update-partner"
+    },
+    {
+      "id": "list-partners-to-delete-partner",
+      "source": "list-partners",
+      "target": "delete-partner"
+    }
   ]
 }

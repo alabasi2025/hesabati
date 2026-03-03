@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-users",
+      "workflowId": "backend/users",
+      "title": "GET /users",
+      "description": "api.ts line 1950: Returns all users from users table.",
+      "nodeType": "feature",
+      "fileName": "list-users",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": []
+}

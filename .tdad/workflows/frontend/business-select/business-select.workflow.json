@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-businesses",
+      "workflowId": "frontend/business-select",
+      "title": "Load Businesses List",
+      "description": "pages/business-select/business-select.ts: Calls api.getBusinesses() on init. Displays business cards.",
+      "nodeType": "feature",
+      "fileName": "load-businesses",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "select-business",
+      "workflowId": "frontend/business-select",
+      "title": "Select Business",
+      "description": "pages/business-select/business-select.ts: On card click, navigates to /biz/:bizId (dashboard).",
+      "nodeType": "feature",
+      "fileName": "select-business",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-businesses"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-businesses-to-select-business",
+      "source": "load-businesses",
+      "target": "select-business"
+    }
+  ]
+}

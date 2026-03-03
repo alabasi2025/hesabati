@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-settlements",
+      "workflowId": "backend/settlements",
+      "title": "GET /businesses/:bizId/settlements",
+      "description": "api.ts: Returns all settlements/reconciliations for business.",
+      "nodeType": "feature",
+      "fileName": "list-settlements",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-settlement",
+      "workflowId": "backend/settlements",
+      "title": "POST /businesses/:bizId/settlements",
+      "description": "api.ts: Creates settlement.",
+      "nodeType": "feature",
+      "fileName": "create-settlement",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-settlements"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-settlement",
+      "workflowId": "backend/settlements",
+      "title": "PUT /businesses/:bizId/settlements/:id",
+      "description": "api.ts: Updates settlement.",
+      "nodeType": "feature",
+      "fileName": "update-settlement",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-settlements"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-settlement",
+      "workflowId": "backend/settlements",
+      "title": "DELETE /businesses/:bizId/settlements/:id",
+      "description": "api.ts: Deletes settlement.",
+      "nodeType": "feature",
+      "fileName": "delete-settlement",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-settlements"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-settlements-to-create-settlement",
+      "source": "list-settlements",
+      "target": "create-settlement"
+    },
+    {
+      "id": "list-settlements-to-update-settlement",
+      "source": "list-settlements",
+      "target": "update-settlement"
+    },
+    {
+      "id": "list-settlements-to-delete-settlement",
+      "source": "list-settlements",
+      "target": "delete-settlement"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-warehouse-ops",
+      "workflowId": "frontend/warehouse-operations",
+      "title": "Load Warehouse Operations",
+      "description": "pages/warehouse-operations/warehouse-operations.ts: Calls api.getWarehouseOperations, getWarehouses, getSuppliers, getOperationTypes.",
+      "nodeType": "feature",
+      "fileName": "load-warehouse-ops",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "create-warehouse-op-ui",
+      "workflowId": "frontend/warehouse-operations",
+      "title": "Create Warehouse Operation",
+      "description": "pages/warehouse-operations/warehouse-operations.ts: Calls api.createWarehouseOperation(bizId, {warehouseId, operationTypeId, items, ...}).",
+      "nodeType": "feature",
+      "fileName": "create-warehouse-op-ui",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-warehouse-ops"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "view-warehouse-op",
+      "workflowId": "frontend/warehouse-operations",
+      "title": "View Operation Details",
+      "description": "pages/warehouse-operations/warehouse-operations.ts: Calls api.getWarehouseOperation(id).",
+      "nodeType": "feature",
+      "fileName": "view-warehouse-op",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-warehouse-ops"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-warehouse-ops-to-create-warehouse-op-ui",
+      "source": "load-warehouse-ops",
+      "target": "create-warehouse-op-ui"
+    },
+    {
+      "id": "load-warehouse-ops-to-view-warehouse-op",
+      "source": "load-warehouse-ops",
+      "target": "view-warehouse-op"
+    }
+  ]
+}

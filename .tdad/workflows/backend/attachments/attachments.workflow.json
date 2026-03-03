@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "upload-attachment",
+      "workflowId": "backend/attachments",
+      "title": "POST /businesses/:bizId/attachments",
+      "description": "api.ts line 2907: Uploads attachment file. Stores in attachments table.",
+      "nodeType": "feature",
+      "fileName": "upload-attachment",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-attachment",
+      "workflowId": "backend/attachments",
+      "title": "DELETE /businesses/:bizId/attachments/:id",
+      "description": "api.ts line 2930: Deletes attachment.",
+      "nodeType": "feature",
+      "fileName": "delete-attachment",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "upload-attachment"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "upload-attachment-to-delete-attachment",
+      "source": "upload-attachment",
+      "target": "delete-attachment"
+    }
+  ]
+}

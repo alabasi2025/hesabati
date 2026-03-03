@@ -4,86 +4,158 @@
     {
       "id": "list-roles",
       "workflowId": "backend/roles",
-      "title": "List Roles",
-      "description": "GET /api/businesses/:bizId/roles with Authorization header. Returns array of roles with {id, name, permissions: {canViewAccounts, canEditVouchers, canManageUsers, ...}}.",
+      "title": "GET /businesses/:bizId/roles",
+      "description": "api.ts line 2793: Returns all roles with permissions for business.",
       "nodeType": "feature",
       "fileName": "list-roles",
-      "position": { "x": 100, "y": 100 },
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "create-role",
       "workflowId": "backend/roles",
-      "title": "Create Role",
-      "description": "POST /api/businesses/:bizId/roles with {name, permissions: {canViewAccounts, canEditVouchers, ...}}. Creates role with specified permissions. Returns created role.",
+      "title": "POST /businesses/:bizId/roles",
+      "description": "api.ts line 2815: Creates role with permissions.",
       "nodeType": "feature",
       "fileName": "create-role",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-roles"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "update-role",
       "workflowId": "backend/roles",
-      "title": "Update Role",
-      "description": "PUT /api/businesses/:bizId/roles/:id with {name?, permissions?}. Updates role name and/or permissions. Returns updated role.",
+      "title": "PUT /businesses/:bizId/roles/:id",
+      "description": "api.ts line 2834: Updates role and permissions.",
       "nodeType": "feature",
       "fileName": "update-role",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["create-role"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-roles"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "delete-role",
       "workflowId": "backend/roles",
-      "title": "Delete Role",
-      "description": "DELETE /api/businesses/:bizId/roles/:id. Removes role and all user-role assignments. Returns 200 with {message: 'تم الحذف'}.",
+      "title": "DELETE /businesses/:bizId/roles/:id",
+      "description": "api.ts line 2858: Deletes role.",
       "nodeType": "feature",
       "fileName": "delete-role",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["create-role"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-roles"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "assign-role-to-user",
+      "id": "assign-user-role",
       "workflowId": "backend/roles",
-      "title": "Assign Role to User",
-      "description": "POST /api/businesses/:bizId/user-roles with {userId, roleId}. Assigns a role to a user within the business. Returns {userId, roleId, businessId}.",
+      "title": "POST /businesses/:bizId/user-roles",
+      "description": "api.ts line 2872: Assigns role to user.",
       "nodeType": "feature",
-      "fileName": "assign-role-to-user",
-      "position": { "x": 100, "y": 400 },
-      "dependencies": ["create-role"],
-      "testLayers": ["api"]
+      "fileName": "assign-user-role",
+      "position": {
+        "x": 100,
+        "y": 400
+      },
+      "dependencies": [
+        "list-roles"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "list-user-roles",
       "workflowId": "backend/roles",
-      "title": "List User Roles",
-      "description": "GET /api/businesses/:bizId/user-roles with Authorization header. Returns array of user-role assignments with {userId, roleId, roleName, userName}.",
+      "title": "GET /businesses/:bizId/user-roles",
+      "description": "api.ts line 2885: Returns all user-role assignments.",
       "nodeType": "feature",
       "fileName": "list-user-roles",
-      "position": { "x": 300, "y": 400 },
-      "dependencies": ["assign-role-to-user"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "dependencies": [
+        "list-roles"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "remove-user-role",
       "workflowId": "backend/roles",
-      "title": "Remove User Role",
-      "description": "DELETE /api/businesses/:bizId/user-roles/:userId. Removes role assignment from user. Returns 200 with {message: 'تم الحذف'}.",
+      "title": "DELETE /businesses/:bizId/user-roles/:userId",
+      "description": "api.ts line 2898: Removes role from user.",
       "nodeType": "feature",
       "fileName": "remove-user-role",
-      "position": { "x": 500, "y": 400 },
-      "dependencies": ["assign-role-to-user"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 500,
+        "y": 400
+      },
+      "dependencies": [
+        "assign-user-role"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "create-to-update", "source": "create-role", "target": "update-role" },
-    { "id": "create-to-delete", "source": "create-role", "target": "delete-role" },
-    { "id": "create-to-assign", "source": "create-role", "target": "assign-role-to-user" },
-    { "id": "assign-to-list", "source": "assign-role-to-user", "target": "list-user-roles" },
-    { "id": "assign-to-remove", "source": "assign-role-to-user", "target": "remove-user-role" }
+    {
+      "id": "list-roles-to-create-role",
+      "source": "list-roles",
+      "target": "create-role"
+    },
+    {
+      "id": "list-roles-to-update-role",
+      "source": "list-roles",
+      "target": "update-role"
+    },
+    {
+      "id": "list-roles-to-delete-role",
+      "source": "list-roles",
+      "target": "delete-role"
+    },
+    {
+      "id": "list-roles-to-assign-user-role",
+      "source": "list-roles",
+      "target": "assign-user-role"
+    },
+    {
+      "id": "list-roles-to-list-user-roles",
+      "source": "list-roles",
+      "target": "list-user-roles"
+    },
+    {
+      "id": "assign-user-role-to-remove-user-role",
+      "source": "assign-user-role",
+      "target": "remove-user-role"
+    }
   ]
 }

@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-billing",
+      "workflowId": "frontend/billing-systems",
+      "title": "Load Billing Systems",
+      "description": "pages/billing-systems/billing-systems.ts: Calls api.getEmployeeBillingAccounts, getBillingSystemsConfig, getBillingAccountTypes, getStations, getEmployees.",
+      "nodeType": "feature",
+      "fileName": "load-billing",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-billing-accounts",
+      "workflowId": "frontend/billing-systems",
+      "title": "CRUD Billing Accounts",
+      "description": "pages/billing-systems/billing-systems.ts: Calls api.createEmployeeBillingAccount, updateEmployeeBillingAccount, deleteEmployeeBillingAccount.",
+      "nodeType": "feature",
+      "fileName": "crud-billing-accounts",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-billing"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "manage-billing-config",
+      "workflowId": "frontend/billing-systems",
+      "title": "Manage Billing Config",
+      "description": "pages/billing-systems/billing-systems.ts: Calls api.createBillingSystemConfig, deleteBillingSystemConfig.",
+      "nodeType": "feature",
+      "fileName": "manage-billing-config",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-billing"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-billing-types",
+      "workflowId": "frontend/billing-systems",
+      "title": "CRUD Billing Account Types",
+      "description": "pages/billing-systems/billing-systems.ts: Calls api.createBillingAccountType, updateBillingAccountType, deleteBillingAccountType.",
+      "nodeType": "feature",
+      "fileName": "crud-billing-types",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "load-billing"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-billing-to-crud-billing-accounts",
+      "source": "load-billing",
+      "target": "crud-billing-accounts"
+    },
+    {
+      "id": "load-billing-to-manage-billing-config",
+      "source": "load-billing",
+      "target": "manage-billing-config"
+    },
+    {
+      "id": "load-billing-to-crud-billing-types",
+      "source": "load-billing",
+      "target": "crud-billing-types"
+    }
+  ]
+}

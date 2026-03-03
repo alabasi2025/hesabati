@@ -4,22 +4,30 @@
     {
       "id": "backend",
       "workflowId": "root",
-      "title": "Backend (API Server)",
-      "description": "Hono.js REST API server with PostgreSQL database, JWT authentication, and business logic for accounting, vouchers, journal entries, warehouse management, and reporting",
+      "title": "Backend (Hono.js API)",
+      "description": "REST API server: auth.ts (3 routes), api.ts (186 routes), dashboard.ts (1 route), enhancements.ts (12 routes). Total: 202 unique routes. PostgreSQL with 61 tables.",
       "nodeType": "folder",
       "folderPath": "backend",
-      "position": { "x": 100, "y": 200 },
+      "position": {
+        "x": 100,
+        "y": 200
+      },
       "dependencies": []
     },
     {
       "id": "frontend",
       "workflowId": "root",
-      "title": "Frontend (Angular SPA)",
-      "description": "Angular 19 single-page application with PrimeNG components, providing user interface for accounting operations, dashboard, reports, and custom screens",
+      "title": "Frontend (Angular 19)",
+      "description": "Angular 19 SPA with 30 pages under /pages/. Uses PrimeNG components. AuthGuard protects all /biz/:bizId routes.",
       "nodeType": "folder",
       "folderPath": "frontend",
-      "position": { "x": 400, "y": 200 },
-      "dependencies": ["backend"]
+      "position": {
+        "x": 500,
+        "y": 200
+      },
+      "dependencies": [
+        "backend"
+      ]
     }
   ],
   "edges": [

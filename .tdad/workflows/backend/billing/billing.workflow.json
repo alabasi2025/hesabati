@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-billing-accounts",
+      "workflowId": "backend/billing",
+      "title": "GET /businesses/:bizId/employee-billing-accounts",
+      "description": "api.ts line 231: Returns employee billing accounts with joins.",
+      "nodeType": "feature",
+      "fileName": "list-billing-accounts",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-billing-account",
+      "workflowId": "backend/billing",
+      "title": "POST /employee-billing-accounts",
+      "description": "api.ts line 260: Creates employee billing account.",
+      "nodeType": "feature",
+      "fileName": "create-billing-account",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-billing-accounts"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-billing-account",
+      "workflowId": "backend/billing",
+      "title": "PUT /employee-billing-accounts/:id",
+      "description": "api.ts line 268: Updates billing account.",
+      "nodeType": "feature",
+      "fileName": "update-billing-account",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-billing-accounts"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-billing-account",
+      "workflowId": "backend/billing",
+      "title": "DELETE /employee-billing-accounts/:id",
+      "description": "api.ts line 277: Deletes billing account.",
+      "nodeType": "feature",
+      "fileName": "delete-billing-account",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-billing-accounts"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-billing-accounts-to-create-billing-account",
+      "source": "list-billing-accounts",
+      "target": "create-billing-account"
+    },
+    {
+      "id": "list-billing-accounts-to-update-billing-account",
+      "source": "list-billing-accounts",
+      "target": "update-billing-account"
+    },
+    {
+      "id": "list-billing-accounts-to-delete-billing-account",
+      "source": "list-billing-accounts",
+      "target": "delete-billing-account"
+    }
+  ]
+}

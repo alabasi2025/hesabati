@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-roles",
+      "workflowId": "frontend/roles",
+      "title": "Load Roles",
+      "description": "pages/roles/roles.ts: Calls api.getRoles(bizId), getUsers(), getUserRoles(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-roles",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-roles",
+      "workflowId": "frontend/roles",
+      "title": "CRUD Roles",
+      "description": "pages/roles/roles.ts: Calls api.createRole, updateRole, deleteRole.",
+      "nodeType": "feature",
+      "fileName": "crud-roles",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-roles"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "manage-user-roles",
+      "workflowId": "frontend/roles",
+      "title": "Manage User Roles",
+      "description": "pages/roles/roles.ts: Calls api.assignUserRole(bizId, {userId, roleId}) and api.removeUserRole(bizId, userId).",
+      "nodeType": "feature",
+      "fileName": "manage-user-roles",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-roles"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-roles-to-crud-roles",
+      "source": "load-roles",
+      "target": "crud-roles"
+    },
+    {
+      "id": "load-roles-to-manage-user-roles",
+      "source": "load-roles",
+      "target": "manage-user-roles"
+    }
+  ]
+}

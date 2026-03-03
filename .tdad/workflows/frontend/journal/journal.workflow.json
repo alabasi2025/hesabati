@@ -2,53 +2,71 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "display-journal-entries",
+      "id": "load-journal",
       "workflowId": "frontend/journal",
-      "title": "Display Journal Entries",
-      "description": "When /biz/:bizId/journal page loads, fetch GET /api/businesses/:bizId/journal-entries and display in table with columns: entry number, date, description, total debit, total credit, balanced status. Supports date range filtering.",
+      "title": "Load Journal Entries",
+      "description": "pages/journal/journal.ts: Calls api.getJournalEntries, getAccounts, getOperationTypes.",
       "nodeType": "feature",
-      "fileName": "display-journal-entries",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "load-journal",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["ui", "api"]
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "open-journal-entry-form",
+      "id": "create-journal-ui",
       "workflowId": "frontend/journal",
-      "title": "Open Journal Entry Form",
-      "description": "When user clicks 'إضافة قيد' button, display form with: date picker, description input, operationTypeId dropdown (required), category dropdown, and dynamic lines table with columns [account, debit, credit, description]. Shows running totals for debit and credit.",
+      "title": "Create Journal Entry",
+      "description": "pages/journal/journal.ts: Calls api.createJournalEntry(bizId, {operationTypeId, lines, ...}).",
       "nodeType": "feature",
-      "fileName": "open-journal-entry-form",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": ["display-journal-entries"],
-      "testLayers": ["ui"]
+      "fileName": "create-journal-ui",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-journal"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "submit-journal-entry",
-      "workflowId": "frontend/journal",
-      "title": "Submit Journal Entry",
-      "description": "When user clicks 'حفظ' on journal entry form, triggers POST /api/businesses/:bizId/journal-entries with form data. Success: closes form, shows success toast, refreshes list. Failure: shows error from API (e.g., 'معرّف نوع العملية (القالب) مطلوب').",
-      "nodeType": "feature",
-      "fileName": "submit-journal-entry",
-      "position": { "x": 200, "y": 250 },
-      "dependencies": ["open-journal-entry-form"],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "delete-journal-entry",
+      "id": "delete-journal-ui",
       "workflowId": "frontend/journal",
       "title": "Delete Journal Entry",
-      "description": "When user clicks delete icon on entry row, shows confirmation dialog. On confirm, triggers DELETE /api/businesses/:bizId/journal-entries/:id. Success: removes from list, shows toast.",
+      "description": "pages/journal/journal.ts: Calls api.deleteJournalEntry(id).",
       "nodeType": "feature",
-      "fileName": "delete-journal-entry",
-      "position": { "x": 200, "y": 400 },
-      "dependencies": ["submit-journal-entry"],
-      "testLayers": ["ui", "api"]
+      "fileName": "delete-journal-ui",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-journal"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "list-to-form", "source": "display-journal-entries", "target": "open-journal-entry-form" },
-    { "id": "form-to-submit", "source": "open-journal-entry-form", "target": "submit-journal-entry" },
-    { "id": "submit-to-delete", "source": "submit-journal-entry", "target": "delete-journal-entry" }
+    {
+      "id": "load-journal-to-create-journal-ui",
+      "source": "load-journal",
+      "target": "create-journal-ui"
+    },
+    {
+      "id": "load-journal-to-delete-journal-ui",
+      "source": "load-journal",
+      "target": "delete-journal-ui"
+    }
   ]
 }

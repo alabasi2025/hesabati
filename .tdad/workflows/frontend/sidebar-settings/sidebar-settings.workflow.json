@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-sidebar-settings",
+      "workflowId": "frontend/sidebar-settings",
+      "title": "Load Sidebar Settings",
+      "description": "pages/sidebar-settings/sidebar-settings.ts: Calls api.getUsers, getSidebarSections, getSidebarItems.",
+      "nodeType": "feature",
+      "fileName": "load-sidebar-settings",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "manage-sections",
+      "workflowId": "frontend/sidebar-settings",
+      "title": "Manage Sidebar Sections",
+      "description": "pages/sidebar-settings/sidebar-settings.ts: CRUD sections via api.createSidebarSection, updateSidebarSection, deleteSidebarSection.",
+      "nodeType": "feature",
+      "fileName": "manage-sections",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-sidebar-settings"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "manage-items",
+      "workflowId": "frontend/sidebar-settings",
+      "title": "Manage Sidebar Items",
+      "description": "pages/sidebar-settings/sidebar-settings.ts: CRUD items via api.createSidebarItem, updateSidebarItem.",
+      "nodeType": "feature",
+      "fileName": "manage-items",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-sidebar-settings"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "manage-user-sidebar",
+      "workflowId": "frontend/sidebar-settings",
+      "title": "Manage User Sidebar",
+      "description": "pages/sidebar-settings/sidebar-settings.ts: Calls api.getUserSidebar(bizId, userId) and api.updateUserSidebar(bizId, userId, {items}).",
+      "nodeType": "feature",
+      "fileName": "manage-user-sidebar",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "load-sidebar-settings"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-sidebar-settings-to-manage-sections",
+      "source": "load-sidebar-settings",
+      "target": "manage-sections"
+    },
+    {
+      "id": "load-sidebar-settings-to-manage-items",
+      "source": "load-sidebar-settings",
+      "target": "manage-items"
+    },
+    {
+      "id": "load-sidebar-settings-to-manage-user-sidebar",
+      "source": "load-sidebar-settings",
+      "target": "manage-user-sidebar"
+    }
+  ]
+}

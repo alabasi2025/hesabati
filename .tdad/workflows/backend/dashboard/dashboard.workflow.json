@@ -2,37 +2,20 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "fetch-enhanced-log",
+      "id": "get-dashboard-stats",
       "workflowId": "backend/dashboard",
-      "title": "Fetch Enhanced Log",
-      "description": "GET /api/businesses/:bizId/widget-log-enhanced?limit=20 with Authorization header. Returns recent activity log with {entries: [{id, type, description, amount, date, userName}], total}. Aggregates vouchers, journal entries, and warehouse operations.",
+      "title": "GET /dashboard/stats",
+      "description": "dashboard.ts line 18: Returns dashboard statistics.",
       "nodeType": "feature",
-      "fileName": "fetch-enhanced-log",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "get-dashboard-stats",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "fetch-enhanced-stats",
-      "workflowId": "backend/dashboard",
-      "title": "Fetch Enhanced Stats",
-      "description": "GET /api/businesses/:bizId/widget-stats-enhanced?period=month with Authorization header. Supports periods: day, week, month, year, custom. Returns {totalReceipts, totalPayments, netCashFlow, voucherCount, comparison: {previousPeriod, changePercent}}.",
-      "nodeType": "feature",
-      "fileName": "fetch-enhanced-stats",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "fetch-enhanced-chart",
-      "workflowId": "backend/dashboard",
-      "title": "Fetch Enhanced Chart",
-      "description": "GET /api/businesses/:bizId/widget-chart-enhanced?months=6 with Authorization header. Returns time-series data for charts: {labels: [month names], datasets: [{label, data: [amounts]}]}. Includes receipts, payments, and net flow per month.",
-      "nodeType": "feature",
-      "fileName": "fetch-enhanced-chart",
-      "position": { "x": 500, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": []

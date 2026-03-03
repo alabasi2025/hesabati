@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-partners",
+      "workflowId": "frontend/partners",
+      "title": "Load Partners",
+      "description": "pages/partners/partners.ts: Calls api.getBusiness(bizId) and api.getPartners(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-partners",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-partners",
+      "workflowId": "frontend/partners",
+      "title": "CRUD Partners",
+      "description": "pages/partners/partners.ts: Calls api.createPartner, updatePartner, deletePartner.",
+      "nodeType": "feature",
+      "fileName": "crud-partners",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-partners"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-partners-to-crud-partners",
+      "source": "load-partners",
+      "target": "crud-partners"
+    }
+  ]
+}

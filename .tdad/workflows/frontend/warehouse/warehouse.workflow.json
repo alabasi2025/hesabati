@@ -2,52 +2,71 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "display-warehouses",
+      "id": "load-warehouses",
       "workflowId": "frontend/warehouse",
-      "title": "Display Warehouses",
-      "description": "When /biz/:bizId/warehouse page loads, fetch GET /api/businesses/:bizId/warehouses and display warehouse cards. Each card shows name, type, and item count. Clicking a card navigates to warehouse inventory view.",
+      "title": "Load Warehouses",
+      "description": "pages/warehouse/warehouse.ts: Calls api.getWarehouses, getStations, getWarehouseTypes.",
       "nodeType": "feature",
-      "fileName": "display-warehouses",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "load-warehouses",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["ui", "api"]
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "display-warehouse-inventory",
+      "id": "crud-warehouses",
       "workflowId": "frontend/warehouse",
-      "title": "Display Warehouse Inventory",
-      "description": "When warehouse is selected, fetch GET /api/businesses/:bizId/warehouses/:id/inventory and display inventory table with columns: item name, quantity, unit price, total value. Ghost items (quantity=0 or empty names) are filtered out.",
+      "title": "CRUD Warehouses",
+      "description": "pages/warehouse/warehouse.ts: Calls api.createWarehouse, updateWarehouse, deleteWarehouse.",
       "nodeType": "feature",
-      "fileName": "display-warehouse-inventory",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": ["display-warehouses"],
-      "testLayers": ["ui", "api"]
+      "fileName": "crud-warehouses",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-warehouses"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "display-warehouse-operations",
+      "id": "crud-warehouse-types-ui",
       "workflowId": "frontend/warehouse",
-      "title": "Display Warehouse Operations",
-      "description": "When /biz/:bizId/warehouse-operations page loads, fetch GET /api/businesses/:bizId/warehouse-operations and display operations table with columns: date, warehouse, operation type, items count, total amount. Supports date filtering.",
+      "title": "CRUD Warehouse Types",
+      "description": "pages/warehouse/warehouse.ts: Calls api.createWarehouseType, updateWarehouseType, deleteWarehouseType.",
       "nodeType": "feature",
-      "fileName": "display-warehouse-operations",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": [],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "create-warehouse-operation",
-      "workflowId": "frontend/warehouse",
-      "title": "Create Warehouse Operation",
-      "description": "When user clicks 'إضافة عملية' and fills form with {warehouseId, operationType, date, operationTypeId, items[]}, triggers POST /api/businesses/:bizId/warehouse-operations. Success: closes form, refreshes list. Failure: shows error (e.g., 'هذا المخزن لا يتبع لهذا النشاط التجاري').",
-      "nodeType": "feature",
-      "fileName": "create-warehouse-operation",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["display-warehouse-operations"],
-      "testLayers": ["ui", "api"]
+      "fileName": "crud-warehouse-types-ui",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-warehouses"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "warehouses-to-inventory", "source": "display-warehouses", "target": "display-warehouse-inventory" },
-    { "id": "operations-to-create", "source": "display-warehouse-operations", "target": "create-warehouse-operation" }
+    {
+      "id": "load-warehouses-to-crud-warehouses",
+      "source": "load-warehouses",
+      "target": "crud-warehouses"
+    },
+    {
+      "id": "load-warehouses-to-crud-warehouse-types-ui",
+      "source": "load-warehouses",
+      "target": "crud-warehouse-types-ui"
+    }
   ]
 }

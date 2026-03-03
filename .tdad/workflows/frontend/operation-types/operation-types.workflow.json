@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-operation-types",
+      "workflowId": "frontend/operation-types",
+      "title": "Load Operation Types",
+      "description": "pages/operation-types/operation-types.ts: Calls api.getOperationTypes, getAllAccounts, getFunds, getWarehouses.",
+      "nodeType": "feature",
+      "fileName": "load-operation-types",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "create-ot-ui",
+      "workflowId": "frontend/operation-types",
+      "title": "Create Operation Type",
+      "description": "pages/operation-types/operation-types.ts: Calls api.createOperationType(bizId, payload).",
+      "nodeType": "feature",
+      "fileName": "create-ot-ui",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-operation-types"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "update-ot-ui",
+      "workflowId": "frontend/operation-types",
+      "title": "Update Operation Type",
+      "description": "pages/operation-types/operation-types.ts: Calls api.updateOperationType(id, payload).",
+      "nodeType": "feature",
+      "fileName": "update-ot-ui",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "load-operation-types"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "delete-ot-ui",
+      "workflowId": "frontend/operation-types",
+      "title": "Delete Operation Type",
+      "description": "pages/operation-types/operation-types.ts: Calls api.deleteOperationType(id).",
+      "nodeType": "feature",
+      "fileName": "delete-ot-ui",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-operation-types"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "clone-ot-ui",
+      "workflowId": "frontend/operation-types",
+      "title": "Clone Operation Type",
+      "description": "pages/operation-types/operation-types.ts: Calls api.cloneOperationType(bizId, id).",
+      "nodeType": "feature",
+      "fileName": "clone-ot-ui",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "load-operation-types"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-operation-types-to-create-ot-ui",
+      "source": "load-operation-types",
+      "target": "create-ot-ui"
+    },
+    {
+      "id": "load-operation-types-to-update-ot-ui",
+      "source": "load-operation-types",
+      "target": "update-ot-ui"
+    },
+    {
+      "id": "load-operation-types-to-delete-ot-ui",
+      "source": "load-operation-types",
+      "target": "delete-ot-ui"
+    },
+    {
+      "id": "load-operation-types-to-clone-ot-ui",
+      "source": "load-operation-types",
+      "target": "clone-ot-ui"
+    }
+  ]
+}

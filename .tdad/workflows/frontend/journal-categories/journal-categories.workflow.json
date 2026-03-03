@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-journal-categories",
+      "workflowId": "frontend/journal-categories",
+      "title": "Load Journal Categories",
+      "description": "pages/journal-categories/journal-categories.ts: Calls api.getJournalEntryCategories(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-journal-categories",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-journal-categories",
+      "workflowId": "frontend/journal-categories",
+      "title": "CRUD Journal Categories",
+      "description": "pages/journal-categories/journal-categories.ts: Calls api.createJournalEntryCategory, updateJournalEntryCategory, deleteJournalEntryCategory.",
+      "nodeType": "feature",
+      "fileName": "crud-journal-categories",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-journal-categories"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-journal-categories-to-crud-journal-categories",
+      "source": "load-journal-categories",
+      "target": "crud-journal-categories"
+    }
+  ]
+}

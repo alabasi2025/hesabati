@@ -2,75 +2,281 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-sidebar-sections",
+      "id": "list-sections",
       "workflowId": "backend/sidebar",
-      "title": "List Sidebar Sections",
-      "description": "GET /api/businesses/:bizId/sidebar-sections with Authorization header. Returns array of sidebar sections with {id, name, icon, order, items[]}.",
+      "title": "GET /businesses/:bizId/sidebar-sections",
+      "description": "api.ts: Returns all sidebar sections for business.",
       "nodeType": "feature",
-      "fileName": "list-sidebar-sections",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "list-sections",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "create-sidebar-section",
+      "id": "create-section",
       "workflowId": "backend/sidebar",
-      "title": "Create Sidebar Section",
-      "description": "POST /api/businesses/:bizId/sidebar-sections with {name, icon?, order?}. Creates sidebar section. Returns created section.",
+      "title": "POST /businesses/:bizId/sidebar-sections",
+      "description": "api.ts: Creates sidebar section.",
       "nodeType": "feature",
-      "fileName": "create-sidebar-section",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "fileName": "create-section",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-sections"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "list-sidebar-items",
+      "id": "update-section",
       "workflowId": "backend/sidebar",
-      "title": "List Sidebar Items",
-      "description": "GET /api/businesses/:bizId/sidebar-items with Authorization header. Returns array of sidebar items with {id, sectionId, name, icon, route, order}.",
+      "title": "PUT /sidebar-sections/:id",
+      "description": "api.ts: Updates sidebar section.",
       "nodeType": "feature",
-      "fileName": "list-sidebar-items",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "fileName": "update-section",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "list-sections"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "create-sidebar-item",
+      "id": "delete-section",
       "workflowId": "backend/sidebar",
-      "title": "Create Sidebar Item",
-      "description": "POST /api/businesses/:bizId/sidebar-items with {sectionId, name, icon?, route, order?}. Creates sidebar item within a section. Returns created item.",
+      "title": "DELETE /sidebar-sections/:id",
+      "description": "api.ts: Deletes sidebar section.",
       "nodeType": "feature",
-      "fileName": "create-sidebar-item",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["create-sidebar-section"],
-      "testLayers": ["api"]
+      "fileName": "delete-section",
+      "position": {
+        "x": 700,
+        "y": 100
+      },
+      "dependencies": [
+        "list-sections"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "list-items",
+      "workflowId": "backend/sidebar",
+      "title": "GET /businesses/:bizId/sidebar-items",
+      "description": "api.ts: Returns all sidebar items.",
+      "nodeType": "feature",
+      "fileName": "list-items",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-sections"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-item",
+      "workflowId": "backend/sidebar",
+      "title": "POST /businesses/:bizId/sidebar-items",
+      "description": "api.ts: Creates sidebar item.",
+      "nodeType": "feature",
+      "fileName": "create-item",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-items"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-item",
+      "workflowId": "backend/sidebar",
+      "title": "PUT /sidebar-items/:id",
+      "description": "api.ts: Updates sidebar item.",
+      "nodeType": "feature",
+      "fileName": "update-item",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "list-items"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-item",
+      "workflowId": "backend/sidebar",
+      "title": "DELETE /sidebar-items/:id",
+      "description": "api.ts: Deletes sidebar item.",
+      "nodeType": "feature",
+      "fileName": "delete-item",
+      "position": {
+        "x": 700,
+        "y": 250
+      },
+      "dependencies": [
+        "list-items"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "get-user-sidebar",
+      "workflowId": "backend/sidebar",
+      "title": "GET /businesses/:bizId/users/:userId/sidebar",
+      "description": "api.ts line 1852: Returns user-specific sidebar configuration from user_sidebar_config.",
+      "nodeType": "feature",
+      "fileName": "get-user-sidebar",
+      "position": {
+        "x": 100,
+        "y": 400
+      },
+      "dependencies": [
+        "list-sections",
+        "list-items"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-user-sidebar",
+      "workflowId": "backend/sidebar",
+      "title": "PUT /businesses/:bizId/users/:userId/sidebar",
+      "description": "api.ts line 1926: Updates user sidebar configuration.",
+      "nodeType": "feature",
+      "fileName": "update-user-sidebar",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "dependencies": [
+        "get-user-sidebar"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "copy-sidebar-config",
       "workflowId": "backend/sidebar",
-      "title": "Copy Sidebar Config",
-      "description": "POST /api/businesses/:bizId/sidebar-config/copy with {fromUserId, toUserIds: []}. Copies sidebar configuration from one user to multiple users. Returns {message: 'تم النسخ بنجاح', copiedTo: count}.",
+      "title": "POST /businesses/:bizId/sidebar-config/copy",
+      "description": "enhancements.ts line 391: Copies sidebar config from one user to another. Deletes target's existing config first.",
       "nodeType": "feature",
       "fileName": "copy-sidebar-config",
-      "position": { "x": 100, "y": 400 },
-      "dependencies": ["create-sidebar-item"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 500,
+        "y": 400
+      },
+      "dependencies": [
+        "get-user-sidebar"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "reset-sidebar-config",
       "workflowId": "backend/sidebar",
-      "title": "Reset Sidebar Config",
-      "description": "POST /api/businesses/:bizId/sidebar-config/reset/:userId. Removes all user-specific sidebar customizations, reverting to default. Returns {message: 'تم إعادة التعيين'}.",
+      "title": "POST /businesses/:bizId/sidebar-config/reset/:userId",
+      "description": "enhancements.ts line 425: Resets user sidebar to default by deleting user_sidebar_config entries.",
       "nodeType": "feature",
       "fileName": "reset-sidebar-config",
-      "position": { "x": 300, "y": 400 },
-      "dependencies": ["copy-sidebar-config"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 700,
+        "y": 400
+      },
+      "dependencies": [
+        "get-user-sidebar"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "section-to-item", "source": "create-sidebar-section", "target": "create-sidebar-item" },
-    { "id": "item-to-copy", "source": "create-sidebar-item", "target": "copy-sidebar-config" },
-    { "id": "copy-to-reset", "source": "copy-sidebar-config", "target": "reset-sidebar-config" }
+    {
+      "id": "list-sections-to-create-section",
+      "source": "list-sections",
+      "target": "create-section"
+    },
+    {
+      "id": "list-sections-to-update-section",
+      "source": "list-sections",
+      "target": "update-section"
+    },
+    {
+      "id": "list-sections-to-delete-section",
+      "source": "list-sections",
+      "target": "delete-section"
+    },
+    {
+      "id": "list-sections-to-list-items",
+      "source": "list-sections",
+      "target": "list-items"
+    },
+    {
+      "id": "list-items-to-create-item",
+      "source": "list-items",
+      "target": "create-item"
+    },
+    {
+      "id": "list-items-to-update-item",
+      "source": "list-items",
+      "target": "update-item"
+    },
+    {
+      "id": "list-items-to-delete-item",
+      "source": "list-items",
+      "target": "delete-item"
+    },
+    {
+      "id": "list-sections-to-get-user-sidebar",
+      "source": "list-sections",
+      "target": "get-user-sidebar"
+    },
+    {
+      "id": "list-items-to-get-user-sidebar",
+      "source": "list-items",
+      "target": "get-user-sidebar"
+    },
+    {
+      "id": "get-user-sidebar-to-update-user-sidebar",
+      "source": "get-user-sidebar",
+      "target": "update-user-sidebar"
+    },
+    {
+      "id": "get-user-sidebar-to-copy-sidebar-config",
+      "source": "get-user-sidebar",
+      "target": "copy-sidebar-config"
+    },
+    {
+      "id": "get-user-sidebar-to-reset-sidebar-config",
+      "source": "get-user-sidebar",
+      "target": "reset-sidebar-config"
+    }
   ]
 }

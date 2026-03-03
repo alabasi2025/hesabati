@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-journal-categories",
+      "workflowId": "backend/categories",
+      "title": "GET /businesses/:bizId/journal-entry-categories",
+      "description": "api.ts line 3322: Returns journal entry categories.",
+      "nodeType": "feature",
+      "fileName": "list-journal-categories",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "crud-journal-categories",
+      "workflowId": "backend/categories",
+      "title": "POST/PUT/DELETE journal-entry-categories",
+      "description": "api.ts lines 3328-3355: Create, update, delete journal entry categories.",
+      "nodeType": "feature",
+      "fileName": "crud-journal-categories",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-journal-categories"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-journal-categories-to-crud-journal-categories",
+      "source": "list-journal-categories",
+      "target": "crud-journal-categories"
+    }
+  ]
+}

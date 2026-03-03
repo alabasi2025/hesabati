@@ -4,62 +4,89 @@
     {
       "id": "list-journal-entries",
       "workflowId": "backend/journal",
-      "title": "List Journal Entries",
-      "description": "GET /api/businesses/:bizId/journal-entries with Authorization header. Supports query params: dateFrom, dateTo, page, limit, categoryId. Returns paginated array of journal entries with {id, entryNumber, date, description, totalDebit, totalCredit, isBalanced, lines[], categoryId}.",
+      "title": "GET /businesses/:bizId/journal-entries",
+      "description": "api.ts: Protected by bizAuthMiddleware(). Queries journal_entries with journal_entry_lines. Returns entries with line details.",
       "nodeType": "feature",
       "fileName": "list-journal-entries",
-      "position": { "x": 100, "y": 100 },
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "validate-journal-entry",
-      "workflowId": "backend/journal",
-      "title": "Validate Journal Entry",
-      "description": "Validates journal entry payload. Checks: operationTypeId is required (returns 400 'معرّف نوع العملية (القالب) مطلوب'), lines array must have at least 2 entries, each line must have accountId and either debit or credit > 0. Computes totalDebit and totalCredit, sets isBalanced flag.",
-      "nodeType": "feature",
-      "fileName": "validate-journal-entry",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "create-journal-entry",
       "workflowId": "backend/journal",
-      "title": "Create Journal Entry",
-      "description": "POST /api/businesses/:bizId/journal-entries with {date, description, operationTypeId, categoryId?, lines: [{accountId, debit, credit, description}]}. Generates sequential entry number, creates entry with computed totals and balance flag. Returns created entry.",
+      "title": "POST /businesses/:bizId/journal-entries",
+      "description": "api.ts: Validates operationTypeId is required. Calculates totalDebit and totalCredit from lines. Sets isBalanced = (totalDebit === totalCredit). Inserts journal_entries and journal_entry_lines. Updates account_balances.",
       "nodeType": "feature",
       "fileName": "create-journal-entry",
-      "position": { "x": 200, "y": 250 },
-      "dependencies": ["validate-journal-entry"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-journal-entries"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "update-journal-entry",
       "workflowId": "backend/journal",
-      "title": "Update Journal Entry",
-      "description": "PUT /api/businesses/:bizId/journal-entries/:id with {date?, description?, lines?[]}. Updates entry fields and recalculates totals if lines changed. Returns updated entry.",
+      "title": "PUT /businesses/:bizId/journal-entries/:id",
+      "description": "api.ts: Updates journal entry fields.",
       "nodeType": "feature",
       "fileName": "update-journal-entry",
-      "position": { "x": 100, "y": 400 },
-      "dependencies": ["create-journal-entry"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-journal-entries"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "delete-journal-entry",
       "workflowId": "backend/journal",
-      "title": "Delete Journal Entry",
-      "description": "DELETE /api/businesses/:bizId/journal-entries/:id. Removes journal entry and all its lines. Returns 200 with {message: 'تم الحذف'}.",
+      "title": "DELETE /businesses/:bizId/journal-entries/:id",
+      "description": "api.ts: Deletes journal entry and its lines.",
       "nodeType": "feature",
       "fileName": "delete-journal-entry",
-      "position": { "x": 300, "y": 400 },
-      "dependencies": ["create-journal-entry"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-journal-entries"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "validate-to-create", "source": "validate-journal-entry", "target": "create-journal-entry" },
-    { "id": "create-to-update", "source": "create-journal-entry", "target": "update-journal-entry" },
-    { "id": "create-to-delete", "source": "create-journal-entry", "target": "delete-journal-entry" }
+    {
+      "id": "list-journal-entries-to-create-journal-entry",
+      "source": "list-journal-entries",
+      "target": "create-journal-entry"
+    },
+    {
+      "id": "list-journal-entries-to-update-journal-entry",
+      "source": "list-journal-entries",
+      "target": "update-journal-entry"
+    },
+    {
+      "id": "list-journal-entries-to-delete-journal-entry",
+      "source": "list-journal-entries",
+      "target": "delete-journal-entry"
+    }
   ]
 }

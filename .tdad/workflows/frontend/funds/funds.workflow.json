@@ -2,53 +2,71 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "display-funds-list",
+      "id": "load-funds",
       "workflowId": "frontend/funds",
-      "title": "Display Funds List",
-      "description": "When /biz/:bizId/funds page loads, fetch GET /api/businesses/:bizId/funds and display funds in a table with columns: name, type (safe/bank/wallet/exchanger), linked account, balance. Supports filtering by fund type.",
+      "title": "Load Funds & Types",
+      "description": "pages/funds/funds.ts: Calls api.getFunds, getFundTypes, getStations in parallel.",
       "nodeType": "feature",
-      "fileName": "display-funds-list",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "load-funds",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["ui", "api"]
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "create-fund",
+      "id": "crud-funds-ui",
       "workflowId": "frontend/funds",
-      "title": "Create Fund",
-      "description": "When user clicks 'إضافة صندوق' and fills form with {name, fundType, accountId, currencyId}, triggers POST /api/businesses/:bizId/funds. Success: closes form, refreshes list. Failure: shows validation errors.",
+      "title": "CRUD Funds",
+      "description": "pages/funds/funds.ts: Create/update/delete funds. Calls api.createFund, updateFund, deleteAccount.",
       "nodeType": "feature",
-      "fileName": "create-fund",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": ["display-funds-list"],
-      "testLayers": ["ui", "api"]
+      "fileName": "crud-funds-ui",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-funds"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "edit-fund",
+      "id": "crud-fund-types-ui",
       "workflowId": "frontend/funds",
-      "title": "Edit Fund",
-      "description": "When user clicks edit icon on fund row, opens pre-filled form. When user saves, triggers PUT /api/businesses/:bizId/funds/:id. Success: refreshes list. Failure: shows error.",
+      "title": "CRUD Fund Types",
+      "description": "pages/funds/funds.ts: Create/update/delete fund types. Calls api.createFundType, updateFundType, deleteFundType.",
       "nodeType": "feature",
-      "fileName": "edit-fund",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["create-fund"],
-      "testLayers": ["ui", "api"]
-    },
-    {
-      "id": "delete-fund",
-      "workflowId": "frontend/funds",
-      "title": "Delete Fund",
-      "description": "When user clicks delete icon, shows confirmation dialog. On confirm, triggers DELETE /api/businesses/:bizId/funds/:id. Success: removes from list. Cancel: closes dialog.",
-      "nodeType": "feature",
-      "fileName": "delete-fund",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["create-fund"],
-      "testLayers": ["ui", "api"]
+      "fileName": "crud-fund-types-ui",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-funds"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "list-to-create", "source": "display-funds-list", "target": "create-fund" },
-    { "id": "create-to-edit", "source": "create-fund", "target": "edit-fund" },
-    { "id": "create-to-delete", "source": "create-fund", "target": "delete-fund" }
+    {
+      "id": "load-funds-to-crud-funds-ui",
+      "source": "load-funds",
+      "target": "crud-funds-ui"
+    },
+    {
+      "id": "load-funds-to-crud-fund-types-ui",
+      "source": "load-funds",
+      "target": "crud-fund-types-ui"
+    }
   ]
 }

@@ -1,0 +1,621 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-screens",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/screens",
+      "description": "api.ts line 1959: Returns all screens for business.",
+      "nodeType": "feature",
+      "fileName": "list-screens",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-screen",
+      "workflowId": "backend/screens-widgets",
+      "title": "POST /businesses/:bizId/screens",
+      "description": "api.ts line 1965: Creates screen with tabs configuration. Inserts into screen_widgets for each widget.",
+      "nodeType": "feature",
+      "fileName": "create-screen",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-screen",
+      "workflowId": "backend/screens-widgets",
+      "title": "PUT /screens/:id",
+      "description": "api.ts line 2057: Updates screen name/description.",
+      "nodeType": "feature",
+      "fileName": "update-screen",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-screen",
+      "workflowId": "backend/screens-widgets",
+      "title": "DELETE /screens/:id",
+      "description": "api.ts line 2066: Deletes screen and all its widgets.",
+      "nodeType": "feature",
+      "fileName": "delete-screen",
+      "position": {
+        "x": 700,
+        "y": 100
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "clone-screen",
+      "workflowId": "backend/screens-widgets",
+      "title": "POST /screens/:screenId/clone",
+      "description": "api.ts line 2198: Deep copies screen with all widgets, templates, accounts.",
+      "nodeType": "feature",
+      "fileName": "clone-screen",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "list-screen-widgets",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /screens/:screenId/widgets",
+      "description": "api.ts line 2082: Returns all widgets for a screen.",
+      "nodeType": "feature",
+      "fileName": "list-screen-widgets",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-widget",
+      "workflowId": "backend/screens-widgets",
+      "title": "POST /screens/:screenId/widgets",
+      "description": "api.ts line 2089: Creates widget in screen.",
+      "nodeType": "feature",
+      "fileName": "create-widget",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-widget",
+      "workflowId": "backend/screens-widgets",
+      "title": "PUT /widgets/:id",
+      "description": "api.ts line 2099: Updates widget fields.",
+      "nodeType": "feature",
+      "fileName": "update-widget",
+      "position": {
+        "x": 700,
+        "y": 250
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-widget",
+      "workflowId": "backend/screens-widgets",
+      "title": "DELETE /widgets/:id",
+      "description": "api.ts line 2108: Deletes widget.",
+      "nodeType": "feature",
+      "fileName": "delete-widget",
+      "position": {
+        "x": 100,
+        "y": 400
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "batch-update-widgets",
+      "workflowId": "backend/screens-widgets",
+      "title": "PUT /screens/:screenId/widgets/batch",
+      "description": "api.ts line 2117: Updates multiple widgets at once (reorder, resize).",
+      "nodeType": "feature",
+      "fileName": "batch-update-widgets",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-templates",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET/POST/DELETE widget templates",
+      "description": "api.ts lines 2138-2167: CRUD for linking operation types to widgets. Tables: screen_widget_templates.",
+      "nodeType": "feature",
+      "fileName": "widget-templates",
+      "position": {
+        "x": 500,
+        "y": 400
+      },
+      "dependencies": [
+        "create-widget"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-accounts",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET/POST/DELETE widget accounts",
+      "description": "api.ts lines 2168-2196: CRUD for linking accounts to widgets. Tables: screen_widget_accounts.",
+      "nodeType": "feature",
+      "fileName": "widget-accounts",
+      "position": {
+        "x": 700,
+        "y": 400
+      },
+      "dependencies": [
+        "create-widget"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "copy-widget",
+      "workflowId": "backend/screens-widgets",
+      "title": "POST /widgets/:widgetId/copy-to/:targetScreenId",
+      "description": "api.ts line 2245: Copies widget to another screen with all templates and accounts.",
+      "nodeType": "feature",
+      "fileName": "copy-widget",
+      "position": {
+        "x": 100,
+        "y": 550
+      },
+      "dependencies": [
+        "create-widget"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "screens-with-widgets",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/screens-with-widgets",
+      "description": "api.ts line 2263: Returns all screens with their widgets pre-loaded.",
+      "nodeType": "feature",
+      "fileName": "screens-with-widgets",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "screen-permissions",
+      "workflowId": "backend/screens-widgets",
+      "title": "CRUD /screens/:screenId/permissions",
+      "description": "api.ts lines 2283-2355: Get, create, update, delete, batch-update screen permissions. Table: screen_permissions.",
+      "nodeType": "feature",
+      "fileName": "screen-permissions",
+      "position": {
+        "x": 500,
+        "y": 550
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "add-screen-to-sidebar",
+      "workflowId": "backend/screens-widgets",
+      "title": "POST /businesses/:bizId/screens/:screenId/add-to-sidebar",
+      "description": "api.ts line 2356: Adds screen as sidebar item.",
+      "nodeType": "feature",
+      "fileName": "add-screen-to-sidebar",
+      "position": {
+        "x": 700,
+        "y": 550
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "user-screens",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/users/:userId/screens",
+      "description": "api.ts line 2414: Returns screens accessible to specific user based on permissions.",
+      "nodeType": "feature",
+      "fileName": "user-screens",
+      "position": {
+        "x": 100,
+        "y": 700
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-stats",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-stats",
+      "description": "api.ts line 2443: Returns statistics for dashboard widgets (totals, counts).",
+      "nodeType": "feature",
+      "fileName": "widget-stats",
+      "position": {
+        "x": 300,
+        "y": 700
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-log",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-log",
+      "description": "api.ts line 2506: Returns operation log for widget display.",
+      "nodeType": "feature",
+      "fileName": "widget-log",
+      "position": {
+        "x": 500,
+        "y": 700
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-accounts-data",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-accounts",
+      "description": "api.ts line 2555: Returns account balance data for monitoring widgets.",
+      "nodeType": "feature",
+      "fileName": "widget-accounts-data",
+      "position": {
+        "x": 700,
+        "y": 700
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-chart",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-chart",
+      "description": "api.ts line 2605: Returns chart data for widget display.",
+      "nodeType": "feature",
+      "fileName": "widget-chart",
+      "position": {
+        "x": 100,
+        "y": 850
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-notes",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET/PUT /widgets/:widgetId/notes",
+      "description": "api.ts lines 2642-2660: Get and save notes for a widget.",
+      "nodeType": "feature",
+      "fileName": "widget-notes",
+      "position": {
+        "x": 300,
+        "y": 850
+      },
+      "dependencies": [
+        "create-widget"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-operation-types",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-operation-types",
+      "description": "api.ts line 2662: Returns operation types linked to widgets.",
+      "nodeType": "feature",
+      "fileName": "widget-operation-types",
+      "position": {
+        "x": 500,
+        "y": 850
+      },
+      "dependencies": [
+        "list-screen-widgets"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "collection-style-config",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET/PUT collection-style-config",
+      "description": "api.ts lines 3230-3289: Get and save custom screen display configuration (tabs, notes). Table: custom_screen_config.",
+      "nodeType": "feature",
+      "fileName": "collection-style-config",
+      "position": {
+        "x": 700,
+        "y": 850
+      },
+      "dependencies": [
+        "list-screens"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-stats-enhanced",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-stats-enhanced",
+      "description": "enhancements.ts line 501: Enhanced stats with date filtering and detailed breakdowns.",
+      "nodeType": "feature",
+      "fileName": "widget-stats-enhanced",
+      "position": {
+        "x": 100,
+        "y": 1000
+      },
+      "dependencies": [
+        "widget-stats"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-log-enhanced",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-log-enhanced",
+      "description": "enhancements.ts line 453: Enhanced log with pagination, search, and date filters.",
+      "nodeType": "feature",
+      "fileName": "widget-log-enhanced",
+      "position": {
+        "x": 300,
+        "y": 1000
+      },
+      "dependencies": [
+        "widget-log"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "widget-chart-enhanced",
+      "workflowId": "backend/screens-widgets",
+      "title": "GET /businesses/:bizId/widget-chart-enhanced",
+      "description": "enhancements.ts line 608: Enhanced chart with custom date ranges and grouping.",
+      "nodeType": "feature",
+      "fileName": "widget-chart-enhanced",
+      "position": {
+        "x": 500,
+        "y": 1000
+      },
+      "dependencies": [
+        "widget-chart"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-screens-to-create-screen",
+      "source": "list-screens",
+      "target": "create-screen"
+    },
+    {
+      "id": "list-screens-to-update-screen",
+      "source": "list-screens",
+      "target": "update-screen"
+    },
+    {
+      "id": "list-screens-to-delete-screen",
+      "source": "list-screens",
+      "target": "delete-screen"
+    },
+    {
+      "id": "list-screens-to-clone-screen",
+      "source": "list-screens",
+      "target": "clone-screen"
+    },
+    {
+      "id": "list-screens-to-list-screen-widgets",
+      "source": "list-screens",
+      "target": "list-screen-widgets"
+    },
+    {
+      "id": "list-screen-widgets-to-create-widget",
+      "source": "list-screen-widgets",
+      "target": "create-widget"
+    },
+    {
+      "id": "list-screen-widgets-to-update-widget",
+      "source": "list-screen-widgets",
+      "target": "update-widget"
+    },
+    {
+      "id": "list-screen-widgets-to-delete-widget",
+      "source": "list-screen-widgets",
+      "target": "delete-widget"
+    },
+    {
+      "id": "list-screen-widgets-to-batch-update-widgets",
+      "source": "list-screen-widgets",
+      "target": "batch-update-widgets"
+    },
+    {
+      "id": "create-widget-to-widget-templates",
+      "source": "create-widget",
+      "target": "widget-templates"
+    },
+    {
+      "id": "create-widget-to-widget-accounts",
+      "source": "create-widget",
+      "target": "widget-accounts"
+    },
+    {
+      "id": "create-widget-to-copy-widget",
+      "source": "create-widget",
+      "target": "copy-widget"
+    },
+    {
+      "id": "list-screens-to-screens-with-widgets",
+      "source": "list-screens",
+      "target": "screens-with-widgets"
+    },
+    {
+      "id": "list-screens-to-screen-permissions",
+      "source": "list-screens",
+      "target": "screen-permissions"
+    },
+    {
+      "id": "list-screens-to-add-screen-to-sidebar",
+      "source": "list-screens",
+      "target": "add-screen-to-sidebar"
+    },
+    {
+      "id": "list-screens-to-user-screens",
+      "source": "list-screens",
+      "target": "user-screens"
+    },
+    {
+      "id": "list-screen-widgets-to-widget-stats",
+      "source": "list-screen-widgets",
+      "target": "widget-stats"
+    },
+    {
+      "id": "list-screen-widgets-to-widget-log",
+      "source": "list-screen-widgets",
+      "target": "widget-log"
+    },
+    {
+      "id": "list-screen-widgets-to-widget-accounts-data",
+      "source": "list-screen-widgets",
+      "target": "widget-accounts-data"
+    },
+    {
+      "id": "list-screen-widgets-to-widget-chart",
+      "source": "list-screen-widgets",
+      "target": "widget-chart"
+    },
+    {
+      "id": "create-widget-to-widget-notes",
+      "source": "create-widget",
+      "target": "widget-notes"
+    },
+    {
+      "id": "list-screen-widgets-to-widget-operation-types",
+      "source": "list-screen-widgets",
+      "target": "widget-operation-types"
+    },
+    {
+      "id": "list-screens-to-collection-style-config",
+      "source": "list-screens",
+      "target": "collection-style-config"
+    },
+    {
+      "id": "widget-stats-to-widget-stats-enhanced",
+      "source": "widget-stats",
+      "target": "widget-stats-enhanced"
+    },
+    {
+      "id": "widget-log-to-widget-log-enhanced",
+      "source": "widget-log",
+      "target": "widget-log-enhanced"
+    },
+    {
+      "id": "widget-chart-to-widget-chart-enhanced",
+      "source": "widget-chart",
+      "target": "widget-chart-enhanced"
+    }
+  ]
+}

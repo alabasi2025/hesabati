@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-businesses",
+      "workflowId": "backend/businesses",
+      "title": "GET /businesses",
+      "description": "api.ts: Queries all businesses from businesses table. Returns array of business objects.",
+      "nodeType": "feature",
+      "fileName": "list-businesses",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-business",
+      "workflowId": "backend/businesses",
+      "title": "POST /businesses",
+      "description": "api.ts: Accepts business data. Inserts into businesses table. Returns created business.",
+      "nodeType": "feature",
+      "fileName": "create-business",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-businesses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "get-business",
+      "workflowId": "backend/businesses",
+      "title": "GET /businesses/:bizId",
+      "description": "api.ts: Protected by bizAuthMiddleware(). Queries single business by id. Returns business object.",
+      "nodeType": "feature",
+      "fileName": "get-business",
+      "position": {
+        "x": 200,
+        "y": 250
+      },
+      "dependencies": [
+        "list-businesses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-businesses-to-create-business",
+      "source": "list-businesses",
+      "target": "create-business"
+    },
+    {
+      "id": "list-businesses-to-get-business",
+      "source": "list-businesses",
+      "target": "get-business"
+    }
+  ]
+}

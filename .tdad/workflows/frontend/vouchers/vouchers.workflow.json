@@ -2,77 +2,143 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "display-vouchers-list",
+      "id": "load-vouchers-list",
       "workflowId": "frontend/vouchers",
-      "title": "Display Vouchers List",
-      "description": "When /biz/:bizId/vouchers page loads, fetch GET /api/businesses/:bizId/vouchers and display vouchers in a table with columns: number, date, type, amount, description, status. Supports filtering by type (receipt/payment/transfer) and date range.",
+      "title": "Load Vouchers List",
+      "description": "pages/vouchers/vouchers.ts: Calls api.getVouchersEnhanced(bizId, filters) or api.getVouchers(bizId). Also loads getOperationTypes, getAccounts, getFunds.",
       "nodeType": "feature",
-      "fileName": "display-vouchers-list",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "load-vouchers-list",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["ui", "api"]
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "open-voucher-form",
+      "id": "create-voucher-ui",
       "workflowId": "frontend/vouchers",
-      "title": "Open Voucher Form",
-      "description": "When user clicks 'إضافة سند' button, display form with fields: type dropdown (receipt/payment/transfer), date picker, amount input, description textarea, fromAccountId dropdown, toAccountId dropdown, currencyId dropdown, operationTypeId dropdown (required). Operation type selection auto-fills default accounts.",
+      "title": "Create Voucher",
+      "description": "pages/vouchers/vouchers.ts: Validates operationTypeId is selected before submit. Calls api.createVoucher(bizId, payload) with {operationTypeId, type, sourceAccountId, targetAccountId, amount, ...}.",
       "nodeType": "feature",
-      "fileName": "open-voucher-form",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": ["display-vouchers-list"],
-      "testLayers": ["ui"]
+      "fileName": "create-voucher-ui",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-vouchers-list"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "validate-voucher-form",
+      "id": "create-draft-ui",
       "workflowId": "frontend/vouchers",
-      "title": "Validate Voucher Form",
-      "description": "When user attempts to submit voucher form, validates: operationTypeId is selected (shows 'يجب اختيار نوع العملية' error if missing), amount > 0, date is valid, fromAccountId and toAccountId are selected. Prevents submission if validation fails.",
+      "title": "Create Draft Voucher",
+      "description": "pages/vouchers/vouchers.ts: Calls api.createVoucherDraft(bizId, payload). Saves without updating balances.",
       "nodeType": "feature",
-      "fileName": "validate-voucher-form",
-      "position": { "x": 200, "y": 250 },
-      "dependencies": ["open-voucher-form"],
-      "testLayers": ["ui"]
+      "fileName": "create-draft-ui",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "load-vouchers-list"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "submit-voucher",
+      "id": "update-voucher-ui",
       "workflowId": "frontend/vouchers",
-      "title": "Submit Voucher",
-      "description": "When user clicks 'حفظ' after validation passes, triggers POST /api/businesses/:bizId/vouchers with form data including operationTypeId. UI shows loading spinner. Success: closes form, shows success toast with voucher number, refreshes list. Failure: shows error message from API.",
+      "title": "Update Voucher",
+      "description": "pages/vouchers/vouchers.ts: Calls api.updateVoucher(bizId, id, payload).",
       "nodeType": "feature",
-      "fileName": "submit-voucher",
-      "position": { "x": 200, "y": 400 },
-      "dependencies": ["validate-voucher-form"],
-      "testLayers": ["ui", "api"]
+      "fileName": "update-voucher-ui",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-vouchers-list"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "delete-voucher",
+      "id": "change-status-ui",
       "workflowId": "frontend/vouchers",
-      "title": "Delete Voucher",
-      "description": "When user clicks delete icon on voucher row, shows confirmation dialog. On confirm, triggers DELETE /api/businesses/:bizId/vouchers/:id. Success: removes from list, shows toast. API reverses all balance changes automatically.",
+      "title": "Change Voucher Status",
+      "description": "pages/vouchers/vouchers.ts: Calls api.changeVoucherStatus(bizId, id, newStatus).",
       "nodeType": "feature",
-      "fileName": "delete-voucher",
-      "position": { "x": 100, "y": 550 },
-      "dependencies": ["submit-voucher"],
-      "testLayers": ["ui", "api"]
+      "fileName": "change-status-ui",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "load-vouchers-list"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     },
     {
-      "id": "reverse-voucher",
+      "id": "check-balance-ui",
       "workflowId": "frontend/vouchers",
-      "title": "Reverse Voucher",
-      "description": "When user clicks 'عكس' button on voucher row, shows confirmation dialog. On confirm, triggers POST /api/businesses/:bizId/vouchers/:id/reverse. Success: shows new reversal voucher number, marks original as reversed, refreshes list.",
+      "title": "Check Account Balance",
+      "description": "pages/vouchers/vouchers.ts: Calls api.getAccountBalance(bizId, accountId) to show current balance.",
       "nodeType": "feature",
-      "fileName": "reverse-voucher",
-      "position": { "x": 300, "y": 550 },
-      "dependencies": ["submit-voucher"],
-      "testLayers": ["ui", "api"]
+      "fileName": "check-balance-ui",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "load-vouchers-list"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "list-to-form", "source": "display-vouchers-list", "target": "open-voucher-form" },
-    { "id": "form-to-validate", "source": "open-voucher-form", "target": "validate-voucher-form" },
-    { "id": "validate-to-submit", "source": "validate-voucher-form", "target": "submit-voucher" },
-    { "id": "submit-to-delete", "source": "submit-voucher", "target": "delete-voucher" },
-    { "id": "submit-to-reverse", "source": "submit-voucher", "target": "reverse-voucher" }
+    {
+      "id": "load-vouchers-list-to-create-voucher-ui",
+      "source": "load-vouchers-list",
+      "target": "create-voucher-ui"
+    },
+    {
+      "id": "load-vouchers-list-to-create-draft-ui",
+      "source": "load-vouchers-list",
+      "target": "create-draft-ui"
+    },
+    {
+      "id": "load-vouchers-list-to-update-voucher-ui",
+      "source": "load-vouchers-list",
+      "target": "update-voucher-ui"
+    },
+    {
+      "id": "load-vouchers-list-to-change-status-ui",
+      "source": "load-vouchers-list",
+      "target": "change-status-ui"
+    },
+    {
+      "id": "load-vouchers-list-to-check-balance-ui",
+      "source": "load-vouchers-list",
+      "target": "check-balance-ui"
+    }
   ]
 }

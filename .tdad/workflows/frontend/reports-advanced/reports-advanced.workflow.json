@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-advanced-reports",
+      "workflowId": "frontend/reports-advanced",
+      "title": "Load Advanced Reports",
+      "description": "pages/reports-advanced/reports-advanced.ts: Calls api.getAccounts(bizId) for account selection.",
+      "nodeType": "feature",
+      "fileName": "load-advanced-reports",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "profit-loss-report",
+      "workflowId": "frontend/reports-advanced",
+      "title": "Profit/Loss Report",
+      "description": "pages/reports-advanced/reports-advanced.ts: Calls api.getProfitLossReport(bizId, dateFrom, dateTo).",
+      "nodeType": "feature",
+      "fileName": "profit-loss-report",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-advanced-reports"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "account-statement-report",
+      "workflowId": "frontend/reports-advanced",
+      "title": "Account Statement",
+      "description": "pages/reports-advanced/reports-advanced.ts: Calls api.getAccountStatement(bizId, accountId, dateFrom, dateTo).",
+      "nodeType": "feature",
+      "fileName": "account-statement-report",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "load-advanced-reports"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "daily-summary-report",
+      "workflowId": "frontend/reports-advanced",
+      "title": "Daily Summary",
+      "description": "pages/reports-advanced/reports-advanced.ts: Calls api.getDailySummary(bizId, date).",
+      "nodeType": "feature",
+      "fileName": "daily-summary-report",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "load-advanced-reports"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "trial-balance-report",
+      "workflowId": "frontend/reports-advanced",
+      "title": "Trial Balance",
+      "description": "pages/reports-advanced/reports-advanced.ts: Calls api.getTrialBalance(bizId, dateFrom, dateTo).",
+      "nodeType": "feature",
+      "fileName": "trial-balance-report",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "load-advanced-reports"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-advanced-reports-to-profit-loss-report",
+      "source": "load-advanced-reports",
+      "target": "profit-loss-report"
+    },
+    {
+      "id": "load-advanced-reports-to-account-statement-report",
+      "source": "load-advanced-reports",
+      "target": "account-statement-report"
+    },
+    {
+      "id": "load-advanced-reports-to-daily-summary-report",
+      "source": "load-advanced-reports",
+      "target": "daily-summary-report"
+    },
+    {
+      "id": "load-advanced-reports-to-trial-balance-report",
+      "source": "load-advanced-reports",
+      "target": "trial-balance-report"
+    }
+  ]
+}

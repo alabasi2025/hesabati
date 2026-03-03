@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-suppliers",
+      "workflowId": "frontend/suppliers",
+      "title": "Load Suppliers",
+      "description": "pages/suppliers/suppliers.ts: Calls api.getSuppliers(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-suppliers",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-suppliers",
+      "workflowId": "frontend/suppliers",
+      "title": "CRUD Suppliers",
+      "description": "pages/suppliers/suppliers.ts: Calls api.createSupplier, updateSupplier, deleteSupplier.",
+      "nodeType": "feature",
+      "fileName": "crud-suppliers",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-suppliers"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-suppliers-to-crud-suppliers",
+      "source": "load-suppliers",
+      "target": "crud-suppliers"
+    }
+  ]
+}

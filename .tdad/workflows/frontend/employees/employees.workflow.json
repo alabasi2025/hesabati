@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-employees-page",
+      "workflowId": "frontend/employees",
+      "title": "Load Employees",
+      "description": "pages/employees/employees.ts: Calls api.getEmployees(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-employees-page",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-employees-ui",
+      "workflowId": "frontend/employees",
+      "title": "CRUD Employees",
+      "description": "pages/employees/employees.ts: Calls create/update/delete employee APIs.",
+      "nodeType": "feature",
+      "fileName": "crud-employees-ui",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-employees-page"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-employees-page-to-crud-employees-ui",
+      "source": "load-employees-page",
+      "target": "crud-employees-ui"
+    }
+  ]
+}

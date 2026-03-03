@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-pending",
+      "workflowId": "frontend/pending-accounts",
+      "title": "Load Pending Accounts",
+      "description": "pages/pending-accounts/pending-accounts.ts: Calls api.getPendingAccounts(bizId).",
+      "nodeType": "feature",
+      "fileName": "load-pending",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "crud-pending",
+      "workflowId": "frontend/pending-accounts",
+      "title": "CRUD Pending Accounts",
+      "description": "pages/pending-accounts/pending-accounts.ts: Calls api.createPendingAccount, updatePendingAccount, deletePendingAccount.",
+      "nodeType": "feature",
+      "fileName": "crud-pending",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-pending"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-pending-to-crud-pending",
+      "source": "load-pending",
+      "target": "crud-pending"
+    }
+  ]
+}

@@ -2,48 +2,68 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "generate-profit-loss-report",
+      "id": "profit-loss",
       "workflowId": "backend/reports",
-      "title": "Generate Profit Loss Report",
-      "description": "GET /api/businesses/:bizId/reports/profit-loss?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD with Authorization header. Returns {revenue, expenses, netProfit, details: [{accountName, amount}]}. Calculates from voucher and journal entry data.",
+      "title": "GET /businesses/:bizId/reports/profit-loss",
+      "description": "api.ts line 3057: Returns profit/loss report for date range. Aggregates revenue and expense accounts.",
       "nodeType": "feature",
-      "fileName": "generate-profit-loss-report",
-      "position": { "x": 100, "y": 100 },
+      "fileName": "profit-loss",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "generate-account-statement",
+      "id": "account-statement",
       "workflowId": "backend/reports",
-      "title": "Generate Account Statement",
-      "description": "GET /api/businesses/:bizId/reports/account-statement/:accountId?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD with Authorization header. Returns {accountName, openingBalance, transactions: [{date, description, debit, credit, balance}], closingBalance}.",
+      "title": "GET /businesses/:bizId/reports/account-statement/:accountId",
+      "description": "api.ts line 3103: Returns account statement with all transactions for date range.",
       "nodeType": "feature",
-      "fileName": "generate-account-statement",
-      "position": { "x": 300, "y": 100 },
+      "fileName": "account-statement",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "generate-daily-summary",
+      "id": "daily-summary",
       "workflowId": "backend/reports",
-      "title": "Generate Daily Summary",
-      "description": "GET /api/businesses/:bizId/reports/daily-summary?date=YYYY-MM-DD with Authorization header. Returns {date, totalReceipts, totalPayments, totalTransfers, voucherCount, journalEntryCount}.",
+      "title": "GET /businesses/:bizId/reports/daily-summary",
+      "description": "api.ts line 3153: Returns daily summary of all transactions for a specific date.",
       "nodeType": "feature",
-      "fileName": "generate-daily-summary",
-      "position": { "x": 100, "y": 250 },
+      "fileName": "daily-summary",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "generate-trial-balance",
+      "id": "trial-balance",
       "workflowId": "backend/reports",
-      "title": "Generate Trial Balance",
-      "description": "GET /api/businesses/:bizId/reports/trial-balance?date=YYYY-MM-DD with Authorization header. Returns array of {accountId, accountName, accountCode, debitBalance, creditBalance}. Total debits must equal total credits.",
+      "title": "GET /businesses/:bizId/reports/trial-balance",
+      "description": "api.ts line 3194: Returns trial balance report with all account balances.",
       "nodeType": "feature",
-      "fileName": "generate-trial-balance",
-      "position": { "x": 300, "y": 250 },
+      "fileName": "trial-balance",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": []

@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-suppliers",
+      "workflowId": "backend/suppliers",
+      "title": "GET /businesses/:bizId/suppliers",
+      "description": "api.ts line 1108: Returns all suppliers for business.",
+      "nodeType": "feature",
+      "fileName": "list-suppliers",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "create-supplier",
+      "workflowId": "backend/suppliers",
+      "title": "POST /businesses/:bizId/suppliers",
+      "description": "api.ts line 1114: Creates supplier.",
+      "nodeType": "feature",
+      "fileName": "create-supplier",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-suppliers"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-supplier",
+      "workflowId": "backend/suppliers",
+      "title": "PUT /suppliers/:id",
+      "description": "api.ts line 1123: Updates supplier.",
+      "nodeType": "feature",
+      "fileName": "update-supplier",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-suppliers"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-supplier",
+      "workflowId": "backend/suppliers",
+      "title": "DELETE /suppliers/:id",
+      "description": "api.ts line 1132: Deletes supplier.",
+      "nodeType": "feature",
+      "fileName": "delete-supplier",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-suppliers"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-suppliers-to-create-supplier",
+      "source": "list-suppliers",
+      "target": "create-supplier"
+    },
+    {
+      "id": "list-suppliers-to-update-supplier",
+      "source": "list-suppliers",
+      "target": "update-supplier"
+    },
+    {
+      "id": "list-suppliers-to-delete-supplier",
+      "source": "list-suppliers",
+      "target": "delete-supplier"
+    }
+  ]
+}

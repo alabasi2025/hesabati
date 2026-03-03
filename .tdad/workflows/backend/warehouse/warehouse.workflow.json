@@ -4,95 +4,296 @@
     {
       "id": "list-warehouses",
       "workflowId": "backend/warehouse",
-      "title": "List Warehouses",
-      "description": "GET /api/businesses/:bizId/warehouses with Authorization header. Returns array of warehouses with {id, name, warehouseTypeId, businessId}. Includes warehouse type details.",
+      "title": "GET /businesses/:bizId/warehouses",
+      "description": "api.ts line 1140: Returns all warehouses for business.",
       "nodeType": "feature",
       "fileName": "list-warehouses",
-      "position": { "x": 100, "y": 100 },
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "create-warehouse-operation",
+      "id": "create-warehouse",
       "workflowId": "backend/warehouse",
-      "title": "Create Warehouse Operation",
-      "description": "POST /api/businesses/:bizId/warehouse-operations with {warehouseId, operationType, date, operationTypeId, items: [{itemName, quantity, unitPrice}]}. Validates warehouse belongs to business (returns 403 'هذا المخزن لا يتبع لهذا النشاط التجاري'). Validates operationTypeId is required (returns 400). Creates operation and updates inventory. Returns created operation.",
+      "title": "POST /businesses/:bizId/warehouses",
+      "description": "api.ts line 1146: Creates warehouse with {name, stationId, warehouseTypeId, ...}.",
       "nodeType": "feature",
-      "fileName": "create-warehouse-operation",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "fileName": "create-warehouse",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "update-warehouse",
+      "workflowId": "backend/warehouse",
+      "title": "PUT /warehouses/:id",
+      "description": "api.ts line 1167: Updates warehouse fields.",
+      "nodeType": "feature",
+      "fileName": "update-warehouse",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "delete-warehouse",
+      "workflowId": "backend/warehouse",
+      "title": "DELETE /warehouses/:id",
+      "description": "api.ts line 1176: Deletes warehouse.",
+      "nodeType": "feature",
+      "fileName": "delete-warehouse",
+      "position": {
+        "x": 700,
+        "y": 100
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "list-warehouse-operations",
       "workflowId": "backend/warehouse",
-      "title": "List Warehouse Operations",
-      "description": "GET /api/businesses/:bizId/warehouses/:warehouseId/operations with Authorization header. Supports query params: dateFrom, dateTo, operationType. Returns array of operations with {id, operationType, date, items[], totalAmount}.",
+      "title": "GET /businesses/:bizId/warehouses/:warehouseId/operations",
+      "description": "api.ts line 3357: Returns operations for specific warehouse with items.",
       "nodeType": "feature",
       "fileName": "list-warehouse-operations",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "get-operation-details",
+      "id": "create-warehouse-operation",
       "workflowId": "backend/warehouse",
-      "title": "Get Operation Details",
-      "description": "GET /api/warehouse-operations/:id with Authorization header. Returns single operation with {id, warehouseId, operationType, date, items: [{itemName, quantity, unitPrice}], totalAmount}. Returns 404 if not found.",
+      "title": "POST /businesses/:bizId/warehouse-operations",
+      "description": "api.ts line 3388: Validates operationTypeId required. Validates warehouse belongs to business. Creates operation with items. Updates inventory_stock. Generates sequence number.",
       "nodeType": "feature",
-      "fileName": "get-operation-details",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "fileName": "create-warehouse-operation",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "get-warehouse-operation",
+      "workflowId": "backend/warehouse",
+      "title": "GET /warehouse-operations/:id",
+      "description": "api.ts line 3505: Returns single operation with items.",
+      "nodeType": "feature",
+      "fileName": "get-warehouse-operation",
+      "position": {
+        "x": 500,
+        "y": 250
+      },
+      "dependencies": [
+        "list-warehouse-operations"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "get-warehouse-inventory",
       "workflowId": "backend/warehouse",
-      "title": "Get Warehouse Inventory",
-      "description": "GET /api/businesses/:bizId/warehouses/:warehouseId/inventory with Authorization header. Returns current inventory items with {itemName, totalQuantity, avgUnitPrice, totalValue}. Filters out ghost items (quantity=0 or empty names).",
+      "title": "GET /businesses/:bizId/warehouses/:warehouseId/inventory",
+      "description": "api.ts line 3538: Returns inventory items for warehouse. FILTERS ghost items (quantity=0 or empty name).",
       "nodeType": "feature",
       "fileName": "get-warehouse-inventory",
-      "position": { "x": 100, "y": 400 },
-      "dependencies": ["create-warehouse-operation"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 100,
+        "y": 400
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "list-all-warehouse-operations",
+      "workflowId": "backend/warehouse",
+      "title": "GET /businesses/:bizId/warehouse-operations",
+      "description": "api.ts line 3589: Returns all warehouse operations across all warehouses.",
+      "nodeType": "feature",
+      "fileName": "list-all-warehouse-operations",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "get-inventory-summary",
       "workflowId": "backend/warehouse",
-      "title": "Get Inventory Summary",
-      "description": "GET /api/businesses/:bizId/inventory-summary?warehouseIds=1,2,3 with Authorization header. Returns aggregated inventory across multiple warehouses. Filters out ghost items. Returns 400 if warehouseIds not provided.",
+      "title": "GET /businesses/:bizId/inventory-summary",
+      "description": "api.ts line 3621: Returns aggregated inventory across multiple warehouses. Requires warehouseIds query param. FILTERS ghost items.",
       "nodeType": "feature",
       "fileName": "get-inventory-summary",
-      "position": { "x": 300, "y": 400 },
-      "dependencies": ["create-warehouse-operation"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 500,
+        "y": 400
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "get-operations-summary",
       "workflowId": "backend/warehouse",
-      "title": "Get Operations Summary",
-      "description": "GET /api/businesses/:bizId/warehouse-operations-summary?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD with Authorization header. Returns summary of warehouse operations grouped by type. Validates date format using regex (rejects SQL injection). Returns 400 with 'تنسيق التاريخ غير صالح' for invalid dates.",
+      "title": "GET /businesses/:bizId/warehouse-operations-summary",
+      "description": "api.ts line 3684: Returns operations summary with date filtering. VALIDATES date format with regex to prevent SQL injection.",
       "nodeType": "feature",
       "fileName": "get-operations-summary",
-      "position": { "x": 500, "y": 400 },
-      "dependencies": ["create-warehouse-operation"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 700,
+        "y": 400
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
-      "id": "manage-warehouse-types",
+      "id": "list-warehouse-types",
       "workflowId": "backend/warehouse",
-      "title": "Manage Warehouse Types",
-      "description": "CRUD for warehouse types. POST /api/businesses/:bizId/warehouse-types with {name, description?}. PUT /api/warehouse-types/:id with {name?, description?}. DELETE /api/warehouse-types/:id. GET /api/businesses/:bizId/warehouse-types returns all types.",
+      "title": "GET /businesses/:bizId/warehouse-types",
+      "description": "api.ts line 3290: Returns warehouse type categories.",
       "nodeType": "feature",
-      "fileName": "manage-warehouse-types",
-      "position": { "x": 500, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "fileName": "list-warehouse-types",
+      "position": {
+        "x": 100,
+        "y": 550
+      },
+      "dependencies": [
+        "list-warehouses"
+      ],
+      "testLayers": [
+        "api"
+      ]
+    },
+    {
+      "id": "crud-warehouse-types",
+      "workflowId": "backend/warehouse",
+      "title": "POST/PUT/DELETE warehouse-types",
+      "description": "api.ts lines 3296-3321: Create, update, delete warehouse types.",
+      "nodeType": "feature",
+      "fileName": "crud-warehouse-types",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "dependencies": [
+        "list-warehouse-types"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "create-to-inventory", "source": "create-warehouse-operation", "target": "get-warehouse-inventory" },
-    { "id": "create-to-summary", "source": "create-warehouse-operation", "target": "get-inventory-summary" },
-    { "id": "create-to-ops-summary", "source": "create-warehouse-operation", "target": "get-operations-summary" }
+    {
+      "id": "list-warehouses-to-create-warehouse",
+      "source": "list-warehouses",
+      "target": "create-warehouse"
+    },
+    {
+      "id": "list-warehouses-to-update-warehouse",
+      "source": "list-warehouses",
+      "target": "update-warehouse"
+    },
+    {
+      "id": "list-warehouses-to-delete-warehouse",
+      "source": "list-warehouses",
+      "target": "delete-warehouse"
+    },
+    {
+      "id": "list-warehouses-to-list-warehouse-operations",
+      "source": "list-warehouses",
+      "target": "list-warehouse-operations"
+    },
+    {
+      "id": "list-warehouses-to-create-warehouse-operation",
+      "source": "list-warehouses",
+      "target": "create-warehouse-operation"
+    },
+    {
+      "id": "list-warehouse-operations-to-get-warehouse-operation",
+      "source": "list-warehouse-operations",
+      "target": "get-warehouse-operation"
+    },
+    {
+      "id": "list-warehouses-to-get-warehouse-inventory",
+      "source": "list-warehouses",
+      "target": "get-warehouse-inventory"
+    },
+    {
+      "id": "list-warehouses-to-list-all-warehouse-operations",
+      "source": "list-warehouses",
+      "target": "list-all-warehouse-operations"
+    },
+    {
+      "id": "list-warehouses-to-get-inventory-summary",
+      "source": "list-warehouses",
+      "target": "get-inventory-summary"
+    },
+    {
+      "id": "list-warehouses-to-get-operations-summary",
+      "source": "list-warehouses",
+      "target": "get-operations-summary"
+    },
+    {
+      "id": "list-warehouses-to-list-warehouse-types",
+      "source": "list-warehouses",
+      "target": "list-warehouse-types"
+    },
+    {
+      "id": "list-warehouse-types-to-crud-warehouse-types",
+      "source": "list-warehouse-types",
+      "target": "crud-warehouse-types"
+    }
   ]
 }

@@ -4,62 +4,89 @@
     {
       "id": "list-employees",
       "workflowId": "backend/employees",
-      "title": "List Employees",
-      "description": "GET /api/businesses/:bizId/employees with Authorization header. Returns array of employees with {id, name, phone, position, stationId, billingAccounts[]}.",
+      "title": "GET /businesses/:bizId/employees",
+      "description": "api.ts line 175: Returns all employees for business.",
       "nodeType": "feature",
       "fileName": "list-employees",
-      "position": { "x": 100, "y": 100 },
+      "position": {
+        "x": 100,
+        "y": 100
+      },
       "dependencies": [],
-      "testLayers": ["api"]
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "create-employee",
       "workflowId": "backend/employees",
-      "title": "Create Employee",
-      "description": "POST /api/businesses/:bizId/employees with {name, phone?, position?, stationId?}. Creates employee record. Returns created employee.",
+      "title": "POST /businesses/:bizId/employees",
+      "description": "api.ts line 183: Creates employee.",
       "nodeType": "feature",
       "fileName": "create-employee",
-      "position": { "x": 300, "y": 100 },
-      "dependencies": [],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "list-employees"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "update-employee",
       "workflowId": "backend/employees",
-      "title": "Update Employee",
-      "description": "PUT /api/businesses/:bizId/employees/:id with {name?, phone?, position?, stationId?}. Updates employee fields. Returns updated employee.",
+      "title": "PUT /businesses/:bizId/employees/:id",
+      "description": "api.ts line 192: Updates employee.",
       "nodeType": "feature",
       "fileName": "update-employee",
-      "position": { "x": 100, "y": 250 },
-      "dependencies": ["create-employee"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "list-employees"
+      ],
+      "testLayers": [
+        "api"
+      ]
     },
     {
       "id": "delete-employee",
       "workflowId": "backend/employees",
-      "title": "Delete Employee",
-      "description": "DELETE /api/businesses/:bizId/employees/:id. Removes employee record. Returns 200 with {message: 'تم الحذف'}.",
+      "title": "DELETE /businesses/:bizId/employees/:id",
+      "description": "api.ts line 203: Deletes employee.",
       "nodeType": "feature",
       "fileName": "delete-employee",
-      "position": { "x": 300, "y": 250 },
-      "dependencies": ["create-employee"],
-      "testLayers": ["api"]
-    },
-    {
-      "id": "manage-billing-accounts",
-      "workflowId": "backend/employees",
-      "title": "Manage Billing Accounts",
-      "description": "CRUD for employee billing accounts. POST /api/employee-billing-accounts with {employeeId, accountId, billingSystemId}. PUT /api/employee-billing-accounts/:id. DELETE /api/employee-billing-accounts/:id. GET /api/businesses/:bizId/employee-billing-accounts returns all.",
-      "nodeType": "feature",
-      "fileName": "manage-billing-accounts",
-      "position": { "x": 200, "y": 400 },
-      "dependencies": ["create-employee"],
-      "testLayers": ["api"]
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "list-employees"
+      ],
+      "testLayers": [
+        "api"
+      ]
     }
   ],
   "edges": [
-    { "id": "create-to-update", "source": "create-employee", "target": "update-employee" },
-    { "id": "create-to-delete", "source": "create-employee", "target": "delete-employee" },
-    { "id": "create-to-billing", "source": "create-employee", "target": "manage-billing-accounts" }
+    {
+      "id": "list-employees-to-create-employee",
+      "source": "list-employees",
+      "target": "create-employee"
+    },
+    {
+      "id": "list-employees-to-update-employee",
+      "source": "list-employees",
+      "target": "update-employee"
+    },
+    {
+      "id": "list-employees-to-delete-employee",
+      "source": "list-employees",
+      "target": "delete-employee"
+    }
   ]
 }
