@@ -1,0 +1,89 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-vouchers",
+      "workflowId": "backend/vouchers",
+      "title": "List Vouchers",
+      "description": "GET /api/businesses/:bizId/vouchers with Authorization header. Supports query params: type (receipt|payment|transfer), dateFrom, dateTo, page, limit. Returns paginated array of vouchers with {id, voucherNumber, type, date, amount, description, lines[], status}.",
+      "nodeType": "feature",
+      "fileName": "list-vouchers",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "validate-voucher-data",
+      "workflowId": "backend/vouchers",
+      "title": "Validate Voucher Data",
+      "description": "Validates voucher payload before creation. Checks: operationTypeId is required (returns 400 'operationTypeId: Required'), type must be receipt|payment|transfer, amount > 0, fromAccountId and toAccountId must exist and belong to business. For transfer type: rejects if both accounts are 'safe' type (returns 400 'لا يمكن التحويل بين خزينتين').",
+      "nodeType": "feature",
+      "fileName": "validate-voucher-data",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-voucher",
+      "workflowId": "backend/vouchers",
+      "title": "Create Voucher",
+      "description": "POST /api/businesses/:bizId/vouchers with {type, date, amount, description, fromAccountId, toAccountId, currencyId, operationTypeId, lines[]}. Generates sequential voucher number, creates voucher record, updates account and fund balances. Returns created voucher with generated number.",
+      "nodeType": "feature",
+      "fileName": "create-voucher",
+      "position": { "x": 200, "y": 250 },
+      "dependencies": ["validate-voucher-data"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-voucher",
+      "workflowId": "backend/vouchers",
+      "title": "Update Voucher",
+      "description": "PUT /api/businesses/:bizId/vouchers/:id with {date?, amount?, description?, lines?[]}. Updates voucher fields. Returns updated voucher object.",
+      "nodeType": "feature",
+      "fileName": "update-voucher",
+      "position": { "x": 100, "y": 400 },
+      "dependencies": ["create-voucher"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-voucher",
+      "workflowId": "backend/vouchers",
+      "title": "Delete Voucher",
+      "description": "DELETE /api/businesses/:bizId/vouchers/:id. Reverses all balance changes (account balances and fund balances), deletes voucher lines, then deletes voucher. Returns 200 with {message: 'تم الحذف'}.",
+      "nodeType": "feature",
+      "fileName": "delete-voucher",
+      "position": { "x": 300, "y": 400 },
+      "dependencies": ["create-voucher"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "reverse-voucher",
+      "workflowId": "backend/vouchers",
+      "title": "Reverse Voucher",
+      "description": "POST /api/businesses/:bizId/vouchers/:id/reverse with Authorization header. Creates a new reversal voucher that negates the original voucher's balance effects. Marks original voucher as reversed. Returns new reversal voucher object.",
+      "nodeType": "feature",
+      "fileName": "reverse-voucher",
+      "position": { "x": 500, "y": 400 },
+      "dependencies": ["create-voucher"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-draft-voucher",
+      "workflowId": "backend/vouchers",
+      "title": "Create Draft Voucher",
+      "description": "POST /api/businesses/:bizId/vouchers-draft with {type, date, amount, description, fromAccountId, toAccountId, currencyId, operationTypeId}. Creates voucher in draft status without affecting balances. Returns draft voucher object with status='draft'.",
+      "nodeType": "feature",
+      "fileName": "create-draft-voucher",
+      "position": { "x": 200, "y": 550 },
+      "dependencies": ["validate-voucher-data"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "validate-to-create", "source": "validate-voucher-data", "target": "create-voucher" },
+    { "id": "create-to-update", "source": "create-voucher", "target": "update-voucher" },
+    { "id": "create-to-delete", "source": "create-voucher", "target": "delete-voucher" },
+    { "id": "create-to-reverse", "source": "create-voucher", "target": "reverse-voucher" },
+    { "id": "validate-to-draft", "source": "validate-voucher-data", "target": "create-draft-voucher" }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-employees",
+      "workflowId": "backend/employees",
+      "title": "List Employees",
+      "description": "GET /api/businesses/:bizId/employees with Authorization header. Returns array of employees with {id, name, phone, position, stationId, billingAccounts[]}.",
+      "nodeType": "feature",
+      "fileName": "list-employees",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-employee",
+      "workflowId": "backend/employees",
+      "title": "Create Employee",
+      "description": "POST /api/businesses/:bizId/employees with {name, phone?, position?, stationId?}. Creates employee record. Returns created employee.",
+      "nodeType": "feature",
+      "fileName": "create-employee",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-employee",
+      "workflowId": "backend/employees",
+      "title": "Update Employee",
+      "description": "PUT /api/businesses/:bizId/employees/:id with {name?, phone?, position?, stationId?}. Updates employee fields. Returns updated employee.",
+      "nodeType": "feature",
+      "fileName": "update-employee",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": ["create-employee"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-employee",
+      "workflowId": "backend/employees",
+      "title": "Delete Employee",
+      "description": "DELETE /api/businesses/:bizId/employees/:id. Removes employee record. Returns 200 with {message: 'تم الحذف'}.",
+      "nodeType": "feature",
+      "fileName": "delete-employee",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-employee"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "manage-billing-accounts",
+      "workflowId": "backend/employees",
+      "title": "Manage Billing Accounts",
+      "description": "CRUD for employee billing accounts. POST /api/employee-billing-accounts with {employeeId, accountId, billingSystemId}. PUT /api/employee-billing-accounts/:id. DELETE /api/employee-billing-accounts/:id. GET /api/businesses/:bizId/employee-billing-accounts returns all.",
+      "nodeType": "feature",
+      "fileName": "manage-billing-accounts",
+      "position": { "x": 200, "y": 400 },
+      "dependencies": ["create-employee"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-employee", "target": "update-employee" },
+    { "id": "create-to-delete", "source": "create-employee", "target": "delete-employee" },
+    { "id": "create-to-billing", "source": "create-employee", "target": "manage-billing-accounts" }
+  ]
+}

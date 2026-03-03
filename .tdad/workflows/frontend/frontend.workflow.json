@@ -1,0 +1,106 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "auth",
+      "workflowId": "frontend",
+      "title": "Authentication UI",
+      "description": "Login page, auth guard, and session management",
+      "nodeType": "folder",
+      "folderPath": "frontend/auth",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": []
+    },
+    {
+      "id": "dashboard",
+      "workflowId": "frontend",
+      "title": "Dashboard UI",
+      "description": "Dashboard widgets, statistics, charts, and activity log",
+      "nodeType": "folder",
+      "folderPath": "frontend/dashboard",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": []
+    },
+    {
+      "id": "accounts",
+      "workflowId": "frontend",
+      "title": "Accounts UI",
+      "description": "Account management, tree view, and account linking",
+      "nodeType": "folder",
+      "folderPath": "frontend/accounts",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": []
+    },
+    {
+      "id": "funds",
+      "workflowId": "frontend",
+      "title": "Funds UI",
+      "description": "Safes, banks, wallets, and exchangers management",
+      "nodeType": "folder",
+      "folderPath": "frontend/funds",
+      "position": { "x": 100, "y": 300 },
+      "dependencies": []
+    },
+    {
+      "id": "vouchers",
+      "workflowId": "frontend",
+      "title": "Vouchers UI",
+      "description": "Receipt, payment, and transfer voucher forms",
+      "nodeType": "folder",
+      "folderPath": "frontend/vouchers",
+      "position": { "x": 300, "y": 300 },
+      "dependencies": []
+    },
+    {
+      "id": "journal",
+      "workflowId": "frontend",
+      "title": "Journal UI",
+      "description": "Journal entry forms and listing",
+      "nodeType": "folder",
+      "folderPath": "frontend/journal",
+      "position": { "x": 500, "y": 300 },
+      "dependencies": []
+    },
+    {
+      "id": "warehouse",
+      "workflowId": "frontend",
+      "title": "Warehouse UI",
+      "description": "Warehouse management and inventory operations",
+      "nodeType": "folder",
+      "folderPath": "frontend/warehouse",
+      "position": { "x": 100, "y": 500 },
+      "dependencies": []
+    },
+    {
+      "id": "reports",
+      "workflowId": "frontend",
+      "title": "Reports UI",
+      "description": "Financial reports display and export",
+      "nodeType": "folder",
+      "folderPath": "frontend/reports",
+      "position": { "x": 300, "y": 500 },
+      "dependencies": []
+    },
+    {
+      "id": "settings",
+      "workflowId": "frontend",
+      "title": "Settings UI",
+      "description": "Sidebar settings, roles, operation types, and custom screens",
+      "nodeType": "folder",
+      "folderPath": "frontend/settings",
+      "position": { "x": 500, "y": 500 },
+      "dependencies": []
+    },
+    {
+      "id": "screens",
+      "workflowId": "frontend",
+      "title": "Custom Screens UI",
+      "description": "Dynamic custom screen rendering with tabs",
+      "nodeType": "folder",
+      "folderPath": "frontend/screens",
+      "position": { "x": 300, "y": 700 },
+      "dependencies": []
+    }
+  ],
+  "edges": []
+}

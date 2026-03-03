@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-stations",
+      "workflowId": "backend/stations",
+      "title": "List Stations",
+      "description": "GET /api/businesses/:bizId/stations with Authorization header. Returns array of stations with {id, name, businessId}.",
+      "nodeType": "feature",
+      "fileName": "list-stations",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-station-details",
+      "workflowId": "backend/stations",
+      "title": "Get Station Details",
+      "description": "GET /api/businesses/:bizId/stations/:id with Authorization header. Returns single station {id, name, businessId}. Returns 404 if not found.",
+      "nodeType": "feature",
+      "fileName": "get-station-details",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-station",
+      "workflowId": "backend/stations",
+      "title": "Create Station",
+      "description": "POST /api/businesses/:bizId/stations with {name}. Creates station record. Returns created station with {id, name, businessId}.",
+      "nodeType": "feature",
+      "fileName": "create-station",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-station",
+      "workflowId": "backend/stations",
+      "title": "Update Station",
+      "description": "PUT /api/businesses/:bizId/stations/:id with {name}. Updates station name. Returns updated station.",
+      "nodeType": "feature",
+      "fileName": "update-station",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-station"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-station",
+      "workflowId": "backend/stations",
+      "title": "Delete Station",
+      "description": "DELETE /api/businesses/:bizId/stations/:id. Removes station record. Returns 200 with {message: 'تم الحذف'}.",
+      "nodeType": "feature",
+      "fileName": "delete-station",
+      "position": { "x": 500, "y": 250 },
+      "dependencies": ["create-station"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-station", "target": "update-station" },
+    { "id": "create-to-delete", "source": "create-station", "target": "delete-station" }
+  ]
+}

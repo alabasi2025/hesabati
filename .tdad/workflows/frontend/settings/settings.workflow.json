@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "manage-operation-types",
+      "workflowId": "frontend/settings",
+      "title": "Manage Operation Types",
+      "description": "When /biz/:bizId/operation-types page loads, fetch and display operation types in table. User can create new type with form (name, category, default accounts, warehouse). Edit and delete supported via row actions. Name uniqueness checked via API.",
+      "nodeType": "feature",
+      "fileName": "manage-operation-types",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "manage-sidebar-settings",
+      "workflowId": "frontend/settings",
+      "title": "Manage Sidebar Settings",
+      "description": "When /biz/:bizId/sidebar-settings page loads, display sidebar sections and items in drag-and-drop interface. User can add/remove sections and items, reorder them, and copy/reset configurations between users.",
+      "nodeType": "feature",
+      "fileName": "manage-sidebar-settings",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "manage-roles",
+      "workflowId": "frontend/settings",
+      "title": "Manage Roles",
+      "description": "When /biz/:bizId/roles page loads, fetch and display roles with permissions. User can create role with name and permission checkboxes. Edit role permissions. Assign/remove roles from users. Delete roles with confirmation.",
+      "nodeType": "feature",
+      "fileName": "manage-roles",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "manage-exchange-rates",
+      "workflowId": "frontend/settings",
+      "title": "Manage Exchange Rates",
+      "description": "When /biz/:bizId/exchange-rates page loads, fetch and display exchange rates. User can add new rate with from/to currency dropdowns and rate input. Edit and delete rates. Currency converter tool available.",
+      "nodeType": "feature",
+      "fileName": "manage-exchange-rates",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "manage-journal-categories",
+      "workflowId": "frontend/settings",
+      "title": "Manage Journal Categories",
+      "description": "When /biz/:bizId/journal-categories page loads, fetch and display journal entry categories. User can create, edit, and delete categories. Each category has name and optional description.",
+      "nodeType": "feature",
+      "fileName": "manage-journal-categories",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": []
+}

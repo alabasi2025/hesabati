@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-funds-list",
+      "workflowId": "frontend/funds",
+      "title": "Display Funds List",
+      "description": "When /biz/:bizId/funds page loads, fetch GET /api/businesses/:bizId/funds and display funds in a table with columns: name, type (safe/bank/wallet/exchanger), linked account, balance. Supports filtering by fund type.",
+      "nodeType": "feature",
+      "fileName": "display-funds-list",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "create-fund",
+      "workflowId": "frontend/funds",
+      "title": "Create Fund",
+      "description": "When user clicks 'إضافة صندوق' and fills form with {name, fundType, accountId, currencyId}, triggers POST /api/businesses/:bizId/funds. Success: closes form, refreshes list. Failure: shows validation errors.",
+      "nodeType": "feature",
+      "fileName": "create-fund",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["display-funds-list"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "edit-fund",
+      "workflowId": "frontend/funds",
+      "title": "Edit Fund",
+      "description": "When user clicks edit icon on fund row, opens pre-filled form. When user saves, triggers PUT /api/businesses/:bizId/funds/:id. Success: refreshes list. Failure: shows error.",
+      "nodeType": "feature",
+      "fileName": "edit-fund",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": ["create-fund"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "delete-fund",
+      "workflowId": "frontend/funds",
+      "title": "Delete Fund",
+      "description": "When user clicks delete icon, shows confirmation dialog. On confirm, triggers DELETE /api/businesses/:bizId/funds/:id. Success: removes from list. Cancel: closes dialog.",
+      "nodeType": "feature",
+      "fileName": "delete-fund",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-fund"],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": [
+    { "id": "list-to-create", "source": "display-funds-list", "target": "create-fund" },
+    { "id": "create-to-edit", "source": "create-fund", "target": "edit-fund" },
+    { "id": "create-to-delete", "source": "create-fund", "target": "delete-fund" }
+  ]
+}

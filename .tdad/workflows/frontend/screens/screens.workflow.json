@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-custom-screens-list",
+      "workflowId": "frontend/screens",
+      "title": "Display Custom Screens List",
+      "description": "When /biz/:bizId/custom-screens page loads, fetch GET /api/businesses/:bizId/custom-screens and display screens as cards. Each card shows screen name, description, and tab count. Clicking a card opens the screen view.",
+      "nodeType": "feature",
+      "fileName": "display-custom-screens-list",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "create-custom-screen",
+      "workflowId": "frontend/screens",
+      "title": "Create Custom Screen",
+      "description": "When user clicks 'إضافة شاشة' and fills form with {name, description, tabs[]}, triggers POST /api/businesses/:bizId/custom-screens. Tab configuration includes type (operations, monitoring, summary) and linked resources. Success: refreshes list.",
+      "nodeType": "feature",
+      "fileName": "create-custom-screen",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["display-custom-screens-list"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "render-custom-screen-tabs",
+      "workflowId": "frontend/screens",
+      "title": "Render Custom Screen Tabs",
+      "description": "When user opens a custom screen, render tab navigation at top. Each tab displays its configured content: operations tab shows linked operation types, monitoring tab shows account balances, summary tab shows aggregated data. Tab switching is instant without page reload.",
+      "nodeType": "feature",
+      "fileName": "render-custom-screen-tabs",
+      "position": { "x": 200, "y": 250 },
+      "dependencies": ["create-custom-screen"],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": [
+    { "id": "list-to-create", "source": "display-custom-screens-list", "target": "create-custom-screen" },
+    { "id": "create-to-render", "source": "create-custom-screen", "target": "render-custom-screen-tabs" }
+  ]
+}

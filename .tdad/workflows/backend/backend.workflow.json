@@ -1,0 +1,156 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "auth",
+      "workflowId": "backend",
+      "title": "Authentication",
+      "description": "User login, registration, and session management",
+      "nodeType": "folder",
+      "folderPath": "backend/auth",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": []
+    },
+    {
+      "id": "accounts",
+      "workflowId": "backend",
+      "title": "Accounts Management",
+      "description": "Chart of accounts CRUD and account linking",
+      "nodeType": "folder",
+      "folderPath": "backend/accounts",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": []
+    },
+    {
+      "id": "funds",
+      "workflowId": "backend",
+      "title": "Funds Management",
+      "description": "Safes, banks, wallets, and exchangers CRUD",
+      "nodeType": "folder",
+      "folderPath": "backend/funds",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": []
+    },
+    {
+      "id": "vouchers",
+      "workflowId": "backend",
+      "title": "Vouchers",
+      "description": "Receipt, payment, and transfer vouchers with balance tracking",
+      "nodeType": "folder",
+      "folderPath": "backend/vouchers",
+      "position": { "x": 100, "y": 300 },
+      "dependencies": []
+    },
+    {
+      "id": "journal",
+      "workflowId": "backend",
+      "title": "Journal Entries",
+      "description": "Accounting journal entries with debit/credit balancing",
+      "nodeType": "folder",
+      "folderPath": "backend/journal",
+      "position": { "x": 300, "y": 300 },
+      "dependencies": []
+    },
+    {
+      "id": "warehouse",
+      "workflowId": "backend",
+      "title": "Warehouse & Inventory",
+      "description": "Warehouse operations, inventory tracking, and stock management",
+      "nodeType": "folder",
+      "folderPath": "backend/warehouse",
+      "position": { "x": 500, "y": 300 },
+      "dependencies": []
+    },
+    {
+      "id": "operation-types",
+      "workflowId": "backend",
+      "title": "Operation Types",
+      "description": "Templates for voucher and warehouse operations",
+      "nodeType": "folder",
+      "folderPath": "backend/operation-types",
+      "position": { "x": 100, "y": 500 },
+      "dependencies": []
+    },
+    {
+      "id": "custom-screens",
+      "workflowId": "backend",
+      "title": "Custom Screens",
+      "description": "User-defined screens with tabs and widgets",
+      "nodeType": "folder",
+      "folderPath": "backend/custom-screens",
+      "position": { "x": 300, "y": 500 },
+      "dependencies": []
+    },
+    {
+      "id": "currencies",
+      "workflowId": "backend",
+      "title": "Currencies & Exchange",
+      "description": "Multi-currency support and exchange rate management",
+      "nodeType": "folder",
+      "folderPath": "backend/currencies",
+      "position": { "x": 500, "y": 500 },
+      "dependencies": []
+    },
+    {
+      "id": "roles",
+      "workflowId": "backend",
+      "title": "Roles & Permissions",
+      "description": "Role-based access control and user role assignment",
+      "nodeType": "folder",
+      "folderPath": "backend/roles",
+      "position": { "x": 100, "y": 700 },
+      "dependencies": []
+    },
+    {
+      "id": "reports",
+      "workflowId": "backend",
+      "title": "Financial Reports",
+      "description": "Profit/loss, trial balance, account statements, and daily summaries",
+      "nodeType": "folder",
+      "folderPath": "backend/reports",
+      "position": { "x": 300, "y": 700 },
+      "dependencies": []
+    },
+    {
+      "id": "sidebar",
+      "workflowId": "backend",
+      "title": "Sidebar Configuration",
+      "description": "Dynamic sidebar sections, items, and user-specific configuration",
+      "nodeType": "folder",
+      "folderPath": "backend/sidebar",
+      "position": { "x": 500, "y": 700 },
+      "dependencies": []
+    },
+    {
+      "id": "employees",
+      "workflowId": "backend",
+      "title": "Employees",
+      "description": "Employee management and billing accounts",
+      "nodeType": "folder",
+      "folderPath": "backend/employees",
+      "position": { "x": 100, "y": 900 },
+      "dependencies": []
+    },
+    {
+      "id": "stations",
+      "workflowId": "backend",
+      "title": "Stations",
+      "description": "Station CRUD operations",
+      "nodeType": "folder",
+      "folderPath": "backend/stations",
+      "position": { "x": 300, "y": 900 },
+      "dependencies": []
+    },
+    {
+      "id": "dashboard",
+      "workflowId": "backend",
+      "title": "Dashboard Widgets",
+      "description": "Enhanced dashboard statistics, logs, and charts",
+      "nodeType": "folder",
+      "folderPath": "backend/dashboard",
+      "position": { "x": 500, "y": 900 },
+      "dependencies": []
+    }
+  ],
+  "edges": []
+}

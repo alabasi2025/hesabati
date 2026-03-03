@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-vouchers-list",
+      "workflowId": "frontend/vouchers",
+      "title": "Display Vouchers List",
+      "description": "When /biz/:bizId/vouchers page loads, fetch GET /api/businesses/:bizId/vouchers and display vouchers in a table with columns: number, date, type, amount, description, status. Supports filtering by type (receipt/payment/transfer) and date range.",
+      "nodeType": "feature",
+      "fileName": "display-vouchers-list",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "open-voucher-form",
+      "workflowId": "frontend/vouchers",
+      "title": "Open Voucher Form",
+      "description": "When user clicks 'إضافة سند' button, display form with fields: type dropdown (receipt/payment/transfer), date picker, amount input, description textarea, fromAccountId dropdown, toAccountId dropdown, currencyId dropdown, operationTypeId dropdown (required). Operation type selection auto-fills default accounts.",
+      "nodeType": "feature",
+      "fileName": "open-voucher-form",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["display-vouchers-list"],
+      "testLayers": ["ui"]
+    },
+    {
+      "id": "validate-voucher-form",
+      "workflowId": "frontend/vouchers",
+      "title": "Validate Voucher Form",
+      "description": "When user attempts to submit voucher form, validates: operationTypeId is selected (shows 'يجب اختيار نوع العملية' error if missing), amount > 0, date is valid, fromAccountId and toAccountId are selected. Prevents submission if validation fails.",
+      "nodeType": "feature",
+      "fileName": "validate-voucher-form",
+      "position": { "x": 200, "y": 250 },
+      "dependencies": ["open-voucher-form"],
+      "testLayers": ["ui"]
+    },
+    {
+      "id": "submit-voucher",
+      "workflowId": "frontend/vouchers",
+      "title": "Submit Voucher",
+      "description": "When user clicks 'حفظ' after validation passes, triggers POST /api/businesses/:bizId/vouchers with form data including operationTypeId. UI shows loading spinner. Success: closes form, shows success toast with voucher number, refreshes list. Failure: shows error message from API.",
+      "nodeType": "feature",
+      "fileName": "submit-voucher",
+      "position": { "x": 200, "y": 400 },
+      "dependencies": ["validate-voucher-form"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "delete-voucher",
+      "workflowId": "frontend/vouchers",
+      "title": "Delete Voucher",
+      "description": "When user clicks delete icon on voucher row, shows confirmation dialog. On confirm, triggers DELETE /api/businesses/:bizId/vouchers/:id. Success: removes from list, shows toast. API reverses all balance changes automatically.",
+      "nodeType": "feature",
+      "fileName": "delete-voucher",
+      "position": { "x": 100, "y": 550 },
+      "dependencies": ["submit-voucher"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "reverse-voucher",
+      "workflowId": "frontend/vouchers",
+      "title": "Reverse Voucher",
+      "description": "When user clicks 'عكس' button on voucher row, shows confirmation dialog. On confirm, triggers POST /api/businesses/:bizId/vouchers/:id/reverse. Success: shows new reversal voucher number, marks original as reversed, refreshes list.",
+      "nodeType": "feature",
+      "fileName": "reverse-voucher",
+      "position": { "x": 300, "y": 550 },
+      "dependencies": ["submit-voucher"],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": [
+    { "id": "list-to-form", "source": "display-vouchers-list", "target": "open-voucher-form" },
+    { "id": "form-to-validate", "source": "open-voucher-form", "target": "validate-voucher-form" },
+    { "id": "validate-to-submit", "source": "validate-voucher-form", "target": "submit-voucher" },
+    { "id": "submit-to-delete", "source": "submit-voucher", "target": "delete-voucher" },
+    { "id": "submit-to-reverse", "source": "submit-voucher", "target": "reverse-voucher" }
+  ]
+}

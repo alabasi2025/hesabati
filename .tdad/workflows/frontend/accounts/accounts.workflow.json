@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-accounts-list",
+      "workflowId": "frontend/accounts",
+      "title": "Display Accounts List",
+      "description": "When /biz/:bizId/accounts page loads, fetch GET /api/businesses/:bizId/accounts and display accounts in a hierarchical tree view. Each account shows name, code, type, and balance. Supports expand/collapse for parent accounts.",
+      "nodeType": "feature",
+      "fileName": "display-accounts-list",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "open-create-account-form",
+      "workflowId": "frontend/accounts",
+      "title": "Open Create Account Form",
+      "description": "When user clicks 'إضافة حساب' button, display modal form with fields: name (required), code (required), accountType dropdown, parentId dropdown, currencyId dropdown, and allowed links multi-select. Cancel button closes modal.",
+      "nodeType": "feature",
+      "fileName": "open-create-account-form",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["display-accounts-list"],
+      "testLayers": ["ui"]
+    },
+    {
+      "id": "submit-create-account",
+      "workflowId": "frontend/accounts",
+      "title": "Submit Create Account",
+      "description": "When user fills account form and clicks 'حفظ', triggers POST /api/businesses/:bizId/accounts with form data. Success: closes modal, shows success toast, refreshes accounts list. Failure: shows validation error messages inline.",
+      "nodeType": "feature",
+      "fileName": "submit-create-account",
+      "position": { "x": 200, "y": 250 },
+      "dependencies": ["open-create-account-form"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "edit-account",
+      "workflowId": "frontend/accounts",
+      "title": "Edit Account",
+      "description": "When user clicks edit icon on account row, opens pre-filled form modal. When user modifies fields and clicks 'حفظ', triggers PUT /api/businesses/:bizId/accounts/:id. Success: closes modal, shows success toast, refreshes list.",
+      "nodeType": "feature",
+      "fileName": "edit-account",
+      "position": { "x": 100, "y": 400 },
+      "dependencies": ["submit-create-account"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "delete-account",
+      "workflowId": "frontend/accounts",
+      "title": "Delete Account",
+      "description": "When user clicks delete icon on account row, shows confirmation modal 'هل أنت متأكد من حذف هذا الحساب؟'. When user confirms, triggers DELETE /api/businesses/:bizId/accounts/:id. Success: removes account from list, shows success toast. Cancel: closes modal.",
+      "nodeType": "feature",
+      "fileName": "delete-account",
+      "position": { "x": 300, "y": 400 },
+      "dependencies": ["submit-create-account"],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": [
+    { "id": "list-to-form", "source": "display-accounts-list", "target": "open-create-account-form" },
+    { "id": "form-to-submit", "source": "open-create-account-form", "target": "submit-create-account" },
+    { "id": "submit-to-edit", "source": "submit-create-account", "target": "edit-account" },
+    { "id": "submit-to-delete", "source": "submit-create-account", "target": "delete-account" }
+  ]
+}

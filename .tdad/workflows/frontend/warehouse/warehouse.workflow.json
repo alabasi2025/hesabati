@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-warehouses",
+      "workflowId": "frontend/warehouse",
+      "title": "Display Warehouses",
+      "description": "When /biz/:bizId/warehouse page loads, fetch GET /api/businesses/:bizId/warehouses and display warehouse cards. Each card shows name, type, and item count. Clicking a card navigates to warehouse inventory view.",
+      "nodeType": "feature",
+      "fileName": "display-warehouses",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "display-warehouse-inventory",
+      "workflowId": "frontend/warehouse",
+      "title": "Display Warehouse Inventory",
+      "description": "When warehouse is selected, fetch GET /api/businesses/:bizId/warehouses/:id/inventory and display inventory table with columns: item name, quantity, unit price, total value. Ghost items (quantity=0 or empty names) are filtered out.",
+      "nodeType": "feature",
+      "fileName": "display-warehouse-inventory",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["display-warehouses"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "display-warehouse-operations",
+      "workflowId": "frontend/warehouse",
+      "title": "Display Warehouse Operations",
+      "description": "When /biz/:bizId/warehouse-operations page loads, fetch GET /api/businesses/:bizId/warehouse-operations and display operations table with columns: date, warehouse, operation type, items count, total amount. Supports date filtering.",
+      "nodeType": "feature",
+      "fileName": "display-warehouse-operations",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "create-warehouse-operation",
+      "workflowId": "frontend/warehouse",
+      "title": "Create Warehouse Operation",
+      "description": "When user clicks 'إضافة عملية' and fills form with {warehouseId, operationType, date, operationTypeId, items[]}, triggers POST /api/businesses/:bizId/warehouse-operations. Success: closes form, refreshes list. Failure: shows error (e.g., 'هذا المخزن لا يتبع لهذا النشاط التجاري').",
+      "nodeType": "feature",
+      "fileName": "create-warehouse-operation",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["display-warehouse-operations"],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": [
+    { "id": "warehouses-to-inventory", "source": "display-warehouses", "target": "display-warehouse-inventory" },
+    { "id": "operations-to-create", "source": "display-warehouse-operations", "target": "create-warehouse-operation" }
+  ]
+}

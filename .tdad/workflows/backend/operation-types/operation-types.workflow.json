@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-operation-types",
+      "workflowId": "backend/operation-types",
+      "title": "List Operation Types",
+      "description": "GET /api/businesses/:bizId/operation-types with Authorization header. Returns array of operation types with {id, name, category, defaultFromAccountId, defaultToAccountId, warehouseId, fields[]}. Categories include: voucher, journal, warehouse.",
+      "nodeType": "feature",
+      "fileName": "list-operation-types",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-operation-type",
+      "workflowId": "backend/operation-types",
+      "title": "Create Operation Type",
+      "description": "POST /api/businesses/:bizId/operation-types with {name, category, defaultFromAccountId?, defaultToAccountId?, warehouseId?, fields?[]}. Creates operation type template. Returns created type. Returns 400 if name already exists.",
+      "nodeType": "feature",
+      "fileName": "create-operation-type",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-operation-type",
+      "workflowId": "backend/operation-types",
+      "title": "Update Operation Type",
+      "description": "PUT /api/businesses/:bizId/operation-types/:id with {name?, category?, defaultFromAccountId?, defaultToAccountId?, warehouseId?, fields?[]}. Updates operation type fields. Returns updated type.",
+      "nodeType": "feature",
+      "fileName": "update-operation-type",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": ["create-operation-type"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-operation-type",
+      "workflowId": "backend/operation-types",
+      "title": "Delete Operation Type",
+      "description": "DELETE /api/businesses/:bizId/operation-types/:id. Removes operation type. Returns 200 with {message: 'تم الحذف'}.",
+      "nodeType": "feature",
+      "fileName": "delete-operation-type",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-operation-type"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "check-operation-type-name",
+      "workflowId": "backend/operation-types",
+      "title": "Check Operation Type Name",
+      "description": "GET /api/businesses/:bizId/operation-types/check-name?name=X with Authorization header. Returns {available: true} if name is unique, {available: false} if name already exists in business.",
+      "nodeType": "feature",
+      "fileName": "check-operation-type-name",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-operation-type", "target": "update-operation-type" },
+    { "id": "create-to-delete", "source": "create-operation-type", "target": "delete-operation-type" }
+  ]
+}

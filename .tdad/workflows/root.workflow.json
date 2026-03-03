@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "backend",
+      "workflowId": "root",
+      "title": "Backend (API Server)",
+      "description": "Hono.js REST API server with PostgreSQL database, JWT authentication, and business logic for accounting, vouchers, journal entries, warehouse management, and reporting",
+      "nodeType": "folder",
+      "folderPath": "backend",
+      "position": { "x": 100, "y": 200 },
+      "dependencies": []
+    },
+    {
+      "id": "frontend",
+      "workflowId": "root",
+      "title": "Frontend (Angular SPA)",
+      "description": "Angular 19 single-page application with PrimeNG components, providing user interface for accounting operations, dashboard, reports, and custom screens",
+      "nodeType": "folder",
+      "folderPath": "frontend",
+      "position": { "x": 400, "y": 200 },
+      "dependencies": ["backend"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "backend-to-frontend",
+      "source": "backend",
+      "target": "frontend"
+    }
+  ]
+}

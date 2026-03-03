@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "login-user",
+      "workflowId": "backend/auth",
+      "title": "Login User",
+      "description": "POST /api/auth/login with {username, password}. Validates credentials against database. Returns {token, user: {id, username, fullName}} on success. Returns 401 with {error: 'اسم المستخدم أو كلمة المرور غير صحيحة'} on failure.",
+      "nodeType": "feature",
+      "fileName": "login-user",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "register-user",
+      "workflowId": "backend/auth",
+      "title": "Register User",
+      "description": "POST /api/auth/register with {username, password, fullName}. Hashes password with bcrypt, inserts user record. Returns {id, username, fullName} on success. Returns 400 with {error: 'اسم المستخدم مستخدم بالفعل'} if username exists.",
+      "nodeType": "feature",
+      "fileName": "register-user",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "fetch-current-user",
+      "workflowId": "backend/auth",
+      "title": "Fetch Current User",
+      "description": "GET /api/auth/me with Authorization Bearer token. Decodes JWT and returns {userId, username, fullName}. Returns 401 with {error: 'غير مصرح'} if token invalid or missing.",
+      "nodeType": "feature",
+      "fileName": "fetch-current-user",
+      "position": { "x": 200, "y": 250 },
+      "dependencies": ["login-user"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "login-to-me", "source": "login-user", "target": "fetch-current-user" }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-sidebar-sections",
+      "workflowId": "backend/sidebar",
+      "title": "List Sidebar Sections",
+      "description": "GET /api/businesses/:bizId/sidebar-sections with Authorization header. Returns array of sidebar sections with {id, name, icon, order, items[]}.",
+      "nodeType": "feature",
+      "fileName": "list-sidebar-sections",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-sidebar-section",
+      "workflowId": "backend/sidebar",
+      "title": "Create Sidebar Section",
+      "description": "POST /api/businesses/:bizId/sidebar-sections with {name, icon?, order?}. Creates sidebar section. Returns created section.",
+      "nodeType": "feature",
+      "fileName": "create-sidebar-section",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "list-sidebar-items",
+      "workflowId": "backend/sidebar",
+      "title": "List Sidebar Items",
+      "description": "GET /api/businesses/:bizId/sidebar-items with Authorization header. Returns array of sidebar items with {id, sectionId, name, icon, route, order}.",
+      "nodeType": "feature",
+      "fileName": "list-sidebar-items",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-sidebar-item",
+      "workflowId": "backend/sidebar",
+      "title": "Create Sidebar Item",
+      "description": "POST /api/businesses/:bizId/sidebar-items with {sectionId, name, icon?, route, order?}. Creates sidebar item within a section. Returns created item.",
+      "nodeType": "feature",
+      "fileName": "create-sidebar-item",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-sidebar-section"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "copy-sidebar-config",
+      "workflowId": "backend/sidebar",
+      "title": "Copy Sidebar Config",
+      "description": "POST /api/businesses/:bizId/sidebar-config/copy with {fromUserId, toUserIds: []}. Copies sidebar configuration from one user to multiple users. Returns {message: 'تم النسخ بنجاح', copiedTo: count}.",
+      "nodeType": "feature",
+      "fileName": "copy-sidebar-config",
+      "position": { "x": 100, "y": 400 },
+      "dependencies": ["create-sidebar-item"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "reset-sidebar-config",
+      "workflowId": "backend/sidebar",
+      "title": "Reset Sidebar Config",
+      "description": "POST /api/businesses/:bizId/sidebar-config/reset/:userId. Removes all user-specific sidebar customizations, reverting to default. Returns {message: 'تم إعادة التعيين'}.",
+      "nodeType": "feature",
+      "fileName": "reset-sidebar-config",
+      "position": { "x": 300, "y": 400 },
+      "dependencies": ["copy-sidebar-config"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "section-to-item", "source": "create-sidebar-section", "target": "create-sidebar-item" },
+    { "id": "item-to-copy", "source": "create-sidebar-item", "target": "copy-sidebar-config" },
+    { "id": "copy-to-reset", "source": "copy-sidebar-config", "target": "reset-sidebar-config" }
+  ]
+}

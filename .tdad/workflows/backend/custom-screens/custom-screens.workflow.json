@@ -1,0 +1,77 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-custom-screens",
+      "workflowId": "backend/custom-screens",
+      "title": "List Custom Screens",
+      "description": "GET /api/businesses/:bizId/custom-screens with Authorization header. Returns array of custom screens with {id, name, description, tabs: [{id, name, type, config}]}.",
+      "nodeType": "feature",
+      "fileName": "list-custom-screens",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-custom-screen",
+      "workflowId": "backend/custom-screens",
+      "title": "Create Custom Screen",
+      "description": "POST /api/businesses/:bizId/custom-screens with {name, description?, tabs: [{name, type, config}]}. Creates screen with multiple tabs. Returns created screen with tab IDs.",
+      "nodeType": "feature",
+      "fileName": "create-custom-screen",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-custom-screen",
+      "workflowId": "backend/custom-screens",
+      "title": "Update Custom Screen",
+      "description": "PUT /api/businesses/:bizId/custom-screens/:id with {name?, description?, tabs?[]}. Updates screen and its tabs. Returns updated screen.",
+      "nodeType": "feature",
+      "fileName": "update-custom-screen",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": ["create-custom-screen"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-custom-screen",
+      "workflowId": "backend/custom-screens",
+      "title": "Delete Custom Screen",
+      "description": "DELETE /api/businesses/:bizId/custom-screens/:id. Removes screen and all its tabs. Returns 200 with {message: 'تم الحذف'}.",
+      "nodeType": "feature",
+      "fileName": "delete-custom-screen",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-custom-screen"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-screen-config",
+      "workflowId": "backend/custom-screens",
+      "title": "Get Screen Config",
+      "description": "GET /api/businesses/:bizId/screens/:screenId/collection-style-config with Authorization header. Returns screen-specific configuration including layout style, visible columns, and widget settings.",
+      "nodeType": "feature",
+      "fileName": "get-screen-config",
+      "position": { "x": 100, "y": 400 },
+      "dependencies": ["create-custom-screen"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "save-screen-config",
+      "workflowId": "backend/custom-screens",
+      "title": "Save Screen Config",
+      "description": "PUT /api/businesses/:bizId/screens/:screenId/collection-style-config with {layout, columns[], widgets[]}. Saves or updates screen-specific configuration. Returns saved config.",
+      "nodeType": "feature",
+      "fileName": "save-screen-config",
+      "position": { "x": 300, "y": 400 },
+      "dependencies": ["create-custom-screen"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-custom-screen", "target": "update-custom-screen" },
+    { "id": "create-to-delete", "source": "create-custom-screen", "target": "delete-custom-screen" },
+    { "id": "create-to-get-config", "source": "create-custom-screen", "target": "get-screen-config" },
+    { "id": "create-to-save-config", "source": "create-custom-screen", "target": "save-screen-config" }
+  ]
+}

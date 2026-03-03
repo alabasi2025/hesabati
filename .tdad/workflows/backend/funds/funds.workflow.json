@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-funds",
+      "workflowId": "backend/funds",
+      "title": "List Funds",
+      "description": "GET /api/businesses/:bizId/funds with Authorization header. Returns array of funds with {id, name, fundType, accountId, currencyId, balances[]}. Fund types include: safe, bank, wallet, exchanger.",
+      "nodeType": "feature",
+      "fileName": "list-funds",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-fund-details",
+      "workflowId": "backend/funds",
+      "title": "Get Fund Details",
+      "description": "GET /api/funds/:id with Authorization header. Returns single fund {id, name, fundType, accountId, currencyId}. Returns 404 with {error: 'الصندوق غير موجود'} if not found.",
+      "nodeType": "feature",
+      "fileName": "get-fund-details",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-fund",
+      "workflowId": "backend/funds",
+      "title": "Create Fund",
+      "description": "POST /api/businesses/:bizId/funds with {name, fundType, accountId, currencyId}. Creates fund record linked to an account. Returns created fund object. Returns 400 if validation fails.",
+      "nodeType": "feature",
+      "fileName": "create-fund",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-fund",
+      "workflowId": "backend/funds",
+      "title": "Update Fund",
+      "description": "PUT /api/businesses/:bizId/funds/:id with {name?, fundType?, accountId?, currencyId?}. Updates fund fields. Returns updated fund object.",
+      "nodeType": "feature",
+      "fileName": "update-fund",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-fund"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-fund",
+      "workflowId": "backend/funds",
+      "title": "Delete Fund",
+      "description": "DELETE /api/businesses/:bizId/funds/:id. Removes fund and its balances. Returns 200 with {message: 'تم الحذف'}. Returns 404 if fund not found.",
+      "nodeType": "feature",
+      "fileName": "delete-fund",
+      "position": { "x": 500, "y": 250 },
+      "dependencies": ["create-fund"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-fund", "target": "update-fund" },
+    { "id": "create-to-delete", "source": "create-fund", "target": "delete-fund" }
+  ]
+}

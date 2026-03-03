@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-partners",
+      "workflowId": "backend/partners",
+      "title": "List Partners",
+      "description": "GET /api/businesses/:bizId/partners with Authorization header. Returns array of partners with {id, name, type, phone, accountId}. Partner types include: customer, supplier, agent.",
+      "nodeType": "feature",
+      "fileName": "list-partners",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-partner",
+      "workflowId": "backend/partners",
+      "title": "Create Partner",
+      "description": "POST /api/businesses/:bizId/partners with {name, type, phone?, accountId?}. Creates partner record. Returns created partner.",
+      "nodeType": "feature",
+      "fileName": "create-partner",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-partner",
+      "workflowId": "backend/partners",
+      "title": "Update Partner",
+      "description": "PUT /api/businesses/:bizId/partners/:id with {name?, type?, phone?, accountId?}. Updates partner fields. Returns updated partner.",
+      "nodeType": "feature",
+      "fileName": "update-partner",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": ["create-partner"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-partner",
+      "workflowId": "backend/partners",
+      "title": "Delete Partner",
+      "description": "DELETE /api/businesses/:bizId/partners/:id. Removes partner record. Returns 200 with {message: 'تم الحذف'}.",
+      "nodeType": "feature",
+      "fileName": "delete-partner",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-partner"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "manage-settlements",
+      "workflowId": "backend/partners",
+      "title": "Manage Settlements",
+      "description": "GET /api/businesses/:bizId/settlements returns partner settlement records. POST /api/businesses/:bizId/settlements with {partnerId, amount, date, description} creates settlement. PUT and DELETE also supported.",
+      "nodeType": "feature",
+      "fileName": "manage-settlements",
+      "position": { "x": 200, "y": 400 },
+      "dependencies": ["create-partner"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-partner", "target": "update-partner" },
+    { "id": "create-to-delete", "source": "create-partner", "target": "delete-partner" },
+    { "id": "create-to-settlements", "source": "create-partner", "target": "manage-settlements" }
+  ]
+}

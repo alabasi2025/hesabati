@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "list-accounts",
+      "workflowId": "backend/accounts",
+      "title": "List Accounts",
+      "description": "GET /api/businesses/:bizId/accounts with Authorization header. Returns array of accounts with {id, name, code, accountType, parentId, currencyId, allowedLinks[]}. Supports hierarchical tree structure with parent-child relationships.",
+      "nodeType": "feature",
+      "fileName": "list-accounts",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-account-details",
+      "workflowId": "backend/accounts",
+      "title": "Get Account Details",
+      "description": "GET /api/accounts/:id with Authorization header. Returns single account {id, name, code, accountType, parentId, currencyId}. Returns 404 with {error: 'الحساب غير موجود'} if not found.",
+      "nodeType": "feature",
+      "fileName": "get-account-details",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-account",
+      "workflowId": "backend/accounts",
+      "title": "Create Account",
+      "description": "POST /api/businesses/:bizId/accounts with {name, code, accountType, parentId?, currencyId, allowedLinks?[]}. Inserts account record and optional allowed links. Returns created account object. Returns 400 if validation fails.",
+      "nodeType": "feature",
+      "fileName": "create-account",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "update-account",
+      "workflowId": "backend/accounts",
+      "title": "Update Account",
+      "description": "PUT /api/businesses/:bizId/accounts/:id with {name?, code?, accountType?, parentId?, currencyId?, allowedLinks?[]}. Updates account fields and replaces allowed links if provided. Returns updated account.",
+      "nodeType": "feature",
+      "fileName": "update-account",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["create-account"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-account",
+      "workflowId": "backend/accounts",
+      "title": "Delete Account",
+      "description": "DELETE /api/businesses/:bizId/accounts/:id. Removes account, its allowed links, and account balances. Returns 200 with {message: 'تم الحذف'}. Returns 404 if account not found.",
+      "nodeType": "feature",
+      "fileName": "delete-account",
+      "position": { "x": 500, "y": 250 },
+      "dependencies": ["create-account"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-allowed-links",
+      "workflowId": "backend/accounts",
+      "title": "Get Allowed Links",
+      "description": "GET /api/accounts/:id/allowed-links. Returns array of linked account IDs that this account can transfer to/from. Each link contains {id, fromAccountId, toAccountId}.",
+      "nodeType": "feature",
+      "fileName": "get-allowed-links",
+      "position": { "x": 100, "y": 400 },
+      "dependencies": ["create-account"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-allowed-targets",
+      "workflowId": "backend/accounts",
+      "title": "Get Allowed Targets",
+      "description": "GET /api/accounts/:id/allowed-targets. Returns array of account objects that are valid transfer targets for the given account, based on allowed links configuration.",
+      "nodeType": "feature",
+      "fileName": "get-allowed-targets",
+      "position": { "x": 300, "y": 400 },
+      "dependencies": ["create-account"],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": [
+    { "id": "create-to-update", "source": "create-account", "target": "update-account" },
+    { "id": "create-to-delete", "source": "create-account", "target": "delete-account" },
+    { "id": "create-to-links", "source": "create-account", "target": "get-allowed-links" },
+    { "id": "create-to-targets", "source": "create-account", "target": "get-allowed-targets" }
+  ]
+}
