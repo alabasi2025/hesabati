@@ -2,7 +2,7 @@ import {
   Component, ElementRef, ViewChild, AfterViewInit, OnDestroy,
   Input, inject, ChangeDetectionStrategy
 } from '@angular/core';
-import * as THREE from 'three';
+import { Mesh, Vector3 } from 'three';
 import { ThreeService } from '../../services/three.service';
 
 export interface NetworkNode {
@@ -38,7 +38,7 @@ export class ThreeNetworkComponent implements AfterViewInit, OnDestroy {
 
   private three = inject(ThreeService);
   private sceneId = 'network-' + Math.random().toString(36).slice(2, 8);
-  private nodeMeshes = new Map<string, THREE.Mesh>();
+  private nodeMeshes = new Map<string, Mesh>();
 
   private defaultColors = [
     0x6366f1, 0x06b6d4, 0x10b981, 0xf59e0b,
@@ -52,6 +52,7 @@ export class ThreeNetworkComponent implements AfterViewInit, OnDestroy {
     const managed = this.three.createScene(this.sceneId, container, {
       clearColor: 0x0a0e1a,
       clearAlpha: 0.95,
+      pixelRatio: 1.0,
       fog: { color: 0x0a0e1a, near: 10, far: 50 },
       camera: { fov: 55, position: [0, 5, 15], lookAt: [0, 0, 0] },
       ambient: { color: 0xffffff, intensity: 0.4 },
@@ -116,8 +117,8 @@ export class ThreeNetworkComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    // جسيمات خلفية
-    const particles = this.three.createParticleSystem(200, 25, 0x475569, 0.02);
+    // جسيمات خلفية — مخفضة من 200 إلى 80
+    const particles = this.three.createParticleSystem(80, 25, 0x475569, 0.02);
     scene.add(particles);
 
     // عنوان
@@ -131,7 +132,7 @@ export class ThreeNetworkComponent implements AfterViewInit, OnDestroy {
     this.three.animate(this.sceneId, (delta, elapsed) => {
       // تحريك العقد
       this.nodeMeshes.forEach(mesh => {
-        const base = (mesh as any)._basePos as THREE.Vector3;
+        const base = (mesh as any)._basePos as Vector3;
         const offset = (mesh as any)._floatOffset as number;
         mesh.position.y = base.y + Math.sin(elapsed * 0.5 + offset) * 0.3;
         mesh.rotation.y += delta * 0.3;

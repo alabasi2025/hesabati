@@ -2,7 +2,14 @@ import {
   Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, OnChanges,
   Input, Output, EventEmitter, inject, ChangeDetectionStrategy, SimpleChanges
 } from '@angular/core';
-import * as THREE from 'three';
+import {
+  Mesh, Object3D, Group, Line, Points, Sprite, Vector3,
+  BoxGeometry, PlaneGeometry, SphereGeometry, ConeGeometry,
+  ShapeGeometry, ExtrudeGeometry, Shape,
+  MeshPhysicalMaterial, MeshStandardMaterial, MeshBasicMaterial,
+  LineBasicMaterial, BufferGeometry,
+  CatmullRomCurve3, DoubleSide,
+} from 'three';
 import { ThreeService, ManagedScene } from '../../services/three.service';
 
 export interface ChartDataItem {
@@ -125,11 +132,11 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
   private three = inject(ThreeService);
   private sceneId = 'chart-' + Math.random().toString(36).slice(2, 8);
-  private bars: THREE.Object3D[] = [];
-  private labels: THREE.Sprite[] = [];
+  private bars: Object3D[] = [];
+  private labels: Sprite[] = [];
   private initialized = false;
   private managed: ManagedScene | null = null;
-  private hoveredObject: THREE.Object3D | null = null;
+  private hoveredObject: Object3D | null = null;
 
   // Event handlers
   private mouseMoveHandler!: (e: MouseEvent) => void;
@@ -191,11 +198,10 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
   private setupInteractivity(container: HTMLElement): void {
     this.mouseMoveHandler = (e: MouseEvent) => {
-      const hit = this.three.raycast(this.sceneId, e, this.bars.filter(b => b instanceof THREE.Mesh || b instanceof THREE.Group) as THREE.Object3D[]);
+      const hit = this.three.raycast(this.sceneId, e, this.bars.filter(b => b instanceof Mesh || b instanceof Group) as Object3D[]);
 
       if (hit && hit.object.userData?.['chartItem']) {
         const item = hit.object.userData['chartItem'] as ChartDataItem;
-        const idx = hit.object.userData['chartIndex'] as number;
 
         // Tooltip
         const rect = container.getBoundingClientRect();
@@ -231,7 +237,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     };
 
     this.clickHandler = (e: MouseEvent) => {
-      const hit = this.three.raycast(this.sceneId, e, this.bars as THREE.Object3D[]);
+      const hit = this.three.raycast(this.sceneId, e, this.bars as Object3D[]);
       if (hit && hit.object.userData?.['chartItem']) {
         const item = hit.object.userData['chartItem'] as ChartDataItem;
         const idx = hit.object.userData['chartIndex'] as number;
@@ -250,9 +256,9 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     container.addEventListener('mouseleave', this.mouseLeaveHandler);
   }
 
-  private applyHover(obj: THREE.Object3D): void {
-    if (obj instanceof THREE.Mesh) {
-      const mat = obj.material as THREE.MeshPhysicalMaterial;
+  private applyHover(obj: Object3D): void {
+    if (obj instanceof Mesh) {
+      const mat = obj.material as MeshPhysicalMaterial;
       (obj as any)._origEmissive = mat.emissiveIntensity;
       mat.emissiveIntensity = 0.5;
       obj.scale.multiplyScalar(1.08);
@@ -260,8 +266,8 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
   }
 
   private resetHover(): void {
-    if (this.hoveredObject instanceof THREE.Mesh) {
-      const mat = this.hoveredObject.material as THREE.MeshPhysicalMaterial;
+    if (this.hoveredObject instanceof Mesh) {
+      const mat = this.hoveredObject.material as MeshPhysicalMaterial;
       mat.emissiveIntensity = (this.hoveredObject as any)._origEmissive ?? 0.1;
       this.hoveredObject.scale.divideScalar(1.08);
     }
@@ -304,7 +310,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.managed = this.three.createScene(this.sceneId, container, {
       clearColor: this.darkMode ? 0x0f172a : 0xf8fafc,
       clearAlpha: this.darkMode ? 0.95 : 0.9,
-      preserveDrawingBuffer: true,
       camera: { fov: 45, position: [6, 5, 10], lookAt: [0, 1.5, 0] },
       ambient: { color: 0xffffff, intensity: this.darkMode ? 0.35 : 0.6 },
       directional: { color: 0xffffff, intensity: this.darkMode ? 1.2 : 0.8, position: [8, 12, 8] },
@@ -316,13 +321,13 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.three.addRimLights(scene, [0x6366f1, 0x06b6d4], this.darkMode ? 0.3 : 0.1);
 
     // أرضية عاكسة
-    const floorGeo = new THREE.PlaneGeometry(20, 20);
-    const floorMat = new THREE.MeshStandardMaterial({
+    const floorGeo = new PlaneGeometry(20, 20);
+    const floorMat = new MeshStandardMaterial({
       color: this.darkMode ? 0x0f172a : 0xe2e8f0,
       metalness: 0.8, roughness: 0.3, transparent: true,
       opacity: this.darkMode ? 0.5 : 0.3,
     });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    const floor = new Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
     floor.receiveShadow = true;
@@ -343,18 +348,17 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
       const color = item.color ? parseInt(item.color.replace('#', ''), 16) : this.defaultColors[i % this.defaultColors.length];
       const x = startX + i * (barWidth + gap);
 
-      const geo = new THREE.BoxGeometry(barWidth, 0.01, barDepth);
-      const mat = new THREE.MeshPhysicalMaterial({
+      const geo = new BoxGeometry(barWidth, 0.01, barDepth);
+      const mat = new MeshPhysicalMaterial({
         color, metalness: 0.2, roughness: 0.3,
         clearcoat: 0.8, clearcoatRoughness: 0.1,
         emissive: color, emissiveIntensity: this.darkMode ? 0.15 : 0.05,
       });
-      const bar = new THREE.Mesh(geo, mat);
+      const bar = new Mesh(geo, mat);
       bar.position.set(x, 0.005, 0);
       bar.castShadow = true;
       bar.receiveShadow = true;
 
-      // بيانات التفاعلية
       bar.userData = { chartItem: item, chartIndex: i };
 
       (bar as any)._targetHeight = targetHeight;
@@ -367,11 +371,11 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
       // انعكاس
       if (this.darkMode) {
-        const reflGeo = new THREE.BoxGeometry(barWidth, 0.01, barDepth);
-        const reflMat = new THREE.MeshPhysicalMaterial({
+        const reflGeo = new BoxGeometry(barWidth, 0.01, barDepth);
+        const reflMat = new MeshPhysicalMaterial({
           color, metalness: 0.2, roughness: 0.5, transparent: true, opacity: 0.15,
         });
-        const reflection = new THREE.Mesh(reflGeo, reflMat);
+        const reflection = new Mesh(reflGeo, reflMat);
         reflection.position.set(x, -0.005, 0);
         reflection.scale.y = -1;
         (bar as any)._reflection = reflection;
@@ -402,7 +406,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const managed = this.managed;
     this.three.animate(this.sceneId, (delta, elapsed) => {
       this.bars.forEach(obj => {
-        const bar = obj as THREE.Mesh;
+        const bar = obj as Mesh;
         if ((bar as any)._growing) {
           if (!(bar as any)._growStarted) {
             if (elapsed >= (bar as any)._growDelay) (bar as any)._growStarted = true;
@@ -420,7 +424,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
             (bar as any)._reflection.position.y = -current * 0.15;
           }
         }
-        const mat = bar.material as THREE.MeshPhysicalMaterial;
+        const mat = bar.material as MeshPhysicalMaterial;
         if (mat.emissiveIntensity !== undefined && !(bar as any)._isHovered) {
           mat.emissiveIntensity = (this.darkMode ? 0.1 : 0.03) + Math.sin(elapsed * 1.5) * 0.05;
         }
@@ -443,7 +447,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.managed = this.three.createScene(this.sceneId, container, {
       clearColor: this.darkMode ? 0x0f172a : 0xf8fafc,
       clearAlpha: this.darkMode ? 0.95 : 0.9,
-      preserveDrawingBuffer: true,
       camera: { fov: 45, position: [0, 5, 7], lookAt: [0, 0, 0] },
       ambient: { color: 0xffffff, intensity: this.darkMode ? 0.4 : 0.6 },
       directional: { color: 0xffffff, intensity: this.darkMode ? 1.0 : 0.7, position: [5, 10, 5] },
@@ -462,7 +465,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
       const angle = (item.value / total) * Math.PI * 2;
       const color = item.color ? parseInt(item.color.replace('#', ''), 16) : this.defaultColors[i % this.defaultColors.length];
 
-      const shape = new THREE.Shape();
+      const shape = new Shape();
       const segments = 48;
       if (innerRadius > 0) {
         shape.moveTo(Math.cos(startAngle) * innerRadius, Math.sin(startAngle) * innerRadius);
@@ -483,16 +486,16 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
         shape.lineTo(0, 0);
       }
 
-      const geo = new THREE.ExtrudeGeometry(shape, {
+      const geo = new ExtrudeGeometry(shape, {
         depth: height, bevelEnabled: true,
         bevelThickness: 0.08, bevelSize: 0.06, bevelSegments: 4,
       });
-      const mat = new THREE.MeshPhysicalMaterial({
+      const mat = new MeshPhysicalMaterial({
         color, metalness: 0.15, roughness: 0.25,
         clearcoat: 1.0, clearcoatRoughness: 0.05,
         emissive: color, emissiveIntensity: this.darkMode ? 0.1 : 0.03,
       });
-      const mesh = new THREE.Mesh(geo, mat);
+      const mesh = new Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.castShadow = true;
 
@@ -501,7 +504,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
       mesh.position.x = Math.cos(midAngle) * explodeDistance;
       mesh.position.z = -Math.sin(midAngle) * explodeDistance;
 
-      // بيانات التفاعلية
       mesh.userData = { chartItem: item, chartIndex: i };
 
       (mesh as any)._midAngle = midAngle;
@@ -535,7 +537,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const managed = this.managed;
     this.three.animate(this.sceneId, (delta, elapsed) => {
       this.bars.forEach(obj => {
-        const mesh = obj as THREE.Mesh;
+        const mesh = obj as Mesh;
         if (!(mesh as any)._entered) {
           if (elapsed >= (mesh as any)._entryDelay) {
             const progress = Math.min((elapsed - (mesh as any)._entryDelay) * 2, 1);
@@ -545,7 +547,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
           }
         }
         mesh.position.y = Math.sin(elapsed * 0.5 + (mesh as any)._midAngle) * 0.02;
-        const mat = mesh.material as THREE.MeshPhysicalMaterial;
+        const mat = mesh.material as MeshPhysicalMaterial;
         mat.emissiveIntensity = (this.darkMode ? 0.08 : 0.02) + Math.sin(elapsed * 0.8 + (mesh as any)._midAngle) * 0.05;
       });
 
@@ -565,7 +567,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.managed = this.three.createScene(this.sceneId, container, {
       clearColor: this.darkMode ? 0x0f172a : 0xf8fafc,
       clearAlpha: this.darkMode ? 0.95 : 0.9,
-      preserveDrawingBuffer: true,
       camera: { fov: 45, position: [0, 4, 10], lookAt: [0, 1.5, 0] },
       ambient: { color: 0xffffff, intensity: this.darkMode ? 0.35 : 0.6 },
       directional: { color: 0xffffff, intensity: this.darkMode ? 0.8 : 0.5, position: [5, 10, 5] },
@@ -581,11 +582,11 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const startX = -totalWidth / 2;
     const color = this.defaultColors[0];
 
-    const points: THREE.Vector3[] = [];
+    const points: Vector3[] = [];
     this.data.forEach((item, i) => {
       const x = startX + i * spacing;
       const y = (item.value / maxVal) * this.maxBarHeight;
-      points.push(new THREE.Vector3(x, y, 0));
+      points.push(new Vector3(x, y, 0));
 
       const sphere = this.three.createGlowSphere(0.12, color, 0.8, [x, 0, 0]);
       sphere.userData = { chartItem: item, chartIndex: i };
@@ -608,22 +609,22 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     });
 
     if (points.length > 1) {
-      const curve = new THREE.CatmullRomCurve3(points);
+      const curve = new CatmullRomCurve3(points);
       const curvePoints = curve.getPoints(100);
-      const lineGeo = new THREE.BufferGeometry().setFromPoints(curvePoints);
-      const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.8 });
-      scene.add(new THREE.Line(lineGeo, lineMat));
+      const lineGeo = new BufferGeometry().setFromPoints(curvePoints);
+      const lineMat = new LineBasicMaterial({ color, transparent: true, opacity: 0.8 });
+      scene.add(new Line(lineGeo, lineMat));
 
       if (this.type === 'area') {
-        const areaShape = new THREE.Shape();
+        const areaShape = new Shape();
         areaShape.moveTo(curvePoints[0].x, 0);
         curvePoints.forEach(p => areaShape.lineTo(p.x, p.y));
         areaShape.lineTo(curvePoints[curvePoints.length - 1].x, 0);
         areaShape.lineTo(curvePoints[0].x, 0);
-        const areaMat = new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity: this.darkMode ? 0.15 : 0.1, side: THREE.DoubleSide,
+        const areaMat = new MeshBasicMaterial({
+          color, transparent: true, opacity: this.darkMode ? 0.15 : 0.1, side: DoubleSide,
         });
-        scene.add(new THREE.Mesh(new THREE.ShapeGeometry(areaShape), areaMat));
+        scene.add(new Mesh(new ShapeGeometry(areaShape), areaMat));
       }
     }
 
@@ -643,7 +644,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
           const eased = 1 - Math.pow(1 - progress, 3);
           sphere.position.y = targetY * eased;
         }
-        const mat = (sphere as THREE.Mesh).material as THREE.MeshStandardMaterial;
+        const mat = (sphere as Mesh).material as MeshStandardMaterial;
         mat.emissiveIntensity = 0.5 + Math.sin(elapsed * 2 + i) * 0.3;
       });
 
@@ -662,7 +663,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.managed = this.three.createScene(this.sceneId, container, {
       clearColor: this.darkMode ? 0x0f172a : 0xf8fafc,
       clearAlpha: this.darkMode ? 0.95 : 0.9,
-      preserveDrawingBuffer: true,
       camera: { fov: 45, position: [8, 6, 12], lookAt: [0, 1, 0] },
       ambient: { color: 0xffffff, intensity: this.darkMode ? 0.35 : 0.6 },
       directional: { color: 0xffffff, intensity: this.darkMode ? 1.0 : 0.7, position: [8, 12, 8] },
@@ -674,13 +674,12 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const grid = this.three.createGridLines(20, 20, this.darkMode ? 0x1e293b : 0xc7d2fe, this.darkMode ? 0x334155 : 0xe0e7ff);
     scene.add(grid);
 
-    // أرضية
-    const floorGeo = new THREE.PlaneGeometry(20, 20);
-    const floorMat = new THREE.MeshStandardMaterial({
+    const floorGeo = new PlaneGeometry(20, 20);
+    const floorMat = new MeshStandardMaterial({
       color: this.darkMode ? 0x0f172a : 0xe2e8f0,
       metalness: 0.8, roughness: 0.3, transparent: true, opacity: 0.4,
     });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    const floor = new Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
     floor.receiveShadow = true;
@@ -700,12 +699,12 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
       const color = isPositive ? 0x10b981 : 0xef4444;
       const x = startX + i * (barWidth + gap);
 
-      const geo = new THREE.BoxGeometry(barWidth, 0.01, barWidth);
-      const mat = new THREE.MeshPhysicalMaterial({
+      const geo = new BoxGeometry(barWidth, 0.01, barWidth);
+      const mat = new MeshPhysicalMaterial({
         color, metalness: 0.2, roughness: 0.3,
         clearcoat: 0.6, emissive: color, emissiveIntensity: 0.15,
       });
-      const bar = new THREE.Mesh(geo, mat);
+      const bar = new Mesh(geo, mat);
       bar.position.set(x, runningY + (isPositive ? 0 : -height), 0);
       bar.castShadow = true;
 
@@ -722,22 +721,22 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
       // خط اتصال
       if (i > 0) {
-        const lineGeo = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(x - barWidth / 2 - gap, runningY, 0),
-          new THREE.Vector3(x - barWidth / 2, runningY, 0),
+        const lineGeo = new BufferGeometry().setFromPoints([
+          new Vector3(x - barWidth / 2 - gap, runningY, 0),
+          new Vector3(x - barWidth / 2, runningY, 0),
         ]);
-        const lineMat = new THREE.LineBasicMaterial({
+        const lineMat = new LineBasicMaterial({
           color: this.darkMode ? 0x475569 : 0x94a3b8, transparent: true, opacity: 0.5,
         });
-        scene.add(new THREE.Line(lineGeo, lineMat));
+        scene.add(new Line(lineGeo, lineMat));
       }
 
       // سهم اتجاه
-      const arrowGeo = new THREE.ConeGeometry(0.12, 0.3, 6);
-      const arrowMat = new THREE.MeshStandardMaterial({
+      const arrowGeo = new ConeGeometry(0.12, 0.3, 6);
+      const arrowMat = new MeshStandardMaterial({
         color, emissive: color, emissiveIntensity: 0.3, transparent: true, opacity: 0.8,
       });
-      const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+      const arrow = new Mesh(arrowGeo, arrowMat);
       arrow.position.set(x, runningY + (isPositive ? height + 0.3 : -height - 0.3), 0);
       if (!isPositive) arrow.rotation.z = Math.PI;
       scene.add(arrow);
@@ -770,7 +769,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const managed = this.managed;
     this.three.animate(this.sceneId, (delta, elapsed) => {
       this.bars.forEach(obj => {
-        const bar = obj as THREE.Mesh;
+        const bar = obj as Mesh;
         if ((bar as any)._growing) {
           if (!(bar as any)._growStarted) {
             if (elapsed >= (bar as any)._growDelay) (bar as any)._growStarted = true;
@@ -804,7 +803,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.managed = this.three.createScene(this.sceneId, container, {
       clearColor: this.darkMode ? 0x0f172a : 0xf8fafc,
       clearAlpha: this.darkMode ? 0.95 : 0.9,
-      preserveDrawingBuffer: true,
       camera: { fov: 45, position: [0, 1, 6], lookAt: [0, 0.5, 0] },
       ambient: { color: 0xffffff, intensity: this.darkMode ? 0.4 : 0.6 },
       directional: { color: 0xffffff, intensity: this.darkMode ? 0.8 : 0.5, position: [3, 8, 5] },
@@ -812,11 +810,10 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
     const { scene } = this.managed;
 
-    // تحديد اللون حسب النسبة
     const ratio = this.gaugeMax > 0 ? this.gaugeValue / this.gaugeMax : 0;
-    let gaugeColor = 0x10b981; // أخضر
-    if (ratio > 0.8) gaugeColor = 0xef4444; // أحمر
-    else if (ratio > 0.6) gaugeColor = 0xf59e0b; // برتقالي
+    let gaugeColor = 0x10b981;
+    if (ratio > 0.8) gaugeColor = 0xef4444;
+    else if (ratio > 0.6) gaugeColor = 0xf59e0b;
 
     const gauge = this.three.createGauge(
       this.gaugeValue, this.gaugeMax, 2,
@@ -824,19 +821,16 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     );
     scene.add(gauge);
 
-    // قيمة مركزية
     const valueText = new Intl.NumberFormat('ar-YE').format(this.gaugeValue);
     const valueSprite = this.three.createTextSprite(valueText, this.darkMode ? '#f8fafc' : '#0f172a', 48, [0, -0.3, 0.1]);
     valueSprite.scale.set(3, 0.8, 1);
     scene.add(valueSprite);
 
-    // نسبة مئوية
     const pctText = (ratio * 100).toFixed(0) + '%';
     const pctSprite = this.three.createTextSprite(pctText, this.darkMode ? '#818cf8' : '#4f46e5', 36, [0, -0.9, 0.1]);
     pctSprite.scale.set(2, 0.5, 1);
     scene.add(pctSprite);
 
-    // تسمية
     if (this.gaugeLabel || this.title) {
       const labelSprite = this.three.createTextSprite(
         this.gaugeLabel || this.title, this.darkMode ? '#94a3b8' : '#64748b', 30, [0, -1.5, 0.1]
@@ -845,13 +839,12 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
       scene.add(labelSprite);
     }
 
-    // جسيمات خلفية
-    const particles = this.three.createParticleSystem(80, 10, gaugeColor, 0.03);
+    // جسيمات خلفية مخفضة
+    const particles = this.three.createParticleSystem(40, 10, gaugeColor, 0.03);
     scene.add(particles);
 
     const managed = this.managed;
     this.three.animate(this.sceneId, (delta, elapsed) => {
-      // نبض خفيف للمقياس
       gauge.rotation.z = Math.sin(elapsed * 0.3) * 0.01;
       this.three.animateParticles(particles, delta, 10);
 
@@ -869,7 +862,6 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     this.managed = this.three.createScene(this.sceneId, container, {
       clearColor: this.darkMode ? 0x0f172a : 0xf8fafc,
       clearAlpha: this.darkMode ? 0.95 : 0.9,
-      preserveDrawingBuffer: true,
       camera: { fov: 50, position: [0, 8, 8], lookAt: [0, 0, 0] },
       ambient: { color: 0xffffff, intensity: this.darkMode ? 0.4 : 0.6 },
       directional: { color: 0xffffff, intensity: this.darkMode ? 1.0 : 0.7, position: [5, 12, 5] },
@@ -878,13 +870,12 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const { scene } = this.managed;
     this.three.addRimLights(scene, [0x6366f1, 0x06b6d4, 0x10b981], this.darkMode ? 0.3 : 0.1);
 
-    // أرضية
-    const floorGeo = new THREE.PlaneGeometry(12, 12);
-    const floorMat = new THREE.MeshStandardMaterial({
+    const floorGeo = new PlaneGeometry(12, 12);
+    const floorMat = new MeshStandardMaterial({
       color: this.darkMode ? 0x0f172a : 0xe2e8f0,
       metalness: 0.7, roughness: 0.3, transparent: true, opacity: 0.4,
     });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    const floor = new Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
     floor.receiveShadow = true;
@@ -899,13 +890,11 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const treemap = this.three.createTreemapBlocks(treemapData, 8, 8, this.maxBarHeight);
     scene.add(treemap);
 
-    // إضافة userData للتفاعلية
     treemap.children.forEach((child, i) => {
-      if (child instanceof THREE.Mesh && i < this.data.length) {
+      if (child instanceof Mesh && i < this.data.length) {
         child.userData = { chartItem: this.data[i], chartIndex: i };
         this.bars.push(child);
 
-        // تسمية فوق كل بلوك
         const label = this.three.createTextSprite(
           this.data[i].label, this.darkMode ? '#e2e8f0' : '#1e293b', 24,
           [child.position.x, child.position.y + child.scale.y * 0.5 + 0.5, child.position.z]
@@ -917,7 +906,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
     // تأثير دخول
     treemap.children.forEach((child, i) => {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof Mesh) {
         const targetY = child.position.y;
         child.position.y = -2;
         (child as any)._targetY = targetY;
@@ -935,7 +924,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const managed = this.managed;
     this.three.animate(this.sceneId, (delta, elapsed) => {
       treemap.children.forEach(child => {
-        if (child instanceof THREE.Mesh && !(child as any)._entered) {
+        if (child instanceof Mesh && !(child as any)._entered) {
           const delay = (child as any)._entryDelay || 0;
           if (elapsed >= delay) {
             const progress = Math.min((elapsed - delay) * 1.5, 1);

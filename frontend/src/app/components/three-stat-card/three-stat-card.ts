@@ -1,19 +1,31 @@
 import {
-  Component, ElementRef, ViewChild, AfterViewInit, OnDestroy,
-  Input, inject, ChangeDetectionStrategy
+  Component, Input, inject, ChangeDetectionStrategy
 } from '@angular/core';
-import * as THREE from 'three';
-import { ThreeService } from '../../services/three.service';
 import { ThemeService } from '../../services/theme.service';
 
+/**
+ * بطاقة إحصائيات بتأثيرات CSS 3D بدلاً من WebGL Canvas منفصل.
+ * هذا يقلل عدد WebGL contexts من 13 إلى 6 في Dashboard.
+ * التأثيرات البصرية محققة عبر CSS transforms و gradients و animations.
+ */
 @Component({
   selector: 'app-three-stat-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="stat-card-3d" [class.light-mode]="!isDark"
-         (mouseenter)="onHover(true)" (mouseleave)="onHover(false)">
-      <div #miniScene class="mini-scene"></div>
+         (mouseenter)="isHovered = true" (mouseleave)="isHovered = false"
+         [class.hovered]="isHovered">
+      <!-- خلفية متحركة CSS بدلاً من WebGL -->
+      <div class="card-bg-effect">
+        <div class="floating-shape shape-1" [style.background]="color + '33'"></div>
+        <div class="floating-shape shape-2" [style.background]="color + '22'"></div>
+        <div class="floating-shape shape-3" [style.background]="color + '18'"></div>
+        <div class="particle-dots">
+          <span class="dot" *ngFor="let d of dots" [style.left.%]="d.x" [style.top.%]="d.y"
+                [style.animation-delay]="d.delay + 's'" [style.background]="color + '44'"></span>
+        </div>
+      </div>
       <div class="stat-content">
         <div class="stat-icon-wrap" [style.background]="iconBg">
           <span class="material-icons-round" [style.color]="color">{{ icon }}</span>
@@ -26,7 +38,28 @@ import { ThemeService } from '../../services/theme.service';
     </div>
   `,
   styles: [`
+    @keyframes floatShape1 {
+      0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      25% { transform: translate(10px, -15px) rotate(45deg) scale(1.1); }
+      50% { transform: translate(-5px, -25px) rotate(90deg) scale(0.95); }
+      75% { transform: translate(15px, -10px) rotate(135deg) scale(1.05); }
+    }
+    @keyframes floatShape2 {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      33% { transform: translate(-12px, 10px) rotate(-60deg); }
+      66% { transform: translate(8px, -8px) rotate(60deg); }
+    }
+    @keyframes floatShape3 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(5px, -12px) scale(1.15); }
+    }
+    @keyframes dotPulse {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 0.7; transform: scale(1.2); }
+    }
+
     :host { display: block; }
+
     .stat-card-3d {
       position: relative;
       border-radius: 16px;
@@ -36,27 +69,63 @@ import { ThemeService } from '../../services/theme.service';
       border: 1px solid rgba(99, 102, 241, 0.15);
       transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
       cursor: pointer;
+      perspective: 800px;
     }
     .stat-card-3d.light-mode {
       background: rgba(255, 255, 255, 0.85);
       border-color: rgba(99, 102, 241, 0.12);
     }
-    .stat-card-3d:hover {
+    .stat-card-3d.hovered {
       transform: translateY(-4px) scale(1.02);
       box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2), 0 0 30px rgba(99, 102, 241, 0.1);
       border-color: rgba(99, 102, 241, 0.3);
     }
-    .stat-card-3d.light-mode:hover {
+    .stat-card-3d.light-mode.hovered {
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1), 0 0 20px rgba(99, 102, 241, 0.08);
     }
-    .mini-scene {
+
+    .card-bg-effect {
       position: absolute;
       inset: 0;
       z-index: 0;
       opacity: 0.35;
       transition: opacity 0.3s ease;
+      overflow: hidden;
     }
-    .stat-card-3d:hover .mini-scene { opacity: 0.6; }
+    .stat-card-3d.hovered .card-bg-effect { opacity: 0.65; }
+
+    .floating-shape {
+      position: absolute;
+      border-radius: 30%;
+      filter: blur(8px);
+    }
+    .shape-1 {
+      width: 60px; height: 60px;
+      top: -10px; right: -10px;
+      animation: floatShape1 8s ease-in-out infinite;
+    }
+    .shape-2 {
+      width: 45px; height: 45px;
+      bottom: -5px; left: 10px;
+      animation: floatShape2 10s ease-in-out infinite;
+    }
+    .shape-3 {
+      width: 35px; height: 35px;
+      top: 50%; right: 30%;
+      animation: floatShape3 6s ease-in-out infinite;
+    }
+
+    .particle-dots {
+      position: absolute;
+      inset: 0;
+    }
+    .dot {
+      position: absolute;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      animation: dotPulse 3s ease-in-out infinite;
+    }
+
     .stat-content {
       position: relative;
       z-index: 1;
@@ -75,7 +144,7 @@ import { ThemeService } from '../../services/theme.service';
       flex-shrink: 0;
       transition: transform 0.3s ease;
     }
-    .stat-card-3d:hover .stat-icon-wrap {
+    .stat-card-3d.hovered .stat-icon-wrap {
       transform: scale(1.1) rotate(-5deg);
     }
     .stat-icon-wrap .material-icons-round {
@@ -97,21 +166,25 @@ import { ThemeService } from '../../services/theme.service';
     .light-mode .stat-label { color: #64748b; }
   `],
 })
-export class ThreeStatCardComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('miniScene') sceneRef!: ElementRef<HTMLElement>;
-
+export class ThreeStatCardComponent {
   @Input() value = 0;
   @Input() label = '';
   @Input() icon = 'analytics';
   @Input() color = '#6366f1';
 
-  private three = inject(ThreeService);
   private theme = inject(ThemeService);
-  private sceneId = 'stat-' + Math.random().toString(36).slice(2, 8);
-  private isHovered = false;
-  private shape!: THREE.Mesh;
+  isHovered = false;
 
-  isDark = true;
+  // نقاط عشوائية للتأثير البصري
+  dots = Array.from({ length: 8 }, () => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    delay: Math.random() * 3,
+  }));
+
+  get isDark(): boolean {
+    return this.theme.isDark?.() ?? true;
+  }
 
   get formattedValue(): string {
     return new Intl.NumberFormat('ar-YE').format(this.value);
@@ -119,93 +192,5 @@ export class ThreeStatCardComponent implements AfterViewInit, OnDestroy {
 
   get iconBg(): string {
     return this.color + '22';
-  }
-
-  ngAfterViewInit(): void {
-    const container = this.sceneRef?.nativeElement;
-    if (!container) return;
-
-    this.isDark = this.theme.isDark?.() ?? true;
-    const colorHex = parseInt(this.color.replace('#', ''), 16);
-
-    const managed = this.three.createScene(this.sceneId, container, {
-      clearColor: 0x000000,
-      clearAlpha: 0,
-      camera: { fov: 45, position: [0, 0, 4], lookAt: [0, 0, 0] },
-      ambient: { color: 0xffffff, intensity: this.isDark ? 0.3 : 0.5 },
-      directional: { color: 0xffffff, intensity: this.isDark ? 0.6 : 0.4, position: [2, 3, 2] },
-    });
-
-    // شكل هندسي عائم حسب الأيقونة
-    const shapes: Record<string, () => THREE.Mesh> = {
-      bolt: () => this.createOctahedron(colorHex),
-      groups: () => this.three.createGlowSphere(0.7, colorHex, 0.5, [0, 0, 0]),
-      account_balance_wallet: () => this.three.createGlassCube(1, colorHex, [0, 0, 0]),
-      inventory_2: () => this.three.createGlowTorus(0.7, 0.12, colorHex, [0, 0, 0]),
-      payments: () => this.createDodecahedron(colorHex),
-      local_shipping: () => this.three.createGlassCube(0.9, colorHex, [0, 0, 0]),
-      warehouse: () => this.createTetrahedron(colorHex),
-      default: () => this.three.createGlowSphere(0.6, colorHex, 0.4, [0, 0, 0]),
-    };
-
-    this.shape = (shapes[this.icon] || shapes['default'])();
-    managed.scene.add(this.shape);
-
-    // جسيمات صغيرة
-    const particles = this.three.createParticleSystem(40, 4, colorHex, 0.025);
-    managed.scene.add(particles);
-
-    this.three.animate(this.sceneId, (delta, elapsed) => {
-      const speed = this.isHovered ? 2.5 : 0.5;
-      this.shape.rotation.x += delta * speed * 0.5;
-      this.shape.rotation.y += delta * speed;
-      this.shape.position.y = Math.sin(elapsed * 0.8) * 0.12;
-
-      // نبض التوهج عند hover
-      if (this.isHovered) {
-        const mat = this.shape.material as THREE.MeshStandardMaterial;
-        if (mat.emissiveIntensity !== undefined) {
-          mat.emissiveIntensity = 0.4 + Math.sin(elapsed * 3) * 0.2;
-        }
-      }
-
-      this.three.animateParticles(particles, delta, 4);
-      particles.rotation.y += delta * 0.05;
-    });
-  }
-
-  private createOctahedron(color: number): THREE.Mesh {
-    const geo = new THREE.OctahedronGeometry(0.8, 0);
-    const mat = new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.3,
-      metalness: 0.5, roughness: 0.3, transparent: true, opacity: 0.8,
-    });
-    return new THREE.Mesh(geo, mat);
-  }
-
-  private createDodecahedron(color: number): THREE.Mesh {
-    const geo = new THREE.DodecahedronGeometry(0.7, 0);
-    const mat = new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.3,
-      metalness: 0.4, roughness: 0.3, transparent: true, opacity: 0.8,
-    });
-    return new THREE.Mesh(geo, mat);
-  }
-
-  private createTetrahedron(color: number): THREE.Mesh {
-    const geo = new THREE.TetrahedronGeometry(0.9, 0);
-    const mat = new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.3,
-      metalness: 0.5, roughness: 0.3, transparent: true, opacity: 0.8,
-    });
-    return new THREE.Mesh(geo, mat);
-  }
-
-  onHover(hovered: boolean): void {
-    this.isHovered = hovered;
-  }
-
-  ngOnDestroy(): void {
-    this.three.destroyScene(this.sceneId);
   }
 }

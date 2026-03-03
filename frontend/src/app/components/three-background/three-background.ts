@@ -2,7 +2,15 @@ import {
   Component, ElementRef, ViewChild, AfterViewInit, OnDestroy,
   Input, inject, ChangeDetectionStrategy
 } from '@angular/core';
-import * as THREE from 'three';
+import {
+  Scene, Mesh, Points, Line, GridHelper, Group,
+  MeshStandardMaterial, MeshBasicMaterial, PointsMaterial, Material,
+  TorusKnotGeometry, TorusGeometry, IcosahedronGeometry,
+  OctahedronGeometry, DodecahedronGeometry, TetrahedronGeometry,
+  PlaneGeometry, BufferGeometry, BufferAttribute,
+  PointLight, Vector3,
+  AdditiveBlending, DoubleSide,
+} from 'three';
 import { ThreeService } from '../../services/three.service';
 import { ThemeService } from '../../services/theme.service';
 
@@ -27,16 +35,15 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
   private sceneId = 'bg-' + Math.random().toString(36).slice(2, 8);
 
   // كائنات المشهد
-  private particles!: THREE.Points;
-  private orbs: THREE.Mesh[] = [];
-  private torus!: THREE.Mesh;
-  private torusKnot!: THREE.Mesh;
-  private grid!: THREE.GridHelper;
-  private floatingCubes: THREE.Mesh[] = [];
-  private icosahedrons: THREE.Mesh[] = [];
-  private rings: THREE.Mesh[] = [];
-  private connectionLines: THREE.Line[] = [];
-  private nebulaClouds: THREE.Mesh[] = [];
+  private particles!: Points;
+  private orbs: Mesh[] = [];
+  private torusKnot!: Mesh;
+  private grid!: GridHelper;
+  private floatingCubes: Mesh[] = [];
+  private icosahedrons: Mesh[] = [];
+  private rings: Mesh[] = [];
+  private connectionLines: Line[] = [];
+  private nebulaClouds: Mesh[] = [];
   private mouseX = 0;
   private mouseY = 0;
   private mouseMoveHandler!: (e: MouseEvent) => void;
@@ -60,7 +67,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
       this.mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
       this.mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
     };
-    window.addEventListener('mousemove', this.mouseMoveHandler);
+    window.addEventListener('mousemove', this.mouseMoveHandler, { passive: true });
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -81,9 +88,11 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
           nebula2: 0x67e8f9
         };
 
+    // pixelRatio مخفض للخلفية (1.0 بدلاً من devicePixelRatio)
     const managed = this.three.createScene(this.sceneId, container, {
       clearColor: colors.bg,
       clearAlpha: isDark ? 0.98 : 0.3,
+      pixelRatio: 1.0,
       fog: { color: colors.bg, near: 8, far: 60 },
       camera: {
         fov: 55,
@@ -97,28 +106,26 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
     const { scene } = managed;
 
     // ═══ ضوء نقطي ملون ═══
-    const pointLight1 = new THREE.PointLight(colors.accent1, isDark ? 2 : 0.5, 25);
+    const pointLight1 = new PointLight(colors.accent1, isDark ? 2 : 0.5, 25);
     pointLight1.position.set(-5, 5, 5);
     scene.add(pointLight1);
 
-    const pointLight2 = new THREE.PointLight(colors.accent2, isDark ? 1.5 : 0.3, 20);
+    const pointLight2 = new PointLight(colors.accent2, isDark ? 1.5 : 0.3, 20);
     pointLight2.position.set(5, -3, 3);
     scene.add(pointLight2);
 
-    // ═══ جسيمات نجمية متطايرة ═══
-    this.particles = this.createStarField(1200, 40, colors.particle);
+    // ═══ جسيمات نجمية — مخفضة من 1200 إلى 600 ═══
+    this.particles = this.createStarField(600, 40, colors.particle);
     scene.add(this.particles);
 
-    // ═══ سحب سديمية (Nebula Clouds) ═══
+    // ═══ سحب سديمية ═══
     this.createNebulaClouds(scene, colors, isDark);
 
-    // ═══ كرات متوهجة بتأثير Fresnel ═══
+    // ═══ كرات متوهجة — مخفضة من 5 إلى 3 ═══
     const orbConfigs: Array<{ r: number; c: number; p: [number, number, number]; ei: number }> = [
       { r: 1.8, c: colors.accent1, p: [-5, 3, -8], ei: 0.7 },
       { r: 1.2, c: colors.accent2, p: [6, -2, -10], ei: 0.6 },
       { r: 1.0, c: colors.accent3, p: [3, 4, -5], ei: 0.8 },
-      { r: 0.7, c: colors.accent4, p: [-4, -3, -7], ei: 0.5 },
-      { r: 0.5, c: colors.accent1, p: [0, 5, -12], ei: 0.4 },
     ];
     orbConfigs.forEach(cfg => {
       const orb = this.three.createGlowSphere(cfg.r, cfg.c, cfg.ei, cfg.p);
@@ -127,8 +134,8 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
     });
 
     // ═══ TorusKnot مركزي ═══
-    const torusKnotGeo = new THREE.TorusKnotGeometry(2.5, 0.15, 128, 16, 2, 3);
-    const torusKnotMat = new THREE.MeshStandardMaterial({
+    const torusKnotGeo = new TorusKnotGeometry(2.5, 0.15, 100, 12, 2, 3);
+    const torusKnotMat = new MeshStandardMaterial({
       color: colors.accent1,
       emissive: colors.accent2,
       emissiveIntensity: isDark ? 0.3 : 0.15,
@@ -138,14 +145,14 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
       opacity: isDark ? 0.35 : 0.2,
       wireframe: true,
     });
-    this.torusKnot = new THREE.Mesh(torusKnotGeo, torusKnotMat);
+    this.torusKnot = new Mesh(torusKnotGeo, torusKnotMat);
     this.torusKnot.position.set(0, 0, -8);
     scene.add(this.torusKnot);
 
-    // ═══ حلقات Torus متداخلة ═══
+    // ═══ حلقات Torus — مخفضة segments ═══
     for (let i = 0; i < 3; i++) {
-      const torusGeo = new THREE.TorusGeometry(3 + i * 1.5, 0.04, 16, 100);
-      const torusMat = new THREE.MeshStandardMaterial({
+      const torusGeo = new TorusGeometry(3 + i * 1.5, 0.04, 12, 64);
+      const torusMat = new MeshStandardMaterial({
         color: [colors.accent1, colors.accent2, colors.accent3][i],
         emissive: [colors.accent1, colors.accent2, colors.accent3][i],
         emissiveIntensity: isDark ? 0.5 : 0.2,
@@ -154,7 +161,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
         transparent: true,
         opacity: isDark ? 0.4 : 0.25,
       });
-      const torusMesh = new THREE.Mesh(torusGeo, torusMat);
+      const torusMesh = new Mesh(torusGeo, torusMat);
       torusMesh.position.set(0, 0, -6 - i * 2);
       torusMesh.rotation.x = Math.PI / 4 + i * 0.3;
       torusMesh.rotation.y = i * 0.5;
@@ -162,14 +169,14 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
       scene.add(torusMesh);
     }
 
-    // ═══ شبكة أرضية مع تأثير perspective ═══
-    this.grid = this.three.createGridLines(60, 60, colors.grid1, colors.grid2);
+    // ═══ شبكة أرضية ═══
+    this.grid = this.three.createGridLines(60, 40, colors.grid1, colors.grid2);
     this.grid.position.y = -4;
-    (this.grid.material as THREE.Material).opacity = isDark ? 0.12 : 0.08;
+    (this.grid.material as Material).opacity = isDark ? 0.12 : 0.08;
     scene.add(this.grid);
 
-    // ═══ مكعبات زجاجية عائمة ═══
-    for (let i = 0; i < 12; i++) {
+    // ═══ مكعبات زجاجية — مخفضة من 12 إلى 8 ═══
+    for (let i = 0; i < 8; i++) {
       const size = 0.15 + Math.random() * 0.4;
       const color = [colors.accent1, colors.accent2, colors.accent3, colors.accent4][i % 4];
       const pos: [number, number, number] = [
@@ -190,12 +197,12 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
       scene.add(cube);
     }
 
-    // ═══ Icosahedrons عائمة ═══
-    for (let i = 0; i < 5; i++) {
+    // ═══ Icosahedrons — مخفضة من 5 إلى 3 ═══
+    for (let i = 0; i < 3; i++) {
       const radius = 0.3 + Math.random() * 0.5;
       const color = [colors.accent1, colors.accent3, colors.accent4][i % 3];
-      const geo = new THREE.IcosahedronGeometry(radius, 1);
-      const mat = new THREE.MeshStandardMaterial({
+      const geo = new IcosahedronGeometry(radius, 1);
+      const mat = new MeshStandardMaterial({
         color,
         emissive: color,
         emissiveIntensity: 0.3,
@@ -205,7 +212,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
         transparent: true,
         opacity: 0.6,
       });
-      const mesh = new THREE.Mesh(geo, mat);
+      const mesh = new Mesh(geo, mat);
       mesh.position.set(
         (Math.random() - 0.5) * 20,
         (Math.random() - 0.5) * 10,
@@ -245,7 +252,6 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
         this.torusKnot.rotation.x = elapsed * 0.08;
         this.torusKnot.rotation.y = elapsed * 0.12;
         this.torusKnot.rotation.z = elapsed * 0.05;
-        // نبض خفيف
         const scale = 1 + Math.sin(elapsed * 0.5) * 0.05;
         this.torusKnot.scale.set(scale, scale, scale);
       }
@@ -257,21 +263,20 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
         ring.rotation.z += delta * (0.02 + i * 0.01);
       });
 
-      // تحريك الكرات بمسارات إهليلجية
+      // تحريك الكرات
       this.orbs.forEach((orb, i) => {
         const speed = 0.15 + i * 0.08;
         const amp = 0.2 + i * 0.08;
         orb.position.y += Math.sin(elapsed * speed + i * 1.5) * amp * delta;
         orb.position.x += Math.cos(elapsed * speed * 0.6 + i * 2.5) * amp * 0.4 * delta;
-        // نبض التوهج
-        const mat = orb.material as THREE.MeshStandardMaterial;
+        const mat = orb.material as MeshStandardMaterial;
         mat.emissiveIntensity = 0.3 + Math.sin(elapsed * 0.8 + i) * 0.3;
       });
 
       // تحريك السحب السديمية
       this.nebulaClouds.forEach((cloud, i) => {
         cloud.rotation.z += delta * 0.01 * (i % 2 === 0 ? 1 : -1);
-        const mat = cloud.material as THREE.MeshBasicMaterial;
+        const mat = cloud.material as MeshBasicMaterial;
         mat.opacity = 0.06 + Math.sin(elapsed * 0.3 + i * 2) * 0.03;
       });
 
@@ -288,7 +293,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
       });
 
       // تحريك Icosahedrons
-      this.icosahedrons.forEach((ico, i) => {
+      this.icosahedrons.forEach((ico) => {
         const rs = (ico as any)._rotSpeed;
         ico.rotation.x += rs.x;
         ico.rotation.y += rs.y;
@@ -310,7 +315,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // مشهد لوحة التحكم - تأثيرات بيانات مالية
+  // مشهد لوحة التحكم - تأثيرات خفيفة
   // ═══════════════════════════════════════════════════════════
   private buildDashboardScene(container: HTMLElement, isDark: boolean): void {
     const colors = isDark
@@ -325,9 +330,11 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
           grid2: 0xe0e7ff, particle: 0x6366f1
         };
 
+    // pixelRatio مخفض للخلفية
     const managed = this.three.createScene(this.sceneId, container, {
       clearColor: colors.bg,
       clearAlpha: isDark ? 0.6 : 0.15,
+      pixelRatio: 1.0,
       fog: { color: colors.bg, near: 10, far: 80 },
       camera: {
         fov: 50,
@@ -340,42 +347,39 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
 
     const { scene } = managed;
 
-    // ═══ جسيمات خفيفة ═══
-    this.particles = this.createStarField(300, 50, colors.particle);
-    (this.particles.material as THREE.PointsMaterial).opacity = 0.3;
-    (this.particles.material as THREE.PointsMaterial).size = 0.03;
+    // ═══ جسيمات خفيفة — مخفضة من 300 إلى 150 ═══
+    this.particles = this.createStarField(150, 50, colors.particle);
+    (this.particles.material as PointsMaterial).opacity = 0.3;
+    (this.particles.material as PointsMaterial).size = 0.03;
     scene.add(this.particles);
 
-    // ═══ كرات متوهجة خفيفة ═══
+    // ═══ كرات متوهجة — مخفضة إلى 2 ═══
     const orb1 = this.three.createGlowSphere(1.0, colors.accent1, 0.3, [-8, 2, -15]);
     const orb2 = this.three.createGlowSphere(0.7, colors.accent2, 0.2, [8, -1, -12]);
-    const orb3 = this.three.createGlowSphere(0.5, colors.accent3, 0.25, [0, 4, -18]);
-    this.orbs.push(orb1, orb2, orb3);
-    scene.add(orb1, orb2, orb3);
+    this.orbs.push(orb1, orb2);
+    scene.add(orb1, orb2);
 
     // ═══ شبكة أرضية خفيفة ═══
-    this.grid = this.three.createGridLines(80, 40, colors.grid1, colors.grid2);
+    this.grid = this.three.createGridLines(80, 30, colors.grid1, colors.grid2);
     this.grid.position.y = -5;
-    (this.grid.material as THREE.Material).opacity = isDark ? 0.08 : 0.05;
+    (this.grid.material as Material).opacity = isDark ? 0.08 : 0.05;
     scene.add(this.grid);
 
-    // ═══ أشكال هندسية عائمة (تمثل البيانات) ═══
+    // ═══ أشكال هندسية — مخفضة إلى 3 ═══
     const shapes = [
       { type: 'octahedron', color: colors.accent1, pos: [-10, 3, -20] as [number, number, number], size: 0.8 },
       { type: 'dodecahedron', color: colors.accent2, pos: [10, -2, -18] as [number, number, number], size: 0.6 },
       { type: 'tetrahedron', color: colors.accent3, pos: [-5, -3, -22] as [number, number, number], size: 0.7 },
-      { type: 'icosahedron', color: colors.accent4, pos: [7, 5, -25] as [number, number, number], size: 0.5 },
     ];
 
     shapes.forEach(s => {
-      let geo: THREE.BufferGeometry;
+      let geo: BufferGeometry;
       switch (s.type) {
-        case 'octahedron': geo = new THREE.OctahedronGeometry(s.size, 0); break;
-        case 'dodecahedron': geo = new THREE.DodecahedronGeometry(s.size, 0); break;
-        case 'tetrahedron': geo = new THREE.TetrahedronGeometry(s.size, 0); break;
-        default: geo = new THREE.IcosahedronGeometry(s.size, 0);
+        case 'octahedron': geo = new OctahedronGeometry(s.size, 0); break;
+        case 'dodecahedron': geo = new DodecahedronGeometry(s.size, 0); break;
+        default: geo = new TetrahedronGeometry(s.size, 0);
       }
-      const mat = new THREE.MeshStandardMaterial({
+      const mat = new MeshStandardMaterial({
         color: s.color,
         emissive: s.color,
         emissiveIntensity: 0.2,
@@ -385,7 +389,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
         opacity: isDark ? 0.5 : 0.3,
         wireframe: true,
       });
-      const mesh = new THREE.Mesh(geo, mat);
+      const mesh = new Mesh(geo, mat);
       mesh.position.set(...s.pos);
       (mesh as any)._rotSpeed = { x: (Math.random() - 0.5) * 0.008, y: (Math.random() - 0.5) * 0.008 };
       (mesh as any)._floatOffset = Math.random() * Math.PI * 2;
@@ -394,8 +398,8 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
       scene.add(mesh);
     });
 
-    // ═══ مكعبات زجاجية صغيرة ═══
-    for (let i = 0; i < 6; i++) {
+    // ═══ مكعبات زجاجية — مخفضة من 6 إلى 4 ═══
+    for (let i = 0; i < 4; i++) {
       const size = 0.1 + Math.random() * 0.25;
       const color = [colors.accent1, colors.accent2, colors.accent3, colors.accent4][i % 4];
       const pos: [number, number, number] = [
@@ -418,26 +422,22 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
 
     // ═══ حلقة الرسم ═══
     this.three.animate(this.sceneId, (delta, elapsed) => {
-      // جسيمات
       this.three.animateParticles(this.particles, delta, 50);
       this.particles.rotation.y += delta * 0.01;
 
-      // كرات
       this.orbs.forEach((orb, i) => {
         orb.position.y += Math.sin(elapsed * 0.1 + i * 2) * 0.1 * delta;
-        const mat = orb.material as THREE.MeshStandardMaterial;
+        const mat = orb.material as MeshStandardMaterial;
         mat.emissiveIntensity = 0.15 + Math.sin(elapsed * 0.5 + i) * 0.1;
       });
 
-      // أشكال هندسية
-      this.icosahedrons.forEach((mesh, i) => {
+      this.icosahedrons.forEach((mesh) => {
         const rs = (mesh as any)._rotSpeed;
         mesh.rotation.x += rs.x;
         mesh.rotation.y += rs.y;
         mesh.position.y = (mesh as any)._baseY + Math.sin(elapsed * 0.2 + (mesh as any)._floatOffset) * 0.2;
       });
 
-      // مكعبات
       this.floatingCubes.forEach(cube => {
         const rs = (cube as any)._rotSpeed;
         cube.rotation.x += rs.x;
@@ -446,7 +446,6 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
         cube.position.y = (cube as any)._baseY + Math.sin(elapsed * (cube as any)._floatSpeed + (cube as any)._floatOffset) * 0.3;
       });
 
-      // parallax خفيف
       const cam = managed.camera;
       cam.position.x += (this.mouseX * 0.3 - cam.position.x) * 0.01;
       cam.position.y += (-this.mouseY * 0.15 + 3 - cam.position.y) * 0.01;
@@ -465,6 +464,7 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
     const managed = this.three.createScene(this.sceneId, container, {
       clearColor: colors.bg,
       clearAlpha: isDark ? 0.4 : 0.1,
+      pixelRatio: 1.0,
       camera: {
         fov: 50,
         position: [0, 2, 20],
@@ -475,14 +475,15 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
 
     const { scene } = managed;
 
-    this.particles = this.createStarField(150, 60, colors.particle);
-    (this.particles.material as THREE.PointsMaterial).opacity = 0.2;
-    (this.particles.material as THREE.PointsMaterial).size = 0.02;
+    // جسيمات مخفضة من 150 إلى 80
+    this.particles = this.createStarField(80, 60, colors.particle);
+    (this.particles.material as PointsMaterial).opacity = 0.2;
+    (this.particles.material as PointsMaterial).size = 0.02;
     scene.add(this.particles);
 
-    this.grid = this.three.createGridLines(100, 50, colors.grid1, colors.grid2);
+    this.grid = this.three.createGridLines(100, 30, colors.grid1, colors.grid2);
     this.grid.position.y = -6;
-    (this.grid.material as THREE.Material).opacity = 0.05;
+    (this.grid.material as Material).opacity = 0.05;
     scene.add(this.grid);
 
     this.three.animate(this.sceneId, (delta, elapsed) => {
@@ -500,54 +501,51 @@ export class ThreeBackgroundComponent implements AfterViewInit, OnDestroy {
   // أدوات مساعدة
   // ═══════════════════════════════════════════════════════════
 
-  /** إنشاء حقل نجمي مع أحجام متنوعة */
-  private createStarField(count: number, spread: number, color: number): THREE.Points {
+  private createStarField(count: number, spread: number, color: number): Points {
     const positions = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
     const velocities = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
       positions[i * 3] = (Math.random() - 0.5) * spread;
       positions[i * 3 + 1] = (Math.random() - 0.5) * spread;
       positions[i * 3 + 2] = (Math.random() - 0.5) * spread;
-      sizes[i] = Math.random() * 0.08 + 0.02;
       velocities[i * 3] = (Math.random() - 0.5) * 0.015;
       velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.015;
       velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.015;
     }
 
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new BufferAttribute(positions, 3));
     (geo as any)._velocities = velocities;
 
-    const mat = new THREE.PointsMaterial({
+    const mat = new PointsMaterial({
       color,
       size: 0.05,
       transparent: true,
       opacity: 0.5,
-      blending: THREE.AdditiveBlending,
+      blending: AdditiveBlending,
       depthWrite: false,
       sizeAttenuation: true,
     });
 
-    return new THREE.Points(geo, mat);
+    return new Points(geo, mat);
   }
 
-  /** إنشاء سحب سديمية */
-  private createNebulaClouds(scene: THREE.Scene, colors: any, isDark: boolean): void {
+  private createNebulaClouds(scene: Scene, colors: any, isDark: boolean): void {
     const nebulaColors = [colors.nebula1, colors.nebula2, colors.accent3];
 
-    for (let i = 0; i < 3; i++) {
-      const geo = new THREE.PlaneGeometry(20 + i * 5, 15 + i * 3);
-      const mat = new THREE.MeshBasicMaterial({
+    // مخفضة من 3 إلى 2
+    for (let i = 0; i < 2; i++) {
+      const geo = new PlaneGeometry(20 + i * 5, 15 + i * 3);
+      const mat = new MeshBasicMaterial({
         color: nebulaColors[i],
         transparent: true,
         opacity: isDark ? 0.06 : 0.03,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
+        side: DoubleSide,
+        blending: AdditiveBlending,
         depthWrite: false,
       });
-      const cloud = new THREE.Mesh(geo, mat);
+      const cloud = new Mesh(geo, mat);
       cloud.position.set(
         (Math.random() - 0.5) * 10,
         (Math.random() - 0.5) * 8,
