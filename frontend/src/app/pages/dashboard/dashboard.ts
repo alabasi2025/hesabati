@@ -4,11 +4,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { ThreeBackgroundComponent } from '../../components/three-background/three-background';
+import { ThreeChartComponent, ChartDataItem } from '../../components/three-chart/three-chart';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ThreeBackgroundComponent, ThreeChartComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -31,6 +33,7 @@ export class DashboardComponent implements OnInit {
   loading = signal(true);
   totalSalaries = signal(0);
   loadError = signal('');
+  chartData = signal<ChartDataItem[]>([]);
 
   ngOnInit() {
     this.route.parent?.params.subscribe(params => {
@@ -75,6 +78,9 @@ export class DashboardComponent implements OnInit {
       this.totalSalaries.set(
         emps.reduce((sum: number, e: any) => sum + Number(e.salary || 0), 0)
       );
+
+      // بناء بيانات الرسم البياني
+      this.buildChartData();
 
       // التحقق من وجود أخطاء جزئية
       const failedCount = results.filter(r => r.status === 'rejected').length;
@@ -126,5 +132,24 @@ export class DashboardComponent implements OnInit {
 
   retry() {
     this.loadData();
+  }
+
+  private buildChartData(): void {
+    const items: ChartDataItem[] = [];
+    const stCount = this.stations().length;
+    const empCount = this.employees().length;
+    const accCount = this.accounts().length;
+    const fundCount = this.funds().length;
+    const supCount = this.suppliers().length;
+    const whCount = this.warehouses().length;
+
+    if (stCount > 0) items.push({ label: 'محطات', value: stCount, color: '#6366f1' });
+    if (empCount > 0) items.push({ label: 'موظفون', value: empCount, color: '#06b6d4' });
+    if (accCount > 0) items.push({ label: 'حسابات', value: accCount, color: '#10b981' });
+    if (fundCount > 0) items.push({ label: 'صناديق', value: fundCount, color: '#f59e0b' });
+    if (supCount > 0) items.push({ label: 'موردون', value: supCount, color: '#ef4444' });
+    if (whCount > 0) items.push({ label: 'مخازن', value: whCount, color: '#8b5cf6' });
+
+    this.chartData.set(items);
   }
 }

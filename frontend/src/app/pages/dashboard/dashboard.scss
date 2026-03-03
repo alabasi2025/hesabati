@@ -113,3 +113,71 @@
   .material-icons-round { color: #ef4444 !important; }
 }
 .pending-icon { background: rgba(239,68,68,0.15) !important; color: #ef4444 !important; }
+
+// ═══ 3D Charts Section ═══
+.charts-section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(99, 102, 241, 0.03) 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #06b6d4, #8b5cf6, #6366f1);
+    background-size: 300% 100%;
+    animation: shimmer-gradient 4s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-wrapper {
+  height: 320px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+  }
+
+  app-three-chart {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// ═══ Dashboard Page - position relative for 3D background ═══
+.dashboard-page {
+  position: relative;
+  z-index: 0;
+
+  > *:not(app-three-background) {
+    position: relative;
+    z-index: 1;
+  }
+}

@@ -1,4 +1,6 @@
 <div class="dashboard-page">
+  <!-- Three.js 3D Background -->
+  <app-three-background variant="dashboard"></app-three-background>
   @if (loading()) {
     <div class="loading-container">
       <div class="spinner"></div>
@@ -165,6 +167,34 @@
               }
             </div>
           }
+        </div>
+      </div>
+    }
+
+    <!-- 3D Charts Section -->
+    @if (chartData().length > 0) {
+      <div class="section-card charts-section">
+        <h3 class="section-title"><span class="material-icons-round">bar_chart</span> نظرة عامة ثلاثية الأبعاد</h3>
+        <div class="charts-grid">
+          <div class="chart-wrapper">
+            <app-three-chart
+              type="bar"
+              [data]="chartData()"
+              title="توزيع الأصول"
+              [maxBarHeight]="4"
+              [autoRotate]="true"
+              [rotateSpeed]="0.08"
+            ></app-three-chart>
+          </div>
+          <div class="chart-wrapper">
+            <app-three-chart
+              type="donut"
+              [data]="chartData()"
+              title="النسب المئوية"
+              [autoRotate]="true"
+              [rotateSpeed]="0.12"
+            ></app-three-chart>
+          </div>
         </div>
       </div>
     }
