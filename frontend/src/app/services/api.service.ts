@@ -544,6 +544,109 @@ export class ApiService {
     return this.request<any[]>(`/businesses/${bizId}/warehouses/${warehouseId}/inventory`);
   }
 
+  // ===================== سير العمل (Workflow) =====================
+  getVoucherTransitions(bizId: number, voucherId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/vouchers/${voucherId}/transitions`);
+  }
+  executeVoucherTransition(bizId: number, voucherId: number, transitionId: number, note?: string) {
+    return this.request<any>(`/businesses/${bizId}/vouchers/${voucherId}/transition`, { method: 'POST', body: JSON.stringify({ transitionId, note }) });
+  }
+  getVoucherWorkflowHistory(bizId: number, voucherId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/vouchers/${voucherId}/workflow-history`);
+  }
+  setupDefaultWorkflow(bizId: number, opTypeId: number) {
+    return this.request<any>(`/businesses/${bizId}/operation-types/${opTypeId}/setup-workflow`, { method: 'POST' });
+  }
+  getOperationTypeTransitions(bizId: number, opTypeId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/operation-types/${opTypeId}/transitions`);
+  }
+  addOperationTypeTransition(bizId: number, opTypeId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/operation-types/${opTypeId}/transitions`, { method: 'POST', body: JSON.stringify(d) });
+  }
+  deleteTransition(bizId: number, transitionId: number) {
+    return this.request<any>(`/businesses/${bizId}/transitions/${transitionId}`, { method: 'DELETE' });
+  }
+
+  // ===================== بناء الواجهات الديناميكية (UI Builder) =====================
+  getUiPages(bizId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/ui/pages`);
+  }
+  getUiPageByKey(bizId: number, pageKey: string) {
+    return this.request<any>(`/businesses/${bizId}/ui/pages/key/${pageKey}`);
+  }
+  getUiPage(bizId: number, pageId: number) {
+    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}`);
+  }
+  createUiPage(bizId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/pages`, { method: 'POST', body: JSON.stringify(d) });
+  }
+  updateUiPage(bizId: number, pageId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}`, { method: 'PUT', body: JSON.stringify(d) });
+  }
+  deleteUiPage(bizId: number, pageId: number) {
+    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}`, { method: 'DELETE' });
+  }
+  addUiComponent(bizId: number, pageId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}/components`, { method: 'POST', body: JSON.stringify(d) });
+  }
+  updateUiComponent(bizId: number, componentId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/components/${componentId}`, { method: 'PUT', body: JSON.stringify(d) });
+  }
+  deleteUiComponent(bizId: number, componentId: number) {
+    return this.request<any>(`/businesses/${bizId}/ui/components/${componentId}`, { method: 'DELETE' });
+  }
+  getUiDataSources(bizId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/ui/data-sources`);
+  }
+  createUiDataSource(bizId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/data-sources`, { method: 'POST', body: JSON.stringify(d) });
+  }
+  updateUiDataSource(bizId: number, dsId: number, d: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/data-sources/${dsId}`, { method: 'PUT', body: JSON.stringify(d) });
+  }
+  deleteUiDataSource(bizId: number, dsId: number) {
+    return this.request<any>(`/businesses/${bizId}/ui/data-sources/${dsId}`, { method: 'DELETE' });
+  }
+  executeUiDataSource(bizId: number, dsId: number, params?: any) {
+    return this.request<any>(`/businesses/${bizId}/ui/data-sources/${dsId}/execute`, { method: 'POST', body: JSON.stringify(params || {}) });
+  }
+
+  // ===================== التقارير المتقدمة =====================
+  getMonthlyRevenue(bizId: number, year?: number) {
+    const q = year ? `?year=${year}` : '';
+    return this.request<any>(`/businesses/${bizId}/reports/monthly-revenue${q}`);
+  }
+  getAggregatedProfitLoss(dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.request<any>(`/reports/aggregated-profit-loss${q}`);
+  }
+  getAggregatedSummary() {
+    return this.request<any>(`/reports/aggregated-summary`);
+  }
+
+  // ===================== محرك المخزون - دوال جديدة =====================
+  getStockLevels(bizId: number, warehouseId?: number) {
+    const q = warehouseId ? `?warehouseId=${warehouseId}` : '';
+    return this.request<any>(`/businesses/${bizId}/stock-levels${q}`);
+  }
+  getStockAlerts(bizId: number) {
+    return this.request<any>(`/businesses/${bizId}/stock-alerts`);
+  }
+  getStockValuation(bizId: number, warehouseId?: number) {
+    const q = warehouseId ? `?warehouseId=${warehouseId}` : '';
+    return this.request<any>(`/businesses/${bizId}/stock-valuation${q}`);
+  }
+  getItemMovements(bizId: number, itemId: number, limit?: number) {
+    const q = limit ? `?limit=${limit}` : '';
+    return this.request<any>(`/businesses/${bizId}/items/${itemId}/movements${q}`);
+  }
+  createStockMovement(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/stock-movements`, { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // ===================== فحص الاتصال =====================
   async checkDbHealth(): Promise<{ status: string; message: string; latency?: string }> {
     try {

@@ -11,6 +11,7 @@ import {
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, parseId } from '../middleware/helpers.ts';
+import { postTransaction } from '../services/transaction.service.ts';
 
 const enhancements = new Hono();
 
@@ -140,69 +141,79 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تغيير حالة سند ملغي' }, 400);
   if (existing.status === 'confirmed' && newStatus === 'draft') return c.json({ error: 'لا يمكن إرجاع سند معتمد إلى مسودة' }, 400);
 
-  const result = await db.transaction(async (tx) => {
-    const [updated] = await tx.update(vouchers).set({
-      status: newStatus, updatedAt: new Date(),
-    }).where(eq(vouchers.id, id)).returning();
-
-    // إذا تم اعتماد السند من مسودة → تنفيذ القيود المحاسبية وتحديث الأرصدة
+  try {
+    // إذا تم اعتماد السند من مسودة → نستخدم محرك المعاملات لتنفيذ القيود المحاسبية
     if (existing.status === 'draft' && newStatus === 'confirmed') {
       const amount = parseFloat(String(existing.amount));
       const currencyId = existing.currencyId || 1;
       const debitAccountId = existing.toAccountId;
       const creditAccountId = existing.fromAccountId;
 
-      // إنشاء القيد المحاسبي
-      const entryDate = existing.voucherDate ? new Date(existing.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      const [entry] = await tx.insert(journalEntries).values({
-        businessId: bizId,
-        entryNumber: `JE-${existing.voucherNumber}`,
-        entryDate,
-        description: existing.description || '',
-        reference: existing.voucherNumber,
-        operationTypeId: existing.operationTypeId || null,
-        totalDebit: String(amount),
-        totalCredit: String(amount),
-        isBalanced: true,
-        createdBy: userId,
-      }).returning();
+      // تنفيذ القيود عبر محرك المعاملات المركزي
+      await db.transaction(async (tx) => {
+        // تحديث حالة السند
+        await tx.update(vouchers).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(vouchers.id, id));
 
-      if (debitAccountId) {
-        await tx.insert(journalEntryLines).values({
-          journalEntryId: entry.id, accountId: debitAccountId,
-          lineType: 'debit', amount: String(amount), description: existing.description || '', sortOrder: 0,
+        // إنشاء القيد المحاسبي
+        const entryDate = existing.voucherDate ? new Date(existing.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        const [entry] = await tx.insert(journalEntries).values({
+          businessId: bizId, entryNumber: `JE-${existing.voucherNumber}`,
+          entryDate, description: existing.description || '',
+          reference: existing.voucherNumber, operationTypeId: existing.operationTypeId || null,
+          totalDebit: String(amount), totalCredit: String(amount),
+          isBalanced: true, createdBy: userId,
+        }).returning();
+
+        if (debitAccountId) {
+          await tx.insert(journalEntryLines).values({
+            journalEntryId: entry.id, accountId: debitAccountId,
+            lineType: 'debit', amount: String(amount), description: existing.description || '', sortOrder: 0,
+          });
+          await tx.execute(sql`
+            INSERT INTO account_balances (account_id, currency_id, balance)
+            VALUES (${debitAccountId}, ${currencyId}, ${amount})
+            ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
+          `);
+        }
+        if (creditAccountId) {
+          await tx.insert(journalEntryLines).values({
+            journalEntryId: entry.id, accountId: creditAccountId,
+            lineType: 'credit', amount: String(amount), description: existing.description || '', sortOrder: 1,
+          });
+          await tx.execute(sql`
+            INSERT INTO account_balances (account_id, currency_id, balance)
+            VALUES (${creditAccountId}, ${currencyId}, ${-amount})
+            ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
+          `);
+        }
+
+        // سجل التدقيق
+        await tx.insert(auditLog).values({
+          userId, businessId: bizId, action: 'change_voucher_status',
+          tableName: 'vouchers', recordId: id,
+          oldData: { status: 'draft' }, newData: { status: 'confirmed' },
         });
-        await tx.execute(sql`
-          INSERT INTO account_balances (account_id, currency_id, balance)
-          VALUES (${debitAccountId}, ${currencyId}, ${amount})
-          ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
-        `);
-      }
-      if (creditAccountId) {
-        await tx.insert(journalEntryLines).values({
-          journalEntryId: entry.id, accountId: creditAccountId,
-          lineType: 'credit', amount: String(amount), description: existing.description || '', sortOrder: 1,
-        });
-        await tx.execute(sql`
-          INSERT INTO account_balances (account_id, currency_id, balance)
-          VALUES (${creditAccountId}, ${currencyId}, ${-amount})
-          ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
-        `);
-      }
+      });
+
+      const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
+      return c.json(updated);
     }
 
-    // سجل التدقيق
-    await tx.insert(auditLog).values({
+    // تغيير حالة عادي (ليس من draft إلى confirmed)
+    const [updated] = await db.update(vouchers).set({
+      status: newStatus, updatedAt: new Date(),
+    }).where(eq(vouchers.id, id)).returning();
+
+    await db.insert(auditLog).values({
       userId, businessId: bizId, action: 'change_voucher_status',
       tableName: 'vouchers', recordId: id,
-      oldData: { status: existing.status },
-      newData: { status: newStatus },
+      oldData: { status: existing.status }, newData: { status: newStatus },
     });
 
-    return updated;
-  });
-
-  return c.json(result);
+    return c.json(updated);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'فشل في تغيير حالة السند' }, 400);
+  }
 }));
 
 // 4. جلب رصيد حساب (لعرضه أثناء إنشاء العملية)

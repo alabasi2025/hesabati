@@ -99,8 +99,9 @@ export const roles = pgTable('roles', {
 export const rolePermissions = pgTable('role_permissions', {
   id: serial('id').primaryKey(),
   roleId: integer('role_id').notNull().references(() => roles.id),
-  resource: varchar('resource', { length: 100 }).notNull(), // vouchers | accounts | reports | screens | settings
-  action: varchar('action', { length: 50 }).notNull(), // create | read | update | delete | approve | reverse
+  resource: varchar('resource', { length: 100 }).notNull(), // vouchers | accounts | funds | reports | screens | settings | inventory | workflow | ui_builder
+  action: varchar('action', { length: 50 }).notNull(), // create | read | update | delete | approve | reverse | execute
+  constraints: jsonb('constraints').$type<any>().default({}), // قيود إضافية: {maxAmount, stationIds, operationTypeIds, accountIds}
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
@@ -536,6 +537,8 @@ export const inventoryStock = pgTable('inventory_stock', {
   warehouseId: integer('warehouse_id').notNull().references(() => warehouses.id),
   quantity: decimal('quantity', { precision: 15, scale: 2 }).notNull().default('0'),
   avgCost: decimal('avg_cost', { precision: 15, scale: 2 }),
+  costingMethod: varchar('costing_method', { length: 20 }).default('weighted_avg'), // weighted_avg | fifo | lifo
+  costLayers: jsonb('cost_layers').$type<Array<{qty: number; unitCost: number; date: string}>>().default([]), // طبقات التكلفة لـ FIFO/LIFO
   currencyId: integer('currency_id').references(() => currencies.id),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -688,6 +691,7 @@ export const operationTypes = pgTable('operation_types', {
   screens: text('screens').default('{}'), // PostgreSQL text[] stored as text for Drizzle compat
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),
+  workflowConfig: jsonb('workflow_config').$type<{ enabled: boolean; initialStatus: string; statuses: string[] }>(), // إعدادات سير العمل
   sortOrder: integer('sort_order').default(0),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
@@ -1047,4 +1051,101 @@ export const warehouseOperationItems = pgTable('warehouse_operation_items', {
   notes: text('notes'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== ANALYTICS SNAPSHOTS (لقطات التقارير المؤقتة) =====================
+export const analyticsSnapshots = pgTable('analytics_snapshots', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  reportKey: varchar('report_key', { length: 100 }).notNull(), // profit_loss | trial_balance | daily_summary | account_statement
+  filtersHash: varchar('filters_hash', { length: 64 }).notNull(), // SHA-256 hash of filters for caching
+  data: jsonb('data').notNull(), // البيانات المخزنة مؤقتاً
+  generatedAt: timestamp('generated_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at'), // وقت انتهاء الصلاحية
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+// ===================== WORKFLOW TRANSITIONS (انتقالات سير العمل) =====================
+export const workflowTransitions = pgTable('workflow_transitions', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  operationTypeId: integer('operation_type_id').notNull().references(() => operationTypes.id),
+  fromStatus: varchar('from_status', { length: 30 }).notNull(), // draft | confirmed | pending_approval | approved | rejected | cancelled
+  toStatus: varchar('to_status', { length: 30 }).notNull(),
+  actionName: varchar('action_name', { length: 100 }).notNull(), // اسم الإجراء (مثل: اعتماد، رفض، إلغاء)
+  actionIcon: varchar('action_icon', { length: 50 }).default('check_circle'),
+  actionColor: varchar('action_color', { length: 20 }).default('#3b82f6'),
+  requiredRole: varchar('required_role', { length: 100 }), // الدور المطلوب لتنفيذ الانتقال
+  requiresNote: boolean('requires_note').notNull().default(false), // هل يتطلب ملاحظة
+  autoExecute: boolean('auto_execute').notNull().default(false), // تنفيذ تلقائي عند الإنشاء
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ===================== WORKFLOW HISTORY (سجل انتقالات سير العمل) =====================
+export const workflowHistory = pgTable('workflow_history', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  voucherId: integer('voucher_id').notNull().references(() => vouchers.id),
+  transitionId: integer('transition_id').references(() => workflowTransitions.id),
+  fromStatus: varchar('from_status', { length: 30 }).notNull(),
+  toStatus: varchar('to_status', { length: 30 }).notNull(),
+  actionName: varchar('action_name', { length: 100 }).notNull(),
+  note: text('note'),
+  executedBy: integer('executed_by').references(() => users.id),
+  executedAt: timestamp('executed_at').notNull().defaultNow(),
+});
+
+// ===================== UI DATA SOURCES (مصادر البيانات الديناميكية) =====================
+export const uiDataSources = pgTable('ui_data_sources', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  sourceType: varchar('source_type', { length: 30 }).notNull(),
+  tableName: varchar('table_name', { length: 100 }),
+  queryTemplate: text('query_template'),
+  filters: jsonb('filters').$type<any>().default({}),
+  sorting: jsonb('sorting').$type<any>().default({}),
+  config: jsonb('config').$type<any>().default({}),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== UI PAGES (صفحات الواجهة الديناميكية) =====================
+export const uiPages = pgTable('ui_pages', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  pageKey: varchar('page_key', { length: 100 }).notNull(),
+  title: varchar('title', { length: 200 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 50 }).default('dashboard'),
+  color: varchar('color', { length: 20 }).default('#3b82f6'),
+  layout: varchar('layout', { length: 30 }).default('grid'),
+  config: jsonb('config').$type<any>().default({}),
+  isActive: boolean('is_active').notNull().default(true),
+  sortOrder: integer('sort_order').default(0),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ===================== UI COMPONENTS (مكونات الواجهة الديناميكية) =====================
+export const uiComponents = pgTable('ui_components', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  pageId: integer('page_id').notNull().references(() => uiPages.id),
+  componentType: varchar('component_type', { length: 50 }).notNull(),
+  title: varchar('title', { length: 200 }),
+  config: jsonb('config').$type<any>().default({}),
+  dataSourceId: integer('data_source_id').references(() => uiDataSources.id),
+  positionX: integer('position_x').notNull().default(0),
+  positionY: integer('position_y').notNull().default(0),
+  width: integer('width').notNull().default(6),
+  height: integer('height').notNull().default(4),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

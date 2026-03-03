@@ -31,6 +31,12 @@ import {
 } from '../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired } from '../middleware/helpers.ts';
 import { getNextSequence, formatSequenceNumber, generateOperationSequences, TYPE_PREFIXES, generateItemCode, getNextItemSequence } from '../middleware/sequencing.ts';
+import { postTransaction, cancelTransaction, reverseTransaction } from '../services/transaction.service.ts';
+import { getProfitAndLoss, getTrialBalance, getAccountStatement, getDailySummary, getAggregatedProfitAndLoss, getAggregatedSummary, getMonthlyRevenueExpenses } from '../services/reporting.service.ts';
+import { getAvailableTransitions, executeTransition, getWorkflowHistory, setupDefaultWorkflow, getOperationTypeTransitions, addTransition, deleteTransition } from '../services/workflow.service.ts';
+import { getPages, getPage, getPageById, createPage, updatePage, deletePage, addComponent, updateComponent, deleteComponent, getDataSources, createDataSource, updateDataSource, deleteDataSource, executeDataSource } from '../services/ui-builder.service.ts';
+import { checkPermission, validateConstraints } from '../middleware/permissions.ts';
+import { processStockMovement, getStockLevels, getLowStockAlerts, getStockValuation, getItemMovementHistory } from '../services/inventory.service.ts';
 
 const api = new Hono();
 
@@ -399,7 +405,7 @@ api.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandler('جلب 
   });
 }));
 
-api.post('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandler('إضافة حساب', async (c) => {
+api.post('/businesses/:bizId/accounts', bizAuthMiddleware(), checkPermission('accounts', 'create'), safeHandler('إضافة حساب', async (c) => {
   const bizId = c.get('bizId') as number;
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(accountSchema, body);
@@ -448,7 +454,7 @@ api.put('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), safeHandler('ت�
   return c.json(updated);
 }));
 
-api.delete('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), safeHandler('حذف حساب', async (c) => {
+api.delete('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), checkPermission('accounts', 'delete'), safeHandler('حذف حساب', async (c) => {
   const bizId = c.get('bizId') as number;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
@@ -590,7 +596,7 @@ api.get('/businesses/:bizId/funds', bizAuthMiddleware(), safeHandler('جلب ا�
   return c.json(rows.map(f => ({ ...f, balances: balanceMap[f.id] || [] })));
 }));
 
-api.post('/businesses/:bizId/funds', bizAuthMiddleware(), safeHandler('إضافة صندوق', async (c) => {
+api.post('/businesses/:bizId/funds', bizAuthMiddleware(), checkPermission('funds', 'create'), safeHandler('إضافة صندوق', async (c) => {
   const bizId = c.get('bizId') as number;
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(fundSchema, body);
@@ -622,7 +628,7 @@ api.put('/businesses/:bizId/funds/:id', bizAuthMiddleware(), safeHandler('تعد
   return c.json(updated);
 }));
 
-api.delete('/businesses/:bizId/funds/:id', bizAuthMiddleware(), safeHandler('حذف صندوق', async (c) => {
+api.delete('/businesses/:bizId/funds/:id', bizAuthMiddleware(), checkPermission('funds', 'delete'), safeHandler('حذف صندوق', async (c) => {
   const bizId = c.get('bizId') as number;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف الصندوق غير صالح' }, 400);
@@ -653,7 +659,7 @@ api.get('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('جلب 
   return c.json(rows);
 }));
 
-api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضافة سند', async (c) => {
+api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إضافة سند', async (c) => {
   const bizId = c.get('bizId') as number;
   const userId = (c.get('user') as any)?.userId;
   const body = normalizeBody(await c.req.json());
@@ -737,10 +743,34 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
   const primaryAccountId = debitAccountId || creditAccountId;
   const templateId = voucherData.operationTypeId || null;
 
-  // === تنفيذ العملية داخل transaction ===
-  const result = await db.transaction(async (tx) => {
-    // 1. توليد رقم السند بـ sequence (النظام القديم للتوافق)
-    let voucherNumber = voucherData.voucherNumber;
+  // === تنفيذ العملية عبر محرك المعاملات المركزي ===
+  try {
+    const result = await postTransaction(bizId, userId, {
+      voucherType: vType,
+      amount,
+      currencyId,
+      debitAccountId,
+      creditAccountId,
+      toFundId: voucherData.toFundId || null,
+      fromFundId: voucherData.fromFundId || opType?.source_fund_id || null,
+      stationId: voucherData.stationId || null,
+      employeeId: voucherData.employeeId || null,
+      supplierId: voucherData.supplierId || null,
+      operationTypeId: voucherData.operationTypeId || null,
+      operationTypeName: opType?.name || null,
+      description: voucherData.description || (opType?.name) || '',
+      reference: voucherData.reference || null,
+      voucherDate: voucherData.voucherDate || null,
+      voucherNumber: voucherData.voucherNumber || null,
+    });
+    return c.json(result.voucher, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'فشل في تنفيذ المعاملة' }, 400);
+  }
+}));
+
+/* === الكود القديم المُستبدل بـ postTransaction ===
+let voucherNumber = voucherData.voucherNumber;
     if (!voucherNumber) {
       const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
       const prefix = TYPE_PREFIXES[vType] || 'VCH';
@@ -875,97 +905,37 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
 
     return { voucher: created, journalEntry: entry };
   });
-
   return c.json(result.voucher, 201);
 }));
+=== نهاية الكود القديم === */
 
-api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('حذف سند', async (c) => {
+api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), checkPermission('vouchers', 'delete'), safeHandler('حذف سند', async (c) => {
   const bizId = c.get('bizId') as number;
   const userId = (c.get('user') as any)?.userId;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
-  const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
-  if (!existing) return c.json({ error: 'سند غير موجود أو لا ينتمي لهذا العمل' }, 404);
-  if (existing.status === 'cancelled') return c.json({ error: 'السند ملغي مسبقاً' }, 400);
-
-  const amount = parseFloat(String(existing.amount));
-  const currencyId = existing.currencyId || 1;
-
-  await db.transaction(async (tx) => {
-    // 1. إلغاء السند
-    await tx.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
-
-    // 2. عكس أرصدة الحسابات
-    if (existing.toAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE account_id = ${existing.toAccountId} AND currency_id = ${currencyId}
-      `);
-    }
-    if (existing.fromAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE account_id = ${existing.fromAccountId} AND currency_id = ${currencyId}
-      `);
-    }
-
-    // 3. عكس أرصدة الصناديق
-    if (existing.toFundId) {
-      await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE fund_id = ${existing.toFundId} AND currency_id = ${currencyId}
-      `);
-    }
-    if (existing.fromFundId) {
-      await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE fund_id = ${existing.fromFundId} AND currency_id = ${currencyId}
-      `);
-    }
-
-    // 4. سجل التدقيق
-    await tx.insert(auditLog).values({
-      userId,
-      businessId: bizId,
-      action: 'cancel_voucher',
-      tableName: 'vouchers',
-      recordId: id,
-      oldData: { voucherNumber: existing.voucherNumber, amount: String(amount), status: 'confirmed' },
-      newData: { status: 'cancelled' },
-    });
-  });
-
-  return c.json({ success: true });
+  try {
+    const result = await cancelTransaction(bizId, userId, id);
+    return c.json(result);
+  } catch (err: any) {
+    const status = err.message.includes('غير موجود') ? 404 : 400;
+    return c.json({ error: err.message }, status);
+  }
 }));
 
 // Legacy
 api.delete('/vouchers/:id', safeHandler('حذف سند (legacy)', async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+  // Legacy: نجلب السند لمعرفة bizId ثم نستخدم cancelTransaction
   const [existing] = await db.select().from(vouchers).where(eq(vouchers.id, id));
   if (!existing) return c.json({ error: 'سند غير موجود' }, 404);
-  if (existing.status === 'cancelled') return c.json({ error: 'السند ملغي مسبقاً' }, 400);
-
-  const amount = parseFloat(String(existing.amount));
-  const currencyId = existing.currencyId || 1;
-
-  await db.transaction(async (tx) => {
-    await tx.update(vouchers).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(vouchers.id, id));
-    if (existing.toAccountId) {
-      await tx.execute(sql`UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW() WHERE account_id = ${existing.toAccountId} AND currency_id = ${currencyId}`);
-    }
-    if (existing.fromAccountId) {
-      await tx.execute(sql`UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW() WHERE account_id = ${existing.fromAccountId} AND currency_id = ${currencyId}`);
-    }
-    if (existing.toFundId) {
-      await tx.execute(sql`UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW() WHERE fund_id = ${existing.toFundId} AND currency_id = ${currencyId}`);
-    }
-    if (existing.fromFundId) {
-      await tx.execute(sql`UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW() WHERE fund_id = ${existing.fromFundId} AND currency_id = ${currencyId}`);
-    }
-  });
-
-  return c.json({ success: true });
+  try {
+    const result = await cancelTransaction(existing.businessId, 0, id);
+    return c.json(result);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 400);
+  }
 }));
 
 // ===================== التحصيل اليومي =====================
@@ -1482,7 +1452,7 @@ api.get('/businesses/:bizId/journal-entries', bizAuthMiddleware(), safeHandler('
   return c.json(entries.map(e => ({ ...e, lines: lineMap[e.id] || [] })));
 }));
 
-api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), safeHandler('إضافة قيد محاسبي', async (c) => {
+api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إضافة قيد محاسبي', async (c) => {
   const bizId = c.get('bizId') as number;
   const body = normalizeBody(await c.req.json());
   
@@ -2937,21 +2907,23 @@ api.delete('/businesses/:bizId/attachments/:id', bizAuthMiddleware(), safeHandle
 }));
 
 // ===================== عكس العمليات (Void/Reverse) =====================
-api.post('/businesses/:bizId/vouchers/:id/reverse', bizAuthMiddleware(), safeHandler('عكس سند', async (c) => {
+api.post('/businesses/:bizId/vouchers/:id/reverse', bizAuthMiddleware(), checkPermission('vouchers', 'reverse'), safeHandler('عكس سند', async (c) => {
   const bizId = c.get('bizId') as number;
   const userId = (c.get('user') as any)?.userId;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
   const body = normalizeBody(await c.req.json());
   const reason = body.reason || 'عكس عملية';
+  try {
+    const result = await reverseTransaction(bizId, userId, id, reason);
+    return c.json(result, 201);
+  } catch (err: any) {
+    const status = err.message.includes('غير موجود') ? 404 : 400;
+    return c.json({ error: err.message }, status);
+  }
+}));
 
-  // جلب السند الأصلي
-  const [original] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
-  if (!original) return c.json({ error: 'السند غير موجود' }, 404);
-  if (original.status === 'cancelled') return c.json({ error: 'السند ملغي مسبقاً' }, 400);
-  if (original.reversalStatus === 'reversed') return c.json({ error: 'السند معكوس مسبقاً' }, 400);
-  if (original.reversalStatus === 'reversal') return c.json({ error: 'لا يمكن عكس سند عكسي' }, 400);
-
+/* === الكود القديم المُستبدل بـ reverseTransaction ===
   const amount = parseFloat(String(original.amount));
   const currencyId = original.currencyId || 1;
 
@@ -3048,55 +3020,18 @@ api.post('/businesses/:bizId/vouchers/:id/reverse', bizAuthMiddleware(), safeHan
 
     return { originalVoucher: { ...original, reversalStatus: 'reversed' }, reversalVoucher, journalEntry: entry };
   });
-
   return c.json(result, 201);
 }));
+=== نهاية الكود القديم === */
 
 // ===================== التقارير المتقدمة =====================
 // تقرير الأرباح والخسائر
 api.get('/businesses/:bizId/reports/profit-loss', bizAuthMiddleware(), safeHandler('تقرير الأرباح والخسائر', async (c) => {
   const bizId = c.get('bizId') as number;
-  const dateFrom = c.req.query('dateFrom') || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
-  const dateTo = c.req.query('dateTo') || new Date().toISOString().split('T')[0];
-
-  const result = await db.execute(sql`
-    SELECT
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_income,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_expenses,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) -
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as net_profit,
-      COUNT(*) as total_operations
-    FROM vouchers v
-    LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId}
-    AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
-    AND v.voucher_date >= ${dateFrom}::date
-    AND v.voucher_date <= ${dateTo}::date
-  `);
-  const rows = Array.isArray(result) ? result : (result as any).rows || [];
-  const summary = rows[0] || { total_income: 0, total_expenses: 0, net_profit: 0, total_operations: 0 };
-
-  // تفصيل حسب التصنيف
-  const byCategory = await db.execute(sql`
-    SELECT
-      COALESCE(ot.category, 'غير مصنف') as category,
-      ot.voucher_type,
-      COALESCE(SUM(CAST(v.amount AS NUMERIC)), 0) as total,
-      COUNT(*) as count
-    FROM vouchers v
-    LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId}
-    AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
-    AND v.voucher_date >= ${dateFrom}::date
-    AND v.voucher_date <= ${dateTo}::date
-    GROUP BY ot.category, ot.voucher_type
-    ORDER BY total DESC
-  `);
-  const categoryRows = Array.isArray(byCategory) ? byCategory : (byCategory as any).rows || [];
-
-  return c.json({ dateFrom, dateTo, summary, byCategory: categoryRows });
+  const dateFrom = c.req.query('dateFrom');
+  const dateTo = c.req.query('dateTo');
+  const report = await getProfitAndLoss(bizId, { dateFrom, dateTo });
+  return c.json(report);
 }));
 
 // تقرير كشف حساب
@@ -3104,90 +3039,18 @@ api.get('/businesses/:bizId/reports/account-statement/:accountId', bizAuthMiddle
   const bizId = c.get('bizId') as number;
   const accountId = parseId(c.req.param('accountId'));
   if (!accountId) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
-  const dateFrom = c.req.query('dateFrom') || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
-  const dateTo = c.req.query('dateTo') || new Date().toISOString().split('T')[0];
-
-  // معلومات الحساب
-  const [account] = await db.select().from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)));
-  if (!account) return c.json({ error: 'الحساب غير موجود' }, 404);
-
-  // الحركات
-  const movements = await db.execute(sql`
-    SELECT
-      je.entry_date, je.entry_number, je.description as entry_description,
-      jel.line_type, CAST(jel.amount AS NUMERIC) as amount, jel.description as line_description,
-      ot.name as operation_type_name, ot.icon as operation_type_icon,
-      je.reference
-    FROM journal_entry_lines jel
-    JOIN journal_entries je ON je.id = jel.journal_entry_id
-    LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
-    WHERE jel.account_id = ${accountId}
-    AND je.business_id = ${bizId}
-    AND je.entry_date >= ${dateFrom}
-    AND je.entry_date <= ${dateTo}
-    ORDER BY je.entry_date ASC, je.id ASC
-  `);
-  const movementRows = Array.isArray(movements) ? movements : (movements as any).rows || [];
-
-  // حساب الرصيد التراكمي
-  let runningBalance = 0;
-  const entries = movementRows.map((m: any) => {
-    const amt = Number(m.amount);
-    if (m.line_type === 'debit') runningBalance += amt;
-    else runningBalance -= amt;
-    return { ...m, amount: amt, runningBalance };
-  });
-
-  // الأرصدة الحالية
-  const balances = await db.select({
-    currencyId: accountBalances.currencyId, balance: accountBalances.balance,
-    currencyCode: currencies.code, currencySymbol: currencies.symbol,
-  }).from(accountBalances)
-    .leftJoin(currencies, eq(accountBalances.currencyId, currencies.id))
-    .where(eq(accountBalances.accountId, accountId));
-
-  return c.json({ account, dateFrom, dateTo, entries, balances, totalEntries: entries.length });
+  const dateFrom = c.req.query('dateFrom');
+  const dateTo = c.req.query('dateTo');
+  const report = await getAccountStatement(bizId, accountId, { dateFrom, dateTo });
+  return c.json(report);
 }));
 
 // تقرير ملخص يومي
 api.get('/businesses/:bizId/reports/daily-summary', bizAuthMiddleware(), safeHandler('ملخص يومي', async (c) => {
   const bizId = c.get('bizId') as number;
   const dateParam = c.req.query('date') || new Date().toISOString().split('T')[0];
-
-  const result = await db.execute(sql`
-    SELECT
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as payments,
-      COUNT(*) as operations_count,
-      COUNT(DISTINCT v.operation_type_id) as operation_types_count
-    FROM vouchers v
-    LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId}
-    AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
-    AND v.voucher_date::date = ${dateParam}::date
-  `);
-  const rows = Array.isArray(result) ? result : (result as any).rows || [];
-  const summary = rows[0] || { receipts: 0, payments: 0, operations_count: 0, operation_types_count: 0 };
-
-  // تفصيل حسب نوع العملية
-  const byOpType = await db.execute(sql`
-    SELECT
-      ot.id, ot.name, ot.icon, ot.color, ot.voucher_type,
-      COALESCE(SUM(CAST(v.amount AS NUMERIC)), 0) as total,
-      COUNT(*) as count
-    FROM vouchers v
-    JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId}
-    AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
-    AND v.voucher_date::date = ${dateParam}::date
-    GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.voucher_type
-    ORDER BY total DESC
-  `);
-  const opTypeRows = Array.isArray(byOpType) ? byOpType : (byOpType as any).rows || [];
-
-  return c.json({ date: dateParam, summary, byOperationType: opTypeRows });
+  const report = await getDailySummary(bizId, dateParam);
+  return c.json(report);
 }));
 
 // تقرير ميزان المراجعة
@@ -3195,33 +3058,233 @@ api.get('/businesses/:bizId/reports/trial-balance', bizAuthMiddleware(), safeHan
   const bizId = c.get('bizId') as number;
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
+  const report = await getTrialBalance(bizId, { dateFrom, dateTo });
+  return c.json(report);
+}));
 
-  let dateCondition = sql`AND je.business_id = ${bizId}`;
-  if (dateFrom) dateCondition = sql`${dateCondition} AND je.entry_date >= ${dateFrom}`;
-  if (dateTo) dateCondition = sql`${dateCondition} AND je.entry_date <= ${dateTo}`;
+// تقرير الإيرادات والمصروفات الشهرية
+api.get('/businesses/:bizId/reports/monthly-revenue', bizAuthMiddleware(), safeHandler('تقرير شهري', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const year = Number(c.req.query('year')) || new Date().getFullYear();
+  const report = await getMonthlyRevenueExpenses(bizId, year);
+  return c.json(report);
+}));
 
-  const result = await db.execute(sql`
-    SELECT
-      a.id as account_id, a.name as account_name, a.account_type,
-      COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as total_debit,
-      COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as total_credit,
-      COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) -
-      COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as balance
-    FROM accounts a
-    LEFT JOIN journal_entry_lines jel ON jel.account_id = a.id
-    LEFT JOIN journal_entries je ON je.id = jel.journal_entry_id ${dateCondition}
-    WHERE a.business_id = ${bizId}
-    GROUP BY a.id, a.name, a.account_type
-    HAVING COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) > 0
-    OR COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) > 0
-    ORDER BY a.account_type, a.name
-  `);
-  const rows = Array.isArray(result) ? result : (result as any).rows || [];
+// تقرير تجميعي لكل الأعمال - أرباح وخسائر
+api.get('/reports/aggregated-profit-loss', safeHandler('تقرير تجميعي', async (c) => {
+  const userId = (c as any).get?.('userId') || 1;
+  const dateFrom = c.req.query('dateFrom');
+  const dateTo = c.req.query('dateTo');
+  const report = await getAggregatedProfitAndLoss(userId, { dateFrom, dateTo });
+  return c.json(report);
+}));
 
-  const totalDebit = rows.reduce((s: number, r: any) => s + Number(r.total_debit), 0);
-  const totalCredit = rows.reduce((s: number, r: any) => s + Number(r.total_credit), 0);
+// ملخص تجميعي لكل الأعمال
+api.get('/reports/aggregated-summary', safeHandler('ملخص تجميعي', async (c) => {
+  const userId = (c as any).get?.('userId') || 1;
+  const report = await getAggregatedSummary(userId);
+  return c.json(report);
+}));
 
-  return c.json({ dateFrom, dateTo, accounts: rows, totals: { totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) < 0.01 } });
+// ===================== سير العمل (Workflow) =====================
+
+// جلب الانتقالات المتاحة لسند
+api.get('/businesses/:bizId/vouchers/:voucherId/transitions', bizAuthMiddleware(), safeHandler('جلب انتقالات سير العمل', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const voucherId = parseId(c.req.param('voucherId'));
+  if (!voucherId) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+  const transitions = await getAvailableTransitions(bizId, voucherId);
+  return c.json(transitions);
+}));
+
+// تنفيذ انتقال على سند
+api.post('/businesses/:bizId/vouchers/:voucherId/transition', bizAuthMiddleware(), checkPermission('workflow', 'execute'), safeHandler('تنفيذ انتقال', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const voucherId = parseId(c.req.param('voucherId'));
+  if (!voucherId) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  const { transitionId, note } = body;
+  if (!transitionId) return c.json({ error: 'معرّف الانتقال مطلوب' }, 400);
+  const userId = (c as any).get?.('userId') || 1;
+  const result = await executeTransition(bizId, voucherId, transitionId, userId, note);
+  return c.json(result);
+}));
+
+// سجل سير العمل لسند
+api.get('/businesses/:bizId/vouchers/:voucherId/workflow-history', bizAuthMiddleware(), safeHandler('سجل سير العمل', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const voucherId = parseId(c.req.param('voucherId'));
+  if (!voucherId) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+  const history = await getWorkflowHistory(bizId, voucherId);
+  return c.json(history);
+}));
+
+// إعداد سير عمل افتراضي لنوع عملية
+api.post('/businesses/:bizId/operation-types/:opTypeId/setup-workflow', bizAuthMiddleware(), safeHandler('إعداد سير عمل', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const opTypeId = parseId(c.req.param('opTypeId'));
+  if (!opTypeId) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
+  await setupDefaultWorkflow(bizId, opTypeId);
+  return c.json({ success: true, message: 'تم إعداد سير العمل الافتراضي' });
+}));
+
+// جلب انتقالات نوع عملية
+api.get('/businesses/:bizId/operation-types/:opTypeId/transitions', bizAuthMiddleware(), safeHandler('جلب انتقالات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const opTypeId = parseId(c.req.param('opTypeId'));
+  if (!opTypeId) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
+  const transitions = await getOperationTypeTransitions(bizId, opTypeId);
+  return c.json(transitions);
+}));
+
+// إضافة انتقال جديد
+api.post('/businesses/:bizId/operation-types/:opTypeId/transitions', bizAuthMiddleware(), safeHandler('إضافة انتقال', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const opTypeId = parseId(c.req.param('opTypeId'));
+  if (!opTypeId) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  const transition = await addTransition(bizId, opTypeId, body);
+  return c.json(transition, 201);
+}));
+
+// حذف انتقال
+api.delete('/businesses/:bizId/transitions/:transitionId', bizAuthMiddleware(), safeHandler('حذف انتقال', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const transitionId = parseId(c.req.param('transitionId'));
+  if (!transitionId) return c.json({ error: 'معرّف الانتقال غير صالح' }, 400);
+  await deleteTransition(bizId, transitionId);
+  return c.json({ success: true });
+}));
+
+// ===================== بناء الواجهات الديناميكية (UI Builder) =====================
+
+// جلب كل الصفحات الديناميكية
+api.get('/businesses/:bizId/ui/pages', bizAuthMiddleware(), safeHandler('جلب الصفحات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const pages = await getPages(bizId);
+  return c.json(pages);
+}));
+
+// جلب صفحة بالمفتاح
+api.get('/businesses/:bizId/ui/pages/key/:pageKey', bizAuthMiddleware(), safeHandler('جلب صفحة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const pageKey = c.req.param('pageKey');
+  const result = await getPage(bizId, pageKey);
+  if (!result) return c.json({ error: 'الصفحة غير موجودة' }, 404);
+  return c.json(result);
+}));
+
+// جلب صفحة بالمعرّف
+api.get('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), safeHandler('جلب صفحة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const pageId = parseId(c.req.param('pageId'));
+  if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  const result = await getPageById(bizId, pageId);
+  if (!result) return c.json({ error: 'الصفحة غير موجودة' }, 404);
+  return c.json(result);
+}));
+
+// إنشاء صفحة جديدة
+api.post('/businesses/:bizId/ui/pages', bizAuthMiddleware(), checkPermission('ui_builder', 'create'), safeHandler('إنشاء صفحة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await normalizeBody(c);
+  if (!body.pageKey || !body.title) return c.json({ error: 'المفتاح والعنوان مطلوبان' }, 400);
+  const page = await createPage(bizId, body);
+  return c.json(page, 201);
+}));
+
+// تحديث صفحة
+api.put('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), safeHandler('تحديث صفحة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const pageId = parseId(c.req.param('pageId'));
+  if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  const result = await updatePage(bizId, pageId, body);
+  return c.json(result);
+}));
+
+// حذف صفحة
+api.delete('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), safeHandler('حذف صفحة', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const pageId = parseId(c.req.param('pageId'));
+  if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  await deletePage(bizId, pageId);
+  return c.json({ success: true });
+}));
+
+// إضافة مكون لصفحة
+api.post('/businesses/:bizId/ui/pages/:pageId/components', bizAuthMiddleware(), safeHandler('إضافة مكون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const pageId = parseId(c.req.param('pageId'));
+  if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  if (!body.componentType) return c.json({ error: 'نوع المكون مطلوب' }, 400);
+  const component = await addComponent(bizId, pageId, body);
+  return c.json(component, 201);
+}));
+
+// تحديث مكون
+api.put('/businesses/:bizId/ui/components/:componentId', bizAuthMiddleware(), safeHandler('تحديث مكون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const componentId = parseId(c.req.param('componentId'));
+  if (!componentId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  await updateComponent(bizId, componentId, body);
+  return c.json({ success: true });
+}));
+
+// حذف مكون
+api.delete('/businesses/:bizId/ui/components/:componentId', bizAuthMiddleware(), safeHandler('حذف مكون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const componentId = parseId(c.req.param('componentId'));
+  if (!componentId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  await deleteComponent(bizId, componentId);
+  return c.json({ success: true });
+}));
+
+// جلب مصادر البيانات
+api.get('/businesses/:bizId/ui/data-sources', bizAuthMiddleware(), safeHandler('جلب مصادر بيانات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const sources = await getDataSources(bizId);
+  return c.json(sources);
+}));
+
+// إنشاء مصدر بيانات
+api.post('/businesses/:bizId/ui/data-sources', bizAuthMiddleware(), safeHandler('إنشاء مصدر بيانات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const body = await normalizeBody(c);
+  if (!body.name || !body.sourceType) return c.json({ error: 'الاسم والنوع مطلوبان' }, 400);
+  const ds = await createDataSource(bizId, body);
+  return c.json(ds, 201);
+}));
+
+// تحديث مصدر بيانات
+api.put('/businesses/:bizId/ui/data-sources/:dsId', bizAuthMiddleware(), safeHandler('تحديث مصدر بيانات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const dsId = parseId(c.req.param('dsId'));
+  if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  await updateDataSource(bizId, dsId, body);
+  return c.json({ success: true });
+}));
+
+// حذف مصدر بيانات
+api.delete('/businesses/:bizId/ui/data-sources/:dsId', bizAuthMiddleware(), safeHandler('حذف مصدر بيانات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const dsId = parseId(c.req.param('dsId'));
+  if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  await deleteDataSource(bizId, dsId);
+  return c.json({ success: true });
+}));
+
+// تنفيذ مصدر بيانات
+api.post('/businesses/:bizId/ui/data-sources/:dsId/execute', bizAuthMiddleware(), safeHandler('تنفيذ مصدر بيانات', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const dsId = parseId(c.req.param('dsId'));
+  if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
+  const body = await normalizeBody(c);
+  const result = await executeDataSource(bizId, dsId, body);
+  return c.json(result);
 }));
 
 // ===================== إعداد الشاشة المخصصة (تبويبات ديناميكية) =====================
@@ -3385,7 +3448,7 @@ api.get('/businesses/:bizId/warehouses/:warehouseId/operations', bizAuthMiddlewa
 }));
 
 // إنشاء عملية مخزنية
-api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHandler('إنشاء عملية مخزنية', async (c) => {
+api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPermission('inventory', 'create'), safeHandler('إنشاء عملية مخزنية', async (c) => {
   const bizId = c.get('bizId') as number;
   const userId = c.get('userId') as number;
   const body = normalizeBody(await c.req.json());
@@ -3708,6 +3771,58 @@ api.get('/businesses/:bizId/warehouse-operations-summary', bizAuthMiddleware(), 
   const result = await db.execute(query);
   const rows = Array.isArray(result) ? result : (result as any).rows || [];
   return c.json(rows);
+}));
+
+// ===================== محرك المخزون - Endpoints جديدة =====================
+
+// أرصدة المخزون (مع تفاصيل لكل مخزن)
+api.get('/businesses/:bizId/stock-levels', bizAuthMiddleware(), checkPermission('inventory', 'read'), safeHandler('أرصدة المخزون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const warehouseId = c.req.query('warehouseId') ? parseInt(c.req.query('warehouseId')!) : undefined;
+  const result = await getStockLevels(bizId, warehouseId);
+  return c.json(result);
+}));
+
+// تنبيهات المخزون المنخفض
+api.get('/businesses/:bizId/stock-alerts', bizAuthMiddleware(), checkPermission('inventory', 'read'), safeHandler('تنبيهات المخزون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const alerts = await getLowStockAlerts(bizId);
+  return c.json(alerts);
+}));
+
+// تقييم المخزون
+api.get('/businesses/:bizId/stock-valuation', bizAuthMiddleware(), checkPermission('inventory', 'read'), safeHandler('تقييم المخزون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const warehouseId = c.req.query('warehouseId') ? parseInt(c.req.query('warehouseId')!) : undefined;
+  const result = await getStockValuation(bizId, warehouseId);
+  return c.json(result);
+}));
+
+// سجل حركات صنف
+api.get('/businesses/:bizId/items/:itemId/movements', bizAuthMiddleware(), checkPermission('inventory', 'read'), safeHandler('حركات صنف', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const itemId = parseId(c.req.param('itemId'));
+  if (!itemId) return c.json({ error: 'معرّف الصنف غير صالح' }, 400);
+  const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!) : 50;
+  const movements = await getItemMovementHistory(bizId, itemId, limit);
+  return c.json(movements);
+}));
+
+// تسجيل حركة مخزون عبر المحرك المركزي
+api.post('/businesses/:bizId/stock-movements', bizAuthMiddleware(), checkPermission('inventory', 'create'), safeHandler('تسجيل حركة مخزون', async (c) => {
+  const bizId = c.get('bizId') as number;
+  const userId = (c.get('user') as any)?.userId;
+  const body = normalizeBody(await c.req.json());
+  
+  if (!body.itemId || !body.warehouseId || !body.movementType || !body.quantity || !body.movementDate) {
+    return c.json({ error: 'البيانات المطلوبة: itemId, warehouseId, movementType, quantity, movementDate' }, 400);
+  }
+
+  const result = await processStockMovement(bizId, {
+    ...body,
+    createdBy: userId,
+  });
+  return c.json(result, 201);
 }));
 
 export default api;
