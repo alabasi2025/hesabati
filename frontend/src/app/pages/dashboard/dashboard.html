@@ -1,4 +1,4 @@
-<div class="dashboard-page">
+<div class="dashboard-page" [class.presentation-mode]="presentationMode()">
   <!-- Three.js 3D Background -->
   <app-three-background variant="dashboard"></app-three-background>
   @if (loading()) {
@@ -18,57 +18,56 @@
       </div>
     }
 
-    <!-- Stats Row -->
-    <div class="stats-row">
-      <div class="stat-card stat-1" (click)="navigate('stations')">
-        <div class="stat-icon"><span class="material-icons-round">bolt</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ stations().length }}</span>
-          <span class="stat-label">محطة</span>
-        </div>
-      </div>
-      <div class="stat-card stat-2" (click)="navigate('employees')">
-        <div class="stat-icon"><span class="material-icons-round">groups</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ employees().length }}</span>
-          <span class="stat-label">موظف</span>
-        </div>
-      </div>
-      <div class="stat-card stat-3" (click)="navigate('accounts')">
-        <div class="stat-icon"><span class="material-icons-round">account_balance_wallet</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ accounts().length }}</span>
-          <span class="stat-label">حساب ومحفظة</span>
-        </div>
-      </div>
-      <div class="stat-card stat-4" (click)="navigate('funds')">
-        <div class="stat-icon"><span class="material-icons-round">inventory_2</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ funds().length }}</span>
-          <span class="stat-label">صندوق</span>
-        </div>
-      </div>
-      <div class="stat-card stat-5">
-        <div class="stat-icon"><span class="material-icons-round">payments</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ formatNumber(totalSalaries()) }}</span>
-          <span class="stat-label">إجمالي الرواتب (ر.ي)</span>
-        </div>
-      </div>
-      <div class="stat-card stat-6" (click)="navigate('suppliers')">
-        <div class="stat-icon"><span class="material-icons-round">local_shipping</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ suppliers().length }}</span>
-          <span class="stat-label">مورد</span>
-        </div>
-      </div>
-      <div class="stat-card stat-7" (click)="navigate('warehouse')">
-        <div class="stat-icon"><span class="material-icons-round">warehouse</span></div>
-        <div class="stat-info">
-          <span class="stat-value">{{ warehouses().length }}</span>
-          <span class="stat-label">مخزن</span>
-        </div>
-      </div>
+    <!-- 3D Stats Row -->
+    <div class="stats-row-3d">
+      <app-three-stat-card
+        [value]="stations().length"
+        label="محطة"
+        icon="bolt"
+        color="#f59e0b"
+        (click)="navigate('stations')">
+      </app-three-stat-card>
+      <app-three-stat-card
+        [value]="employees().length"
+        label="موظف"
+        icon="groups"
+        color="#3b82f6"
+        (click)="navigate('employees')">
+      </app-three-stat-card>
+      <app-three-stat-card
+        [value]="accounts().length"
+        label="حساب ومحفظة"
+        icon="account_balance_wallet"
+        color="#8b5cf6"
+        (click)="navigate('accounts')">
+      </app-three-stat-card>
+      <app-three-stat-card
+        [value]="funds().length"
+        label="صندوق"
+        icon="inventory_2"
+        color="#06b6d4"
+        (click)="navigate('funds')">
+      </app-three-stat-card>
+      <app-three-stat-card
+        [value]="totalSalaries()"
+        label="إجمالي الرواتب (ر.ي)"
+        icon="payments"
+        color="#ef4444">
+      </app-three-stat-card>
+      <app-three-stat-card
+        [value]="suppliers().length"
+        label="مورد"
+        icon="local_shipping"
+        color="#22c55e"
+        (click)="navigate('suppliers')">
+      </app-three-stat-card>
+      <app-three-stat-card
+        [value]="warehouses().length"
+        label="مخزن"
+        icon="warehouse"
+        color="#f59e0b"
+        (click)="navigate('warehouse')">
+      </app-three-stat-card>
     </div>
 
     <!-- Quick Actions -->
@@ -92,6 +91,99 @@
         </button>
       </div>
     </div>
+
+    <!-- 3D Charts Section - Main -->
+    @if (chartData().length > 0) {
+      <div class="section-card charts-section">
+        <h3 class="section-title">
+          <span class="material-icons-round">bar_chart</span>
+          نظرة عامة ثلاثية الأبعاد
+          <button class="presentation-toggle" (click)="togglePresentation()" title="وضع العرض التقديمي">
+            <span class="material-icons-round">{{ presentationMode() ? 'grid_view' : 'slideshow' }}</span>
+          </button>
+        </h3>
+        <div class="charts-grid">
+          <div class="chart-wrapper">
+            <app-three-chart
+              type="bar"
+              [data]="chartData()"
+              title="توزيع الأصول"
+              [maxBarHeight]="4"
+              [autoRotate]="true"
+              [rotateSpeed]="0.08"
+              [interactive]="true"
+              (chartClick)="onChartClick($event)"
+            ></app-three-chart>
+          </div>
+          <div class="chart-wrapper">
+            <app-three-chart
+              type="donut"
+              [data]="chartData()"
+              title="النسب المئوية"
+              [autoRotate]="true"
+              [rotateSpeed]="0.12"
+              [interactive]="true"
+              (chartClick)="onChartClick($event)"
+            ></app-three-chart>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Advanced Charts Section -->
+    @if (chartData().length > 1) {
+      <div class="section-card charts-section advanced-charts">
+        <h3 class="section-title">
+          <span class="material-icons-round">insights</span>
+          تحليلات متقدمة
+        </h3>
+        <div class="charts-grid charts-grid-3">
+          <!-- Waterfall Chart -->
+          @if (waterfallData().length > 0) {
+            <div class="chart-wrapper">
+              <app-three-chart
+                type="waterfall"
+                [data]="waterfallData()"
+                title="تدفق الموارد"
+                [maxBarHeight]="3"
+                [autoRotate]="true"
+                [rotateSpeed]="0.06"
+                [interactive]="true"
+              ></app-three-chart>
+            </div>
+          }
+
+          <!-- Gauge Chart -->
+          <div class="chart-wrapper">
+            <app-three-chart
+              type="gauge"
+              [gaugeValue]="gaugeValue()"
+              [gaugeMax]="gaugeMax()"
+              gaugeLabel="إجمالي الأصول"
+              title="مؤشر الأداء"
+              [autoRotate]="true"
+              [rotateSpeed]="0.05"
+            ></app-three-chart>
+          </div>
+
+          <!-- Treemap Chart -->
+          @if (treemapData().length > 0) {
+            <div class="chart-wrapper">
+              <app-three-chart
+                type="treemap"
+                [data]="treemapData()"
+                title="خريطة الأصول"
+                [maxBarHeight]="3"
+                [autoRotate]="true"
+                [rotateSpeed]="0.06"
+                [interactive]="true"
+                (chartClick)="onChartClick($event)"
+              ></app-three-chart>
+            </div>
+          }
+        </div>
+      </div>
+    }
 
     <!-- Two Column Layout -->
     <div class="two-cols">
@@ -167,34 +259,6 @@
               }
             </div>
           }
-        </div>
-      </div>
-    }
-
-    <!-- 3D Charts Section -->
-    @if (chartData().length > 0) {
-      <div class="section-card charts-section">
-        <h3 class="section-title"><span class="material-icons-round">bar_chart</span> نظرة عامة ثلاثية الأبعاد</h3>
-        <div class="charts-grid">
-          <div class="chart-wrapper">
-            <app-three-chart
-              type="bar"
-              [data]="chartData()"
-              title="توزيع الأصول"
-              [maxBarHeight]="4"
-              [autoRotate]="true"
-              [rotateSpeed]="0.08"
-            ></app-three-chart>
-          </div>
-          <div class="chart-wrapper">
-            <app-three-chart
-              type="donut"
-              [data]="chartData()"
-              title="النسب المئوية"
-              [autoRotate]="true"
-              [rotateSpeed]="0.12"
-            ></app-three-chart>
-          </div>
         </div>
       </div>
     }

@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { ThreeNetworkComponent, NetworkNode, NetworkLink } from '../../components/three-network/three-network';
 
 // خريطة ثابتة لأيقونات وألوان أنواع الحسابات المعروفة
 const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -44,7 +45,7 @@ interface AccountGroup {
 @Component({
   selector: 'app-accounts',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ThreeNetworkComponent],
   templateUrl: './accounts.html',
   styleUrl: './accounts.scss',
 })
@@ -62,6 +63,9 @@ export class AccountsComponent implements OnInit {
 
   // UI State
   showHowItWorks = signal(false);
+  showNetworkView = signal(false);
+  networkNodes = signal<NetworkNode[]>([]);
+  networkLinks = signal<NetworkLink[]>([]);
   showForm = signal(false);
   editingId = signal<number | null>(null);
   activeType = signal('all');
@@ -362,11 +366,59 @@ export class AccountsComponent implements OnInit {
         exchange: exchangeTypesData,
         e_wallet: walletTypesData,
       });
+      this.buildNetworkData();
     } catch (e: any) {
       this.error.set(e.message);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** بناء بيانات شبكة العلاقات ثلاثية الأبعاد */
+  private buildNetworkData(): void {
+    const accs = this.accounts();
+    if (accs.length === 0) return;
+
+    const nodes: NetworkNode[] = [];
+    const links: NetworkLink[] = [];
+    const typeGroups = new Map<string, string[]>();
+
+    accs.forEach(acc => {
+      const meta = getTypeMeta(acc.accountType);
+      nodes.push({
+        id: `acc-${acc.id}`,
+        label: acc.name,
+        value: 1,
+        color: meta.color,
+        group: acc.accountType,
+      });
+
+      if (!typeGroups.has(acc.accountType)) typeGroups.set(acc.accountType, []);
+      typeGroups.get(acc.accountType)!.push(`acc-${acc.id}`);
+    });
+
+    // إنشاء عقد مركزية لكل نوع
+    typeGroups.forEach((ids, type) => {
+      const meta = getTypeMeta(type);
+      const hubId = `hub-${type}`;
+      nodes.push({
+        id: hubId,
+        label: meta.label,
+        value: ids.length,
+        color: meta.color,
+        group: type,
+      });
+      ids.forEach(id => {
+        links.push({ source: hubId, target: id });
+      });
+    });
+
+    this.networkNodes.set(nodes);
+    this.networkLinks.set(links);
+  }
+
+  toggleNetworkView(): void {
+    this.showNetworkView.update(v => !v);
   }
 
   // ===== فلاتر فرعية =====

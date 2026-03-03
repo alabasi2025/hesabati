@@ -31,6 +31,27 @@
     </div>
   }
 
+  <!-- ===== 3D Network View Toggle ===== -->
+  @if (!loading() && accounts().length > 2) {
+    <div class="network-toggle-bar">
+      <button class="btn-3d" [class.btn-primary]="showNetworkView()" [class.btn-ghost]="!showNetworkView()" (click)="toggleNetworkView()">
+        <span class="material-icons-round">{{ showNetworkView() ? 'grid_view' : 'hub' }}</span>
+        {{ showNetworkView() ? 'عرض البطاقات' : 'عرض شبكة العلاقات' }}
+      </button>
+    </div>
+  }
+
+  <!-- ===== 3D Network View ===== -->
+  @if (showNetworkView() && networkNodes().length > 0) {
+    <div class="network-container">
+      <app-three-network
+        [nodes]="networkNodes()"
+        [links]="networkLinks()"
+        title="شبكة الحسابات">
+      </app-three-network>
+    </div>
+  }
+
   <!-- ===== Stats Bar ===== -->
   @if (!loading() && accounts().length > 0) {
     <div class="stats-bar">
