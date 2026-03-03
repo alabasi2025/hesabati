@@ -664,6 +664,35 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), safeHandler('إضا
     return c.json({ error: 'الحساب المصدر لا ينتمي لهذا العمل' }, 403);
   }
 
+  // === منع التحويل بين الخزائن (safe-to-safe) ===
+  if (voucherData.voucherType === 'transfer' || (opType?.voucher_type === 'transfer')) {
+    // جلب نوع الحسابين
+    const accTypesResult = await db.execute(sql`
+      SELECT id, account_type FROM accounts WHERE id IN (${debitAccountId}${creditAccountId ? sql`, ${creditAccountId}` : sql``}) AND business_id = ${bizId}
+    `);
+    const accTypesRows = Array.isArray(accTypesResult) ? accTypesResult : (accTypesResult as any).rows || [];
+    const debitAccType = (accTypesRows as any[]).find((r: any) => r.id === debitAccountId)?.account_type;
+    const creditAccType = creditAccountId ? (accTypesRows as any[]).find((r: any) => r.id === creditAccountId)?.account_type : null;
+    
+    // التحقق من نوع الصناديق المرتبطة
+    let fromFundType: string | null = null;
+    let toFundType: string | null = null;
+    if (voucherData.fromFundId) {
+      const fromFundResult = await db.execute(sql`SELECT fund_type FROM funds WHERE id = ${voucherData.fromFundId} AND business_id = ${bizId}`);
+      const fromFundRows = Array.isArray(fromFundResult) ? fromFundResult : (fromFundResult as any).rows || [];
+      fromFundType = fromFundRows.length > 0 ? (fromFundRows[0] as any).fund_type : null;
+    }
+    if (voucherData.toFundId) {
+      const toFundResult = await db.execute(sql`SELECT fund_type FROM funds WHERE id = ${voucherData.toFundId} AND business_id = ${bizId}`);
+      const toFundRows = Array.isArray(toFundResult) ? toFundResult : (toFundResult as any).rows || [];
+      toFundType = toFundRows.length > 0 ? (toFundRows[0] as any).fund_type : null;
+    }
+    
+    if (fromFundType === 'safe' && toFundType === 'safe') {
+      return c.json({ error: '\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u062d\u0648\u064a\u0644 \u0628\u064a\u0646 \u062e\u0632\u0627\u0626\u0646 (safe). \u0627\u0633\u062a\u062e\u062f\u0645 \u0639\u0645\u0644\u064a\u0629 \u0633\u062d\u0628/\u0625\u064a\u062f\u0627\u0639 \u0628\u062f\u0644\u0627\u064b \u0645\u0646 \u0630\u0644\u0643' }, 400);
+    }
+  }
+
   // === التحقق من الرصيد الكافي عند الصرف (payment) ===
   const currencyId = voucherData.currencyId || 1;
   const vType = opType?.voucher_type || voucherData.voucherType || 'receipt';
@@ -1361,6 +1390,10 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), safeHandler(
   const { lines, ...entryData } = body;
   if (!lines || !Array.isArray(lines) || lines.length < 2) {
     return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل (مدين ودائن)' }, 400);
+  }
+  // === بند 3.1: operationTypeId إلزامي ===
+  if (!entryData.operationTypeId) {
+    return c.json({ error: '\u0645\u0639\u0631\u0651\u0641 \u0646\u0648\u0639 \u0627\u0644\u0639\u0645\u0644\u064a\u0629 (\u0627\u0644\u0642\u0627\u0644\u0628) \u0645\u0637\u0644\u0648\u0628 - operationTypeId' }, 400);
   }
   
   const entryDate = entryData.entryDate || entryData.date || new Date().toISOString().split('T')[0];
@@ -3419,7 +3452,13 @@ api.get('/businesses/:bizId/warehouses/:warehouseId/inventory', bizAuthMiddlewar
     ORDER BY woi.item_name
   `);
   const rows = Array.isArray(result) ? result : (result as any).rows || [];
-  return c.json(rows);
+  // === فلتر العناصر الوهمية: استبعاد العناصر بدون اسم أو بكمية صفر ===
+  const filteredRows = (rows as any[]).filter((r: any) => {
+    if (!r.item_name || r.item_name.trim() === '') return false;
+    const qty = parseFloat(String(r.current_quantity || 0));
+    return qty > 0;
+  });
+  return c.json(filteredRows);
 }));
 
 // جلب كل العمليات المخزنية للعمل
@@ -3500,7 +3539,13 @@ api.get('/businesses/:bizId/inventory-summary', bizAuthMiddleware(), safeHandler
       ORDER BY woi.item_name
     `);
     const rows = Array.isArray(result) ? result : (result as any).rows || [];
-    allInventory.push(...rows);
+    // === فلتر العناصر الوهمية: استبعاد العناصر بدون اسم أو بكمية صفر ===
+    const filtered = (rows as any[]).filter((r: any) => {
+      if (!r.item_name || r.item_name.trim() === '') return false;
+      const qty = parseFloat(String(r.current_quantity || 0));
+      return qty > 0;
+    });
+    allInventory.push(...filtered);
   }
 
   // ملخص إجمالي

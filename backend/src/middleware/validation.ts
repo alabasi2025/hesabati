@@ -77,7 +77,7 @@ export const voucherSchema = z.object({
   fromFundId: z.number().int().positive().optional().nullable(),
   toFundId: z.number().int().positive().optional().nullable(),
   currencyId: z.number().int().positive().optional(),
-  operationTypeId: z.number().int().positive().optional().nullable(),
+  operationTypeId: z.number().int().positive({ message: 'معرّف نوع العملية (القالب) مطلوب' }),
   voucherDate: z.string().optional(),
 });
 
@@ -127,7 +127,7 @@ export const journalEntrySchema = z.object({
   entryDate: z.union([z.string().min(1, 'تاريخ القيد مطلوب'), z.string().optional()]).optional(),
   date: z.string().optional(), // بديل لـ entryDate (الفرونت قد يرسل date)
   reference: z.string().max(100).optional().nullable(),
-  operationTypeId: z.number().int().positive().optional().nullable(),
+  operationTypeId: z.number().int().positive({ message: 'معرّف نوع العملية (القالب) مطلوب' }),
   lines: z.array(z.object({
     accountId: z.number().int().positive('معرّف الحساب مطلوب'),
     lineType: z.enum(['debit', 'credit']).optional(),
