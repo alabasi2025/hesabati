@@ -326,6 +326,7 @@ async function seed() {
     const financeItems: any[] = [
       { sectionId: secFinance.id, screenKey: 'vouchers', label: 'سندات الصرف والقبض', icon: 'receipt_long', route: '/biz/{bizId}/vouchers', sortOrder: 1 },
       { sectionId: secFinance.id, screenKey: 'journal', label: 'القيود المحاسبية', icon: 'menu_book', route: '/biz/{bizId}/journal', sortOrder: 2 },
+      { sectionId: secFinance.id, screenKey: 'journal_categories', label: 'تصنيفات القيود', icon: 'label', route: '/biz/{bizId}/journal-categories', sortOrder: 3 },
     ];
     if (bizType === 'stations') {
       financeItems.push(
@@ -349,13 +350,15 @@ async function seed() {
     // --- عناصر قسم المخزن والموردين ---
     await db.insert(schema.sidebarItems).values([
       { sectionId: secWarehouse.id, screenKey: 'warehouse', label: 'المخزن', icon: 'warehouse', route: '/biz/{bizId}/warehouse', sortOrder: 1 },
-      { sectionId: secWarehouse.id, screenKey: 'suppliers', label: 'الموردين', icon: 'local_shipping', route: '/biz/{bizId}/suppliers', sortOrder: 2 },
+      { sectionId: secWarehouse.id, screenKey: 'warehouse_operations', label: 'العمليات المخزنية', icon: 'inventory_2', route: '/biz/{bizId}/warehouse-operations', sortOrder: 2 },
+      { sectionId: secWarehouse.id, screenKey: 'suppliers', label: 'الموردين', icon: 'local_shipping', route: '/biz/{bizId}/suppliers', sortOrder: 3 },
     ]);
 
     // --- عناصر قسم التصفيات والتقارير ---
     const reportItems: any[] = [
       { sectionId: secReports.id, screenKey: 'settlements', label: 'التصفيات', icon: 'balance', route: '/biz/{bizId}/settlements', sortOrder: 1 },
       { sectionId: secReports.id, screenKey: 'reports', label: 'التقارير', icon: 'assessment', route: '/biz/{bizId}/reports', sortOrder: 2 },
+      { sectionId: secReports.id, screenKey: 'reports_advanced', label: 'التقارير المتقدمة', icon: 'analytics', route: '/biz/{bizId}/reports-advanced', sortOrder: 3 },
     ];
     if (bizType === 'stations') {
       reportItems.push(
