@@ -3272,7 +3272,7 @@ api.get('/businesses/:bizId/reports/monthly-revenue', bizAuthMiddleware(), safeH
 
 // تقرير تجميعي لكل الأعمال - أرباح وخسائر
 api.get('/reports/aggregated-profit-loss', safeHandler('تقرير تجميعي', async (c) => {
-  const userId = (c as any).get?.('userId') || 1;
+  const userId = (c.get('user') as any)?.userId || 1;
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
   const report = await getAggregatedProfitAndLoss(userId, { dateFrom, dateTo });
@@ -3281,7 +3281,7 @@ api.get('/reports/aggregated-profit-loss', safeHandler('تقرير تجميعي'
 
 // ملخص تجميعي لكل الأعمال
 api.get('/reports/aggregated-summary', safeHandler('ملخص تجميعي', async (c) => {
-  const userId = (c as any).get?.('userId') || 1;
+  const userId = (c.get('user') as any)?.userId || 1;
   const report = await getAggregatedSummary(userId);
   return c.json(report);
 }));
@@ -3302,10 +3302,10 @@ api.post('/businesses/:bizId/vouchers/:voucherId/transition', bizAuthMiddleware(
   const bizId = c.get('bizId') as number;
   const voucherId = parseId(c.req.param('voucherId'));
   if (!voucherId) return c.json({ error: 'معرّف السند غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   const { transitionId, note } = body;
   if (!transitionId) return c.json({ error: 'معرّف الانتقال مطلوب' }, 400);
-  const userId = (c as any).get?.('userId') || 1;
+  const userId = (c.get('user') as any)?.userId || 1;
   const result = await executeTransition(bizId, voucherId, transitionId, userId, note);
   return c.json(result);
 }));
@@ -3342,7 +3342,7 @@ api.post('/businesses/:bizId/operation-types/:opTypeId/transitions', bizAuthMidd
   const bizId = c.get('bizId') as number;
   const opTypeId = parseId(c.req.param('opTypeId'));
   if (!opTypeId) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   const transition = await addTransition(bizId, opTypeId, body);
   return c.json(transition, 201);
 }));
@@ -3387,7 +3387,7 @@ api.get('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), safeHandler(
 // إنشاء صفحة جديدة
 api.post('/businesses/:bizId/ui/pages', bizAuthMiddleware(), checkPermission('ui_builder', 'create'), safeHandler('إنشاء صفحة', async (c) => {
   const bizId = c.get('bizId') as number;
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   if (!body.pageKey || !body.title) return c.json({ error: 'المفتاح والعنوان مطلوبان' }, 400);
   const page = await createPage(bizId, body);
   return c.json(page, 201);
@@ -3398,7 +3398,7 @@ api.put('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), safeHandler(
   const bizId = c.get('bizId') as number;
   const pageId = parseId(c.req.param('pageId'));
   if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   const result = await updatePage(bizId, pageId, body);
   return c.json(result);
 }));
@@ -3417,7 +3417,7 @@ api.post('/businesses/:bizId/ui/pages/:pageId/components', bizAuthMiddleware(), 
   const bizId = c.get('bizId') as number;
   const pageId = parseId(c.req.param('pageId'));
   if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   if (!body.componentType) return c.json({ error: 'نوع المكون مطلوب' }, 400);
   const component = await addComponent(bizId, pageId, body);
   return c.json(component, 201);
@@ -3428,7 +3428,7 @@ api.put('/businesses/:bizId/ui/components/:componentId', bizAuthMiddleware(), sa
   const bizId = c.get('bizId') as number;
   const componentId = parseId(c.req.param('componentId'));
   if (!componentId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   await updateComponent(bizId, componentId, body);
   return c.json({ success: true });
 }));
@@ -3452,7 +3452,7 @@ api.get('/businesses/:bizId/ui/data-sources', bizAuthMiddleware(), safeHandler('
 // إنشاء مصدر بيانات
 api.post('/businesses/:bizId/ui/data-sources', bizAuthMiddleware(), safeHandler('إنشاء مصدر بيانات', async (c) => {
   const bizId = c.get('bizId') as number;
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   if (!body.name || !body.sourceType) return c.json({ error: 'الاسم والنوع مطلوبان' }, 400);
   const ds = await createDataSource(bizId, body);
   return c.json(ds, 201);
@@ -3463,7 +3463,7 @@ api.put('/businesses/:bizId/ui/data-sources/:dsId', bizAuthMiddleware(), safeHan
   const bizId = c.get('bizId') as number;
   const dsId = parseId(c.req.param('dsId'));
   if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   await updateDataSource(bizId, dsId, body);
   return c.json({ success: true });
 }));
@@ -3482,7 +3482,7 @@ api.post('/businesses/:bizId/ui/data-sources/:dsId/execute', bizAuthMiddleware()
   const bizId = c.get('bizId') as number;
   const dsId = parseId(c.req.param('dsId'));
   if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = await normalizeBody(c);
+  const body = normalizeBody(await c.req.json());
   const result = await executeDataSource(bizId, dsId, body);
   return c.json(result);
 }));

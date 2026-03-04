@@ -53,19 +53,20 @@ export function keysToCamel(obj: any): any {
  * تطبيع مفاتيح الكائن: يقبل camelCase و snake_case ويحولها لـ camelCase
  * هذا يحل مشكلة عدم تطابق المسميات بين الفرونت والباك
  */
-export function normalizeBody(body: any): any {
+export function normalizeBody(body: any, depth: number = 0): any {
   if (body === null || body === undefined) return body;
-  if (Array.isArray(body)) return body.map(normalizeBody);
+  if (depth > 20) return body; // منع stack overflow
+  if (Array.isArray(body)) return body.map(item => normalizeBody(item, depth + 1));
   if (typeof body === 'object' && !(body instanceof Date)) {
     const result: any = {};
     for (const [key, value] of Object.entries(body)) {
       // إذا كان المفتاح يحتوي على underscore، حوله لـ camelCase
       const normalizedKey = key.includes('_') ? snakeToCamel(key) : key;
       // أضف كلا الصيغتين لضمان التوافق
-      result[normalizedKey] = normalizeBody(value);
+      result[normalizedKey] = normalizeBody(value, depth + 1);
       // إذا كان المفتاح الأصلي مختلف عن المحول، أضف الأصلي أيضاً
       if (normalizedKey !== key) {
-        result[key] = normalizeBody(value);
+        result[key] = normalizeBody(value, depth + 1);
       }
     }
     return result;
