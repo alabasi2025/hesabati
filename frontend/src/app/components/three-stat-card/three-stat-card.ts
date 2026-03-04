@@ -22,8 +22,10 @@ import { ThemeService } from '../../services/theme.service';
         <div class="floating-shape shape-2" [style.background]="color + '22'"></div>
         <div class="floating-shape shape-3" [style.background]="color + '18'"></div>
         <div class="particle-dots">
-          <span class="dot" *ngFor="let d of dots" [style.left.%]="d.x" [style.top.%]="d.y"
-                [style.animation-delay]="d.delay + 's'" [style.background]="color + '44'"></span>
+          @for (d of dots; track $index) {
+            <span class="dot" [style.left.%]="d.x" [style.top.%]="d.y"
+                  [style.animation-delay]="d.delay + 's'" [style.background]="color + '44'"></span>
+          }
         </div>
       </div>
       <div class="stat-content">

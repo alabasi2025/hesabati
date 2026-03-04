@@ -93,28 +93,28 @@
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.total_income | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ profitLoss.summary.totalIncome | number:'1.0-0' }}</div>
           <div class="sc-label">الإيرادات</div>
         </div>
       </div>
       <div class="stat-card-3d red">
         <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.total_expenses | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ profitLoss.summary.totalExpenses | number:'1.0-0' }}</div>
           <div class="sc-label">المصروفات</div>
         </div>
       </div>
-      <div class="stat-card-3d" [class]="profitLoss.summary.net_profit >= 0 ? 'blue' : 'amber'">
-        <div class="sc-icon"><span class="material-icons-round">{{ profitLoss.summary.net_profit >= 0 ? 'trending_up' : 'trending_down' }}</span></div>
+      <div class="stat-card-3d" [class]="profitLoss.summary.netProfit >= 0 ? 'blue' : 'amber'">
+        <div class="sc-icon"><span class="material-icons-round">{{ profitLoss.summary.netProfit >= 0 ? 'trending_up' : 'trending_down' }}</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.net_profit | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ profitLoss.summary.netProfit | number:'1.0-0' }}</div>
           <div class="sc-label">صافي الربح</div>
         </div>
       </div>
       <div class="stat-card-3d gray">
         <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.total_operations }}</div>
+          <div class="sc-num">{{ profitLoss.summary.totalOperations }}</div>
           <div class="sc-label">عدد العمليات</div>
         </div>
       </div>

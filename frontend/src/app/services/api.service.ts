@@ -56,6 +56,11 @@ export class ApiService {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      // إذا كان الخطأ 401 (غير مصرح) - تسجيل الخروج تلقائياً
+      if (res.status === 401) {
+        this.auth.logout();
+        throw new Error('الجلسة منتهية - يرجى تسجيل الدخول مجدداً');
+      }
       // بناء رسالة خطأ عربية مفصلة
       let errorMsg = err.error || this.getArabicHttpError(res.status);
       if (err.details) {

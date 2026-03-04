@@ -6,7 +6,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
 // ===================== Common =====================
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; transition: all 0.2s; }
-.btn-primary { background: $neon-blue; color: white; &:hover { background: darken($neon-blue, 8%); } &:disabled { opacity: 0.5; } }
+.btn-primary { background: $neon-blue; color: white; &:hover { background: #2563eb; } &:disabled { opacity: 0.5; } }
 .btn-ghost { background: transparent; color: #64748b; &:hover { background: rgba(0,0,0,0.05); } }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 .btn.active { background: $neon-blue; color: white; }

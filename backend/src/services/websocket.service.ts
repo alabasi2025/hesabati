@@ -81,6 +81,20 @@ class WebSocketService {
     });
   }
 
+  // إغلاق جميع الاتصالات بشكل آمن
+  shutdown() {
+    if (this.wss) {
+      for (const [, client] of this.clients) {
+        try {
+          client.ws.close(1001, 'Server shutting down');
+        } catch (e) { /* ignore */ }
+      }
+      this.clients.clear();
+      this.wss.close();
+      this.wss = null;
+    }
+  }
+
   getConnectedCount(bizId?: number): number {
     if (!bizId) return this.clients.size;
     let count = 0;

@@ -1,4 +1,4 @@
-@import '../shared-page.scss';
+@use '../shared-page.scss' as *;
 
 .page-container { padding: 24px 32px; }
 

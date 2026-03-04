@@ -60,6 +60,10 @@ export class AuthService {
     this.currentUser.set(null);
     localStorage.removeItem('hesabati_token');
     localStorage.removeItem('hesabati_user');
+    // إعادة التوجيه إلى صفحة تسجيل الدخول
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = '/login';
+    }
   }
 
   getToken(): string | null {

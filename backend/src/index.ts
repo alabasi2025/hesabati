@@ -9,11 +9,12 @@ import dashboardRoutes from './routes/dashboard.ts';
 import apiRoutes from './routes/api.ts';
 import enhancementRoutes from './routes/enhancements.ts';
 import { authMiddleware } from './middleware/auth.ts';
-import { db } from './db/index.ts';
+import { db, closeDatabase } from './db/index.ts';
 import { sql } from 'drizzle-orm';
 import { rateLimitMiddleware, loginRateLimitMiddleware } from './middleware/rateLimit.ts';
 import { xssSanitizeMiddleware } from './middleware/validation.ts';
 
+const isProduction = process.env.NODE_ENV === 'production';
 const app = new Hono();
 
 // ===================== CORS: قائمة بيضاء بالنطاقات المسموحة =====================
@@ -27,10 +28,9 @@ app.use('*', cors({
     if (!origin) return ALLOWED_ORIGINS[0];
     // التحقق من القائمة البيضاء
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
-    // في بيئة التطوير، السماح بـ localhost
-    if (origin.startsWith('http://localhost:')) return origin;
-    // السماح بنطاقات sandbox
-    if (origin.includes('.manus.computer')) return origin;
+    // في بيئة التطوير فقط، السماح بـ localhost
+    if (!isProduction && origin.startsWith('http://localhost:')) return origin;
+    // رفض النطاقات غير المسموحة
     return ALLOWED_ORIGINS[0];
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -40,14 +40,33 @@ app.use('*', cors({
 
 app.use('*', logger());
 
-// ===================== Rate Limiting (إعدادات مناسبة للاستخدام العادي) =====================
+// ===================== Rate Limiting =====================
 // تسجيل الدخول: 20 محاولة / 15 دقيقة
 app.use('/api/auth/login', loginRateLimitMiddleware());
-// API عام: 1000 طلب / دقيقة (مناسب للاستخدام العادي مع SPA)
+// API عام: 1000 طلب / دقيقة
 app.use('/api/*', rateLimitMiddleware({ windowMs: 60000, maxRequests: 1000 }));
 
 // ===================== XSS Sanitization =====================
 app.use('/api/*', xssSanitizeMiddleware());
+
+// ===================== Security Headers =====================
+app.use('*', async (c, next) => {
+  await next();
+  // منع تضمين الموقع في iframe (حماية من Clickjacking)
+  c.header('X-Frame-Options', 'DENY');
+  // منع sniffing لنوع المحتوى
+  c.header('X-Content-Type-Options', 'nosniff');
+  // تفعيل XSS Protection في المتصفح
+  c.header('X-XSS-Protection', '1; mode=block');
+  // منع تسريب referrer
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // إزالة header الخادم
+  c.header('X-Powered-By', '');
+  // في الإنتاج: فرض HTTPS
+  if (isProduction) {
+    c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+});
 
 // ===================== Public routes =====================
 app.route('/api/auth', authRoutes);
@@ -60,10 +79,10 @@ app.route('/api', enhancementRoutes);
 
 // ===================== Global Error Handler =====================
 app.onError((err, c) => {
-  console.error('خطأ غير متوقع:', err);
+  console.error(`[${new Date().toISOString()}] خطأ غير متوقع:`, err);
   return c.json({ 
     error: 'حدث خطأ غير متوقع في الخادم - حاول مرة أخرى',
-    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    details: !isProduction ? err.message : undefined
   }, 500);
 });
 
@@ -73,7 +92,12 @@ app.notFound((c) => {
 });
 
 // Health check
-app.get('/health', (c) => c.json({ status: 'ok', message: 'حساباتي - النظام يعمل بنجاح' }));
+app.get('/health', (c) => c.json({ 
+  status: 'ok', 
+  message: 'حساباتي - النظام يعمل بنجاح',
+  environment: process.env.NODE_ENV || 'development',
+  uptime: Math.floor(process.uptime()),
+}));
 
 // فحص اتصال قاعدة البيانات
 app.get('/health/db', async (c) => {
@@ -100,14 +124,57 @@ app.get('/health/db', async (c) => {
 // Root
 app.get('/', (c) => c.json({
   name: 'حساباتي API',
-  version: '1.2.0',
+  version: '1.3.0',
   description: 'نظام إدارة مالية شخصية شاملة',
 }));
 
 const port = parseInt(process.env.PORT || '3000');
-console.log(`🚀 حساباتي API يعمل على المنفذ ${port}`);
+console.log(`🚀 حساباتي API يعمل على المنفذ ${port} (${process.env.NODE_ENV || 'development'})`);
 
 const server = serve({ fetch: app.fetch, port });
 wsService.init(server as any);
+
+// ===================== Graceful Shutdown =====================
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  
+  console.log(`\n⚠️ استلام إشارة ${signal} - بدء الإغلاق الآمن...`);
+  
+  // إيقاف قبول اتصالات جديدة
+  server.close(() => {
+    console.log('✅ تم إيقاف قبول الاتصالات الجديدة');
+  });
+  
+  // إغلاق WebSocket
+  wsService.shutdown();
+  console.log('✅ تم إغلاق اتصالات WebSocket');
+  
+  // إغلاق قاعدة البيانات
+  try {
+    await closeDatabase();
+  } catch (err) {
+    console.error('❌ خطأ في إغلاق قاعدة البيانات:', err);
+  }
+  
+  console.log('✅ تم الإغلاق الآمن بنجاح');
+  process.exit(0);
+}
+
+// التقاط إشارات الإيقاف
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// التقاط الأخطاء غير المعالجة
+process.on('uncaughtException', (err) => {
+  console.error(`[${new Date().toISOString()}] ❌ خطأ غير ملتقط:`, err);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`[${new Date().toISOString()}] ❌ وعد غير معالج:`, reason);
+});
 
 export default app;
