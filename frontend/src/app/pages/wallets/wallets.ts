@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-wallets',
@@ -16,6 +17,7 @@ export class WalletsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   accounts = signal<any[]>([]);
@@ -101,8 +103,9 @@ export class WalletsComponent implements OnInit {
         await this.api.createAccount(this.bizId, data);
       }
       this.showAccountForm.set(false);
+      this.toast.success(this.editingAccountId() ? 'تم تحديث المحفظة بنجاح' : 'تم إنشاء المحفظة بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ المحفظة'); }
   }
 
   openAddType() {
@@ -125,8 +128,9 @@ export class WalletsComponent implements OnInit {
         await this.api.createEWalletType(this.bizId, this.typeForm);
       }
       this.showTypeForm.set(false);
+      this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ النوع'); }
   }
 
   confirmDelete(type: 'account' | 'type', id: number, name: string) {
@@ -142,8 +146,9 @@ export class WalletsComponent implements OnInit {
       else await this.api.deleteEWalletType(target.id);
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);
+      this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء الحذف'); }
   }
 
   getBalanceDisplay(acc: any): string {

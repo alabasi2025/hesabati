@@ -34,6 +34,11 @@ export class DashboardComponent implements OnInit {
   loading = signal(true);
   totalSalaries = signal(0);
   loadError = signal('');
+  // ملخص مالي
+  totalReceipts = signal(0);
+  totalPayments = signal(0);
+  operationsCount = signal(0);
+  netBalance = signal(0);
   chartData = signal<ChartDataItem[]>([]);
   waterfallData = signal<ChartDataItem[]>([]);
   treemapData = signal<ChartDataItem[]>([]);
@@ -89,6 +94,15 @@ export class DashboardComponent implements OnInit {
       this.buildWaterfallData();
       this.buildTreemapData();
       this.buildGaugeData();
+
+      // جلب الملخص المالي
+      try {
+        const stats = await this.api.getWidgetStatsEnhanced(this.bizId);
+        this.totalReceipts.set(stats.totalReceipts || 0);
+        this.totalPayments.set(stats.totalPayments || 0);
+        this.operationsCount.set(stats.operationsCount || 0);
+        this.netBalance.set(stats.netBalance || 0);
+      } catch (e) { /* ignore */ }
 
       const failedCount = results.filter(r => r.status === 'rejected').length;
       if (failedCount > 0 && failedCount < results.length) {

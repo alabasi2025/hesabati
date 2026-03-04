@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-partners',
@@ -16,6 +17,7 @@ export class PartnersComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   business = signal<any>(null);
@@ -76,8 +78,9 @@ export class PartnersComponent implements OnInit {
         await this.api.createPartner(this.bizId, data);
       }
       this.showForm.set(false);
+      this.toast.success(this.editingId() ? 'تم تحديث الشريك بنجاح' : 'تم إضافة الشريك بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ الشريك'); }
   }
 
   confirmDelete(p: any) {
@@ -92,8 +95,9 @@ export class PartnersComponent implements OnInit {
       await this.api.deletePartner(t.id);
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);
+      this.toast.success('تم حذف الشريك بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء الحذف'); }
   }
 
   getShareColor(pct: number): string {

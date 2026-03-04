@@ -33,6 +33,16 @@ export class BusinessService {
     return false;
   }
 
+  current() {
+    return {
+      id: this.currentBusinessId(),
+      name: this.currentBusinessName(),
+      color: this.currentBusinessColor(),
+      icon: this.currentBusinessIcon(),
+      type: this.currentBusinessType(),
+    };
+  }
+
   clear() {
     this.currentBusinessId.set(null);
     this.currentBusinessName.set('');

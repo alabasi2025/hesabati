@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-reports',
@@ -16,6 +17,7 @@ export class ReportsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private toast = inject(ToastService);
   biz = inject(BusinessService);
 
   bizId = 0;
@@ -30,12 +32,28 @@ export class ReportsComponent implements OnInit {
   vouchers = signal<any[]>([]);
   journalEntries = signal<any[]>([]);
 
+  // ميزان المراجعة
+  trialBalance = signal<any[]>([]);
+  trialLoading = signal(false);
+  trialDateFrom = signal('');
+  trialDateTo = signal('');
+
+  // كشف حساب
+  statementData = signal<any[]>([]);
+  statementAccount = signal<any>(null);
+  statementLoading = signal(false);
+  statementDateFrom = signal('');
+  statementDateTo = signal('');
+  selectedAccountId = signal<number | null>(null);
+
   // فلاتر
   dateFrom = signal('');
   dateTo = signal('');
 
   reportTypes = [
     { id: 'overview', label: 'نظرة عامة', icon: 'dashboard' },
+    { id: 'trial-balance', label: 'ميزان المراجعة', icon: 'balance' },
+    { id: 'statement', label: 'كشف حساب', icon: 'description' },
     { id: 'accounts', label: 'الحسابات', icon: 'account_balance' },
     { id: 'funds', label: 'الصناديق', icon: 'savings' },
     { id: 'employees', label: 'الرواتب', icon: 'groups' },
@@ -82,7 +100,108 @@ export class ReportsComponent implements OnInit {
     this.loading.set(false);
   }
 
-  setReport(id: string) { this.activeReport.set(id); }
+  setReport(id: string) {
+    this.activeReport.set(id);
+    if (id === 'trial-balance' && this.trialBalance().length === 0) {
+      this.loadTrialBalance();
+    }
+  }
+
+  // ===================== ميزان المراجعة =====================
+  async loadTrialBalance() {
+    this.trialLoading.set(true);
+    try {
+      const params: any = {};
+      if (this.trialDateFrom()) params.dateFrom = this.trialDateFrom();
+      if (this.trialDateTo()) params.dateTo = this.trialDateTo();
+      const result = await this.api.getTrialBalance(this.bizId, params.dateFrom, params.dateTo);
+      this.trialBalance.set(Array.isArray(result) ? result : (result as any).accounts || []);
+    } catch (e: any) {
+      this.toast.error('خطأ في جلب ميزان المراجعة: ' + (e.message || ''));
+      this.trialBalance.set([]);
+    }
+    this.trialLoading.set(false);
+  }
+
+  getTrialTotalDebit(): number {
+    return this.trialBalance().reduce((s: number, a: any) => s + Number(a.totalDebit || a.debit || 0), 0);
+  }
+
+  getTrialTotalCredit(): number {
+    return this.trialBalance().reduce((s: number, a: any) => s + Number(a.totalCredit || a.credit || 0), 0);
+  }
+
+  getTrialTotalBalance(): number {
+    return this.trialBalance().reduce((s: number, a: any) => s + Number(a.balance || 0), 0);
+  }
+
+  // ===================== كشف حساب =====================
+  async loadAccountStatement() {
+    const accId = this.selectedAccountId();
+    if (!accId) { this.toast.warning('اختر حساباً أولاً'); return; }
+    this.statementLoading.set(true);
+    try {
+      const params: any = {};
+      if (this.statementDateFrom()) params.dateFrom = this.statementDateFrom();
+      if (this.statementDateTo()) params.dateTo = this.statementDateTo();
+      const result = await this.api.getAccountStatement(this.bizId, accId, params.dateFrom, params.dateTo);
+      this.statementData.set(Array.isArray(result) ? result : (result as any).entries || []);
+      this.statementAccount.set(this.accounts().find(a => a.id === accId));
+    } catch (e: any) {
+      this.toast.error('خطأ في جلب كشف الحساب: ' + (e.message || ''));
+      this.statementData.set([]);
+    }
+    this.statementLoading.set(false);
+  }
+
+  getStatementTotalDebit(): number {
+    return this.statementData().reduce((s: number, e: any) => s + Number(e.debit || 0), 0);
+  }
+
+  getStatementTotalCredit(): number {
+    return this.statementData().reduce((s: number, e: any) => s + Number(e.credit || 0), 0);
+  }
+
+  // ===================== طباعة =====================
+  printReport() {
+    const printArea = document.getElementById('report-print-area');
+    if (!printArea) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html dir="rtl"><head>
+        <title>تقرير - ${this.biz.currentBusinessName()}</title>
+        <style>
+          body { font-family: 'Tajawal', sans-serif; padding: 20px; direction: rtl; color: #1e293b; }
+          .print-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+          .print-header h2 { margin: 0 0 4px; font-size: 20px; }
+          .print-header p { margin: 0; font-size: 13px; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { padding: 8px 12px; border: 1px solid #ddd; text-align: right; font-size: 13px; }
+          th { background: #f1f5f9; font-weight: 700; }
+          .total-row { font-weight: 900; background: #f8fafc; }
+          .amount { font-family: monospace; }
+          .text-green { color: #16a34a; }
+          .text-red { color: #dc2626; }
+          .text-blue { color: #2563eb; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head><body>
+        <div class="print-header">
+          <h2>${this.biz.currentBusinessName()}</h2>
+          <p>${this.getReportTitle()} - ${new Date().toLocaleDateString('ar-YE')}</p>
+        </div>
+        ${printArea.innerHTML}
+      </body></html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 300);
+  }
+
+  getReportTitle(): string {
+    const r = this.reportTypes.find(r => r.id === this.activeReport());
+    return r?.label || 'تقرير';
+  }
 
   // تجميع الحسابات حسب النوع
   accountsByType() {
@@ -123,7 +242,8 @@ export class ReportsComponent implements OnInit {
   getAccountTypeLabel(t: string): string {
     const map: Record<string, string> = {
       fund: 'صندوق', bank: 'بنك', e_wallet: 'محفظة', exchange: 'صراف',
-      accounting: 'محاسبي', intermediary: 'وسيط', cash: 'نقدي', custody: 'عهدة', service: 'خدمات',
+      accounting: 'محاسبي', intermediary: 'وسيط', cash: 'نقدي', custody: 'عهدة',
+      service: 'خدمات', billing: 'فوترة', warehouse: 'مخزن',
     };
     return map[t] || t;
   }
@@ -134,5 +254,14 @@ export class ReportsComponent implements OnInit {
       safe: 'خزنة', expense: 'مصروفات', deposit: 'إيداع',
     };
     return map[t] || t;
+  }
+
+  formatAmount(n: any): string {
+    return parseFloat(n || 0).toLocaleString('ar-YE');
+  }
+
+  formatDate(d: string): string {
+    if (!d) return '-';
+    return new Date(d).toLocaleDateString('ar-YE');
   }
 }

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-funds',
@@ -16,6 +17,7 @@ export class FundsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   // إصلاح #4: استخدام funds بدلاً من accounts
@@ -133,8 +135,9 @@ export class FundsComponent implements OnInit {
         await this.api.createFund(this.bizId, data);
       }
       this.showFundForm.set(false);
+      this.toast.success(this.editingFundId() ? 'تم تحديث الصندوق بنجاح' : 'تم إنشاء الصندوق بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ الصندوق'); }
   }
 
   // ============ Type CRUD ============
@@ -158,8 +161,9 @@ export class FundsComponent implements OnInit {
         await this.api.createFundType(this.bizId, this.typeForm);
       }
       this.showTypeForm.set(false);
+      this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ النوع'); }
   }
 
   // ============ Delete ============
@@ -182,8 +186,9 @@ export class FundsComponent implements OnInit {
       }
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);
+      this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء الحذف'); }
   }
 
   getBalanceDisplay(fund: any): string {

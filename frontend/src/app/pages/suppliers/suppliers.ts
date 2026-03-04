@@ -41,7 +41,10 @@ export class SuppliersComponent implements OnInit {
     try {
       const data = await this.api.getSuppliers(this.bizId);
       this.suppliers.set(data);
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل بيانات الموردين');
+    }
     this.loading.set(false);
   }
 
@@ -82,8 +85,12 @@ export class SuppliersComponent implements OnInit {
         await this.api.createSupplier(this.bizId, this.form);
       }
       this.showForm.set(false);
+      this.toast.success(this.editingId() ? 'تم تحديث المورد بنجاح' : 'تم إضافة المورد بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ المورد');
+    }
   }
 
   async remove(s: any) {
@@ -91,8 +98,12 @@ export class SuppliersComponent implements OnInit {
     if (confirmed) {
       try {
         await this.api.deleteSupplier(s.id);
+        this.toast.success('تم حذف المورد بنجاح');
         await this.load();
-      } catch (e) { console.error(e); }
+      } catch (e: any) {
+        console.error(e);
+        this.toast.error(e?.message || 'حدث خطأ أثناء الحذف');
+      }
     }
   }
 

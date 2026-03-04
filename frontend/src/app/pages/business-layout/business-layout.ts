@@ -3,19 +3,21 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { SidebarComponent } from '../../components/sidebar/sidebar';
 import { HeaderComponent } from '../../components/header/header';
+import { BreadcrumbsComponent } from '../../components/breadcrumbs/breadcrumbs';
 import { BusinessService, BusinessType } from '../../services/business.service';
 import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-business-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, SidebarComponent, HeaderComponent],
+  imports: [CommonModule, RouterOutlet, SidebarComponent, HeaderComponent, BreadcrumbsComponent],
   template: `
     <div class="app-layout">
       <app-sidebar></app-sidebar>
       <div class="main-area">
         <app-header></app-header>
         <main class="content-area">
+          <app-breadcrumbs></app-breadcrumbs>
           <router-outlet></router-outlet>
         </main>
       </div>
@@ -43,6 +45,7 @@ import { ApiService } from '../../services/api.service';
     .content-area {
       flex: 1;
       padding: 24px;
+      padding-top: 8px;
       overflow-y: auto;
       height: 100%;
     }

@@ -52,6 +52,51 @@
   }
 }
 
+// ═══ Financial Summary ═══
+.financial-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+
+  @media (max-width: 1100px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+}
+
+.fin-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px; border-radius: 14px;
+  background: var(--card-bg); border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card); transition: all 0.25s;
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+}
+
+.fin-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  .material-icons-round { font-size: 24px; color: white; }
+}
+
+.fin-receipts .fin-icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.fin-payments .fin-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.fin-net .fin-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.fin-ops .fin-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+.fin-info {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.fin-label {
+  font-size: 12px; font-weight: 700; color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+.fin-value {
+  font-size: 20px; font-weight: 900; color: var(--text-primary);
+  small { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+}
+
 .section-card {
   background: var(--card-bg); border: 1px solid var(--border-color);
   border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow-card);

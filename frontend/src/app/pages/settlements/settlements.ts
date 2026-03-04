@@ -57,7 +57,10 @@ export class SettlementsComponent implements OnInit {
       this.accounts.set(accs);
       this.funds.set(fds);
       this.stations.set(sts);
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل بيانات التصفيات');
+    }
     this.loading.set(false);
   }
 
@@ -109,8 +112,12 @@ export class SettlementsComponent implements OnInit {
         await this.api.createSettlement(this.bizId, data);
       }
       this.showForm.set(false);
+      this.toast.success(this.editingId() ? 'تم تحديث التصفية بنجاح' : 'تم إنشاء التصفية بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ التصفية');
+    }
   }
 
   async remove(r: any) {
@@ -118,8 +125,12 @@ export class SettlementsComponent implements OnInit {
     if (confirmed) {
       try {
         await this.api.deleteSettlement(r.id);
+        this.toast.success('تم حذف التصفية بنجاح');
         await this.load();
-      } catch (e) { console.error(e); }
+      } catch (e: any) {
+        console.error(e);
+        this.toast.error(e?.message || 'حدث خطأ أثناء الحذف');
+      }
     }
   }
 

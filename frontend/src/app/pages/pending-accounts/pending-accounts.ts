@@ -40,7 +40,10 @@ export class PendingAccountsComponent implements OnInit {
     try {
       const data = await this.api.getPendingAccounts(this.bizId);
       this.items.set(data);
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل الحسابات المعلقة');
+    }
     this.loading.set(false);
   }
 
@@ -78,8 +81,12 @@ export class PendingAccountsComponent implements OnInit {
         await this.api.createPendingAccount(this.bizId, data);
       }
       this.showForm.set(false);
+      this.toast.success(this.editingId() ? 'تم تحديث الحساب المعلق بنجاح' : 'تم إضافة الحساب المعلق بنجاح');
       await this.load();
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ الحساب المعلق');
+    }
   }
 
   async remove(item: any) {
@@ -87,8 +94,12 @@ export class PendingAccountsComponent implements OnInit {
     if (confirmed) {
       try {
         await this.api.deletePendingAccount(item.id);
+        this.toast.success('تم حذف الحساب المعلق بنجاح');
         await this.load();
-      } catch (e) { console.error(e); }
+      } catch (e: any) {
+        console.error(e);
+        this.toast.error(e?.message || 'حدث خطأ أثناء الحذف');
+      }
     }
   }
 

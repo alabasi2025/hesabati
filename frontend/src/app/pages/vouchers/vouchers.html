@@ -158,6 +158,12 @@
               <button class="icon-btn" style="color:#3b82f6" title="المرفقات" (click)="openAttachments(v.id)">
                 <span class="material-icons-round">attach_file</span>
               </button>
+              <button class="icon-btn" style="color:#6366f1" title="تفاصيل" (click)="openDetails(v)">
+                <span class="material-icons-round">visibility</span>
+              </button>
+              <button class="icon-btn" style="color:#06b6d4" title="طباعة" (click)="printVoucher(v)">
+                <span class="material-icons-round">print</span>
+              </button>
               <button class="icon-btn delete-btn" (click)="deleteVoucher(v.id)">
                 <span class="material-icons-round">delete</span>
               </button>
@@ -376,6 +382,146 @@
             تأكيد العكس
           </button>
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Voucher Details Modal ===== -->
+  @if (showDetailsModal()) {
+    <div class="modal-overlay" (click)="closeDetails()">
+      <div class="modal-3d" style="max-width:580px" (click)="$event.stopPropagation()">
+        <div class="modal-header" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
+          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
+            <span class="material-icons-round">receipt_long</span>
+          </div>
+          <h2 style="color:white">تفاصيل السند</h2>
+          <button class="modal-close" (click)="closeDetails()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (detailsLoading()) {
+            <div style="text-align:center;padding:40px"><span class="material-icons-round spin" style="font-size:32px;color:#6366f1">sync</span></div>
+          } @else if (detailsVoucher()) {
+            <div class="details-grid">
+              <div class="detail-row">
+                <span class="detail-label">رقم السند</span>
+                <span class="detail-value">{{ detailsVoucher().voucherNumber || '-' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">النوع</span>
+                <span class="detail-value">
+                  <span class="vr-type-badge" [style.background]="getTypeColor(detailsVoucher().voucherType) + '18'" [style.color]="getTypeColor(detailsVoucher().voucherType)">
+                    {{ getTypeLabel(detailsVoucher().voucherType) }}
+                  </span>
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">المبلغ</span>
+                <span class="detail-value amount-big" [style.color]="getTypeColor(detailsVoucher().voucherType)">{{ formatAmount(detailsVoucher().amount) }} ر.ي</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">البيان</span>
+                <span class="detail-value">{{ detailsVoucher().description || '-' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">التاريخ</span>
+                <span class="detail-value">{{ formatDateTime(detailsVoucher().voucherDate || detailsVoucher().createdAt) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">الحالة</span>
+                <span class="detail-value">
+                  <span class="status-pill" [style.background]="getStatusColor(detailsVoucher().status) + '18'" [style.color]="getStatusColor(detailsVoucher().status)">
+                    <span class="material-icons-round" style="font-size:14px">{{ getStatusIcon(detailsVoucher().status) }}</span>
+                    {{ getStatusLabel(detailsVoucher().status) }}
+                  </span>
+                </span>
+              </div>
+              @if (detailsVoucher().fromAccountId) {
+                <div class="detail-row">
+                  <span class="detail-label">من حساب</span>
+                  <span class="detail-value">{{ detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId) }}</span>
+                </div>
+              }
+              @if (detailsVoucher().toAccountId) {
+                <div class="detail-row">
+                  <span class="detail-label">إلى حساب</span>
+                  <span class="detail-value">{{ detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId) }}</span>
+                </div>
+              }
+              @if (detailsVoucher().reference) {
+                <div class="detail-row">
+                  <span class="detail-label">المرجع</span>
+                  <span class="detail-value">{{ detailsVoucher().reference }}</span>
+                </div>
+              }
+              @if (detailsVoucher().operationTypeId) {
+                <div class="detail-row">
+                  <span class="detail-label">نوع العملية</span>
+                  <span class="detail-value">{{ getOpTypeName(detailsVoucher().operationTypeId) }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="closeDetails()">إغلاق</button>
+          @if (detailsVoucher()) {
+            <button class="btn-3d" style="background:#06b6d4;color:white" (click)="printVoucher(detailsVoucher())">
+              <span class="material-icons-round">print</span>
+              طباعة
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Print Area (Hidden) ===== -->
+  @if (printingVoucher()) {
+    <div id="voucher-print-area" style="display:none">
+      <div class="print-header">
+        <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
+        <h3>{{ getTypeLabel(printingVoucher().voucherType) }}</h3>
+        <p>رقم السند: {{ printingVoucher().voucherNumber || '-' }}</p>
+      </div>
+      <div class="print-row">
+        <span class="print-label">التاريخ:</span>
+        <span>{{ formatDate(printingVoucher().voucherDate || printingVoucher().createdAt) }}</span>
+      </div>
+      <div class="print-row">
+        <span class="print-label">الحالة:</span>
+        <span>{{ getStatusLabel(printingVoucher().status) }}</span>
+      </div>
+      @if (printingVoucher().fromAccountId) {
+        <div class="print-row">
+          <span class="print-label">من حساب:</span>
+          <span>{{ printingVoucher().fromAccountName || getAccountName(printingVoucher().fromAccountId) }}</span>
+        </div>
+      }
+      @if (printingVoucher().toAccountId) {
+        <div class="print-row">
+          <span class="print-label">إلى حساب:</span>
+          <span>{{ printingVoucher().toAccountName || getAccountName(printingVoucher().toAccountId) }}</span>
+        </div>
+      }
+      <div class="print-amount">
+        {{ formatAmount(printingVoucher().amount) }} ر.ي
+      </div>
+      <div class="print-row">
+        <span class="print-label">البيان:</span>
+        <span>{{ printingVoucher().description || '-' }}</span>
+      </div>
+      @if (printingVoucher().reference) {
+        <div class="print-row">
+          <span class="print-label">المرجع:</span>
+          <span>{{ printingVoucher().reference }}</span>
+        </div>
+      }
+      <div class="print-footer">
+        <div class="print-sig">المحاسب</div>
+        <div class="print-sig">المدير</div>
+        <div class="print-sig">المستلم</div>
       </div>
     </div>
   }

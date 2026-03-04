@@ -361,6 +361,51 @@
   p { font-size: 13px; line-height: 1.9; color: var(--text-secondary, #64748b); font-weight: 600; margin: 0; }
 }
 
+/* ===================== Details Grid ===================== */
+.details-grid {
+  display: flex; flex-direction: column; gap: 0;
+}
+
+.detail-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border-color, #f0f0f0);
+  &:last-child { border-bottom: none; }
+}
+
+.detail-label {
+  font-size: 13px; font-weight: 700; color: var(--text-secondary, #64748b);
+}
+
+.detail-value {
+  font-size: 14px; font-weight: 700; color: var(--text-primary, #1e293b);
+  &.amount-big { font-size: 20px; font-weight: 900; }
+}
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 6px;
+  font-size: 12px; font-weight: 700;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 1s linear infinite; }
+
+/* ===================== Print Styles ===================== */
+@media print {
+  body * { visibility: hidden !important; }
+  #voucher-print-area, #voucher-print-area * {
+    visibility: visible !important;
+    display: block !important;
+  }
+  #voucher-print-area {
+    position: absolute; left: 0; top: 0; width: 100%;
+    padding: 20px; font-family: 'Tajawal', sans-serif;
+  }
+}
+
 /* ===================== Responsive ===================== */
 @media (max-width: 768px) {
   .page-header { flex-direction: column; gap: 14px; align-items: flex-start; }

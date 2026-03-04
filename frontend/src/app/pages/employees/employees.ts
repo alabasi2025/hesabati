@@ -41,7 +41,10 @@ export class EmployeesComponent implements OnInit {
     try {
       const [emps, sts] = await Promise.all([this.api.getEmployees(this.bizId), this.api.getStations(this.bizId)]);
       this.employees.set(emps); this.stations.set(sts);
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل بيانات الموظفين');
+    }
     this.loading.set(false);
   }
 
@@ -68,13 +71,27 @@ export class EmployeesComponent implements OnInit {
       const data = { ...this.form, salary: String(this.form.salary) };
       if (this.editingId()) await this.api.updateEmployee(this.editingId()!, data);
       else await this.api.createEmployee(this.bizId, data);
-      this.showForm.set(false); await this.load();
-    } catch (e) { console.error(e); }
+      this.showForm.set(false);
+      this.toast.success(this.editingId() ? 'تم تحديث بيانات الموظف بنجاح' : 'تم إضافة الموظف بنجاح');
+      await this.load();
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ بيانات الموظف');
+    }
   }
 
   async remove(id: number) {
     const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: 'هل أنت متأكد من حذف هذا الموظف؟', type: 'danger' });
-    if (confirmed) { await this.api.deleteEmployee(id); await this.load(); }
+    if (confirmed) {
+      try {
+        await this.api.deleteEmployee(id);
+        this.toast.success('تم حذف الموظف بنجاح');
+        await this.load();
+      } catch (e: any) {
+        console.error(e);
+        this.toast.error(e?.message || 'حدث خطأ أثناء حذف الموظف');
+      }
+    }
   }
 
   getStatusLabel(s: string) { return s === 'active' ? 'نشط' : s === 'suspended' ? 'موقوف' : 'غير نشط'; }

@@ -70,6 +70,38 @@
       </app-three-stat-card>
     </div>
 
+    <!-- ملخص مالي -->
+    <div class="financial-summary">
+      <div class="fin-card fin-receipts">
+        <div class="fin-icon"><span class="material-icons-round">arrow_downward</span></div>
+        <div class="fin-info">
+          <span class="fin-label">إجمالي القبض</span>
+          <span class="fin-value">{{ formatNumber(totalReceipts()) }} <small>ر.ي</small></span>
+        </div>
+      </div>
+      <div class="fin-card fin-payments">
+        <div class="fin-icon"><span class="material-icons-round">arrow_upward</span></div>
+        <div class="fin-info">
+          <span class="fin-label">إجمالي الصرف</span>
+          <span class="fin-value">{{ formatNumber(totalPayments()) }} <small>ر.ي</small></span>
+        </div>
+      </div>
+      <div class="fin-card fin-net">
+        <div class="fin-icon"><span class="material-icons-round">account_balance</span></div>
+        <div class="fin-info">
+          <span class="fin-label">صافي الأرصدة</span>
+          <span class="fin-value">{{ formatNumber(netBalance()) }} <small>ر.ي</small></span>
+        </div>
+      </div>
+      <div class="fin-card fin-ops">
+        <div class="fin-icon"><span class="material-icons-round">receipt_long</span></div>
+        <div class="fin-info">
+          <span class="fin-label">عدد العمليات</span>
+          <span class="fin-value">{{ operationsCount() }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Quick Actions -->
     <div class="section-card">
       <h3 class="section-title"><span class="material-icons-round">flash_on</span> إجراءات سريعة</h3>

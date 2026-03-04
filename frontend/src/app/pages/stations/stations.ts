@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-stations',
@@ -15,6 +16,7 @@ export class StationsComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   biz = inject(BusinessService);
+  private toast = inject(ToastService);
 
   bizId = 0;
   stations = signal<any[]>([]);
@@ -32,7 +34,10 @@ export class StationsComponent implements OnInit {
     try {
       const data = await this.api.getStations(this.bizId);
       this.stations.set(data);
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل المحطات');
+    }
     this.loading.set(false);
   }
 

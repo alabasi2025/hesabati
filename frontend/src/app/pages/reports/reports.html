@@ -1,6 +1,9 @@
 <div class="page-content">
   <div class="page-header">
     <h2><span class="material-icons-round">assessment</span> التقارير</h2>
+    <button class="print-btn" (click)="printReport()">
+      <span class="material-icons-round">print</span> طباعة
+    </button>
   </div>
 
   <!-- تبويبات التقارير -->
@@ -16,6 +19,8 @@
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري تحميل البيانات...</p></div>
   } @else {
+
+    <div id="report-print-area">
 
     <!-- تقرير النظرة العامة -->
     @if (activeReport() === 'overview') {
@@ -45,6 +50,154 @@
             </div>
           </div>
         </div>
+      </div>
+    }
+
+    <!-- ميزان المراجعة -->
+    @if (activeReport() === 'trial-balance') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">balance</span> ميزان المراجعة</h3>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>من تاريخ</label>
+            <input type="date" [ngModel]="trialDateFrom()" (ngModelChange)="trialDateFrom.set($event)">
+          </div>
+          <div class="filter-group">
+            <label>إلى تاريخ</label>
+            <input type="date" [ngModel]="trialDateTo()" (ngModelChange)="trialDateTo.set($event)">
+          </div>
+          <button class="filter-btn" (click)="loadTrialBalance()">
+            <span class="material-icons-round">search</span> عرض
+          </button>
+        </div>
+
+        @if (trialLoading()) {
+          <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري تحميل ميزان المراجعة...</p></div>
+        } @else if (!trialBalance().length) {
+          <div class="empty-state"><span class="material-icons-round">balance</span><p>لا توجد بيانات - قم بإنشاء سندات أولاً</p></div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم الحساب</th>
+                <th>رمز الحساب</th>
+                <th class="amount-col">إجمالي المدين</th>
+                <th class="amount-col">إجمالي الدائن</th>
+                <th class="amount-col">الرصيد</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of trialBalance(); track row.accountId || $index; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td class="name-cell">{{ row.accountName || row.name || '-' }}</td>
+                  <td>{{ row.accountCode || row.code || '-' }}</td>
+                  <td class="amount-cell text-green">{{ formatAmount(row.totalDebit || row.debit) }}</td>
+                  <td class="amount-cell text-red">{{ formatAmount(row.totalCredit || row.credit) }}</td>
+                  <td class="amount-cell" [class.text-green]="(row.balance || 0) > 0" [class.text-red]="(row.balance || 0) < 0">
+                    {{ formatAmount(row.balance) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="3"><strong>الإجمالي</strong></td>
+                <td class="amount-cell text-green"><strong>{{ formatAmount(getTrialTotalDebit()) }}</strong></td>
+                <td class="amount-cell text-red"><strong>{{ formatAmount(getTrialTotalCredit()) }}</strong></td>
+                <td class="amount-cell"><strong>{{ formatAmount(getTrialTotalBalance()) }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="balance-indicator" [class.balanced]="getTrialTotalDebit() === getTrialTotalCredit()">
+            <span class="material-icons-round">{{ getTrialTotalDebit() === getTrialTotalCredit() ? 'check_circle' : 'warning' }}</span>
+            {{ getTrialTotalDebit() === getTrialTotalCredit() ? 'الميزان متوازن' : 'الميزان غير متوازن - يوجد فرق: ' + formatAmount(getTrialTotalDebit() - getTrialTotalCredit()) }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- كشف حساب -->
+    @if (activeReport() === 'statement') {
+      <div class="report-section">
+        <h3 class="section-title"><span class="material-icons-round">description</span> كشف حساب</h3>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>الحساب</label>
+            <select [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event)">
+              <option [ngValue]="null">-- اختر حساباً --</option>
+              @for (acc of accounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code || '-' }})</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>من تاريخ</label>
+            <input type="date" [ngModel]="statementDateFrom()" (ngModelChange)="statementDateFrom.set($event)">
+          </div>
+          <div class="filter-group">
+            <label>إلى تاريخ</label>
+            <input type="date" [ngModel]="statementDateTo()" (ngModelChange)="statementDateTo.set($event)">
+          </div>
+          <button class="filter-btn" (click)="loadAccountStatement()">
+            <span class="material-icons-round">search</span> عرض
+          </button>
+        </div>
+
+        @if (statementLoading()) {
+          <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري تحميل كشف الحساب...</p></div>
+        } @else if (statementAccount()) {
+          <div class="statement-header">
+            <div class="stmt-info">
+              <strong>{{ statementAccount().name }}</strong>
+              <span>رمز: {{ statementAccount().code || '-' }}</span>
+              <span>نوع: {{ getAccountTypeLabel(statementAccount().accountType) }}</span>
+            </div>
+          </div>
+
+          @if (!statementData().length) {
+            <div class="empty-state"><span class="material-icons-round">description</span><p>لا توجد حركات لهذا الحساب</p></div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>التاريخ</th>
+                  <th>الوصف</th>
+                  <th class="amount-col">مدين</th>
+                  <th class="amount-col">دائن</th>
+                  <th class="amount-col">الرصيد</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of statementData(); track $index; let i = $index) {
+                  <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td class="date-cell">{{ formatDate(entry.date || entry.entryDate) }}</td>
+                    <td>{{ entry.description || '-' }}</td>
+                    <td class="amount-cell text-green">{{ entry.debit ? formatAmount(entry.debit) : '-' }}</td>
+                    <td class="amount-cell text-red">{{ entry.credit ? formatAmount(entry.credit) : '-' }}</td>
+                    <td class="amount-cell" [class.text-green]="(entry.runningBalance || 0) > 0" [class.text-red]="(entry.runningBalance || 0) < 0">
+                      {{ formatAmount(entry.runningBalance || entry.balance) }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td colspan="3"><strong>الإجمالي</strong></td>
+                  <td class="amount-cell text-green"><strong>{{ formatAmount(getStatementTotalDebit()) }}</strong></td>
+                  <td class="amount-cell text-red"><strong>{{ formatAmount(getStatementTotalCredit()) }}</strong></td>
+                  <td class="amount-cell"><strong>{{ formatAmount(getStatementTotalDebit() - getStatementTotalCredit()) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          }
+        }
       </div>
     }
 
@@ -120,14 +273,16 @@
           <div class="empty-state"><span class="material-icons-round">receipt_long</span><p>لا يوجد سندات</p></div>
         } @else {
           <table class="data-table">
-            <thead><tr><th>#</th><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>التاريخ</th></tr></thead>
+            <thead><tr><th>#</th><th>الرقم</th><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>الحالة</th><th>التاريخ</th></tr></thead>
             <tbody>
               @for (v of vouchers(); track v.id; let i = $index) {
                 <tr>
                   <td>{{ i + 1 }}</td>
+                  <td>{{ v.voucherNumber || '-' }}</td>
                   <td><span class="type-badge" [class]="v.voucherType === 'receipt' ? 'receipt' : 'payment'">{{ v.voucherType === 'receipt' ? 'قبض' : 'صرف' }}</span></td>
                   <td class="amount-cell">{{ v.amount | number:'1.0-0' }} ر.ي</td>
                   <td>{{ v.description || '-' }}</td>
+                  <td><span class="status-badge" [class]="v.status || 'draft'">{{ v.status === 'confirmed' ? 'مؤكد' : v.status === 'cancelled' ? 'ملغي' : 'مسودة' }}</span></td>
                   <td class="date-cell">{{ v.voucherDate || v.createdAt | date:'yyyy/MM/dd' }}</td>
                 </tr>
               }
@@ -155,5 +310,7 @@
         }
       </div>
     }
+
+    </div><!-- end report-print-area -->
   }
 </div>

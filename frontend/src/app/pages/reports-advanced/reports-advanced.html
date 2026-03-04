@@ -11,6 +11,12 @@
         <p class="page-subtitle">تحليل مالي شامل: أرباح وخسائر، كشف حساب، ملخص يومي، ميزان مراجعة</p>
       </div>
     </div>
+    <div class="header-actions">
+      <button class="btn-3d btn-print" (click)="printReport()" [disabled]="loading">
+        <span class="material-icons-round">print</span>
+        طباعة التقرير
+      </button>
+    </div>
   </div>
 
   <!-- ===== Tabs ===== -->
@@ -37,9 +43,11 @@
         </div>
         @if (activeTab === 'statement') {
           <div class="filter-field wide">
-            <label class="form-label">الحساب</label>
+            <label class="form-label">الحساب / الصندوق</label>
             <select class="form-select" [(ngModel)]="selectedAccountId">
-              <option *ngFor="let a of accounts" [value]="a.id">{{a.name}}</option>
+              @for (a of allAccountsAndFunds; track a.id) {
+                <option [value]="a.id">{{a.displayName || a.name}}</option>
+              }
             </select>
           </div>
         }
@@ -75,6 +83,9 @@
       <p>جاري التحميل...</p>
     </div>
   }
+
+  <!-- ===== Print Area ===== -->
+  <div class="print-area">
 
   <!-- ===== تقرير الأرباح والخسائر ===== -->
   @if (activeTab === 'profit-loss' && profitLoss && !loading) {
@@ -146,7 +157,7 @@
     <div class="account-info-3d">
       <div class="ai-icon"><span class="material-icons-round">account_balance</span></div>
       <div class="ai-main">
-        <div class="ai-name">{{ statement.account?.name }}</div>
+        <div class="ai-name">{{ statement.account?.name || getSelectedAccountName() }}</div>
         <div class="ai-entries">عدد الحركات: {{ statement.totalEntries }}</div>
       </div>
       <div class="ai-balances">
@@ -163,11 +174,15 @@
       <div class="table-header">
         <div class="table-icon"><span class="material-icons-round">receipt</span></div>
         <h3>حركات الحساب</h3>
+        <div class="table-header-info">
+          <span class="entries-count">{{ statement.entries?.length || 0 }} حركة</span>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>التاريخ</th>
               <th>المرجع</th>
               <th>البيان</th>
@@ -179,6 +194,7 @@
           <tbody>
             @for (e of statement.entries; track $index) {
               <tr>
+                <td class="cell-index">{{ $index + 1 }}</td>
                 <td class="cell-date">{{ e.entry_date }}</td>
                 <td class="cell-ref">{{ e.entry_number }}</td>
                 <td class="cell-desc">{{ e.entry_description || e.line_description }}</td>
@@ -276,7 +292,7 @@
       <div class="stat-card-3d" [class]="trialBalance.totals.isBalanced ? 'blue' : 'amber'">
         <div class="sc-icon"><span class="material-icons-round">{{ trialBalance.totals.isBalanced ? 'check_circle' : 'warning' }}</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ trialBalance.totals.isBalanced ? 'متوازن ✓' : 'غير متوازن ✗' }}</div>
+          <div class="sc-num">{{ trialBalance.totals.isBalanced ? 'متوازن' : 'غير متوازن' }}</div>
           <div class="sc-label">الحالة</div>
         </div>
       </div>
@@ -286,11 +302,15 @@
       <div class="table-header">
         <div class="table-icon"><span class="material-icons-round">balance</span></div>
         <h3>ميزان المراجعة</h3>
+        <div class="table-header-info">
+          <span class="entries-count">{{ trialBalance.accounts?.length || 0 }} حساب</span>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>الحساب</th>
               <th>النوع</th>
               <th>مدين</th>
@@ -301,18 +321,29 @@
           <tbody>
             @for (a of trialBalance.accounts; track $index) {
               <tr>
+                <td class="cell-index">{{ $index + 1 }}</td>
                 <td class="cell-name">{{ a.account_name }}</td>
-                <td class="cell-type">{{ a.account_type }}</td>
+                <td class="cell-type">{{ getAccountTypeLabel(a.account_type) }}</td>
                 <td class="cell-debit">{{ a.total_debit | number:'1.0-2' }}</td>
                 <td class="cell-credit">{{ a.total_credit | number:'1.0-2' }}</td>
                 <td class="cell-balance" [class]="a.balance >= 0 ? 'positive' : 'negative'">{{ a.balance | number:'1.0-2' }}</td>
               </tr>
             }
           </tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="3" style="font-weight:900;">الإجمالي</td>
+              <td class="cell-debit" style="font-weight:900;">{{ trialBalance.totals.totalDebit | number:'1.0-2' }}</td>
+              <td class="cell-credit" style="font-weight:900;">{{ trialBalance.totals.totalCredit | number:'1.0-2' }}</td>
+              <td class="cell-balance" style="font-weight:900;">{{ (trialBalance.totals.totalDebit - trialBalance.totals.totalCredit) | number:'1.0-2' }}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
   }
+
+  </div><!-- end print-area -->
 
   <!-- ===== Empty State ===== -->
   @if (!loading && ((activeTab === 'profit-loss' && !profitLoss) || (activeTab === 'statement' && !statement) || (activeTab === 'daily' && !dailySummary) || (activeTab === 'trial-balance' && !trialBalance))) {

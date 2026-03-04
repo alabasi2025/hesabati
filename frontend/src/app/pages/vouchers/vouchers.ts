@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BusinessService } from '../../services/business.service';
 
 @Component({
   selector: 'app-vouchers',
@@ -16,6 +17,7 @@ export class VouchersComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  biz = inject(BusinessService);
 
   bizId = 0;
   loading = signal(true);
