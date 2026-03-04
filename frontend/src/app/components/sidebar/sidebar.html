@@ -16,7 +16,7 @@
 
   <!-- Navigation -->
   <nav class="sidebar-nav">
-    @for (section of menuSections(); track section.title) {
+    @for (section of menuSections(); track section.sectionId ?? section.title) {
       <div class="nav-section">
         @if (!isCollapsed()) {
           <div class="section-title">{{ section.title }}</div>
@@ -74,9 +74,9 @@
             } @else {
               <a
                 class="nav-item"
-                [routerLink]="item.route"
+                [routerLink]="item.route || '/'"
                 routerLinkActive="active"
-                [routerLinkActiveOptions]="{exact: item.route === '/biz/' + biz.currentBusinessId()}"
+                [routerLinkActiveOptions]="{exact: (item.route || '') === ('/biz/' + biz.currentBusinessId())}"
                 [title]="item.label"
                 [attr.hint]="item.label"
                 [attr.data-icon]="item.icon"

@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { ThreeBackgroundComponent } from '../../components/three-background/three-background';
@@ -7,7 +7,7 @@ import { ThreeBackgroundComponent } from '../../components/three-background/thre
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, ThreeBackgroundComponent],
+  imports: [FormsModule, RouterLink, ThreeBackgroundComponent],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })

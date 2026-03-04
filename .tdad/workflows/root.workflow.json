@@ -12,7 +12,36 @@
         "x": 100,
         "y": 200
       },
-      "dependencies": []
+      "dependencies": [],
+      "children": [
+        "auth",
+        "businesses",
+        "accounts",
+        "funds",
+        "vouchers",
+        "journal",
+        "operation-types",
+        "screens-widgets",
+        "sidebar",
+        "warehouse",
+        "partners",
+        "suppliers",
+        "employees",
+        "stations",
+        "settlements",
+        "currencies",
+        "exchange-rates",
+        "roles",
+        "attachments",
+        "reports",
+        "collections",
+        "billing",
+        "pending-accounts",
+        "fund-types",
+        "categories",
+        "dashboard",
+        "users"
+      ]
     },
     {
       "id": "frontend",
@@ -27,6 +56,37 @@
       },
       "dependencies": [
         "backend"
+      ],
+      "children": [
+        "fe-login",
+        "fe-business-select",
+        "fe-dashboard",
+        "fe-accounts",
+        "fe-funds",
+        "fe-vouchers",
+        "fe-journal",
+        "fe-operation-types",
+        "fe-custom-screens",
+        "fe-sidebar-settings",
+        "fe-reports",
+        "fe-reports-advanced",
+        "fe-banks",
+        "fe-exchanges",
+        "fe-wallets",
+        "fe-partners",
+        "fe-warehouse",
+        "fe-warehouse-ops",
+        "fe-suppliers",
+        "fe-settlements",
+        "fe-pending-accounts",
+        "fe-exchange-rates",
+        "fe-roles",
+        "fe-collections",
+        "fe-billing",
+        "fe-journal-categories",
+        "fe-stations",
+        "fe-employees",
+        "fe-summary"
       ]
     }
   ],
@@ -34,7 +94,8 @@
     {
       "id": "backend-to-frontend",
       "source": "backend",
-      "target": "frontend"
+      "target": "frontend",
+      "type": "custom"
     }
   ]
 }

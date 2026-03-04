@@ -18,6 +18,7 @@ import { db } from '../db/index.ts';
 import { eq, and, desc, lte } from 'drizzle-orm';
 import {
   currencies, exchangeRates, accounts, funds, businesses,
+  accountBalances, fundBalances,
 } from '../db/schema/index.ts';
 
 // ===================== جلب سعر الصرف =====================
@@ -125,19 +126,21 @@ export async function getUnifiedBalances(bizId: number, targetCurrencyId: number
   const accountsList = await db.select({
     id: accounts.id,
     name: accounts.name,
-    balance: accounts.balance,
-    currencyId: accounts.currencyId,
+    balance: accountBalances.balance,
+    currencyId: accountBalances.currencyId,
   })
     .from(accounts)
+    .innerJoin(accountBalances, eq(accounts.id, accountBalances.accountId))
     .where(eq(accounts.businessId, bizId));
 
   const fundsList = await db.select({
     id: funds.id,
     name: funds.name,
-    balance: funds.balance,
-    currencyId: funds.currencyId,
+    balance: fundBalances.balance,
+    currencyId: fundBalances.currencyId,
   })
     .from(funds)
+    .innerJoin(fundBalances, eq(funds.id, fundBalances.fundId))
     .where(eq(funds.businessId, bizId));
 
   const unifiedAccounts = await Promise.all(

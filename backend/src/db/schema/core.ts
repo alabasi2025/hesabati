@@ -14,7 +14,7 @@ export const fundTypeEnum = pgEnum('fund_type', [
 ]);
 
 export const voucherTypeEnum = pgEnum('voucher_type', [
-  'receipt', 'payment', 'transfer', 'collection', 'delivery',
+  'receipt', 'payment', 'transfer', 'journal', 'collection', 'delivery',
   'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer',
 ]);
 

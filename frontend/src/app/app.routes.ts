@@ -8,6 +8,11 @@ export const routes: Routes = [
     canActivate: [loginGuard],
   },
   {
+    path: 'register',
+    loadComponent: () => import('./pages/register/register').then(m => m.RegisterComponent),
+    canActivate: [loginGuard],
+  },
+  {
     path: 'businesses',
     loadComponent: () => import('./pages/business-select/business-select').then(m => m.BusinessSelectComponent),
     canActivate: [authGuard],
@@ -47,6 +52,9 @@ export const routes: Routes = [
       { path: 'reports-advanced', loadComponent: () => import('./pages/reports-advanced/reports-advanced').then(m => m.ReportsAdvancedComponent) },
       { path: 'journal-categories', loadComponent: () => import('./pages/journal-categories/journal-categories').then(m => m.JournalCategoriesComponent) },
       { path: 'warehouse-operations', loadComponent: () => import('./pages/warehouse-operations/warehouse-operations').then(m => m.WarehouseOperationsComponent) },
+      { path: 'expense-categories', loadComponent: () => import('./pages/expense-categories/expense-categories').then(m => m.ExpenseCategoriesComponent) },
+      { path: 'expense-budget', loadComponent: () => import('./pages/expense-budget/expense-budget').then(m => m.ExpenseBudgetComponent) },
+      { path: 'salaries', loadComponent: () => import('./pages/salaries/salaries').then(m => m.SalariesComponent) },
     ],
   },
   { path: '', redirectTo: 'login', pathMatch: 'full' },

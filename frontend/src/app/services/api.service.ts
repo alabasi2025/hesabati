@@ -104,7 +104,10 @@ export class ApiService {
   // ===================== المحطات =====================
   getStations(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/stations`); }
   getStation(bizId: number, id: number)        { return this.request<any>(`/businesses/${bizId}/stations/${id}`); }
+  createStation(bizId: number, d: any)         { return this.request<any>(`/businesses/${bizId}/stations`, { method: 'POST', body: JSON.stringify(d) }); }
   updateStation(id: number, d: any)            { return this.request<any>(`/stations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  updateStationByBiz(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/stations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteStation(bizId: number, id: number)     { return this.request<any>(`/businesses/${bizId}/stations/${id}`, { method: 'DELETE' }); }
 
   // ===================== الموظفين =====================
   getEmployees(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/employees`); }
@@ -124,6 +127,7 @@ export class ApiService {
 
   // ===================== الحسابات مع الصلاحيات =====================
   getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
+  getAccount(id: number)                         { return this.request<any>(`/accounts/${id}`); }
   getAllAccounts(bizId: number)                   { return this.request<{ accounts: any[]; stations: any[] }>(`/businesses/${bizId}/accounts?all=true`); }
   createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   updateAccount(id: number, d: any)              { return this.request<any>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
@@ -137,6 +141,7 @@ export class ApiService {
 
   // ===================== الصناديق =====================
   getFunds(bizId: number)                        { return this.request<any[]>(`/businesses/${bizId}/funds`); }
+  getFund(id: number)                            { return this.request<any>(`/funds/${id}`); }
   createFund(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/funds`, { method: 'POST', body: JSON.stringify(d) }); }
   updateFund(bizId: number, id: number, d: any)  { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteFund(bizId: number, id: number)           { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'DELETE' }); }
@@ -175,6 +180,7 @@ export class ApiService {
 
   // ===================== المخازن =====================
   getWarehouses(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/warehouses`); }
+  getWarehouse(id: number)                       { return this.request<any>(`/warehouses/${id}`); }
   createWarehouse(bizId: number, d: any)         { return this.request<any>(`/businesses/${bizId}/warehouses`, { method: 'POST', body: JSON.stringify(d) }); }
   updateWarehouse(id: number, d: any)            { return this.request<any>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteWarehouse(id: number)                    { return this.request<any>(`/warehouses/${id}`, { method: 'DELETE' }); }
@@ -530,6 +536,38 @@ export class ApiService {
   createJournalEntryCategory(bizId: number, d: any) { return this.request<any>(`/businesses/${bizId}/journal-entry-categories`, { method: 'POST', body: JSON.stringify(d) }); }
   updateJournalEntryCategory(id: number, d: any)  { return this.request<any>(`/journal-entry-categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteJournalEntryCategory(id: number)          { return this.request<any>(`/journal-entry-categories/${id}`, { method: 'DELETE' }); }
+
+  // ===================== تصنيفات المصروفات (الوحدة 13) =====================
+  getExpenseCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/expense-categories`); }
+  createExpenseCategory(bizId: number, d: any)   { return this.request<any>(`/businesses/${bizId}/expense-categories`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateExpenseCategory(id: number, d: any)      { return this.request<any>(`/expense-categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteExpenseCategory(id: number)              { return this.request<any>(`/expense-categories/${id}`, { method: 'DELETE' }); }
+
+  // ===================== ميزانية المصروفات (الوحدة 13) =====================
+  getExpenseBudget(bizId: number, month?: number, year?: number) {
+    let url = `/businesses/${bizId}/expense-budget`;
+    const p: string[] = [];
+    if (month != null) p.push(`month=${month}`);
+    if (year != null) p.push(`year=${year}`);
+    if (p.length) url += '?' + p.join('&');
+    return this.request<any[]>(url);
+  }
+  createExpenseBudget(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/expense-budget`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateExpenseBudget(id: number, d: any)         { return this.request<any>(`/expense-budget/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteExpenseBudget(id: number)                { return this.request<any>(`/expense-budget/${id}`, { method: 'DELETE' }); }
+
+  // ===================== سجلات الرواتب (الوحدة 13) =====================
+  getSalaryRecords(bizId: number, month?: number, year?: number) {
+    let url = `/businesses/${bizId}/salary-records`;
+    const p: string[] = [];
+    if (month != null) p.push(`month=${month}`);
+    if (year != null) p.push(`year=${year}`);
+    if (p.length) url += '?' + p.join('&');
+    return this.request<any[]>(url);
+  }
+  createSalaryRecord(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/salary-records`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSalaryRecord(id: number, d: any)         { return this.request<any>(`/salary-records/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSalaryRecord(id: number)                 { return this.request<any>(`/salary-records/${id}`, { method: 'DELETE' }); }
 
   // ===================== العمليات المخزنية =====================
   getWarehouseOperations(bizId: number, type?: string, warehouseId?: number) {

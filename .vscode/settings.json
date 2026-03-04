@@ -1,0 +1,23 @@
+{
+  "simpleBrowser.useIntegratedBrowser": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "todo-tree.general.tags": ["TODO", "FIXME", "NOTE", "BUG", "HACK"],
+  "todo-tree.highlights.defaultHighlight": {
+    "icon": "alert",
+    "type": "text",
+    "foreground": "yellow"
+  },
+  "todohighlight.keywords": [
+    { "text": "TODO:", "color": "#fff", "backgroundColor": "#ffbd03" },
+    { "text": "FIXME:", "color": "#fff", "backgroundColor": "#f44336" }
+  ],
+  "cSpell.enabled": true,
+  "cSpell.enableFiletypes": ["html", "scss", "typescript", "javascript", "json", "markdown"],
+  "cSpell.language": "en,ar",
+  "rest-client.previewResponseInUntitledDocument": true
+}

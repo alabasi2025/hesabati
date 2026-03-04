@@ -1,0 +1,123 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">payments</span> الرواتب</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة سجل راتب</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-card blue">
+      <span class="material-icons-round">people</span>
+      <div><span class="num">{{ items().length }}</span><span class="lbl">عدد السجلات</span></div>
+    </div>
+    <div class="summary-card green">
+      <span class="material-icons-round">payments</span>
+      <div><span class="num">{{ totalNet() | number:'1.0-0' }}</span><span class="lbl">إجمالي صافي الرواتب</span></div>
+    </div>
+    <div class="summary-card amber">
+      <span class="material-icons-round">check_circle</span>
+      <div><span class="num">{{ paidCount() }}</span><span class="lbl">مدفوعة</span></div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <div class="filter-group">
+      <label>الشهر</label>
+      <select [ngModel]="filterMonth()" (ngModelChange)="filterMonth.set($event); onFilterChange()">
+        <option [ngValue]="null">الكل</option>
+        @for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>السنة</label>
+      <select [ngModel]="filterYear()" (ngModelChange)="filterYear.set($event); onFilterChange()">
+        <option [ngValue]="null">الكل</option>
+        @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!items().length) {
+    <div class="empty-state">
+      <span class="material-icons-round">payments</span>
+      <p>لا توجد سجلات رواتب</p>
+      <p class="empty-hint">أضف سجلات رواتب للموظفين حسب الشهر والسنة</p>
+    </div>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th><th>الموظف</th><th>الشهر</th><th>السنة</th><th>الأساس</th><th>السلفة</th><th>الخصومات</th><th>الصافي</th><th>الحالة</th><th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td class="name-cell">{{ item.employeeName || '-' }}</td>
+            <td>{{ item.month }}</td>
+            <td>{{ item.year }}</td>
+            <td class="amount-cell">{{ item.baseSalary | number:'1.0-0' }}</td>
+            <td>{{ item.advance | number:'1.0-0' }}</td>
+            <td>{{ item.deductions | number:'1.0-0' }}</td>
+            <td class="amount-cell net">{{ item.netSalary | number:'1.0-0' }} {{ getCurrencyCode(item.currencyId) }}</td>
+            <td><span class="status-pill" [class.paid]="item.isPaid" [class.unpaid]="!item.isPaid">{{ item.isPaid ? 'مدفوع' : 'غير مدفوع' }}</span></td>
+            <td>
+              <button class="action-btn edit" (click)="openEdit(item)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="remove(item)"><span class="material-icons-round">delete</span></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon blue"><span class="material-icons-round">payments</span></div>
+            <div>
+              <h2>{{ editingId() ? 'تعديل سجل راتب' : 'إضافة سجل راتب' }}</h2>
+              <p>صافي الراتب = الأساس - السلفة - الخصومات</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group full">
+              <label>الموظف <span class="required">*</span></label>
+              <select [(ngModel)]="form.employeeId" required>
+                <option [ngValue]="null">-- اختر الموظف --</option>
+                @for (emp of employees(); track emp.id) { <option [ngValue]="emp.id">{{ emp.fullName }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>الشهر</label><select [(ngModel)]="form.month">@for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }</select></div>
+            <div class="form-group"><label>السنة</label><select [(ngModel)]="form.year">@for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }</select></div>
+            <div class="form-group"><label>العملة</label><select [(ngModel)]="form.currencyId">@for (c of currencies(); track c.id) { <option [ngValue]="c.id">{{ c.code }}</option> }</select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>الراتب الأساسي</label><input type="number" [(ngModel)]="form.baseSalary" min="0" /></div>
+            <div class="form-group"><label>السلفة</label><input type="number" [(ngModel)]="form.advance" min="0" /></div>
+            <div class="form-group"><label>الخصومات</label><input type="number" [(ngModel)]="form.deductions" min="0" /></div>
+          </div>
+          <div class="form-group net-row">صافي الراتب: <strong>{{ netSalary() | number:'1.0-0' }}</strong></div>
+          <div class="form-row">
+            <div class="form-group"><label>أيام الحضور</label><input type="number" [(ngModel)]="form.attendanceDays" min="0" placeholder="اختياري" /></div>
+            <div class="form-group checkbox-group"><label><input type="checkbox" [(ngModel)]="form.isPaid" /> تم الدفع</label></div>
+          </div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة السجل' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

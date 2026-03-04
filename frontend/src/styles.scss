@@ -5,9 +5,7 @@
 @use "app/styles/interactions";
 @use "app/styles/patterns";
 
-/* ===================== Arabic Font ===================== */
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Round');
+/* الخطوط والأيقونات تُحمّل من index.html لتجنب مشكلة البناء */
 
 /* ===================== Dark Mode Variables (Default) ===================== */
 :root,
@@ -167,8 +165,8 @@ html {
 }
 
 body {
-  background: var(--bg-base);
-  color: var(--text-primary);
+  background: var(--bg-base, #f0f2f5);
+  color: var(--text-primary, #0c1222);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;

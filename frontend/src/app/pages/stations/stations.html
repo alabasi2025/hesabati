@@ -1,7 +1,10 @@
 <div class="page-content">
   <div class="page-header">
     <h2><span class="material-icons-round">bolt</span> المحطات</h2>
-    <span class="badge">{{ stations().length }}</span>
+    <div class="header-actions">
+      <span class="badge">{{ stations().length }}</span>
+      <button class="add-btn" (click)="openCreate()"><span class="material-icons-round">add</span> إضافة محطة</button>
+    </div>
   </div>
 
   @if (loading()) {
@@ -47,6 +50,14 @@
               <span class="material-icons-round">groups</span>
               <span>{{ s.hasEmployees ? 'يوجد موظفين' : 'بدون موظفين' }}</span>
             </div>
+            <div class="card-actions">
+              <button type="button" class="action-btn edit" (click)="openEdit(s)" title="تعديل">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button type="button" class="action-btn delete" (click)="deleteStation(s)" title="حذف">
+                <span class="material-icons-round">delete</span>
+              </button>
+            </div>
           </div>
         </div>
       }
@@ -56,7 +67,61 @@
       <div class="empty-state">
         <span class="material-icons-round">bolt</span>
         <p>لا توجد محطات في هذا العمل</p>
+        <button class="add-btn" (click)="openCreate()"><span class="material-icons-round">add</span> إضافة محطة</button>
       </div>
     }
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="closeForm()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon green"><span class="material-icons-round">bolt</span></div>
+            <h2>{{ editingStation() ? 'تعديل محطة' : 'إضافة محطة جديدة' }}</h2>
+          </div>
+          <button type="button" class="close-btn" (click)="closeForm()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم المحطة <span class="required">*</span></label>
+              <input [ngModel]="form().name" (ngModelChange)="setFormField('name', $event)" placeholder="مثال: المحطة الرئيسية" />
+            </div>
+            <div class="form-group">
+              <label>الرمز <span class="required">*</span></label>
+              <input [ngModel]="form().code" (ngModelChange)="setFormField('code', $event)" placeholder="مثال: ST-01" [readonly]="!!editingStation()" />
+              @if (editingStation()) {
+                <small class="form-hint">لا يمكن تغيير الرمز بعد الإنشاء</small>
+              }
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الموقع</label>
+            <input [ngModel]="form().location" (ngModelChange)="setFormField('location', $event)" placeholder="العنوان أو الموقع" />
+          </div>
+          <div class="form-group">
+            <label>أنظمة الفوترة</label>
+            <input [ngModel]="form().billingSystemsStr" (ngModelChange)="setFormField('billingSystemsStr', $event)" placeholder="مفصولة بفاصلة، مثال: moghrabi_v1, prepaid" />
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" [ngModel]="form().isActive" (ngModelChange)="setFormField('isActive', $event)" />
+              المحطة نشطة
+            </label>
+          </div>
+          <div class="form-group">
+            <label>ملاحظات</label>
+            <textarea [ngModel]="form().notes" (ngModelChange)="setFormField('notes', $event)" rows="2" placeholder="ملاحظات اختيارية"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-save" (click)="save()" [disabled]="saving()">
+            {{ saving() ? 'جاري الحفظ...' : (editingStation() ? 'حفظ التعديلات' : 'إضافة') }}
+          </button>
+          <button type="button" class="btn-cancel" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
   }
 </div>

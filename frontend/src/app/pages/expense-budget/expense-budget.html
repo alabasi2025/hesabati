@@ -1,0 +1,106 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">account_balance_wallet</span> ميزانية المصروفات</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة بند ميزانية</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-card blue">
+      <span class="material-icons-round">list</span>
+      <div><span class="num">{{ items().length }}</span><span class="lbl">عدد البنود</span></div>
+    </div>
+    <div class="summary-card green">
+      <span class="material-icons-round">payments</span>
+      <div><span class="num">{{ totalAmount() | number:'1.0-0' }}</span><span class="lbl">إجمالي الميزانية</span></div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <div class="filter-group">
+      <label>الشهر</label>
+      <select [ngModel]="filterMonth()" (ngModelChange)="filterMonth.set($event); onFilterChange()">
+        <option [ngValue]="null">الكل</option>
+        @for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>السنة</label>
+      <select [ngModel]="filterYear()" (ngModelChange)="filterYear.set($event); onFilterChange()">
+        <option [ngValue]="null">الكل</option>
+        @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!items().length) {
+    <div class="empty-state">
+      <span class="material-icons-round">account_balance_wallet</span>
+      <p>لا توجد بنود ميزانية</p>
+      <p class="empty-hint">أضف بنوداً للمصروفات المتوقعة (ثابتة، متغيرة، سنوية)</p>
+    </div>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th><th>الاسم</th><th>المحطة</th><th>المبلغ</th><th>النوع</th><th>الشهر</th><th>السنة</th><th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td class="name-cell">{{ item.name }}</td>
+            <td>{{ getStationName(item.stationId) }}</td>
+            <td class="amount-cell">{{ item.amount | number:'1.0-0' }} {{ getCurrencyCode(item.currencyId) }}</td>
+            <td><span class="type-pill">{{ getExpenseTypeLabel(item.expenseType) }}</span></td>
+            <td>{{ item.month ?? '-' }}</td>
+            <td>{{ item.year ?? '-' }}</td>
+            <td>
+              <button class="action-btn edit" (click)="openEdit(item)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="remove(item)"><span class="material-icons-round">delete</span></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon blue"><span class="material-icons-round">account_balance_wallet</span></div>
+            <div>
+              <h2>{{ editingId() ? 'تعديل بند ميزانية' : 'إضافة بند ميزانية' }}</h2>
+              <p>تخطيط المصروفات (ثابت، متغير، سنوي)</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group"><label>اسم البند <span class="required">*</span></label><input [(ngModel)]="form.name" placeholder="مثال: كهرباء، إيجار" /></div>
+            <div class="form-group"><label>المبلغ</label><input type="number" [(ngModel)]="form.amount" min="0" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>العملة</label><select [(ngModel)]="form.currencyId"><option [ngValue]="c.id" *ngFor="let c of currencies()">{{ c.code }} - {{ c.name }}</option></select></div>
+            <div class="form-group"><label>نوع المصروف</label><select [(ngModel)]="form.expenseType"><option value="fixed">ثابت</option><option value="variable">متغير</option><option value="annual">سنوي</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>المحطة</label><select [(ngModel)]="form.stationId"><option [ngValue]="null">-- الكل --</option><option [ngValue]="s.id" *ngFor="let s of stations()">{{ s.name }}</option></select></div>
+            <div class="form-group"><label>الشهر</label><select [(ngModel)]="form.month"><option [ngValue]="null">--</option><option [ngValue]="m" *ngFor="let m of months">{{ m }}</option></select></div>
+            <div class="form-group"><label>السنة</label><select [(ngModel)]="form.year"><option [ngValue]="null">--</option><option [ngValue]="y" *ngFor="let y of years">{{ y }}</option></select></div>
+          </div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة البند' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

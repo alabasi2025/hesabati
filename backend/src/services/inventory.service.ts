@@ -122,7 +122,7 @@ export async function processStockMovement(bizId: number, data: StockMovementDat
       businessId: bizId,
       itemId: data.itemId,
       warehouseId: data.warehouseId,
-      movementType: data.movementType,
+      movementType: data.movementType as 'in' | 'out' | 'transfer' | 'adjustment' | 'supply_invoice' | 'supply_order' | 'dispatch' | 'transfer_out' | 'receive_transfer',
       quantity: String(data.quantity),
       unitCost: data.unitCost ? String(data.unitCost) : null,
       currencyId: data.currencyId || null,
@@ -179,7 +179,7 @@ export async function processStockMovement(bizId: number, data: StockMovementDat
         newLayers.push({
           qty: data.quantity,
           unitCost: data.unitCost,
-          date: data.movementDate,
+          date: data.movementDate || new Date().toISOString().split('T')[0],
         });
       }
     } else if (isOutbound) {
@@ -224,7 +224,7 @@ export async function processStockMovement(bizId: number, data: StockMovementDat
             quantity: String(data.quantity),
             avgCost: String(cogs / data.quantity),
             costingMethod: stock.costingMethod || 'weighted_avg',
-            costLayers: [{ qty: data.quantity, unitCost: cogs / data.quantity, date: data.movementDate }],
+            costLayers: [{ qty: data.quantity, unitCost: cogs / data.quantity, date: data.movementDate || new Date().toISOString().split('T')[0] }],
             currencyId: data.currencyId || null,
           });
         } else {
@@ -234,7 +234,7 @@ export async function processStockMovement(bizId: number, data: StockMovementDat
           const newDestQty = destQty + data.quantity;
           const newDestAvgCost = newDestQty > 0 ? ((destQty * destAvgCost) + (data.quantity * transferUnitCost)) / newDestQty : transferUnitCost;
           const destLayers: CostLayer[] = (destStock.costLayers as CostLayer[]) || [];
-          destLayers.push({ qty: data.quantity, unitCost: transferUnitCost, date: data.movementDate });
+          destLayers.push({ qty: data.quantity, unitCost: transferUnitCost, date: data.movementDate || new Date().toISOString().split('T')[0] });
 
           await tx.update(inventoryStock).set({
             quantity: String(newDestQty),

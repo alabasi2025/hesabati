@@ -1,0 +1,41 @@
+{
+  "recommendations": [
+    "angular.ng-template",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.live-server",
+    "ms-playwright.playwright",
+    "cypress-io.cypress",
+    "usernamehw.errorlens",
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "formulahendry.auto-close-tag",
+    "humao.rest-client",
+    "cweijan.vscode-database-client2",
+    "eamodio.gitlens",
+    "gruntfuggly.todo-tree",
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-arabic",
+    "editorconfig.editorconfig",
+    "mhutchie.git-graph",
+    "wayou.vscode-todo-highlight"
+  ],
+  "unwantedRecommendations": []
+}
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "formulahendry.auto-close-tag",
+    "humao.rest-client",
+    "cweijan.vscode-database-client2",
+    "eamodio.gitlens",
+    "gruntfuggly.todo-tree",
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-arabic",
+    "editorconfig.editorconfig",
+    "mhutchie.git-graph",
+    "wayou.vscode-todo-highlight"
+  ],
+  "unwantedRecommendations": []
+}

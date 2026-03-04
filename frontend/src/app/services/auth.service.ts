@@ -55,6 +55,21 @@ export class AuthService {
     return data;
   }
 
+  async register(username: string, password: string, fullName: string, role?: string): Promise<{ user: User }> {
+    const response = await fetch(`${this.API_URL}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, fullName, role: role || 'viewer' }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'فشل إنشاء الحساب');
+    }
+
+    return response.json();
+  }
+
   logout() {
     this.token.set(null);
     this.currentUser.set(null);

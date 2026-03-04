@@ -15,8 +15,8 @@ export class ThemeService {
   }
 
   private loadTheme(): Theme {
-    const saved = localStorage.getItem(this.STORAGE_KEY) as Theme;
-    return saved === 'light' ? 'light' : 'dark';
+    const saved = localStorage.getItem(this.STORAGE_KEY) as Theme | null;
+    return saved === 'dark' ? 'dark' : 'light';
   }
 
   private applyTheme(theme: Theme) {

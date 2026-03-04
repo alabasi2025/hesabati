@@ -1,0 +1,105 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">category</span> تصنيفات المصروفات</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة تصنيف</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-card blue">
+      <span class="material-icons-round">category</span>
+      <div><span class="num">{{ categories().length }}</span><span class="lbl">إجمالي التصنيفات</span></div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!categories().length) {
+    <div class="empty-state">
+      <span class="material-icons-round">category</span>
+      <p>لا توجد تصنيفات مصروفات بعد</p>
+      <p class="empty-hint">أضف تصنيفات لتنظيم أنواع المصروفات (كهرباء، صيانة، رواتب...)</p>
+    </div>
+  } @else {
+    <div class="categories-grid">
+      @for (c of categories(); track c.id) {
+        <div class="category-card">
+          <div class="cat-header">
+            <div class="cat-icon" [style.background]="(c.color || '#3b82f6') + '18'" [style.color]="c.color || '#3b82f6'">
+              <span class="material-icons-round">{{ c.icon || 'receipt_long' }}</span>
+            </div>
+            <div class="cat-actions">
+              <button class="action-btn edit" (click)="openEdit(c)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="remove(c)"><span class="material-icons-round">delete</span></button>
+            </div>
+          </div>
+          <h3 class="cat-name">{{ c.name }}</h3>
+          @if (c.description) {
+            <p class="cat-desc">{{ c.description }}</p>
+          }
+          <div class="cat-footer">
+            <span class="cat-badge" [style.background]="(c.color || '#3b82f6') + '15'" [style.color]="c.color || '#3b82f6'">
+              @if (c.isActive !== false) { نشط } @else { غير نشط }
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon blue"><span class="material-icons-round">category</span></div>
+            <div>
+              <h2>{{ editingId() ? 'تعديل تصنيف' : 'إضافة تصنيف مصروفات' }}</h2>
+              <p>تنظيم أنواع المصروفات (كهرباء، صيانة، إيجار...)</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>اسم التصنيف <span class="required">*</span></label>
+            <input [(ngModel)]="form.name" placeholder="مثال: كهرباء، صيانة" />
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea [(ngModel)]="form.description" rows="2" placeholder="وصف اختياري..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اللون</label>
+              <div class="color-picker-row">
+                <input type="color" [(ngModel)]="form.color" />
+                <span class="color-preview" [style.background]="form.color"></span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>الترتيب</label>
+              <input type="number" [(ngModel)]="form.sortOrder" min="0" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <div class="icon-grid">
+              @for (ic of availableIcons; track ic) {
+                <button type="button" class="icon-btn" [class.selected]="form.icon === ic" (click)="form.icon = ic">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="form-group checkbox-group">
+            <label><input type="checkbox" [(ngModel)]="form.isActive" /> التصنيف نشط</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

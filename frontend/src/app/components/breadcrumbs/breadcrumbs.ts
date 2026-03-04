@@ -108,6 +108,9 @@ export class BreadcrumbsComponent implements OnDestroy {
     'exchange-rates': { label: 'أسعار الصرف', icon: 'trending_up' },
     'roles': { label: 'الأدوار والصلاحيات', icon: 'admin_panel_settings' },
     'journal-categories': { label: 'تصنيفات القيود', icon: 'label' },
+    'expense-categories': { label: 'تصنيفات المصروفات', icon: 'category' },
+    'expense-budget': { label: 'ميزانية المصروفات', icon: 'account_balance_wallet' },
+    'salaries': { label: 'الرواتب', icon: 'payments' },
   };
 
   constructor() {
