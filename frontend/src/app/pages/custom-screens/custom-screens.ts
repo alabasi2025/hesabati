@@ -1,12 +1,14 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { WebSocketService } from '../../services/websocket.service';
 
 // ===== Account Type Metadata =====
 const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -96,7 +98,7 @@ const TAB_TYPE_OPTIONS = [
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective, ColorPickerDirective],
+  imports: [CommonModule, FormsModule, BaseChartDirective, ColorPickerDirective, CdkDrag, CdkDropList],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
 })
@@ -105,6 +107,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  private wsService = inject(WebSocketService);
 
   bizId = 0;
   loading = signal(true);
@@ -260,6 +263,13 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   selectedSidebarSection = signal(0);
   sidebarSortOrder = signal(99);
 
+  // ===================== Embedded Reports =====================
+  reportLoading = signal(false);
+  reportData = signal<any>(null);
+  reportType = signal('');
+  reportDateFrom = signal('');
+  reportDateTo = signal('');
+
   // ===================== Options =====================
   tabTypeOptions = TAB_TYPE_OPTIONS;
 
@@ -279,10 +289,20 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   ];
 
   // ===================== Lifecycle =====================
+  private wsEffect: any = null;
+
   async ngOnInit() {
     this.route.parent?.params.subscribe(async (params) => {
       this.bizId = parseInt(params['bizId']);
       await this.loadScreens();
+      this.loadCurrencies();
+      // اتصال WebSocket للتحديث الفوري
+      try {
+        const userId = parseInt(localStorage.getItem('userId') || '0');
+        if (userId && this.bizId) {
+          this.wsService.connect(userId, this.bizId);
+        }
+      } catch (e) { /* WebSocket optional */ }
       this.route.queryParams.subscribe(async (qp) => {
         if (qp['screen']) {
           this.openedFromSidebar.set(true);
@@ -297,6 +317,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
     this.stopAutoRefresh();
+    this.wsService.disconnect();
   }
 
   // ===================== Load Data =====================
@@ -644,9 +665,64 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     return acc?.total_balance || 0;
   }
 
+  // Currencies for multi-currency support
+  currencies = signal<any[]>([]);
+  csFormCurrencyId = signal<number>(1);
+  // Transfer mode
+  csTransferFromAccountId = signal<number | null>(null);
+  csTransferToAccountId = signal<number | null>(null);
+  csTransferAmount = signal<string>('');
+
+  async loadCurrencies() {
+    try { const c = await this.api.getCurrencies(); this.currencies.set(c || []); } catch (e) { /* fallback */ }
+  }
+
+  isTransferType(): boolean {
+    const ot = this.csSelectedOpType();
+    return ot && (ot.voucherType === 'transfer' || ot.voucherType === 'journal' || (ot.name || '').includes('تحويل'));
+  }
+
   async saveOperation() {
     const opType = this.csSelectedOpType();
     if (!opType) return;
+
+    // Transfer operation
+    if (this.isTransferType()) {
+      const fromId = this.csTransferFromAccountId();
+      const toId = this.csTransferToAccountId();
+      const amount = parseFloat(this.csTransferAmount());
+      if (!fromId || !toId) { this.toast.warning('اختر حساب المصدر والوجهة'); return; }
+      if (fromId === toId) { this.toast.warning('لا يمكن التحويل لنفس الحساب'); return; }
+      if (!amount || amount <= 0) { this.toast.warning('أدخل مبلغاً صحيحاً'); return; }
+
+      const fromAcc = this.allAccounts().find(a => a.id === fromId);
+      const toAcc = this.allAccounts().find(a => a.id === toId);
+      const confirmed = await this.toast.confirm({
+        title: `تأكيد تحويل - ${opType.name}`,
+        message: `تحويل ${amount.toLocaleString('ar-SA')} من "${fromAcc?.name || fromId}" إلى "${toAcc?.name || toId}"`,
+        type: 'info',
+      });
+      if (!confirmed) return;
+
+      this.saving.set(true);
+      try {
+        const result = await this.api.createVoucher(this.bizId, {
+          voucherType: 'journal', operationTypeId: opType.id,
+          fromAccountId: fromId, toAccountId: toId,
+          amount, currencyId: this.csFormCurrencyId(),
+          description: this.csFormDescription() || `${opType.name} - تحويل`,
+          voucherDate: this.csFormDate(),
+        });
+        this.toast.success(`تم التحويل بنجاح - ${amount.toLocaleString('ar-SA')}`);
+        this.csSelectedOpType.set(null); this.csTransferFromAccountId.set(null); this.csTransferToAccountId.set(null); this.csTransferAmount.set('');
+        const screen = this.activeScreen();
+        if (screen) await this.openScreen(screen);
+      } catch (e: any) { this.toast.error(e.message || 'خطأ في التحويل'); }
+      finally { this.saving.set(false); }
+      return;
+    }
+
+    // Regular operation (receipt/payment)
     const entries = this.csFormEntries().filter(e => parseFloat(e.amount) > 0);
     if (!entries.length) { this.toast.warning('أدخل مبلغاً واحداً على الأقل'); return; }
 
@@ -667,7 +743,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         try {
           const result = await this.api.createVoucher(this.bizId, {
             voucherType: opType.voucherType || 'receipt', operationTypeId: opType.id,
-            toAccountId: entry.accountId, amount: parseFloat(entry.amount), currencyId: 1,
+            toAccountId: entry.accountId, amount: parseFloat(entry.amount),
+            currencyId: this.csFormCurrencyId(),
             description: this.csFormDescription() || `${opType.name} - ${entry.accountName}`,
             voucherDate: this.csFormDate(),
           });
@@ -683,8 +760,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         this.toast.error(errors.length > 0 ? errors[0] : 'فشلت العمليات');
       }
 
-      if (results.length > 0) { this.csSelectedOpType.set(null); this.csFormEntries.set([]); }
-      // Reload screen data
+      if (results.length > 0) { this.csSelectedOpType.set(null); this.csFormEntries.set([]); this.csFormCurrencyId.set(1); }
       const screen = this.activeScreen();
       if (screen) await this.openScreen(screen);
     } catch (e: any) { this.toast.error(e.message || 'خطأ في تنفيذ العملية'); }
@@ -1235,24 +1311,209 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   // ===== Reports =====
   async generateReport(reportType: string, tab: TabDefinition) {
-    this.toast.info('جاري إعداد التقرير...');
-    // سيتم ربطه بنظام التقارير لاحقاً
+    this.reportType.set(reportType);
+    this.reportLoading.set(true);
+    this.reportData.set(null);
     try {
       if (reportType === 'account_statement') {
         const accountIds = tab.config?.accountIds || [];
-        if (accountIds.length === 0) {
-          this.toast.error('يرجى تحديد حسابات للتقرير');
-          return;
+        if (accountIds.length === 0) { this.toast.error('يرجى تحديد حسابات للتقرير'); this.reportLoading.set(false); return; }
+        const results: any[] = [];
+        for (const accId of accountIds) {
+          try {
+            const params: any = { accountId: accId };
+            if (this.reportDateFrom()) params.dateFrom = this.reportDateFrom();
+            if (this.reportDateTo()) params.dateTo = this.reportDateTo();
+            const data = await this.api.getAccountStatement(this.bizId, accId, this.reportDateFrom() || undefined, this.reportDateTo() || undefined);
+            results.push({ accountId: accId, accountName: this.allAccounts().find(a => a.id === accId)?.name || `حساب ${accId}`, ...data });
+          } catch (e) { results.push({ accountId: accId, error: true }); }
         }
-        this.router.navigate(['biz', this.bizId, 'reports-advanced'], { queryParams: { type: 'account_statement', accountIds: accountIds.join(',') } });
+        this.reportData.set({ type: 'account_statement', results });
       } else if (reportType === 'inventory_report') {
         const warehouseIds = tab.config?.warehouseIds || [];
-        this.router.navigate(['biz', this.bizId, 'reports-advanced'], { queryParams: { type: 'inventory', warehouseIds: warehouseIds.join(',') } });
+        try {
+          let data: any[] = [];
+          for (const wId of warehouseIds) {
+            try {
+              const items = await this.api.getWarehouseInventory(this.bizId, wId);
+              data = data.concat(items || []);
+            } catch (e) { /* skip */ }
+          }
+          this.reportData.set({ type: 'inventory_report', data });
+        } catch (e) { this.reportData.set({ type: 'inventory_report', data: [], error: true }); }
       } else if (reportType === 'operations_summary') {
-        this.router.navigate(['biz', this.bizId, 'reports-advanced'], { queryParams: { type: 'operations_summary' } });
+        try {
+          const data = await this.api.getWidgetStatsEnhanced(this.bizId, undefined, this.reportDateFrom() || undefined, this.reportDateTo() || undefined);
+          this.reportData.set({ type: 'operations_summary', data });
+        } catch (e) { this.reportData.set({ type: 'operations_summary', data: null, error: true }); }
       }
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ');
+    } catch (e: any) { this.toast.error(e?.message || 'حدث خطأ'); }
+    finally { this.reportLoading.set(false); }
+  }
+
+  closeReport() {
+    this.reportData.set(null);
+    this.reportType.set('');
+  }
+
+  // ===================== Export & Print =====================
+  exportTableToCSV(data: any[], filename: string) {
+    if (!data || data.length === 0) { this.toast.warning('لا توجد بيانات للتصدير'); return; }
+    const BOM = '\uFEFF';
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(',')];
+    for (const row of data) {
+      csvRows.push(headers.map(h => {
+        let val = row[h] ?? '';
+        val = String(val).replace(/"/g, '""');
+        return `"${val}"`;
+      }).join(','));
     }
+    const blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    this.toast.success('تم تصدير البيانات بنجاح');
+  }
+
+  exportLogToCSV() {
+    const data = this.logEntries().map(e => ({
+      'التاريخ': this.formatDate(e.entry_date),
+      'النوع': this.getVoucherTypeLabel(e.voucher_type),
+      'الوصف': e.description || e.operation_type_name || '-',
+      'المدين': e.total_debit,
+      'الدائن': e.total_credit,
+    }));
+    this.exportTableToCSV(data, 'سجل_العمليات');
+  }
+
+  exportAccountsToCSV() {
+    const data = this.widgetAccounts().map(a => ({
+      'الحساب': a.name,
+      'النوع': a.account_type,
+      'الرصيد': a.total_balance,
+    }));
+    this.exportTableToCSV(data, 'الحسابات');
+  }
+
+  exportInventoryToCSV(tab: TabDefinition) {
+    const items = this.getTabInventory(tab);
+    const data = items.map((i: any) => ({
+      'الصنف': i.item_name,
+      'المخزن': i.warehouse_name,
+      'الكمية': i.quantity,
+      'التكلفة': i.total_cost,
+    }));
+    this.exportTableToCSV(data, 'المخزون');
+  }
+
+  printCurrentTab() {
+    window.print();
+  }
+
+  // ===================== Drag & Drop Tabs =====================
+  onTabDrop(event: CdkDragDrop<any[]>) {
+    const tabs = [...this.screenTabs()];
+    moveItemInArray(tabs, event.previousIndex, event.currentIndex);
+    this.screenTabs.set(tabs);
+    // تحديث sortOrder في الباكند
+    const updates = tabs.map((t, i) => ({ id: t.id, sortOrder: i }));
+    if (this.activeScreen()) {
+      this.api.updateScreen(this.activeScreen()!.id, { layoutConfig: { tabs } }).catch(() => {});
+    }
+  }
+
+  // ===================== Screen Templates (Presets) =====================
+  showTemplatesModal = signal(false);
+  screenPresets = [
+    {
+      name: 'شاشة محطة كهرباء',
+      description: 'شاشة جاهزة لإدارة محطة كهرباء مع تحصيل وصرف وسجل وإحصائيات',
+      icon: 'bolt',
+      color: '#f59e0b',
+      tabs: [
+        { type: 'operations', label: 'العمليات', icon: 'receipt_long', color: '#3b82f6' },
+        { type: 'log', label: 'السجل', icon: 'history', color: '#22c55e' },
+        { type: 'accounts', label: 'الحسابات', icon: 'account_balance', color: '#f59e0b' },
+        { type: 'stats', label: 'إحصائيات', icon: 'analytics', color: '#8b5cf6' },
+        { type: 'chart', label: 'رسم بياني', icon: 'bar_chart', color: '#14b8a6' },
+      ]
+    },
+    {
+      name: 'شاشة مخزن',
+      description: 'شاشة لإدارة المخزون مع مراقبة الأصناف وتقارير',
+      icon: 'warehouse',
+      color: '#0ea5e9',
+      tabs: [
+        { type: 'inventory', label: 'الأصناف', icon: 'inventory_2', color: '#0ea5e9' },
+        { type: 'operations', label: 'العمليات', icon: 'receipt_long', color: '#3b82f6' },
+        { type: 'log', label: 'السجل', icon: 'history', color: '#22c55e' },
+        { type: 'reports', label: 'تقارير', icon: 'summarize', color: '#ec4899' },
+      ]
+    },
+    {
+      name: 'شاشة حسابات شخصية',
+      description: 'شاشة بسيطة لمتابعة الحسابات الشخصية',
+      icon: 'person',
+      color: '#8b5cf6',
+      tabs: [
+        { type: 'accounts', label: 'الحسابات', icon: 'account_balance', color: '#f59e0b' },
+        { type: 'log', label: 'السجل', icon: 'history', color: '#22c55e' },
+        { type: 'stats', label: 'إحصائيات', icon: 'analytics', color: '#8b5cf6' },
+        { type: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', color: '#f97316' },
+      ]
+    },
+    {
+      name: 'لوحة تحكم شاملة',
+      description: 'لوحة تحكم مع كل أنواع التبويبات',
+      icon: 'dashboard',
+      color: '#3b82f6',
+      tabs: [
+        { type: 'stats', label: 'إحصائيات', icon: 'analytics', color: '#8b5cf6' },
+        { type: 'chart', label: 'رسم بياني', icon: 'bar_chart', color: '#14b8a6' },
+        { type: 'operations', label: 'العمليات', icon: 'receipt_long', color: '#3b82f6' },
+        { type: 'log', label: 'السجل', icon: 'history', color: '#22c55e' },
+        { type: 'accounts', label: 'الحسابات', icon: 'account_balance', color: '#f59e0b' },
+        { type: 'inventory', label: 'المخزون', icon: 'inventory_2', color: '#0ea5e9' },
+        { type: 'reports', label: 'تقارير', icon: 'summarize', color: '#ec4899' },
+        { type: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', color: '#f97316' },
+      ]
+    },
+  ];
+
+  async applyPreset(preset: any) {
+    if (!this.activeScreen()) {
+      // إنشاء شاشة جديدة من القالب
+      try {
+        const screen = await this.api.createScreen(this.bizId, {
+          name: preset.name,
+          icon: preset.icon,
+          color: preset.color,
+          layoutConfig: { tabs: preset.tabs.map((t: any, i: number) => ({ ...t, id: Date.now() + i, sortOrder: i, config: {} })) },
+        });
+        this.screens.set([...this.screens(), screen]);
+        this.activeScreen.set(screen);
+        this.screenTabs.set(screen.layoutConfig?.tabs || []);
+        if (this.screenTabs().length > 0) this.activeTabId.set(this.screenTabs()[0].id);
+        this.viewMode.set('screen');
+        this.toast.success(`تم إنشاء شاشة "${preset.name}" بنجاح`);
+      } catch (e: any) {
+        this.toast.error(e?.message || 'حث خطأ');
+      }
+    } else {
+      // تطبيق القالب على الشاشة الحالية
+      const tabs = preset.tabs.map((t: any, i: number) => ({ ...t, id: Date.now() + i, sortOrder: i, config: {} }));
+      this.screenTabs.set(tabs);
+      try {
+        await this.api.updateScreen(this.activeScreen()!.id, {
+          layoutConfig: { tabs },
+        });
+        this.toast.success('تم تطبيق القالب بنجاح');
+      } catch (e: any) {
+        this.toast.error(e?.message || 'حدث خطأ');
+      }
+    }
+    this.showTemplatesModal.set(false);
   }
 }

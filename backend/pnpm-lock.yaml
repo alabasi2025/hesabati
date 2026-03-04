@@ -13,10 +13,10 @@ importers:
         version: 1.19.9(hono@4.12.2)
       '@orpc/openapi':
         specifier: ^1.4.0
-        version: 1.13.5
+        version: 1.13.5(ws@8.19.0)
       '@orpc/server':
         specifier: ^1.4.0
-        version: 1.13.5
+        version: 1.13.5(ws@8.19.0)
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -35,6 +35,9 @@ importers:
       postgres:
         specifier: ^3.4.5
         version: 3.4.8
+      ws:
+        specifier: ^8.19.0
+        version: 8.19.0
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -48,6 +51,9 @@ importers:
       '@types/node':
         specifier: ^22.13.0
         version: 22.19.12
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       drizzle-kit:
         specifier: ^0.30.5
         version: 0.30.6
@@ -578,6 +584,9 @@ packages:
   '@types/node@22.19.12':
     resolution: {integrity: sha512-0QEp0aPJYSyf6RrTjDB7HlKgNMTY+V2C7ESTaVt6G9gQ0rPLzTGz7OF2NXTLR5vcy7HJEtIUsyWLsfX0kTqJBA==}
 
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
   bcryptjs@2.4.3:
     resolution: {integrity: sha512-V/Hy/X9Vt7f3BbPJEi8BdVFMByHi+jNXrYkW3huaybV/kQ0KJg0Y6PkEMbn+zeT+i+SiKZ/HMqJGIIt4LZDqNQ==}
 
@@ -840,6 +849,18 @@ packages:
     resolution: {integrity: sha512-GlaYyEb07DPxYCKhKzplCWBJtvxZcZMrL+4UkrTSJHHPyZU4mYYTv3qaOe77H7EODLSSopAUFAc6W8U4yqvscg==}
     engines: {node: ^16.13.0 || >=18.0.0}
     hasBin: true
+
+  ws@8.19.0:
+    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -1104,13 +1125,13 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/openapi@1.13.5':
+  '@orpc/openapi@1.13.5(ws@8.19.0)':
     dependencies:
       '@orpc/client': 1.13.5
       '@orpc/contract': 1.13.5
       '@orpc/interop': 1.13.5
       '@orpc/openapi-client': 1.13.5
-      '@orpc/server': 1.13.5
+      '@orpc/server': 1.13.5(ws@8.19.0)
       '@orpc/shared': 1.13.5
       '@orpc/standard-server': 1.13.5
       json-schema-typed: 8.0.2
@@ -1121,7 +1142,7 @@ snapshots:
       - fastify
       - ws
 
-  '@orpc/server@1.13.5':
+  '@orpc/server@1.13.5(ws@8.19.0)':
     dependencies:
       '@orpc/client': 1.13.5
       '@orpc/contract': 1.13.5
@@ -1134,6 +1155,8 @@ snapshots:
       '@orpc/standard-server-node': 1.13.5
       '@orpc/standard-server-peer': 1.13.5
       cookie: 1.1.1
+    optionalDependencies:
+      ws: 8.19.0
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - fastify
@@ -1204,6 +1227,10 @@ snapshots:
   '@types/node@22.19.12':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 22.19.12
 
   bcryptjs@2.4.3: {}
 
@@ -1433,5 +1460,7 @@ snapshots:
   which@4.0.0:
     dependencies:
       isexe: 3.1.5
+
+  ws@8.19.0: {}
 
   zod@3.25.76: {}

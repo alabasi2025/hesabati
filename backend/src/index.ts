@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { serve } from '@hono/node-server';
+import { wsService } from './services/websocket.service.ts';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -106,6 +107,7 @@ app.get('/', (c) => c.json({
 const port = parseInt(process.env.PORT || '3000');
 console.log(`🚀 حساباتي API يعمل على المنفذ ${port}`);
 
-serve({ fetch: app.fetch, port });
+const server = serve({ fetch: app.fetch, port });
+wsService.init(server as any);
 
 export default app;

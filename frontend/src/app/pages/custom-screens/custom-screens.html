@@ -21,6 +21,10 @@
           <span class="material-icons-round">add</span>
           إنشاء شاشة جديدة
         </button>
+        <button class="btn" (click)="showTemplatesModal.set(true)">
+          <span class="material-icons-round">auto_awesome</span>
+          قوالب جاهزة
+        </button>
       </div>
 
       @if (screens().length === 0 && !loading()) {
@@ -378,11 +382,10 @@
       </div>
 
       @if (screenTabs().length > 0) {
-        <div class="tabs-bar">
+        <div class="tabs-bar" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="onTabDrop($event)">
           @for (tab of screenTabs(); track tab.id) {
-            <button class="tab-btn" [class.active]="activeTabId() === tab.id" (click)="setActiveTab(tab.id)"
+            <button class="tab-btn" cdkDrag [class.active]="activeTabId() === tab.id" (click)="setActiveTab(tab.id)"
               [style.--tab-color]="tab.color" [style.background]="activeTabId() === tab.id ? tab.color : 'transparent'">
-
               <span class="material-icons-round">{{ tab.icon }}</span>
               <span>{{ tab.label }}</span>
             </button>
@@ -423,35 +426,83 @@
                           {{ csSelectedOpType()!.name }}
                         </h3>
                       </div>
-                      <div class="form-group">
-                        <label>التاريخ</label>
-                        <input type="date" [ngModel]="csFormDate()" (ngModelChange)="csFormDate.set($event)">
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>التاريخ</label>
+                          <input type="date" [ngModel]="csFormDate()" (ngModelChange)="csFormDate.set($event)">
+                        </div>
+                        @if (currencies().length > 1) {
+                          <div class="form-group">
+                            <label>العملة</label>
+                            <select [ngModel]="csFormCurrencyId()" (ngModelChange)="csFormCurrencyId.set(+$event)">
+                              @for (cur of currencies(); track cur.id) {
+                                <option [value]="cur.id">{{ cur.code }} - {{ cur.name }}</option>
+                              }
+                            </select>
+                          </div>
+                        }
                       </div>
                       <div class="form-group">
                         <label>الوصف</label>
                         <input type="text" [ngModel]="csFormDescription()" (ngModelChange)="csFormDescription.set($event)" placeholder="وصف العملية (اختياري)">
                       </div>
-                      <div class="entries-list">
-                        @for (entry of csFormEntries(); track $index; let i = $index) {
-                          <div class="entry-row">
-                            <div class="entry-account">
-                              <span class="material-icons-round">account_balance</span>
-                              <span>{{ entry.accountName || 'حساب ' + (i + 1) }}</span>
-                              @if (entry.accountId) {
-                                <small class="balance-hint">الرصيد: {{ formatAmount(getAccountBalance(entry.accountId)) }}</small>
-                              }
+
+                      <!-- Transfer Form -->
+                      @if (isTransferType()) {
+                        <div class="transfer-form">
+                          <div class="transfer-row">
+                            <div class="form-group">
+                              <label><span class="material-icons-round" style="font-size:16px;vertical-align:middle;color:#ef4444">arrow_upward</span> من حساب</label>
+                              <select [ngModel]="csTransferFromAccountId()" (ngModelChange)="csTransferFromAccountId.set(+$event)">
+                                <option [value]="0">اختر حساب المصدر...</option>
+                                @for (acc of allAccounts(); track acc.id) {
+                                  <option [value]="acc.id">{{ acc.name }}</option>
+                                }
+                              </select>
                             </div>
-                            <input type="number" class="amount-input" [ngModel]="entry.amount" (ngModelChange)="updateFormEntry(i, 'amount', $event)" placeholder="المبلغ" min="0">
+                            <div class="transfer-arrow">
+                              <span class="material-icons-round">arrow_back</span>
+                            </div>
+                            <div class="form-group">
+                              <label><span class="material-icons-round" style="font-size:16px;vertical-align:middle;color:#22c55e">arrow_downward</span> إلى حساب</label>
+                              <select [ngModel]="csTransferToAccountId()" (ngModelChange)="csTransferToAccountId.set(+$event)">
+                                <option [value]="0">اختر حساب الوجهة...</option>
+                                @for (acc of allAccounts(); track acc.id) {
+                                  <option [value]="acc.id">{{ acc.name }}</option>
+                                }
+                              </select>
+                            </div>
                           </div>
-                        }
-                      </div>
-                      <div class="form-summary">
-                        <span>الإجمالي: <strong>{{ formatAmount(getFormTotal()) }}</strong></span>
-                        <span>الحسابات المعبأة: <strong>{{ getFilledEntriesCount() }} / {{ csFormEntries().length }}</strong></span>
-                      </div>
-                      <button class="btn btn-primary btn-lg" (click)="saveOperation()" [disabled]="saving() || getFormTotal() === 0">
+                          <div class="form-group">
+                            <label>المبلغ</label>
+                            <input type="number" class="amount-input" [ngModel]="csTransferAmount()" (ngModelChange)="csTransferAmount.set($event)" placeholder="مبلغ التحويل" min="0">
+                          </div>
+                        </div>
+                      } @else {
+                        <!-- Regular Entries -->
+                        <div class="entries-list">
+                          @for (entry of csFormEntries(); track $index; let i = $index) {
+                            <div class="entry-row">
+                              <div class="entry-account">
+                                <span class="material-icons-round">account_balance</span>
+                                <span>{{ entry.accountName || 'حساب ' + (i + 1) }}</span>
+                                @if (entry.accountId) {
+                                  <small class="balance-hint">الرصيد: {{ formatAmount(getAccountBalance(entry.accountId)) }}</small>
+                                }
+                              </div>
+                              <input type="number" class="amount-input" [ngModel]="entry.amount" (ngModelChange)="updateFormEntry(i, 'amount', $event)" placeholder="المبلغ" min="0">
+                            </div>
+                          }
+                        </div>
+                        <div class="form-summary">
+                          <span>الإجمالي: <strong>{{ formatAmount(getFormTotal()) }}</strong></span>
+                          <span>الحسابات المعبأة: <strong>{{ getFilledEntriesCount() }} / {{ csFormEntries().length }}</strong></span>
+                        </div>
+                      }
+
+                      <button class="btn btn-primary btn-lg" (click)="saveOperation()" [disabled]="saving() || (isTransferType() ? !csTransferAmount() : getFormTotal() === 0)">
                         <span class="material-icons-round">check</span>
-                        {{ saving() ? 'جاري التنفيذ...' : 'تنفيذ العملية' }}
+                        {{ saving() ? 'جاري التنفيذ...' : isTransferType() ? 'تنفيذ التحويل' : 'تنفيذ العملية' }}
                       </button>
                     </div>
                   }
@@ -500,7 +551,17 @@
                       </tbody>
                     </table>
                   </div>
-                  <div class="log-footer"><span>إجمالي العمليات: {{ logTotal() }}</span></div>
+                  <div class="log-footer">
+                    <span>إجمالي العمليات: {{ logTotal() }}</span>
+                    <div class="footer-actions">
+                      <button class="btn btn-ghost btn-sm" (click)="exportLogToCSV()" title="تصدير CSV">
+                        <span class="material-icons-round">download</span> تصدير
+                      </button>
+                      <button class="btn btn-ghost btn-sm" (click)="printCurrentTab()" title="طباعة">
+                        <span class="material-icons-round">print</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               }
 
@@ -599,6 +660,14 @@
                     <div class="inventory-summary">
                       <span>إجمالي الأصناف: <strong>{{ getTabInventory(tab).length }}</strong></span>
                       <span>إجمالي التكلفة: <strong>{{ formatAmount(getInventoryTotalCost(tab)) }}</strong></span>
+                      <div class="footer-actions">
+                        <button class="btn btn-ghost btn-sm" (click)="exportInventoryToCSV(tab)" title="تصدير CSV">
+                          <span class="material-icons-round">download</span> تصدير
+                        </button>
+                        <button class="btn btn-ghost btn-sm" (click)="printCurrentTab()" title="طباعة">
+                          <span class="material-icons-round">print</span>
+                        </button>
+                      </div>
                     </div>
                   } @else {
                     <div class="empty-tab"><span class="material-icons-round">inventory_2</span><p>لا توجد أصناف في المخازن المحددة</p></div>
@@ -609,20 +678,119 @@
               <!-- ===== REPORTS TAB ===== -->
               @if (tab.type === 'reports') {
                 <div class="reports-content">
-                  <div class="reports-grid">
-                    <div class="report-card" (click)="generateReport('account_statement', tab)">
-                      <span class="material-icons-round" style="color: #3b82f6">description</span>
-                      <div><strong>كشف حساب</strong><small>تقرير تفصيلي لحركة الحسابات</small></div>
+                  @if (!reportData()) {
+                    <!-- Report Selection -->
+                    <div class="report-filters">
+                      <div class="filter-row">
+                        <input type="date" [ngModel]="reportDateFrom()" (ngModelChange)="reportDateFrom.set($event)" placeholder="من تاريخ">
+                        <input type="date" [ngModel]="reportDateTo()" (ngModelChange)="reportDateTo.set($event)" placeholder="إلى تاريخ">
+                      </div>
                     </div>
-                    <div class="report-card" (click)="generateReport('inventory_report', tab)">
-                      <span class="material-icons-round" style="color: #22c55e">inventory_2</span>
-                      <div><strong>تقرير المخزون</strong><small>جرد الأصناف والكميات والتكاليف</small></div>
+                    <div class="reports-grid">
+                      <div class="report-card" (click)="generateReport('account_statement', tab)">
+                        <span class="material-icons-round" style="color: #3b82f6">description</span>
+                        <div><strong>كشف حساب</strong><small>تقرير تفصيلي لحركة الحسابات</small></div>
+                      </div>
+                      <div class="report-card" (click)="generateReport('inventory_report', tab)">
+                        <span class="material-icons-round" style="color: #22c55e">inventory_2</span>
+                        <div><strong>تقرير المخزون</strong><small>جرد الأصناف والكميات والتكاليف</small></div>
+                      </div>
+                      <div class="report-card" (click)="generateReport('operations_summary', tab)">
+                        <span class="material-icons-round" style="color: #f59e0b">summarize</span>
+                        <div><strong>ملخص العمليات</strong><small>إحصائيات العمليات حسب النوع والفترة</small></div>
+                      </div>
                     </div>
-                    <div class="report-card" (click)="generateReport('operations_summary', tab)">
-                      <span class="material-icons-round" style="color: #f59e0b">summarize</span>
-                      <div><strong>ملخص العمليات</strong><small>إحصائيات العمليات حسب النوع والفترة</small></div>
+                    @if (reportLoading()) {
+                      <div class="loading-inline"><div class="spinner-sm"></div> جاري إعداد التقرير...</div>
+                    }
+                  } @else {
+                    <!-- Report Results (Embedded) -->
+                    <div class="report-results">
+                      <div class="report-header">
+                        <button class="btn btn-ghost btn-sm" (click)="closeReport()">
+                          <span class="material-icons-round">arrow_forward</span> رجوع
+                        </button>
+                        <h4>
+                          @if (reportType() === 'account_statement') { كشف حساب }
+                          @if (reportType() === 'inventory_report') { تقرير المخزون }
+                          @if (reportType() === 'operations_summary') { ملخص العمليات }
+                        </h4>
+                        <div class="report-actions">
+                          <button class="btn btn-sm" (click)="printCurrentTab()" title="طباعة">
+                            <span class="material-icons-round">print</span> طباعة
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Account Statement Results -->
+                      @if (reportData()?.type === 'account_statement') {
+                        @for (r of reportData().results; track r.accountId) {
+                          <div class="report-section">
+                            <h5>{{ r.accountName }}</h5>
+                            @if (r.error) {
+                              <p class="error-text">خطأ في تحميل البيانات</p>
+                            } @else if (r.entries?.length) {
+                              <div class="report-table-wrapper">
+                                <table class="report-table">
+                                  <thead><tr><th>التاريخ</th><th>الوصف</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+                                  <tbody>
+                                    @for (e of r.entries; track $index) {
+                                      <tr>
+                                        <td>{{ formatDate(e.date || e.entry_date) }}</td>
+                                        <td>{{ e.description || '-' }}</td>
+                                        <td class="amount debit">{{ formatAmount(e.debit || 0) }}</td>
+                                        <td class="amount credit">{{ formatAmount(e.credit || 0) }}</td>
+                                        <td class="amount">{{ formatAmount(e.balance || 0) }}</td>
+                                      </tr>
+                                    }
+                                  </tbody>
+                                </table>
+                              </div>
+                            } @else {
+                              <p class="no-data-text">لا توجد حركات</p>
+                            }
+                          </div>
+                        }
+                      }
+
+                      <!-- Inventory Report Results -->
+                      @if (reportData()?.type === 'inventory_report') {
+                        @if (reportData().data?.length) {
+                          <div class="report-table-wrapper">
+                            <table class="report-table">
+                              <thead><tr><th>الصنف</th><th>المخزن</th><th>الكمية</th><th>التكلفة</th></tr></thead>
+                              <tbody>
+                                @for (item of reportData().data; track $index) {
+                                  <tr>
+                                    <td>{{ item.item_name || item.name }}</td>
+                                    <td>{{ item.warehouse_name || '-' }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td class="amount">{{ formatAmount(item.total_cost || 0) }}</td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        } @else {
+                          <p class="no-data-text">لا توجد أصناف</p>
+                        }
+                      }
+
+                      <!-- Operations Summary Results -->
+                      @if (reportData()?.type === 'operations_summary') {
+                        @if (reportData().data) {
+                          <div class="summary-cards">
+                            <div class="summary-card"><span class="material-icons-round" style="color:#22c55e">arrow_downward</span><div><strong>{{ formatAmount(reportData().data.totalReceipts) }}</strong><small>إجمالي التحصيل</small></div></div>
+                            <div class="summary-card"><span class="material-icons-round" style="color:#ef4444">arrow_upward</span><div><strong>{{ formatAmount(reportData().data.totalPayments) }}</strong><small>إجمالي الصرف</small></div></div>
+                            <div class="summary-card"><span class="material-icons-round" style="color:#3b82f6">receipt_long</span><div><strong>{{ reportData().data.operationsCount }}</strong><small>عدد العمليات</small></div></div>
+                            <div class="summary-card"><span class="material-icons-round" style="color:#8b5cf6">account_balance</span><div><strong>{{ formatAmount(reportData().data.netBalance) }}</strong><small>صافي الرصيد</small></div></div>
+                          </div>
+                        } @else {
+                          <p class="no-data-text">لا توجد بيانات</p>
+                        }
+                      }
                     </div>
-                  </div>
+                  }
                 </div>
               }
 
@@ -905,6 +1073,41 @@
         <div class="modal-footer">
           <button class="btn btn-ghost" (click)="closePermissionsModal()">إلغاء</button>
           <button class="btn btn-primary" (click)="savePermissions()" [disabled]="saving()">{{ saving() ? 'جاري الحفظ...' : 'حفظ' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ======================== TEMPLATES MODAL ======================== -->
+  @if (showTemplatesModal()) {
+    <div class="modal-overlay" (click)="showTemplatesModal.set(false)">
+      <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>قوالب شاشات جاهزة</h3>
+          <button class="btn-icon" (click)="showTemplatesModal.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <p class="templates-desc">اختر قالباً لإنشاء شاشة بتبويبات معدة مسبقاً</p>
+          <div class="templates-grid">
+            @for (preset of screenPresets; track preset.name) {
+              <div class="template-card" (click)="applyPreset(preset)">
+                <div class="template-icon" [style.background]="preset.color">
+                  <span class="material-icons-round">{{ preset.icon }}</span>
+                </div>
+                <div class="template-info">
+                  <strong>{{ preset.name }}</strong>
+                  <small>{{ preset.description }}</small>
+                  <div class="template-tabs">
+                    @for (t of preset.tabs; track t.type) {
+                      <span class="mini-tab" [style.background]="t.color + '20'" [style.color]="t.color">
+                        <span class="material-icons-round">{{ t.icon }}</span> {{ t.label }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
         </div>
       </div>
     </div>

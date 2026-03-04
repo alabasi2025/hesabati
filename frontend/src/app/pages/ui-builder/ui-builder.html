@@ -1,0 +1,394 @@
+<!-- ======================== PAGES LIST ======================== -->
+@if (viewMode() === 'list') {
+  <div class="builder-list">
+    <div class="page-header">
+      <h1><span class="material-icons-round">dashboard_customize</span> بناء الواجهات</h1>
+      <p>إنشاء صفحات ديناميكية مخصصة مع مكونات قابلة للتخصيص</p>
+      <div class="header-actions">
+        <button class="btn btn-primary" (click)="openCreatePage()">
+          <span class="material-icons-round">add</span> صفحة جديدة
+        </button>
+        <button class="btn btn-ghost" (click)="openDataSources()">
+          <span class="material-icons-round">storage</span> مصادر البيانات
+        </button>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    } @else if (pages().length === 0) {
+      <div class="empty-state">
+        <span class="material-icons-round">dashboard_customize</span>
+        <h3>لا توجد صفحات بعد</h3>
+        <p>أنشئ صفحتك الأولى لبدء بناء واجهات مخصصة</p>
+        <button class="btn btn-primary" (click)="openCreatePage()">
+          <span class="material-icons-round">add</span> إنشاء صفحة
+        </button>
+      </div>
+    } @else {
+      <div class="pages-grid">
+        @for (page of pages(); track page.id) {
+          <div class="page-card" (click)="openPage(page)" [style.--page-color]="page.color || '#3b82f6'">
+            <div class="page-card-icon" [style.background]="page.color || '#3b82f6'">
+              <span class="material-icons-round">{{ page.icon || 'dashboard' }}</span>
+            </div>
+            <div class="page-card-info">
+              <h3>{{ page.title }}</h3>
+              <p>{{ page.description || 'بدون وصف' }}</p>
+              <small>{{ page.pageKey }} &bull; {{ page.layout }}</small>
+            </div>
+            <div class="page-card-actions" (click)="$event.stopPropagation()">
+              <button class="btn-icon" (click)="openEditPage(page)" title="تعديل"><span class="material-icons-round">edit</span></button>
+              <button class="btn-icon danger" (click)="deletePage(page)" title="حذف"><span class="material-icons-round">delete</span></button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- ======================== PAGE VIEW ======================== -->
+@if (viewMode() === 'page' || viewMode() === 'edit') {
+  <div class="page-view">
+    <div class="page-view-header" [style.--page-color]="activePage()!.color || '#3b82f6'">
+      <div class="header-right">
+        <button class="btn-icon" (click)="backToList()" title="رجوع">
+          <span class="material-icons-round">arrow_forward</span>
+        </button>
+        <div class="page-title-icon" [style.background]="activePage()!.color || '#3b82f6'">
+          <span class="material-icons-round">{{ activePage()!.icon || 'dashboard' }}</span>
+        </div>
+        <h2>{{ activePage()!.title }}</h2>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-sm" [class.active]="viewMode() === 'edit'" (click)="toggleEditMode()">
+          <span class="material-icons-round">{{ viewMode() === 'edit' ? 'visibility' : 'edit' }}</span>
+          {{ viewMode() === 'edit' ? 'معاينة' : 'تعديل' }}
+        </button>
+        @if (viewMode() === 'edit') {
+          <button class="btn btn-primary btn-sm" (click)="openAddComponent()">
+            <span class="material-icons-round">add</span> إضافة مكون
+          </button>
+        }
+        <button class="btn-icon" (click)="openDataSources()" title="مصادر البيانات">
+          <span class="material-icons-round">storage</span>
+        </button>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state"><div class="spinner"></div><p>جاري التحميل...</p></div>
+    } @else if (pageComponents().length === 0) {
+      <div class="empty-state">
+        <span class="material-icons-round">widgets</span>
+        <h3>لا توجد مكونات بعد</h3>
+        <p>أضف مكونات لبناء صفحتك</p>
+        <button class="btn btn-primary" (click)="openAddComponent()">
+          <span class="material-icons-round">add</span> إضافة مكون
+        </button>
+      </div>
+    } @else {
+      <div class="components-grid">
+        @for (comp of pageComponents(); track comp.id) {
+          <div class="component-card" [style]="getComponentGridStyle(comp)" [class.editing]="viewMode() === 'edit'">
+            @if (viewMode() === 'edit') {
+              <div class="component-toolbar">
+                <span class="comp-type-badge">{{ getComponentTypeInfo(comp.componentType).label }}</span>
+                <div class="toolbar-actions">
+                  <button class="btn-icon sm" (click)="openEditComponent(comp)" title="تعديل"><span class="material-icons-round">edit</span></button>
+                  <button class="btn-icon sm danger" (click)="deleteComponent(comp)" title="حذف"><span class="material-icons-round">delete</span></button>
+                </div>
+              </div>
+            }
+            <div class="component-content">
+              @if (comp.title) { <h4 class="comp-title">{{ comp.title }}</h4> }
+
+              <!-- Stat Card -->
+              @if (comp.componentType === 'stat_card') {
+                <div class="stat-card-content">
+                  <span class="material-icons-round stat-icon" [style.color]="comp.config?.color || activePage()!.color">{{ comp.config?.icon || 'analytics' }}</span>
+                  <div class="stat-value">{{ componentData()[comp.id]?.data?.[0] ? (componentData()[comp.id].data[0][comp.config?.valueField || 'value'] || '0') : (comp.config?.staticValue || '0') }}</div>
+                  <div class="stat-label">{{ comp.config?.label || comp.title || 'إحصائية' }}</div>
+                </div>
+              }
+
+              <!-- Data Table -->
+              @if (comp.componentType === 'data_table') {
+                @if (componentData()[comp.id]?.data?.length) {
+                  <div class="data-table-wrapper">
+                    <table class="data-table">
+                      <thead><tr>
+                        @for (key of getDataKeys(componentData()[comp.id]); track key) { <th>{{ key }}</th> }
+                      </tr></thead>
+                      <tbody>
+                        @for (row of componentData()[comp.id].data; track $index) {
+                          <tr>
+                            @for (key of getDataKeys(componentData()[comp.id]); track key) { <td>{{ row[key] }}</td> }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <div class="no-data"><span class="material-icons-round">table_chart</span><p>لا توجد بيانات</p></div>
+                }
+              }
+
+              <!-- Text -->
+              @if (comp.componentType === 'text') {
+                <div class="text-content">{{ comp.config?.text || 'نص فارغ' }}</div>
+              }
+
+              <!-- Chart placeholder -->
+              @if (comp.componentType === 'chart') {
+                <div class="chart-placeholder">
+                  <span class="material-icons-round">bar_chart</span>
+                  <p>رسم بياني{{ comp.dataSourceId ? ' (مصدر: ' + getDataSourceName(comp.dataSourceId) + ')' : '' }}</p>
+                </div>
+              }
+
+              <!-- iFrame -->
+              @if (comp.componentType === 'iframe') {
+                @if (comp.config?.url) {
+                  <iframe [src]="comp.config.url" class="iframe-embed" frameborder="0"></iframe>
+                } @else {
+                  <div class="no-data"><span class="material-icons-round">web</span><p>أدخل رابط URL في الإعدادات</p></div>
+                }
+              }
+
+              <!-- List -->
+              @if (comp.componentType === 'list') {
+                @if (componentData()[comp.id]?.data?.length) {
+                  <ul class="list-content">
+                    @for (item of componentData()[comp.id].data; track $index) {
+                      <li>{{ item[comp.config?.labelField || 'name'] || (item | json) }}</li>
+                    }
+                  </ul>
+                } @else {
+                  <div class="no-data"><span class="material-icons-round">list</span><p>لا توجد عناصر</p></div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- ======================== PAGE MODAL ======================== -->
+@if (showPageModal()) {
+  <div class="modal-overlay" (click)="showPageModal.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingPage() ? 'تعديل الصفحة' : 'صفحة جديدة' }}</h3>
+        <button class="btn-icon" (click)="showPageModal.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>عنوان الصفحة</label>
+          <input type="text" [ngModel]="pageForm().title" (ngModelChange)="updatePageForm('title', $event)" placeholder="مثال: لوحة التحكم">
+        </div>
+        <div class="form-group">
+          <label>المفتاح (pageKey)</label>
+          <input type="text" [ngModel]="pageForm().pageKey" (ngModelChange)="updatePageForm('pageKey', $event)" placeholder="مثال: dashboard" dir="ltr">
+        </div>
+        <div class="form-group">
+          <label>الوصف</label>
+          <input type="text" [ngModel]="pageForm().description" (ngModelChange)="updatePageForm('description', $event)" placeholder="وصف مختصر (اختياري)">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <input type="text" [ngModel]="pageForm().icon" (ngModelChange)="updatePageForm('icon', $event)" placeholder="dashboard" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label>اللون</label>
+            <input type="color" [ngModel]="pageForm().color" (ngModelChange)="updatePageForm('color', $event)">
+          </div>
+          <div class="form-group">
+            <label>التخطيط</label>
+            <select [ngModel]="pageForm().layout" (ngModelChange)="updatePageForm('layout', $event)">
+              <option value="grid">شبكة (Grid)</option>
+              <option value="flex">مرن (Flex)</option>
+              <option value="freeform">حر (Freeform)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="showPageModal.set(false)">إلغاء</button>
+        <button class="btn btn-primary" (click)="savePage()" [disabled]="saving()">
+          {{ saving() ? 'جاري الحفظ...' : editingPage() ? 'تحديث' : 'إنشاء' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ======================== COMPONENT MODAL ======================== -->
+@if (showComponentModal()) {
+  <div class="modal-overlay" (click)="showComponentModal.set(false)">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingComponent() ? 'تعديل المكون' : 'إضافة مكون' }}</h3>
+        <button class="btn-icon" (click)="showComponentModal.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>نوع المكون</label>
+          <div class="type-grid">
+            @for (ct of componentTypes; track ct.value) {
+              <button class="type-card" [class.selected]="componentForm().componentType === ct.value" (click)="onComponentTypeChange(ct.value)">
+                <span class="material-icons-round">{{ ct.icon }}</span>
+                <strong>{{ ct.label }}</strong>
+                <small>{{ ct.desc }}</small>
+              </button>
+            }
+          </div>
+        </div>
+        <div class="form-group">
+          <label>العنوان</label>
+          <input type="text" [ngModel]="componentForm().title" (ngModelChange)="updateComponentForm('title', $event)" placeholder="عنوان المكون">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>مصدر البيانات</label>
+            <select [ngModel]="componentForm().dataSourceId" (ngModelChange)="updateComponentForm('dataSourceId', +$event)">
+              <option [value]="0">بدون مصدر</option>
+              @for (ds of dataSources(); track ds.id) {
+                <option [value]="ds.id">{{ ds.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الموقع X</label>
+            <input type="number" [ngModel]="componentForm().positionX" (ngModelChange)="updateComponentForm('positionX', +$event)" min="0" max="11">
+          </div>
+          <div class="form-group">
+            <label>الموقع Y</label>
+            <input type="number" [ngModel]="componentForm().positionY" (ngModelChange)="updateComponentForm('positionY', +$event)" min="0">
+          </div>
+          <div class="form-group">
+            <label>العرض</label>
+            <input type="number" [ngModel]="componentForm().width" (ngModelChange)="updateComponentForm('width', +$event)" min="1" max="12">
+          </div>
+          <div class="form-group">
+            <label>الارتفاع</label>
+            <input type="number" [ngModel]="componentForm().height" (ngModelChange)="updateComponentForm('height', +$event)" min="1" max="12">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>إعدادات JSON</label>
+          <textarea [ngModel]="componentForm().config" (ngModelChange)="updateComponentForm('config', $event)" rows="4" dir="ltr" class="code-input" placeholder='{"key": "value"}'></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="showComponentModal.set(false)">إلغاء</button>
+        <button class="btn btn-primary" (click)="saveComponent()" [disabled]="saving()">
+          {{ saving() ? 'جاري الحفظ...' : editingComponent() ? 'تحديث' : 'إضافة' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ======================== DATA SOURCE MODAL ======================== -->
+@if (showDataSourceModal()) {
+  <div class="modal-overlay" (click)="showDataSourceModal.set(false)">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>مصادر البيانات</h3>
+        <button class="btn-icon" (click)="showDataSourceModal.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <!-- Existing Data Sources -->
+        @if (dataSources().length > 0) {
+          <div class="ds-list">
+            @for (ds of dataSources(); track ds.id) {
+              <div class="ds-item" [class.editing]="editingDataSource()?.id === ds.id">
+                <div class="ds-info">
+                  <span class="material-icons-round">{{ ds.sourceType === 'table' ? 'storage' : 'code' }}</span>
+                  <div>
+                    <strong>{{ ds.name }}</strong>
+                    <small>{{ ds.sourceType === 'table' ? ds.tableName : 'استعلام مخصص' }}</small>
+                  </div>
+                </div>
+                <div class="ds-actions">
+                  <button class="btn-icon sm" (click)="previewDataSource(ds)" title="معاينة"><span class="material-icons-round">visibility</span></button>
+                  <button class="btn-icon sm" (click)="editDataSource(ds)" title="تعديل"><span class="material-icons-round">edit</span></button>
+                  <button class="btn-icon sm danger" (click)="deleteDataSource(ds)" title="حذف"><span class="material-icons-round">delete</span></button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Create/Edit Form -->
+        <div class="ds-form">
+          <h4>{{ editingDataSource() ? 'تعديل مصدر البيانات' : 'إضافة مصدر بيانات جديد' }}</h4>
+          <div class="form-group">
+            <label>الاسم</label>
+            <input type="text" [ngModel]="dsForm().name" (ngModelChange)="updateDsForm('name', $event)" placeholder="اسم مصدر البيانات">
+          </div>
+          <div class="form-group">
+            <label>النوع</label>
+            <select [ngModel]="dsForm().sourceType" (ngModelChange)="updateDsForm('sourceType', $event)">
+              @for (st of sourceTypes; track st.value) {
+                <option [value]="st.value">{{ st.label }}</option>
+              }
+            </select>
+          </div>
+          @if (dsForm().sourceType === 'table') {
+            <div class="form-group">
+              <label>اسم الجدول</label>
+              <input type="text" [ngModel]="dsForm().tableName" (ngModelChange)="updateDsForm('tableName', $event)" placeholder="مثال: accounts" dir="ltr">
+            </div>
+          }
+          @if (dsForm().sourceType === 'query') {
+            <div class="form-group">
+              <label>الاستعلام (استخدم {{ '{' }}bizId{{ '}' }} للعمل الحالي)</label>
+              <textarea [ngModel]="dsForm().queryTemplate" (ngModelChange)="updateDsForm('queryTemplate', $event)" rows="4" dir="ltr" class="code-input" placeholder="SELECT * FROM accounts WHERE business_id = :bizId"></textarea>
+            </div>
+          }
+          <button class="btn btn-primary" (click)="saveDataSource()" [disabled]="saving()">
+            {{ saving() ? 'جاري الحفظ...' : editingDataSource() ? 'تحديث' : 'إضافة' }}
+          </button>
+        </div>
+
+        <!-- Preview -->
+        @if (showDsPreview()) {
+          <div class="ds-preview">
+            <h4>معاينة البيانات</h4>
+            @if (dsPreviewLoading()) {
+              <div class="loading-state sm"><div class="spinner sm"></div></div>
+            } @else if (dsPreviewData()?.error) {
+              <div class="error-msg">{{ dsPreviewData().error }}</div>
+            } @else if (dsPreviewData()?.data?.length) {
+              <div class="data-table-wrapper">
+                <table class="data-table">
+                  <thead><tr>
+                    @for (key of getDataKeys(dsPreviewData()); track key) { <th>{{ key }}</th> }
+                  </tr></thead>
+                  <tbody>
+                    @for (row of dsPreviewData().data; track $index) {
+                      <tr>
+                        @for (key of getDataKeys(dsPreviewData()); track key) { <td>{{ row[key] }}</td> }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <small>إجمالي: {{ dsPreviewData().total }} سجل (عرض أول 10)</small>
+            } @else {
+              <p>لا توجد بيانات</p>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
