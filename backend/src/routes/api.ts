@@ -6,7 +6,7 @@ import {
   businesses, businessPartners, stations, employees, accounts, accountBalances,
   accountAllowedLinks, employeeBillingAccounts,
   funds, fundBalances, vouchers, voucherCategories, currencies, suppliers,
-  warehouses, pendingAccounts, reconciliations, attachments,
+  warehouses, pendingAccounts, reconciliations, attachments, inventoryItems,
   dailyCollections, collectionDetails, deliveryRecords,
   operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines,
@@ -3761,7 +3761,90 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
     );
   }
 
-  return c.json(created, 201);
+  // === تكامل المحرك المخزني: تحديث inventory_stock عبر inventory.service ===
+  const inventoryResults = [];
+  for (const item of body.items) {
+    const itemName = item.itemName || item.name;
+    const itemCode = item.itemCode || null;
+    let inventoryItemId: number;
+
+    // التأكد من وجود الصنف في inventory_items أو إنشائه
+    const existingItems = await db.select().from(inventoryItems)
+      .where(and(
+        eq(inventoryItems.businessId, bizId),
+        itemCode ? eq(inventoryItems.code, itemCode) : eq(inventoryItems.name, itemName)
+      ));
+
+    if (existingItems.length > 0) {
+      inventoryItemId = existingItems[0].id;
+    } else {
+      const autoCode = itemCode || `${itemName.substring(0, 3).toUpperCase()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
+      const [newItem] = await db.insert(inventoryItems).values({
+        businessId: bizId,
+        name: itemName,
+        code: autoCode,
+        unit: item.unit || null,
+      }).returning();
+      inventoryItemId = newItem.id;
+    }
+
+    // تحديث المخزون عبر inventory.service
+    try {
+      const warehouseId = body.sourceWarehouseId || body.destinationWarehouseId;
+      if (['supply_invoice', 'supply_order', 'receive_transfer'].includes(body.operationType)) {
+        const result = await processStockMovement(bizId, {
+          itemId: inventoryItemId,
+          warehouseId,
+          movementType: body.operationType,
+          quantity: Number(item.quantity),
+          unitCost: Number(item.unitCost || 0),
+          reference: operationNumber,
+          description: body.description || '',
+          supplierId: body.supplierId || null,
+        });
+        inventoryResults.push(result);
+      } else if (['dispatch', 'transfer_out'].includes(body.operationType)) {
+        const result = await processStockMovement(bizId, {
+          itemId: inventoryItemId,
+          warehouseId,
+          movementType: body.operationType,
+          quantity: -Number(item.quantity),
+          unitCost: Number(item.unitCost || 0),
+          reference: operationNumber,
+          description: body.description || '',
+          toWarehouseId: body.destinationWarehouseId || null,
+        });
+        inventoryResults.push(result);
+      }
+    } catch (invErr: any) {
+      console.error(`تحذير: فشل تحديث المخزون للصنف ${itemName}:`, invErr.message);
+    }
+  }
+
+  // === تكامل المحرك المالي: إنشاء قيد محاسبي إذا كان القالب يتطلب ذلك ===
+  let relatedVoucherId: number | null = null;
+  if (opTemplate && opTemplate.auto_journal === true) {
+    try {
+      const txResult = await postTransaction(bizId, {
+        type: body.operationType === 'dispatch' ? 'payment' : 'receipt',
+        amount: totalCost,
+        description: `${body.description || body.operationType} - ${operationNumber}`,
+        operationTypeId: body.operationTypeId,
+        currencyId: body.currencyId || null,
+        userId,
+      });
+      if (txResult && txResult.voucher) {
+        relatedVoucherId = txResult.voucher.id;
+        await db.update(warehouseOperations)
+          .set({ relatedVoucherId })
+          .where(eq(warehouseOperations.id, created.id));
+      }
+    } catch (txErr: any) {
+      console.error('تحذير: فشل إنشاء القيد المحاسبي:', txErr.message);
+    }
+  }
+
+  return c.json({ ...created, inventoryUpdated: inventoryResults.length > 0, inventoryResults, relatedVoucherId }, 201);
 }));
 
 // جلب تفاصيل عملية مخزنية مع الأصناف

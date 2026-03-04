@@ -6,7 +6,7 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'accountant', 'manager
 export const currencyCodeEnum = pgEnum('currency_code', ['YER', 'SAR', 'USD']);
 
 export const accountTypeEnum = pgEnum('account_type', [
-  'fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service', 'warehouse',
+  'fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service', 'warehouse', 'billing',
 ]);
 
 export const fundTypeEnum = pgEnum('fund_type', [

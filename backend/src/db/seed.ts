@@ -275,8 +275,31 @@ async function seed() {
   console.log('✅ أنواع حسابات الفوترة');
 
   // ===================== حسابات الفوترة للموظفين =====================
-  // يتم إنشاؤها عبر SQL مباشرة لأنها تعتمد على IDs الموظفين
-  // تم إضافتها عبر SQL migration منفصل
+  // إنشاء حساب فوترة لكل موظف حسب أنظمة الفوترة في محطته
+  const BILLING_SYSTEM_LABELS: Record<string, string> = {
+    moghrabi_v1: 'المغربي', moghrabi_v2: 'المغربي', moghrabi_v3: 'المغربي',
+    support_fund: 'صندوق الدعم', support_fund_west: 'صندوق الدعم - الساحل',
+    prepaid: 'الدفع المسبق',
+  };
+  const stationsWithBilling = [
+    { station: s1, systems: ['moghrabi_v1', 'support_fund', 'prepaid'] },
+    { station: s2, systems: ['moghrabi_v2', 'support_fund', 'prepaid'] },
+    { station: s3, systems: ['moghrabi_v3', 'support_fund', 'prepaid'] },
+  ];
+  const allEmps = await db.select().from(schema.employees).where(eq(schema.employees.businessId, b1.id));
+  for (const { station, systems } of stationsWithBilling) {
+    const stationEmps = allEmps.filter(e => e.stationId === station.id);
+    for (const emp of stationEmps) {
+      for (const sys of systems) {
+        await db.insert(schema.employeeBillingAccounts).values({
+          employeeId: emp.id, stationId: station.id,
+          billingSystem: sys as any, collectionMethod: 'cash_mobile',
+          label: `${BILLING_SYSTEM_LABELS[sys] || sys} - ${emp.fullName}`,
+        });
+      }
+    }
+  }
+  console.log('✅ حسابات الفوترة للموظفين');
 
   // ===================== أنواع المخروجات (expense_categories) =====================
   // تُضاف يدوياً من واجهة المستخدم عند الحاجة

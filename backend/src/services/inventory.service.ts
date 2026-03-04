@@ -40,7 +40,7 @@ interface StockMovementData {
   stationId?: number;
   reference?: string;
   description?: string;
-  movementDate: string;
+  movementDate?: string;
   createdBy?: number;
   currencyId?: number;
 }
@@ -131,7 +131,7 @@ export async function processStockMovement(bizId: number, data: StockMovementDat
       stationId: data.stationId || null,
       reference: data.reference || null,
       description: data.description || null,
-      movementDate: data.movementDate,
+      movementDate: data.movementDate || new Date().toISOString().split('T')[0],
       createdBy: data.createdBy || null,
     }).returning();
 
