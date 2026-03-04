@@ -72,7 +72,17 @@ export class OperationTypesComponent implements OnInit {
     hasMultiLines: true,
     isActive: true,
     sortOrder: 0,
+    // سير العمل
+    workflowEnabled: false,
+    workflowStates: ['draft', 'confirmed'] as string[],
+    workflowInitialState: 'draft',
+    workflowTransitions: [] as { fromState: string; toState: string; actionName: string; allowedRoles: string[] }[],
   });
+  newWfState = signal('');
+  newTrFrom = signal('');
+  newTrTo = signal('');
+  newTrAction = signal('');
+  roles = signal<any[]>([]);
 
   selectedAccountType = signal('');
 
@@ -254,12 +264,12 @@ export class OperationTypesComponent implements OnInit {
   // ===================== Computed: عدد خطوات الـ wizard =====================
   totalSteps = computed(() => {
     const w = this.wiz();
-    // قيد محاسبي: 4 خطوات (تصنيف → نوع → حسابات → تفاصيل)
-    if (w.voucherType === 'journal') return 4;
-    // عمليات مخزنية: 5 خطوات (تصنيف → نوع → مخزن → حسابات → تفاصيل)
-    if (this.isWarehouseType(w.voucherType)) return 5;
-    // سند قبض/صرف: 6 خطوات (تصنيف → نوع → وسيلة → مصدر → حسابات → تفاصيل)
-    return 6;
+    // قيد محاسبي: 4+1 خطوات (تصنيف → نوع → حسابات → سير العمل → تفاصيل)
+    if (w.voucherType === 'journal') return 5;
+    // عمليات مخزنية: 5+1 خطوات (تصنيف → نوع → مخزن → حسابات → سير العمل → تفاصيل)
+    if (this.isWarehouseType(w.voucherType)) return 6;
+    // سند قبض/صرف: 6+1 خطوات (تصنيف → نوع → وسيلة → مصدر → حسابات → سير العمل → تفاصيل)
+    return 7;
   });
 
   // ===================== المخازن =====================
@@ -439,6 +449,7 @@ export class OperationTypesComponent implements OnInit {
       linkedAccounts: [], screens: [],
       requiresAttachment: false, hasMultiLines: true,
       isActive: true, sortOrder: 0,
+      workflowEnabled: false, workflowStates: ['draft', 'confirmed'], workflowInitialState: 'draft', workflowTransitions: [],
     });
     this.wizardStep.set(1);
     this.selectedAccountType.set('');
@@ -470,6 +481,10 @@ export class OperationTypesComponent implements OnInit {
       hasMultiLines: ot.hasMultiLines || false,
       isActive: ot.isActive !== false,
       sortOrder: ot.sortOrder || 0,
+      workflowEnabled: ot.workflowConfig?.enabled || false,
+      workflowStates: ot.workflowConfig?.states || ['draft', 'confirmed'],
+      workflowInitialState: ot.workflowConfig?.initialState || 'draft',
+      workflowTransitions: ot.workflowConfig?.transitions || [],
     });
     this.wizardStep.set(1);
     this.selectedAccountType.set('');
@@ -596,18 +611,19 @@ export class OperationTypesComponent implements OnInit {
 
     if (w.voucherType === 'journal') {
       if (step === 3) return w.linkedAccounts.length > 0;
-      if (step === 4) return !!w.name.trim();
-    } else if (this.isWarehouseType(w.voucherType)) {
-      // عملية مخزنية: step 3 = مخزن, step 4 = حسابات (اختياري), step 5 = تفاصيل
-      if (step === 3) return !!w.sourceWarehouseId;
-      if (step === 4) return true; // الحسابات اختيارية للعمليات المخزنية
+      if (step === 4) return true; // سير العمل اختياري
       if (step === 5) return !!w.name.trim();
+    } else if (this.isWarehouseType(w.voucherType)) {
+      if (step === 3) return !!w.sourceWarehouseId;
+      if (step === 4) return true; // الحسابات اختيارية
+      if (step === 5) return true; // سير العمل اختياري
+      if (step === 6) return !!w.name.trim();
     } else {
-      // سند قبض/صرف
       if (step === 3) return !!w.paymentMethod;
       if (step === 4) return !!(w.sourceAccountId || w.sourceFundId);
       if (step === 5) return w.linkedAccounts.length > 0;
-      if (step === 6) return !!w.name.trim();
+      if (step === 6) return true; // سير العمل اختياري
+      if (step === 7) return !!w.name.trim();
     }
     return true;
   }
@@ -615,9 +631,9 @@ export class OperationTypesComponent implements OnInit {
   isLastStep(): boolean {
     const w = this.wiz();
     const step = this.wizardStep();
-    if (w.voucherType === 'journal') return step === 4;
-    if (this.isWarehouseType(w.voucherType)) return step === 5;
-    return step === 6;
+    if (w.voucherType === 'journal') return step === 5;
+    if (this.isWarehouseType(w.voucherType)) return step === 6;
+    return step === 7;
   }
 
   nextStep() {
@@ -628,7 +644,7 @@ export class OperationTypesComponent implements OnInit {
     this.wizardStep.update(s => s - 1);
   }
 
-  getContentType(): 'category' | 'voucherType' | 'paymentMethod' | 'source' | 'warehouse' | 'accounts' | 'details' {
+  getContentType(): 'category' | 'voucherType' | 'paymentMethod' | 'source' | 'warehouse' | 'accounts' | 'workflow' | 'details' {
     const w = this.wiz();
     const step = this.wizardStep();
 
@@ -637,16 +653,19 @@ export class OperationTypesComponent implements OnInit {
 
     if (w.voucherType === 'journal') {
       if (step === 3) return 'accounts';
-      if (step === 4) return 'details';
+      if (step === 4) return 'workflow';
+      if (step === 5) return 'details';
     } else if (this.isWarehouseType(w.voucherType)) {
       if (step === 3) return 'warehouse';
       if (step === 4) return 'accounts';
-      if (step === 5) return 'details';
+      if (step === 5) return 'workflow';
+      if (step === 6) return 'details';
     } else {
       if (step === 3) return 'paymentMethod';
       if (step === 4) return 'source';
       if (step === 5) return 'accounts';
-      if (step === 6) return 'details';
+      if (step === 6) return 'workflow';
+      if (step === 7) return 'details';
     }
     return 'category';
   }
@@ -659,7 +678,8 @@ export class OperationTypesComponent implements OnInit {
         { num: 1, label: 'التصنيف' },
         { num: 2, label: 'نوع العملية' },
         { num: 3, label: 'الحسابات' },
-        { num: 4, label: 'التفاصيل' },
+        { num: 4, label: 'سير العمل' },
+        { num: 5, label: 'التفاصيل' },
       ];
     }
     if (this.isWarehouseType(w.voucherType)) {
@@ -668,7 +688,8 @@ export class OperationTypesComponent implements OnInit {
         { num: 2, label: 'نوع العملية' },
         { num: 3, label: 'المخزن' },
         { num: 4, label: 'الحسابات' },
-        { num: 5, label: 'التفاصيل' },
+        { num: 5, label: 'سير العمل' },
+        { num: 6, label: 'التفاصيل' },
       ];
     }
     return [
@@ -677,7 +698,8 @@ export class OperationTypesComponent implements OnInit {
       { num: 3, label: 'الوسيلة' },
       { num: 4, label: 'المصدر' },
       { num: 5, label: 'الحسابات' },
-      { num: 6, label: 'التفاصيل' },
+      { num: 6, label: 'سير العمل' },
+      { num: 7, label: 'التفاصيل' },
     ];
   }
 
@@ -720,6 +742,12 @@ export class OperationTypesComponent implements OnInit {
           permission: la.permission,
           sortOrder: 0,
         })),
+        workflowConfig: w.workflowEnabled ? {
+          enabled: true,
+          states: w.workflowStates,
+          initialState: w.workflowInitialState,
+          transitions: w.workflowTransitions,
+        } : { enabled: false },
       };
 
       if (this.editingId()) {
@@ -876,4 +904,61 @@ export class OperationTypesComponent implements OnInit {
   }
 
   trackById(_: number, item: any) { return item.id; }
+
+  // ===================== سير العمل - دوال الإدارة =====================
+  addWorkflowState() {
+    const s = this.newWfState().trim();
+    if (!s) return;
+    const current = this.wiz().workflowStates;
+    if (current.includes(s)) return;
+    this.wiz.update(w => ({ ...w, workflowStates: [...w.workflowStates, s] }));
+    this.newWfState.set('');
+  }
+
+  removeWorkflowState(state: string) {
+    if (state === 'draft') return; // لا يمكن حذف draft
+    this.wiz.update(w => ({
+      ...w,
+      workflowStates: w.workflowStates.filter((s: string) => s !== state),
+      workflowTransitions: w.workflowTransitions.filter((t: any) => t.fromState !== state && t.toState !== state),
+      workflowInitialState: w.workflowInitialState === state ? 'draft' : w.workflowInitialState,
+    }));
+  }
+
+  addWorkflowTransition() {
+    const from = this.newTrFrom();
+    const to = this.newTrTo();
+    const action = this.newTrAction().trim();
+    if (!from || !to || !action || from === to) return;
+    this.wiz.update(w => ({
+      ...w,
+      workflowTransitions: [...w.workflowTransitions, { fromState: from, toState: to, actionName: action, allowedRoles: [] }],
+    }));
+    this.newTrFrom.set('');
+    this.newTrTo.set('');
+    this.newTrAction.set('');
+  }
+
+  removeWorkflowTransition(idx: number) {
+    this.wiz.update(w => ({
+      ...w,
+      workflowTransitions: w.workflowTransitions.filter((_: any, i: number) => i !== idx),
+    }));
+  }
+
+  getStateLabel(state: string): string {
+    const labels: Record<string, string> = {
+      draft: 'مسودة', confirmed: 'معتمد', pending_approval: 'بانتظار الاعتماد',
+      approved: 'موافق عليه', rejected: 'مرفوض', cancelled: 'ملغي', reversed: 'معكوس',
+    };
+    return labels[state] || state;
+  }
+
+  getStateColor(state: string): string {
+    const colors: Record<string, string> = {
+      draft: '#f59e0b', confirmed: '#22c55e', pending_approval: '#3b82f6',
+      approved: '#10b981', rejected: '#ef4444', cancelled: '#64748b', reversed: '#8b5cf6',
+    };
+    return colors[state] || '#64748b';
+  }
 }

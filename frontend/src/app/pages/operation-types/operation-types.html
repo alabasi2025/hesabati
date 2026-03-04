@@ -682,6 +682,129 @@
             </div>
           }
 
+          <!-- ===== محتوى: سير العمل ===== -->
+          @if (getContentType() === 'workflow') {
+            <div class="wizard-step">
+              <h3 class="step-title">
+                <span class="material-icons-round">route</span>
+                سير العمل (اختياري)
+              </h3>
+              <p class="step-desc">حدد حالات السند والانتقالات بينها. إذا لم تفعّل سير العمل، سيعمل السند بالطريقة الافتراضية (مسودة → معتمد).</p>
+
+              <!-- تفعيل سير العمل -->
+              <div class="form-group" style="margin-bottom:20px">
+                <label class="toggle-label" style="font-size:15px;font-weight:600">
+                  <span>تفعيل سير العمل المخصص</span>
+                  <div class="toggle-switch" [class.on]="wiz().workflowEnabled"
+                       (click)="setWizField('workflowEnabled', !wiz().workflowEnabled)">
+                    <div class="toggle-knob"></div>
+                  </div>
+                </label>
+              </div>
+
+              @if (wiz().workflowEnabled) {
+                <!-- الحالات -->
+                <div class="form-group">
+                  <label class="form-label">حالات السند</label>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                    @for (state of wiz().workflowStates; track state) {
+                      <div style="display:flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500"
+                           [style.background]="getStateColor(state) + '18'" [style.color]="getStateColor(state)">
+                        <span>{{ getStateLabel(state) }}</span>
+                        @if (state !== 'draft') {
+                          <button style="background:none;border:none;cursor:pointer;padding:0;color:inherit;font-size:16px;line-height:1"
+                                  (click)="removeWorkflowState(state)">
+                            <span class="material-icons-round" style="font-size:16px">close</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <input class="form-input" type="text" placeholder="اسم الحالة الجديدة (مثل: pending_approval)"
+                           [value]="newWfState()" (input)="newWfState.set($any($event.target).value)"
+                           style="flex:1">
+                    <button class="btn-3d btn-primary" style="padding:8px 16px" (click)="addWorkflowState()">
+                      <span class="material-icons-round" style="font-size:18px">add</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- الحالة الابتدائية -->
+                <div class="form-group">
+                  <label class="form-label">الحالة الابتدائية</label>
+                  <select class="form-input" [value]="wiz().workflowInitialState"
+                          (change)="setWizField('workflowInitialState', $any($event.target).value)">
+                    @for (state of wiz().workflowStates; track state) {
+                      <option [value]="state">{{ getStateLabel(state) }}</option>
+                    }
+                  </select>
+                </div>
+
+                <!-- الانتقالات -->
+                <div class="form-group">
+                  <label class="form-label">الانتقالات (من حالة إلى حالة)</label>
+                  @if (wiz().workflowTransitions.length > 0) {
+                    <div style="margin-bottom:12px">
+                      @for (tr of wiz().workflowTransitions; track $index) {
+                        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:6px;font-size:13px">
+                          <span style="padding:2px 8px;border-radius:12px;font-weight:500"
+                                [style.background]="getStateColor(tr.fromState) + '18'" [style.color]="getStateColor(tr.fromState)">
+                            {{ getStateLabel(tr.fromState) }}
+                          </span>
+                          <span class="material-icons-round" style="font-size:16px;color:#94a3b8">arrow_back</span>
+                          <span style="padding:2px 8px;border-radius:12px;font-weight:500"
+                                [style.background]="getStateColor(tr.toState) + '18'" [style.color]="getStateColor(tr.toState)">
+                            {{ getStateLabel(tr.toState) }}
+                          </span>
+                          <span style="color:#64748b;font-size:12px">({{ tr.actionName }})</span>
+                          <button style="margin-right:auto;background:none;border:none;cursor:pointer;color:#ef4444"
+                                  (click)="removeWorkflowTransition($index)">
+                            <span class="material-icons-round" style="font-size:18px">delete</span>
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+                    <div>
+                      <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block">من حالة</label>
+                      <select class="form-input" [value]="newTrFrom()" (change)="newTrFrom.set($any($event.target).value)">
+                        <option value="">اختر...</option>
+                        @for (state of wiz().workflowStates; track state) {
+                          <option [value]="state">{{ getStateLabel(state) }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div>
+                      <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block">إلى حالة</label>
+                      <select class="form-input" [value]="newTrTo()" (change)="newTrTo.set($any($event.target).value)">
+                        <option value="">اختر...</option>
+                        @for (state of wiz().workflowStates; track state) {
+                          <option [value]="state">{{ getStateLabel(state) }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div>
+                      <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block">اسم الإجراء</label>
+                      <input class="form-input" type="text" placeholder="مثل: اعتماد"
+                             [value]="newTrAction()" (input)="newTrAction.set($any($event.target).value)">
+                    </div>
+                    <button class="btn-3d btn-primary" style="padding:8px 16px;height:40px" (click)="addWorkflowTransition()">
+                      <span class="material-icons-round" style="font-size:18px">add</span>
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <div style="text-align:center;padding:30px;color:#94a3b8">
+                  <span class="material-icons-round" style="font-size:48px;margin-bottom:12px">route</span>
+                  <p>سير العمل الافتراضي: مسودة → معتمد</p>
+                  <p style="font-size:12px">فعّل سير العمل المخصص لإضافة حالات وانتقالات مخصصة</p>
+                </div>
+              }
+            </div>
+          }
+
           <!-- ===== محتوى: الاسم والتفاصيل ===== -->
           @if (getContentType() === 'details') {
             <div class="wizard-step">
