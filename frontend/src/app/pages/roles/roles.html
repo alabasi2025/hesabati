@@ -24,21 +24,21 @@
     <div class="stat-card-3d purple">
       <div class="sc-icon"><span class="material-icons-round">shield</span></div>
       <div class="sc-body">
-        <div class="sc-num">{{ roles.length }}</div>
+        <div class="sc-num">{{ roles().length }}</div>
         <div class="sc-label">الأدوار</div>
       </div>
     </div>
     <div class="stat-card-3d blue">
       <div class="sc-icon"><span class="material-icons-round">people</span></div>
       <div class="sc-body">
-        <div class="sc-num">{{ users.length }}</div>
+        <div class="sc-num">{{ users().length }}</div>
         <div class="sc-label">المستخدمون</div>
       </div>
     </div>
     <div class="stat-card-3d green">
       <div class="sc-icon"><span class="material-icons-round">assignment_ind</span></div>
       <div class="sc-body">
-        <div class="sc-num">{{ userRoles.length }}</div>
+        <div class="sc-num">{{ userRoles().length }}</div>
         <div class="sc-label">تعيينات نشطة</div>
       </div>
     </div>
@@ -46,7 +46,7 @@
 
   <!-- ===== قائمة الأدوار ===== -->
   @if (!showForm) {
-    @if (roles.length === 0) {
+    @if (roles().length === 0) {
       <div class="empty-state">
         <div class="empty-icon-3d">
           <span class="material-icons-round">admin_panel_settings</span>
@@ -60,7 +60,7 @@
       </div>
     } @else {
       <div class="roles-grid">
-        @for (role of roles; track role.id) {
+        @for (role of roles(); track role.id) {
           <div class="role-card-3d">
             <div class="rc-header">
               <div class="rc-color-dot" [style.background]="role.color"></div>
@@ -120,14 +120,14 @@
             <label class="form-label">المستخدم</label>
             <select class="form-select" [(ngModel)]="assignUserId">
               <option value="">اختر المستخدم...</option>
-              <option *ngFor="let u of users" [value]="u.id">{{u.username}}</option>
+              <option *ngFor="let u of users()" [value]="u.id">{{u.username}}</option>
             </select>
           </div>
           <div class="assign-field">
             <label class="form-label">الدور</label>
             <select class="form-select" [(ngModel)]="assignRoleId">
               <option value="">اختر الدور...</option>
-              <option *ngFor="let r of roles" [value]="r.id">{{r.name}}</option>
+              <option *ngFor="let r of roles()" [value]="r.id">{{r.name}}</option>
             </select>
           </div>
           <div class="assign-action">
@@ -138,9 +138,9 @@
           </div>
         </div>
 
-        @if (userRoles.length > 0) {
+        @if (userRoles().length > 0) {
           <div class="user-roles-list">
-            @for (ur of userRoles; track ur.userId) {
+            @for (ur of userRoles(); track ur.userId) {
               <div class="ur-row-3d">
                 <div class="ur-avatar">
                   <span class="material-icons-round">person</span>

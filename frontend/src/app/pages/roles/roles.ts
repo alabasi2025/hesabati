@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -31,9 +31,9 @@ export class RolesComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
 
-  roles: any[] = [];
-  users: any[] = [];
-  userRoles: any[] = [];
+  roles = signal<any[]>([]);
+  users = signal<any[]>([]);
+  userRoles = signal<any[]>([]);
   showForm = false;
   editId: number | null = null;
   form: any = { name: '', description: '', color: '#8b5cf6', maxVoucherAmount: null, maxDailyAmount: null };
@@ -47,9 +47,14 @@ export class RolesComponent extends BasePageComponent {
   }
 
   async load() {
-    this.roles = await this.api.getRoles(this.bizId);
-    this.users = await this.api.getUsers();
-    this.userRoles = await this.api.getUserRoles(this.bizId);
+    const [roles, users, userRoles] = await Promise.all([
+      this.api.getRoles(this.bizId),
+      this.api.getUsers(),
+      this.api.getUserRoles(this.bizId),
+    ]);
+    this.roles.set(roles);
+    this.users.set(users);
+    this.userRoles.set(userRoles);
   }
 
   getResourceLabel(key: string) { return ALL_RESOURCES.find(r => r.key === key)?.label || key; }

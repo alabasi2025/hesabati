@@ -12,7 +12,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn-3d btn-print" (click)="printReport()" [disabled]="loading">
+      <button class="btn-3d btn-print" (click)="printReport()" [disabled]="loading()">
         <span class="material-icons-round">print</span>
         طباعة التقرير
       </button>
@@ -77,7 +77,7 @@
   }
 
   <!-- ===== Loading ===== -->
-  @if (loading) {
+  @if (loading()) {
     <div class="loading-state">
       <div class="loading-spinner"></div>
       <p>جاري التحميل...</p>
@@ -88,7 +88,7 @@
   <div class="print-area">
 
   <!-- ===== تقرير الأرباح والخسائر ===== -->
-  @if (activeTab === 'profit-loss' && profitLoss && !loading) {
+  @if (activeTab === 'profit-loss' && profitLoss && !loading()) {
     <div class="stats-row">
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
@@ -153,7 +153,7 @@
   }
 
   <!-- ===== كشف حساب ===== -->
-  @if (activeTab === 'statement' && statement && !loading) {
+  @if (activeTab === 'statement' && statement && !loading()) {
     <div class="account-info-3d">
       <div class="ai-icon"><span class="material-icons-round">account_balance</span></div>
       <div class="ai-main">
@@ -210,7 +210,7 @@
   }
 
   <!-- ===== ملخص يومي ===== -->
-  @if (activeTab === 'daily' && dailySummary && !loading) {
+  @if (activeTab === 'daily' && dailySummary && !loading()) {
     <div class="stats-row">
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
@@ -273,7 +273,7 @@
   }
 
   <!-- ===== ميزان المراجعة ===== -->
-  @if (activeTab === 'trial-balance' && trialBalance && !loading) {
+  @if (activeTab === 'trial-balance' && trialBalance && !loading()) {
     <div class="stats-row">
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
@@ -346,7 +346,7 @@
   </div><!-- end print-area -->
 
   <!-- ===== Empty State ===== -->
-  @if (!loading && ((activeTab === 'profit-loss' && !profitLoss) || (activeTab === 'statement' && !statement) || (activeTab === 'daily' && !dailySummary) || (activeTab === 'trial-balance' && !trialBalance))) {
+  @if (!loading() && ((activeTab === 'profit-loss' && !profitLoss) || (activeTab === 'statement' && !statement) || (activeTab === 'daily' && !dailySummary) || (activeTab === 'trial-balance' && !trialBalance))) {
     <div class="empty-state">
       <div class="empty-icon-3d">
         <span class="material-icons-round">analytics</span>

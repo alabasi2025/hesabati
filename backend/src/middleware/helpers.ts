@@ -194,7 +194,8 @@ export function toErrorMessage(e: unknown): string {
 /**
  * التحقق من أن الـ ID المرسل رقم صحيح
  */
-export function parseId(value: string): number | null {
+export function parseId(value: string | undefined): number | null {
+  if (value === undefined || value === null) return null;
   const id = Number.parseInt(value, 10);
   if (Number.isNaN(id) || id <= 0) return null;
   return id;

@@ -1,9 +1,8 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
@@ -30,7 +29,8 @@ export class ExpenseBudgetComponent extends BasePageComponent {
   years: number[] = [];
   form: any = { name: '', stationId: null as number | null, amount: 0, currencyId: 1, expenseType: 'variable', month: null as number | null, year: null as number | null, notes: '' };
 
-  ngOnInit(): void {
+  override ngOnInit(): void {
+    super.ngOnInit();
     const y = new Date().getFullYear();
     for (let i = y; i >= y - 5; i--) this.years.push(i);
   }
@@ -74,12 +74,12 @@ export class ExpenseBudgetComponent extends BasePageComponent {
     try {
       const payload = { ...this.form, amount: Number(this.form.amount) };
       const id = this.editingId();
-      if (id !== null) {
-        await this.api.updateExpenseBudget(id, payload);
-        this.toast.success('تم تعديل البند بنجاح');
-      } else {
+      if (id === null) {
         await this.api.createExpenseBudget(this.bizId, payload);
         this.toast.success('تم إضافة بند الميزانية بنجاح');
+      } else {
+        await this.api.updateExpenseBudget(id, payload);
+        this.toast.success('تم تعديل البند بنجاح');
       }
       this.showForm.set(false);
       await this.load();

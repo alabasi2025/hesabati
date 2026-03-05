@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -17,7 +17,7 @@ export class ReportsAdvancedComponent extends BasePageComponent {
   private readonly toast = inject(ToastService);
 
   activeTab = 'profit-loss';
-  loading = false;
+  loading = signal(false);
   tabs = [
     { key: 'profit-loss', label: 'أرباح وخسائر', icon: 'trending_up' },
     { key: 'statement', label: 'كشف حساب', icon: 'receipt' },
@@ -61,7 +61,7 @@ export class ReportsAdvancedComponent extends BasePageComponent {
   }
 
   async loadTab() {
-    this.loading = true;
+    this.loading.set(true);
     try {
       switch (this.activeTab) {
         case 'profit-loss':
@@ -82,7 +82,7 @@ export class ReportsAdvancedComponent extends BasePageComponent {
       this.toast.error('حدث خطأ في تحميل التقرير');
       console.error(e);
     }
-    this.loading = false;
+    this.loading.set(false);
   }
 
   getSelectedAccountName(): string {

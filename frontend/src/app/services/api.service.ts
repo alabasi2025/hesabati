@@ -39,7 +39,7 @@ export interface Business {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly API_URL = '/api';
-  private auth = inject(AuthService);
+  private readonly auth = inject(AuthService);
 
   private getHeaders(): HeadersInit {
     const token = this.auth.getToken();
@@ -558,16 +558,16 @@ export class ApiService {
 
   // ===================== سجلات الرواتب (الوحدة 13) =====================
   getSalaryRecords(bizId: number, month?: number, year?: number) {
-    let url = `/businesses/${bizId}/salary-records`;
+    let url = `/businesses/${bizId}/salaries`;
     const p: string[] = [];
     if (month != null) p.push(`month=${month}`);
     if (year != null) p.push(`year=${year}`);
     if (p.length) url += '?' + p.join('&');
     return this.request<any[]>(url);
   }
-  createSalaryRecord(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/salary-records`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSalaryRecord(id: number, d: any)         { return this.request<any>(`/salary-records/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSalaryRecord(id: number)                 { return this.request<any>(`/salary-records/${id}`, { method: 'DELETE' }); }
+  createSalaryRecord(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/salaries`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSalaryRecord(id: number, d: any)         { return this.request<any>(`/salaries/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSalaryRecord(id: number)                 { return this.request<any>(`/salaries/${id}`, { method: 'DELETE' }); }
 
   // ===================== العمليات المخزنية =====================
   getWarehouseOperations(bizId: number, type?: string, warehouseId?: number) {

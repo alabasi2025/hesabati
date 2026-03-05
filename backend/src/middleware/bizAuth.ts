@@ -22,7 +22,7 @@ export async function userCanAccessBusiness(userId: number, role: string, bizId:
  */
 export function bizAuthMiddleware() {
   return async (c: Context, next: Next) => {
-    const bizId = Number.parseInt(c.req.param('bizId'), 10);
+    const bizId = Number.parseInt(c.req.param('bizId') ?? '', 10);
     if (!bizId || Number.isNaN(bizId)) {
       return c.json({ error: 'معرّف العمل غير صالح' }, 400);
     }

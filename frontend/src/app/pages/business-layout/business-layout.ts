@@ -57,6 +57,11 @@ export class BusinessLayoutComponent implements OnInit {
   private readonly bizService = inject(BusinessService);
   private readonly api = inject(ApiService);
 
+  constructor() {
+    const bizId = Number.parseInt(this.route.snapshot.params['bizId'] ?? '', 10);
+    if (bizId > 0) this.bizService.setBusinessId(bizId);
+  }
+
   ngOnInit() {
     const setFromParams = (params: { bizId?: string }) => {
       const bizId = Number.parseInt(params['bizId'] ?? '', 10);

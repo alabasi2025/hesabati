@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
@@ -40,7 +39,8 @@ export class SalariesComponent extends BasePageComponent {
     return b - a - d;
   });
 
-  ngOnInit(): void {
+  override ngOnInit(): void {
+    super.ngOnInit();
     const y = new Date().getFullYear();
     for (let i = y; i >= y - 5; i--) this.years.push(i);
   }
@@ -92,12 +92,12 @@ export class SalariesComponent extends BasePageComponent {
         currencyId: this.form.currencyId, isPaid: !!this.form.isPaid, attendanceDays: this.form.attendanceDays ?? null, notes: this.form.notes || '',
       };
       const id = this.editingId();
-      if (id !== null) {
-        await this.api.updateSalaryRecord(id, payload);
-        this.toast.success('تم تعديل سجل الراتب بنجاح');
-      } else {
+      if (id === null) {
         await this.api.createSalaryRecord(this.bizId, payload);
         this.toast.success('تم إضافة سجل الراتب بنجاح');
+      } else {
+        await this.api.updateSalaryRecord(id, payload);
+        this.toast.success('تم تعديل سجل الراتب بنجاح');
       }
       this.showForm.set(false);
       await this.load();
