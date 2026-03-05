@@ -1,8 +1,8 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, signal, inject } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 interface SidebarSection {
   id: number;
@@ -49,13 +49,12 @@ interface AppUser {
   templateUrl: './sidebar-settings.html',
   styleUrl: './sidebar-settings.scss',
 })
-export class SidebarSettingsComponent implements OnInit {
+export class SidebarSettingsComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
-  bizId = 0;
+  override bizId = 0;
   activeTab = signal<'users' | 'sections' | 'items'>('users');
 
   // Users tab
@@ -95,8 +94,7 @@ export class SidebarSettingsComponent implements OnInit {
   message = signal('');
   messageType = signal<'success' | 'error'>('success');
 
-  ngOnInit() {
-    this.bizId = Number(this.route.parent?.snapshot.paramMap.get('bizId') || 1);
+  protected onBizIdChange(_bizId: number): void {
     this.loadData();
   }
 

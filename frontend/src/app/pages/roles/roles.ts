@@ -1,9 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 const ALL_RESOURCES = [
   { key: 'vouchers', label: 'السندات', icon: 'receipt_long' },
@@ -27,12 +27,10 @@ const ACTION_LABELS: Record<string, string> = { create: 'إنشاء', read: 'ع�
   templateUrl: './roles.html',
   styleUrl: './roles.scss',
 })
-export class RolesComponent implements OnInit {
+export class RolesComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
 
-  bizId = 0;
   roles: any[] = [];
   users: any[] = [];
   userRoles: any[] = [];
@@ -44,8 +42,7 @@ export class RolesComponent implements OnInit {
   allActions = ALL_ACTIONS;
   assignUserId = ''; assignRoleId = '';
 
-  ngOnInit() {
-    this.bizId = Number(this.route.parent?.snapshot.paramMap.get('bizId'));
+  protected onBizIdChange(_bizId: number): void {
     this.load();
   }
 

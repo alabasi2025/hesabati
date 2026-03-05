@@ -1,10 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-reports-advanced',
@@ -13,13 +12,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './reports-advanced.html',
   styleUrl: './reports-advanced.scss',
 })
-export class ReportsAdvancedComponent implements OnInit {
+export class ReportsAdvancedComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
-  readonly biz = inject(BusinessService);
 
-  bizId = 0;
   activeTab = 'profit-loss';
   loading = false;
   tabs = [
@@ -40,8 +36,7 @@ export class ReportsAdvancedComponent implements OnInit {
   dailySummary: any = null;
   trialBalance: any = null;
 
-  ngOnInit() {
-    this.bizId = Number(this.route.parent?.snapshot.paramMap.get('bizId'));
+  protected onBizIdChange(_bizId: number): void {
     this.loadAccounts();
     this.loadTab();
   }

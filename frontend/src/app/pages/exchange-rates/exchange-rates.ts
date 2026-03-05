@@ -1,9 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-exchange-rates',
@@ -12,12 +12,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './exchange-rates.html',
   styleUrl: './exchange-rates.scss',
 })
-export class ExchangeRatesComponent implements OnInit {
+export class ExchangeRatesComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
 
-  bizId = 0;
   rates: any[] = [];
   currencies: any[] = [];
   showForm = false;
@@ -25,8 +23,7 @@ export class ExchangeRatesComponent implements OnInit {
   form: any = { fromCurrencyId: '', toCurrencyId: '', rate: '', effectiveDate: new Date().toISOString().split('T')[0], source: 'manual', notes: '' };
   convertFrom = ''; convertTo = ''; convertAmount = 1000; convertResult: number | null = null;
 
-  ngOnInit() {
-    this.bizId = Number(this.route.parent?.snapshot.paramMap.get('bizId'));
+  protected onBizIdChange(_bizId: number): void {
     this.load();
   }
 

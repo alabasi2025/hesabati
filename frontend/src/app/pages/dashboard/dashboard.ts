@@ -1,12 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { ThreeBackgroundComponent } from '../../components/three-background/three-background';
 import { ThreeChartComponent, ChartDataItem, ChartClickEvent } from '../../components/three-chart/three-chart';
 import { ThreeStatCardComponent } from '../../components/three-stat-card/three-stat-card';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,14 +14,10 @@ import { ThreeStatCardComponent } from '../../components/three-stat-card/three-s
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent extends BasePageComponent {
   private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private toast = inject(ToastService);
-  biz = inject(BusinessService);
 
-  bizId = 0;
   stations = signal<any[]>([]);
   employees = signal<any[]>([]);
   accounts = signal<any[]>([]);
@@ -48,11 +43,8 @@ export class DashboardComponent implements OnInit {
   // وضع العرض التقديمي
   presentationMode = signal(false);
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.loadData();
-    });
+  protected onBizIdChange(_bizId: number): void {
+    this.loadData();
   }
 
   async loadData() {
