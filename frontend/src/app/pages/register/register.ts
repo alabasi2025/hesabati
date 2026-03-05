@@ -12,8 +12,8 @@ import { ThreeBackgroundComponent } from '../../components/three-background/thre
   styleUrl: './register.scss',
 })
 export class RegisterComponent {
-  private auth = inject(AuthService);
-  private router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   username = signal('');
   password = signal('');
@@ -51,8 +51,8 @@ export class RegisterComponent {
       await this.auth.register(u, p, name, this.role());
       this.router.navigate(['/login']);
       // يمكن عرض رسالة نجاح عبر خدمة أو query param
-    } catch (err: any) {
-      this.error.set(err.message || 'فشل إنشاء الحساب');
+    } catch (err: unknown) {
+      this.error.set(err instanceof Error ? err.message : 'فشل إنشاء الحساب');
     } finally {
       this.isLoading.set(false);
     }

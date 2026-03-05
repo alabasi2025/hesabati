@@ -2,68 +2,27 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-businesses",
+      "id": "get-businesses-list",
       "workflowId": "backend/businesses",
-      "title": "GET /businesses",
-      "description": "api.ts: Queries all businesses from businesses table. Returns array of business objects.",
+      "title": "Get Businesses List",
+      "description": "GET /api/businesses. Returns array of all businesses with stats (stations, employees, accounts counts). No auth required for list. Returns 200 with [{id, name, code, icon, color, ...}].",
       "nodeType": "feature",
-      "fileName": "list-businesses",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-businesses-list",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "create-business",
+      "id": "get-stations-by-business",
       "workflowId": "backend/businesses",
-      "title": "POST /businesses",
-      "description": "api.ts: Accepts business data. Inserts into businesses table. Returns created business.",
+      "title": "Get Stations By Business",
+      "description": "GET /api/businesses/:bizId/stations. Returns array of stations for business. Requires bizId auth. Returns 200 with [{id, name, code, location, billingSystems, ...}].",
       "nodeType": "feature",
-      "fileName": "create-business",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-businesses"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "get-business",
-      "workflowId": "backend/businesses",
-      "title": "GET /businesses/:bizId",
-      "description": "api.ts: Protected by bizAuthMiddleware(). Queries single business by id. Returns business object.",
-      "nodeType": "feature",
-      "fileName": "get-business",
-      "position": {
-        "x": 200,
-        "y": 250
-      },
-      "dependencies": [
-        "list-businesses"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-stations-by-business",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
-  "edges": [
-    {
-      "id": "list-businesses-to-create-business",
-      "source": "list-businesses",
-      "target": "create-business"
-    },
-    {
-      "id": "list-businesses-to-get-business",
-      "source": "list-businesses",
-      "target": "get-business"
-    }
-  ]
+  "edges": []
 }

@@ -6,7 +6,7 @@ import { eq, sql, count } from 'drizzle-orm';
 const dashboardRoutes = new Hono();
 
 // دالة مساعدة لاستخراج العدد بأمان
-const num = (arr: any[], def = 0): number => {
+const num = (arr: { count: number }[], def = 0): number => {
   try {
     return Number(arr?.[0]?.count) || def;
   } catch {
@@ -57,7 +57,7 @@ dashboardRoutes.get('/stats', async (c) => {
       warehouses: num(warehouseCount),
       totalSalaries: salaryResult?.[0]?.total || '0',
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('خطأ في جلب إحصائيات لوحة التحكم:', error);
     return c.json({
       error: 'حدث خطأ في جلب الإحصائيات',

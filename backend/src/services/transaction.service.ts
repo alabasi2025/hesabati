@@ -27,6 +27,7 @@ import {
   auditLog,
 } from '../db/schema/index.ts';
 import { generateOperationSequences, TYPE_PREFIXES } from '../middleware/sequencing.ts';
+import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
 
 // ===================== الأنواع (Types) =====================
 
@@ -79,26 +80,9 @@ export interface ReversalResult {
   journalEntry: any;
 }
 
-// ===================== دوال التحقق من الملكية =====================
-
-/**
- * التحقق من أن الحساب ينتمي لنفس العمل (bizId)
- * هذه القاعدة الأساسية لمنع تسرب البيانات بين الأعمال
- */
-export async function verifyAccountOwnership(accountId: number, bizId: number): Promise<boolean> {
-  const [acc] = await db.select({ id: accounts.id }).from(accounts)
-    .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)));
-  return !!acc;
-}
-
-/**
- * التحقق من أن الصندوق ينتمي لنفس العمل (bizId)
- */
-export async function verifyFundOwnership(fundId: number, bizId: number): Promise<boolean> {
-  const [f] = await db.select({ id: funds.id }).from(funds)
-    .where(and(eq(funds.id, fundId), eq(funds.businessId, bizId)));
-  return !!f;
-}
+// ===================== التحقق من الملكية (مستورد من _shared/ownership) =====================
+// re-export للاستخدام الخارجي إن لزم
+export { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
 
 /**
  * التحقق الصارم من ملكية كل الكيانات المالية في المعاملة لنفس bizId

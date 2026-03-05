@@ -1,9 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 interface UiPage {
   id: number;
@@ -69,13 +69,10 @@ const SOURCE_TYPES = [
   templateUrl: './ui-builder.html',
   styleUrl: './ui-builder.scss',
 })
-export class UiBuilderComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private api = inject(ApiService);
-  private toast = inject(ToastService);
+export class UiBuilderComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   loading = signal(true);
   saving = signal(false);
 
@@ -112,11 +109,8 @@ export class UiBuilderComponent implements OnInit {
   componentTypes = COMPONENT_TYPES;
   sourceTypes = SOURCE_TYPES;
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      await this.loadPages();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    void this.loadPages();
   }
 
   // ===================== Pages CRUD =====================
@@ -158,7 +152,7 @@ export class UiBuilderComponent implements OnInit {
       }
       this.showPageModal.set(false);
       await this.loadPages();
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حفظ الصفحة'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حفظ الصفحة'); }
     finally { this.saving.set(false); }
   }
 
@@ -170,7 +164,7 @@ export class UiBuilderComponent implements OnInit {
       this.toast.success('تم حذف الصفحة');
       if (this.activePage()?.id === page.id) { this.activePage.set(null); this.viewMode.set('list'); }
       await this.loadPages();
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حذف الصفحة'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حذف الصفحة'); }
   }
 
   async openPage(page: UiPage) {
@@ -246,7 +240,7 @@ export class UiBuilderComponent implements OnInit {
       }
       this.showComponentModal.set(false);
       await this.openPage(this.activePage()!);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حفظ المكون'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حفظ المكون'); }
     finally { this.saving.set(false); }
   }
 
@@ -257,7 +251,7 @@ export class UiBuilderComponent implements OnInit {
       await this.api.deleteUiComponent(this.bizId, comp.id);
       this.toast.success('تم حذف المكون');
       await this.openPage(this.activePage()!);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حذف المكون'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حذف المكون'); }
   }
 
   // ===================== Data Sources CRUD =====================
@@ -295,7 +289,7 @@ export class UiBuilderComponent implements OnInit {
       this.dsForm.set({ name: '', sourceType: 'table', tableName: '', queryTemplate: '', config: '{}' });
       const ds = await this.api.getUiDataSources(this.bizId);
       this.dataSources.set(ds || []);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حفظ مصدر البيانات'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حفظ مصدر البيانات'); }
     finally { this.saving.set(false); }
   }
 
@@ -307,7 +301,7 @@ export class UiBuilderComponent implements OnInit {
       this.toast.success('تم حذف مصدر البيانات');
       const dsList = await this.api.getUiDataSources(this.bizId);
       this.dataSources.set(dsList || []);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حذف مصدر البيانات'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حذف مصدر البيانات'); }
   }
 
   async previewDataSource(ds: UiDataSource) {
@@ -316,7 +310,7 @@ export class UiBuilderComponent implements OnInit {
     try {
       const result = await this.api.executeUiDataSource(this.bizId, ds.id, { limit: 10 });
       this.dsPreviewData.set(result);
-    } catch (e: any) { this.dsPreviewData.set({ error: e.message || 'خطأ' }); }
+    } catch (e: unknown) { this.dsPreviewData.set({ error: e instanceof Error ? e.message : 'خطأ' }); }
     finally { this.dsPreviewLoading.set(false); }
   }
 

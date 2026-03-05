@@ -12,8 +12,8 @@ import { ThreeBackgroundComponent } from '../../components/three-background/thre
   styleUrl: './login.scss',
 })
 export class LoginComponent {
-  private auth = inject(AuthService);
-  private router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   username = signal('');
   password = signal('');
@@ -33,8 +33,8 @@ export class LoginComponent {
     try {
       await this.auth.login(this.username(), this.password());
       this.router.navigate(['/businesses']);
-    } catch (err: any) {
-      this.error.set(err.message || 'فشل تسجيل الدخول');
+    } catch (err: unknown) {
+      this.error.set(err instanceof Error ? err.message : 'فشل تسجيل الدخول');
     } finally {
       this.isLoading.set(false);
     }

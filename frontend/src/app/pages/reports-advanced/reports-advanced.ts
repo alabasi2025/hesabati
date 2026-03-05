@@ -14,10 +14,10 @@ import { BusinessService } from '../../services/business.service';
   styleUrl: './reports-advanced.scss',
 })
 export class ReportsAdvancedComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private toast = inject(ToastService);
-  biz = inject(BusinessService);
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly toast = inject(ToastService);
+  readonly biz = inject(BusinessService);
 
   bizId = 0;
   activeTab = 'profit-loss';
@@ -83,7 +83,7 @@ export class ReportsAdvancedComponent implements OnInit {
           this.trialBalance = await this.api.getTrialBalance(this.bizId, this.dateFrom, this.dateTo);
           break;
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.toast.error('حدث خطأ في تحميل التقرير');
       console.error(e);
     }

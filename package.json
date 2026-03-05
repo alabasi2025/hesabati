@@ -1,0 +1,10 @@
+{
+  "name": "hesabati",
+  "private": true,
+  "description": "نظام حساباتي - إدارة مالية شاملة",
+  "scripts": {
+    "check": "pnpm -C backend run build && pnpm -C frontend run build && pnpm -C backend run db:check && node .tdad/scripts/validate-workflows.mjs",
+    "check:tdad": "node .tdad/scripts/validate-workflows.mjs",
+    "check:spell": "npx cspell \"frontend/src/**\" \"backend/src/**\" --no-progress"
+  }
+}

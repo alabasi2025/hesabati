@@ -2,68 +2,26 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "profit-loss",
+      "id": "get-profit-loss-report",
       "workflowId": "backend/reports",
-      "title": "GET /businesses/:bizId/reports/profit-loss",
-      "description": "api.ts line 3057: Returns profit/loss report for date range. Aggregates revenue and expense accounts.",
+      "title": "Get Profit Loss Report",
+      "description": "GET /api/businesses/:bizId/reports/profit-loss with query startDate and endDate. Returns aggregated revenue and expenses for period. Returns 200 with {totalRevenue, totalExpenses, netProfit, details}.",
       "nodeType": "feature",
-      "fileName": "profit-loss",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-profit-loss-report",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "account-statement",
+      "id": "get-trial-balance",
       "workflowId": "backend/reports",
-      "title": "GET /businesses/:bizId/reports/account-statement/:accountId",
-      "description": "api.ts line 3103: Returns account statement with all transactions for date range.",
+      "title": "Get Trial Balance",
+      "description": "GET /api/businesses/:bizId/reports/trial-balance with optional date. Returns trial balance data. Returns 200 with array of account balances.",
       "nodeType": "feature",
-      "fileName": "account-statement",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
+      "fileName": "get-trial-balance",
+      "position": { "x": 300, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "daily-summary",
-      "workflowId": "backend/reports",
-      "title": "GET /businesses/:bizId/reports/daily-summary",
-      "description": "api.ts line 3153: Returns daily summary of all transactions for a specific date.",
-      "nodeType": "feature",
-      "fileName": "daily-summary",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "trial-balance",
-      "workflowId": "backend/reports",
-      "title": "GET /businesses/:bizId/reports/trial-balance",
-      "description": "api.ts line 3194: Returns trial balance report with all account balances.",
-      "nodeType": "feature",
-      "fileName": "trial-balance",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     }
   ],
   "edges": []

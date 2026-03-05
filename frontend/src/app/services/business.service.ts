@@ -19,16 +19,26 @@ export class BusinessService {
     localStorage.setItem('hesabati_biz', JSON.stringify({ id, name, color, icon, type }));
   }
 
+  /** تعيين معرف العمل فوراً من المسار حتى تبدأ الصفحات الفرعية التحميل دون انتظار تفاصيل العمل */
+  setBusinessId(id: number): void {
+    this.currentBusinessId.set(id);
+  }
+
   loadFromStorage(): boolean {
     const saved = localStorage.getItem('hesabati_biz');
     if (saved) {
-      const { id, name, color, icon, type } = JSON.parse(saved);
-      this.currentBusinessId.set(id);
-      this.currentBusinessName.set(name);
-      this.currentBusinessColor.set(color);
-      this.currentBusinessIcon.set(icon);
-      this.currentBusinessType.set(type || 'stations');
-      return true;
+      try {
+        const parsed = JSON.parse(saved) as { id: number; name: string; color: string; icon: string; type?: BusinessType };
+        const { id, name, color, icon, type } = parsed;
+        this.currentBusinessId.set(id);
+        this.currentBusinessName.set(name);
+        this.currentBusinessColor.set(color);
+        this.currentBusinessIcon.set(icon);
+        this.currentBusinessType.set(type || 'stations');
+        return true;
+      } catch {
+        return false;
+      }
     }
     return false;
   }

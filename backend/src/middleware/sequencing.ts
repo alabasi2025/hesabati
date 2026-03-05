@@ -9,6 +9,7 @@
 import { db } from '../db/index.ts';
 import { sequenceCounters } from '../db/schema/core.ts';
 import { eq, and, sql } from 'drizzle-orm';
+import { getFirstRow } from '../utils/db-result.ts';
 
 /**
  * الحصول على الرقم التسلسلي التالي لعداد معين
@@ -38,8 +39,9 @@ export async function getNextSequence(
     DO UPDATE SET last_number = sequence_counters.last_number + 1, updated_at = NOW()
     RETURNING last_number
   `);
-  
-  return (result as any).rows?.[0]?.last_number || (result as any)[0]?.last_number || 1;
+
+  const row = getFirstRow<{ last_number: number }>(result);
+  return row?.last_number ?? 1;
 }
 
 /**

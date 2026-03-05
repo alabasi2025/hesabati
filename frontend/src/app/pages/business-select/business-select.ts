@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService, Business } from '../../services/api.service';
 import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../services/auth.service';
@@ -14,27 +14,42 @@ import { BusinessService, BusinessType } from '../../services/business.service';
   styleUrl: './business-select.scss',
 })
 export class BusinessSelectComponent implements OnInit {
-  private api = inject(ApiService);
-  private router = inject(Router);
-  private auth = inject(AuthService);
-  private bizService = inject(BusinessService);
-  theme = inject(ThemeService);
+  private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
+  private readonly bizService = inject(BusinessService);
+  readonly theme = inject(ThemeService);
 
   businesses = signal<Business[]>([]);
   loading = signal(true);
+  loadError = signal('');
+  noAccessMessage = signal('');
   userName = signal('');
 
   ngOnInit() {
     this.userName.set(this.auth.getUserName() || 'المالك');
+    this.noAccessMessage.set(this.route.snapshot.queryParamMap.get('error') === 'no_access'
+      ? 'ليس لديك صلاحية على العمل المحدد. يرجى اختيار عمل آخر أو التواصل مع المسؤول.'
+      : '');
     this.loadBusinesses();
   }
 
   async loadBusinesses() {
+    this.loadError.set('');
+    if (!this.auth.getToken()) {
+      this.loading.set(false);
+      this.loadError.set('لم يتم تسجيل الدخول. جاري التوجيه...');
+      setTimeout(() => this.auth.logout(), 800);
+      return;
+    }
     try {
       const data = await this.api.getBusinesses();
-      this.businesses.set(data);
-    } catch (e) {
-      console.error(e);
+      this.businesses.set(Array.isArray(data) ? data : []);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'فشل تحميل قائمة الأعمال';
+      this.loadError.set(msg);
+      this.businesses.set([]);
     } finally {
       this.loading.set(false);
     }

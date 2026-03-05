@@ -2,114 +2,62 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-funds",
+      "id": "get-funds-list",
       "workflowId": "backend/funds",
-      "title": "GET /businesses/:bizId/funds",
-      "description": "api.ts line 566: Protected by bizAuthMiddleware(). Joins funds with fund_balances, currencies, stations. Returns funds with balances.",
+      "title": "Get Funds List",
+      "description": "GET /api/businesses/:bizId/funds. Returns array of funds for business with balances joined. Requires Authorization header and bizId membership. Returns 200 with [{id, name, fundType (cash/bank/exchange/e-wallet), provider, stationId, stationName, responsiblePerson, balance, currencyId, createdAt}]. Funds ordered by fundType and name. Returns 401 if unauthorized. Returns 403 if not member of business.",
       "nodeType": "feature",
-      "fileName": "list-funds",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-funds-list",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "get-fund",
+      "id": "get-fund-by-id",
       "workflowId": "backend/funds",
-      "title": "GET /funds/:id",
-      "description": "api.ts line 511: Queries single fund by id. Returns fund object or 404.",
+      "title": "Get Fund By Id",
+      "description": "GET /funds/:id. Returns single fund with balance. Returns 200 with {id, name, fundType, balance, ...}. Returns 404 if not found. Used for lookups when creating vouchers.",
       "nodeType": "feature",
-      "fileName": "get-fund",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-funds"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-fund-by-id",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "create-fund",
+      "id": "post-fund-create",
       "workflowId": "backend/funds",
-      "title": "POST /businesses/:bizId/funds",
-      "description": "api.ts line 593: Accepts {name, fundType, stationId, currencyId, ...}. Inserts into funds table. Creates initial fund_balance record.",
+      "title": "Post Fund Create",
+      "description": "POST /api/businesses/:bizId/funds with body {name, fundType, provider, stationId, responsiblePerson, currencyId, initialBalance}. Validates fundType in allowed list (cash, bank, exchange, e-wallet). Inserts into funds table and creates initial balance record if initialBalance provided. Returns 201 with created fund {id, name, fundType, ...}. Returns 400 if validation fails or fundType invalid. Requires funds create permission.",
       "nodeType": "feature",
-      "fileName": "create-fund",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-funds"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-fund-create",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "update-fund",
+      "id": "put-fund-update",
       "workflowId": "backend/funds",
-      "title": "PUT /businesses/:bizId/funds/:id",
-      "description": "api.ts line 614: Updates fund fields. Validates fund belongs to business.",
+      "title": "Put Fund Update",
+      "description": "PUT /api/businesses/:bizId/funds/:id with body fields to update (name, provider, responsiblePerson, isActive). Validates fundId belongs to business. Cannot change fundType after creation. Updates funds table. Returns 200 with updated fund. Returns 404 if fund not found. Returns 403 if fund not in business.",
       "nodeType": "feature",
-      "fileName": "update-fund",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-funds"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "put-fund-update",
+      "position": { "x": 700, "y": 100 },
+      "dependencies": ["get-funds-list"],
+      "testLayers": ["api"]
     },
     {
       "id": "delete-fund",
       "workflowId": "backend/funds",
-      "title": "DELETE /businesses/:bizId/funds/:id",
-      "description": "api.ts line 625: Deletes fund by id.",
+      "title": "Delete Fund",
+      "description": "DELETE /api/businesses/:bizId/funds/:id. Validates ownership then deletes from funds table (cascade deletes balances). Returns 200 with {success: true}. Returns 404 if not found. Returns 403 if not authorized. Returns 400 if fund has transactions (cannot delete). Requires funds delete permission.",
       "nodeType": "feature",
       "fileName": "delete-fund",
-      "position": {
-        "x": 500,
-        "y": 250
-      },
-      "dependencies": [
-        "list-funds"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "position": { "x": 100, "y": 300 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
   "edges": [
-    {
-      "id": "list-funds-to-get-fund",
-      "source": "list-funds",
-      "target": "get-fund"
-    },
-    {
-      "id": "list-funds-to-create-fund",
-      "source": "list-funds",
-      "target": "create-fund"
-    },
-    {
-      "id": "list-funds-to-update-fund",
-      "source": "list-funds",
-      "target": "update-fund"
-    },
-    {
-      "id": "list-funds-to-delete-fund",
-      "source": "list-funds",
-      "target": "delete-fund"
-    }
+    { "id": "list-to-update", "source": "get-funds-list", "target": "put-fund-update" }
   ]
 }

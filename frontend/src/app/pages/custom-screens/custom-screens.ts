@@ -1,33 +1,17 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
-import { ActivatedRoute, Router } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { WebSocketService } from '../../services/websocket.service';
-
-// ===== Account Type Metadata =====
-const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
-  billing:      { label: 'فوترة',    icon: 'receipt',                  color: '#a855f7' },
-  fund:         { label: 'صندوق',    icon: 'savings',                  color: '#22c55e' },
-  bank:         { label: 'بنك',      icon: 'account_balance',          color: '#3b82f6' },
-  e_wallet:     { label: 'محفظة',    icon: 'account_balance_wallet',   color: '#8b5cf6' },
-  exchange:     { label: 'صراف',     icon: 'currency_exchange',        color: '#f59e0b' },
-  accounting:   { label: 'محاسبي',   icon: 'book',                     color: '#14b8a6' },
-  intermediary: { label: 'وسيط',     icon: 'swap_horiz',               color: '#f97316' },
-  cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
-  custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
-  service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
-  warehouse:    { label: 'مخزن',     icon: 'warehouse',                color: '#0ea5e9' },
-};
-
-function getAccTypeMeta(type: string) {
-  return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
-}
+import { BasePageComponent } from '../../shared/base-page.component';
+import { ACCOUNT_TYPE_META, getAccTypeMeta } from '../../shared/constants/account-types';
+import { formatAmount as formatAmountShared, formatAmountPrecise, formatDate as formatDateShared } from '../../shared/helpers';
+import { takeUntil } from 'rxjs';
 
 // ===== Tab Type Definitions =====
 interface TabDefinition {
@@ -102,14 +86,11 @@ const TAB_TYPE_OPTIONS = [
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
 })
-export class CustomScreensComponent implements OnInit, OnDestroy {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private api = inject(ApiService);
-  private toast = inject(ToastService);
-  private wsService = inject(WebSocketService);
+export class CustomScreensComponent extends BasePageComponent implements OnDestroy {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
+  private readonly wsService = inject(WebSocketService);
 
-  bizId = 0;
   loading = signal(true);
   saving = signal(false);
 
@@ -291,33 +272,34 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   // ===================== Lifecycle =====================
   private wsEffect: any = null;
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      await this.loadScreens();
-      this.loadCurrencies();
-      // اتصال WebSocket للتحديث الفوري
-      try {
-        const userId = parseInt(localStorage.getItem('userId') || '0');
-        if (userId && this.bizId) {
-          this.wsService.connect(userId, this.bizId);
-        }
-      } catch (e) { /* WebSocket optional */ }
-      this.route.queryParams.subscribe(async (qp) => {
-        if (qp['screen']) {
-          this.openedFromSidebar.set(true);
-          const screenId = parseInt(qp['screen']);
-          const screen = this.screens().find(s => s.id === screenId);
-          if (screen) await this.openScreen(screen);
-        }
-      });
+  constructor() {
+    super();
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(async (qp) => {
+      if (qp['screen']) {
+        this.openedFromSidebar.set(true);
+        const screenId = Number.parseInt(qp['screen'], 10);
+        const screen = this.screens().find(s => s.id === screenId);
+        if (screen) await this.openScreen(screen);
+      }
     });
   }
 
-  ngOnDestroy() {
+  protected override onBizIdChange(_bizId: number): void {
+    void this.loadScreens();
+    this.loadCurrencies();
+    try {
+      const userId = Number.parseInt(localStorage.getItem('userId') || '0', 10);
+      if (userId && this.bizId) {
+        this.wsService.connect(userId, this.bizId);
+      }
+    } catch (e) { /* WebSocket optional */ }
+  }
+
+  override ngOnDestroy(): void {
     if (this.notesSaveTimeout) clearTimeout(this.notesSaveTimeout);
     this.stopAutoRefresh();
     this.wsService.disconnect();
+    super.ngOnDestroy();
   }
 
   // ===================== Load Data =====================
@@ -326,8 +308,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     try {
       const data = await this.api.getScreens(this.bizId);
       this.screens.set(data);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الشاشات');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الشاشات');
     } finally {
       this.loading.set(false);
     }
@@ -361,8 +343,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
       // Load data for each tab type
       await this.loadTabsData(tabs);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في تحميل الشاشة');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الشاشة');
     } finally {
       this.loading.set(false);
     }
@@ -407,7 +389,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       };
       if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
       if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
-      if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
+      if (this.logFilterOpType()) filters.operationTypeId = Number.parseInt(this.logFilterOpType(), 10);
       if (this.logSearchQuery()) filters.search = this.logSearchQuery();
       if (this.logMinAmount()) filters.minAmount = this.logMinAmount();
       if (this.logMaxAmount()) filters.maxAmount = this.logMaxAmount();
@@ -420,7 +402,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         const filters: any = { limit: 50 };
         if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
         if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
-        if (this.logFilterOpType()) filters.operationTypeId = parseInt(this.logFilterOpType());
+        if (this.logFilterOpType()) filters.operationTypeId = Number.parseInt(this.logFilterOpType(), 10);
         const result = await this.api.getWidgetLog(this.bizId, filters);
         this.logEntries.set(result.entries || []);
         this.logTotal.set(result.total || 0);
@@ -499,8 +481,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     try {
       const details = await this.api.getVoucherDetails(this.bizId, entryId);
       this.selectedVoucherDetails.set(details);
-    } catch (e: any) {
-      this.toast.error(e.message || 'خطأ في جلب التفاصيل');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في جلب التفاصيل');
       this.showVoucherDetails.set(false);
     } finally {
       this.voucherDetailsLoading.set(false);
@@ -653,11 +635,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   }
 
   getFormTotal(): number {
-    return this.csFormEntries().reduce((sum, e) => { const amt = parseFloat(e.amount); return sum + (isNaN(amt) ? 0 : amt); }, 0);
+    return this.csFormEntries().reduce((sum, e) => { const amt = Number.parseFloat(e.amount); return sum + (Number.isNaN(amt) ? 0 : amt); }, 0);
   }
 
   getFilledEntriesCount(): number {
-    return this.csFormEntries().filter(e => parseFloat(e.amount) > 0).length;
+    return this.csFormEntries().filter(e => Number.parseFloat(e.amount) > 0).length;
   }
 
   getAccountBalance(accountId: number): number {
@@ -690,7 +672,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     if (this.isTransferType()) {
       const fromId = this.csTransferFromAccountId();
       const toId = this.csTransferToAccountId();
-      const amount = parseFloat(this.csTransferAmount());
+      const amount = Number.parseFloat(this.csTransferAmount());
       if (!fromId || !toId) { this.toast.warning('اختر حساب المصدر والوجهة'); return; }
       if (fromId === toId) { this.toast.warning('لا يمكن التحويل لنفس الحساب'); return; }
       if (!amount || amount <= 0) { this.toast.warning('أدخل مبلغاً صحيحاً'); return; }
@@ -717,18 +699,18 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         this.csSelectedOpType.set(null); this.csTransferFromAccountId.set(null); this.csTransferToAccountId.set(null); this.csTransferAmount.set('');
         const screen = this.activeScreen();
         if (screen) await this.openScreen(screen);
-      } catch (e: any) { this.toast.error(e.message || 'خطأ في التحويل'); }
+      } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في التحويل'); }
       finally { this.saving.set(false); }
       return;
     }
 
     // Regular operation (receipt/payment)
-    const entries = this.csFormEntries().filter(e => parseFloat(e.amount) > 0);
+    const entries = this.csFormEntries().filter(e => Number.parseFloat(e.amount) > 0);
     if (!entries.length) { this.toast.warning('أدخل مبلغاً واحداً على الأقل'); return; }
 
     const total = this.getFormTotal();
     const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'توريد' : 'عملية';
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد ${vTypeLabel} - ${opType.name}`,
       message: `سيتم تنفيذ ${entries.length} عملية بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
@@ -743,13 +725,13 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         try {
           const result = await this.api.createVoucher(this.bizId, {
             voucherType: opType.voucherType || 'receipt', operationTypeId: opType.id,
-            toAccountId: entry.accountId, amount: parseFloat(entry.amount),
+            toAccountId: entry.accountId, amount: Number.parseFloat(entry.amount),
             currencyId: this.csFormCurrencyId(),
             description: this.csFormDescription() || `${opType.name} - ${entry.accountName}`,
             voucherDate: this.csFormDate(),
           });
           results.push(result);
-        } catch (e: any) { errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`); }
+        } catch (e: unknown) { errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`); }
       }
 
       if (results.length > 0 && errors.length === 0) {
@@ -763,7 +745,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       if (results.length > 0) { this.csSelectedOpType.set(null); this.csFormEntries.set([]); this.csFormCurrencyId.set(1); }
       const screen = this.activeScreen();
       if (screen) await this.openScreen(screen);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في تنفيذ العملية'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في تنفيذ العملية'); }
     finally { this.saving.set(false); }
   }
 
@@ -997,7 +979,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       const screen = this.screens().find(s => s.id === screenId);
       if (screen) await this.openScreen(screen);
       else this.viewMode.set('list');
-    } catch (e: any) { this.toast.error(e.message || 'خطأ أثناء الحفظ'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء الحفظ'); }
     finally { this.saving.set(false); }
   }
 
@@ -1107,7 +1089,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       this.toast.success('تم حفظ الإعداد بنجاح');
       this.closeConfigWizard();
       await this.openScreen(screen);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في حفظ الإعداد'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حفظ الإعداد'); }
     finally { this.saving.set(false); }
   }
 
@@ -1148,7 +1130,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         const updated = this.screens().find(s => s.id === editing.id);
         if (updated) this.activeScreen.set(updated);
       }
-    } catch (e: any) { this.toast.error(e.message || 'حدث خطأ'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
     finally { this.saving.set(false); }
   }
 
@@ -1162,7 +1144,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       this.toast.success('تم حذف الشاشة');
       await this.loadScreens();
       if (this.activeScreen()?.id === screen.id) this.backToList();
-    } catch (e: any) { this.toast.error(e.message || 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
   }
 
   async cloneScreen(screen: ScreenTemplate) {
@@ -1171,7 +1153,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       await this.api.cloneScreen(screen.id, { name: `${screen.name} (نسخة)` });
       this.toast.success('تم نسخ الشاشة بنجاح');
       await this.loadScreens();
-    } catch (e: any) { this.toast.error(e.message || 'حدث خطأ أثناء النسخ'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء النسخ'); }
     finally { this.saving.set(false); }
   }
 
@@ -1186,7 +1168,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       const map: { [userId: number]: string } = {};
       for (const p of perms) map[p.userId] = p.permission;
       this.permissionsMap.set(map);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في تحميل الصلاحيات'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الصلاحيات'); }
     finally { this.permissionsLoading.set(false); }
   }
 
@@ -1206,11 +1188,11 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
     this.saving.set(true);
     try {
       const map = this.permissionsMap();
-      const permissions = Object.entries(map).map(([userId, permission]) => ({ userId: parseInt(userId), permission }));
+      const permissions = Object.entries(map).map(([userId, permission]) => ({ userId: Number.parseInt(userId, 10), permission }));
       await this.api.batchUpdateScreenPermissions(screen.id, permissions);
       this.toast.success('تم حفظ الصلاحيات بنجاح');
       this.closePermissionsModal();
-    } catch (e: any) { this.toast.error(e.message || 'خطأ أثناء حفظ الصلاحيات'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء حفظ الصلاحيات'); }
     finally { this.saving.set(false); }
   }
 
@@ -1224,7 +1206,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       this.sidebarSections.set(sections);
       if (sections.length > 0) this.selectedSidebarSection.set(sections[0].id);
       this.showSidebarModal.set(true);
-    } catch (e: any) { this.toast.error(e.message || 'خطأ في تحميل الأقسام'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الأقسام'); }
   }
 
   closeSidebarModal() { this.showSidebarModal.set(false); this.sidebarScreen.set(null); }
@@ -1238,7 +1220,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
       await this.api.addScreenToSidebar(this.bizId, screen.id, { sectionId, sortOrder: this.sidebarSortOrder() });
       this.toast.success('تم إضافة الشاشة للقائمة الجانبية');
       this.closeSidebarModal();
-    } catch (e: any) { this.toast.error(e.message || 'خطأ أثناء الإضافة'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء الإضافة'); }
     finally { this.saving.set(false); }
   }
 
@@ -1258,9 +1240,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
 
   // ===================== Helpers =====================
   formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateShared(dateStr || '', 'ar-SA');
   }
 
   formatNumber(num: number): string {
@@ -1269,9 +1249,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
   }
 
   formatAmount(amount: string | number): string {
-    const n = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(n)) return '0';
-    return n.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return formatAmountPrecise(amount, 0, 2, 'ar-SA');
   }
 
   getVoucherTypeLabel(type: string): string {
@@ -1347,7 +1325,7 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
           this.reportData.set({ type: 'operations_summary', data });
         } catch (e) { this.reportData.set({ type: 'operations_summary', data: null, error: true }); }
       }
-    } catch (e: any) { this.toast.error(e?.message || 'حدث خطأ'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
     finally { this.reportLoading.set(false); }
   }
 
@@ -1498,8 +1476,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
         if (this.screenTabs().length > 0) this.activeTabId.set(this.screenTabs()[0].id);
         this.viewMode.set('screen');
         this.toast.success(`تم إنشاء شاشة "${preset.name}" بنجاح`);
-      } catch (e: any) {
-        this.toast.error(e?.message || 'حث خطأ');
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'حث خطأ');
       }
     } else {
       // تطبيق القالب على الشاشة الحالية
@@ -1510,8 +1488,8 @@ export class CustomScreensComponent implements OnInit, OnDestroy {
           layoutConfig: { tabs },
         });
         this.toast.success('تم تطبيق القالب بنجاح');
-      } catch (e: any) {
-        this.toast.error(e?.message || 'حدث خطأ');
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
       }
     }
     this.showTemplatesModal.set(false);

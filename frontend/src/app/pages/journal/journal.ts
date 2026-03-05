@@ -1,9 +1,10 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
+import { formatAmount as formatAmountShared, formatDate as formatDateShared } from '../../shared/helpers';
 
 interface JournalLine {
   accountId: number | null;
@@ -19,12 +20,10 @@ interface JournalLine {
   templateUrl: './journal.html',
   styleUrl: './journal.scss',
 })
-export class JournalComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private toast = inject(ToastService);
+export class JournalComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   entries = signal<any[]>([]);
   accounts = signal<any[]>([]);
   operationTypes = signal<any[]>([]);
@@ -65,11 +64,8 @@ export class JournalComponent implements OnInit {
     return this.operationTypes().filter(ot => ot.category === 'journal');
   });
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -84,8 +80,8 @@ export class JournalComponent implements OnInit {
       this.entries.set(entries);
       this.accounts.set(accounts);
       this.operationTypes.set(opTypes);
-    } catch (e: any) {
-      this.error.set(e.message || 'حدث خطأ في تحميل البيانات');
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : 'حدث خطأ في تحميل البيانات');
     }
     this.loading.set(false);
   }
@@ -170,8 +166,8 @@ export class JournalComponent implements OnInit {
       });
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.error.set(e.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : 'حدث خطأ');
     }
     this.saving.set(false);
   }
@@ -216,8 +212,8 @@ export class JournalComponent implements OnInit {
       });
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.error.set(e.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : 'حدث خطأ');
     }
     this.saving.set(false);
   }
@@ -228,8 +224,8 @@ export class JournalComponent implements OnInit {
     try {
       await this.api.deleteJournalEntry(id);
       await this.load();
-    } catch (e: any) {
-      this.error.set(e.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : 'حدث خطأ');
     }
   }
 
@@ -240,12 +236,11 @@ export class JournalComponent implements OnInit {
   }
 
   formatDate(d: string): string {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateShared(d || '');
   }
 
-  formatAmount(amount: any): string {
-    return Number(amount || 0).toLocaleString('ar-YE');
+  formatAmount(amount: unknown): string {
+    return formatAmountShared(amount);
   }
 
   getStatusLabel(s: string): string {

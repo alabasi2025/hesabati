@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
+import { formatAmount as formatAmountShared, formatDate as formatDateShared, formatDateTime as formatDateTimeShared } from '../../shared/helpers';
 
 @Component({
   selector: 'app-vouchers',
@@ -13,13 +14,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './vouchers.html',
   styleUrl: './vouchers.scss',
 })
-export class VouchersComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private api = inject(ApiService);
-  private toast = inject(ToastService);
-  biz = inject(BusinessService);
+export class VouchersComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   loading = signal(true);
   saving = signal(false);
   vouchers = signal<any[]>([]);
@@ -94,7 +92,7 @@ export class VouchersComponent implements OnInit {
   // ===================== Template-linked accounts =====================
   linkedAccounts = computed(() => {
     const ot = this.selectedOpType();
-    if (!ot || !ot.accounts) return [];
+    if (!ot?.accounts) return [];
     return ot.accounts;
   });
 
@@ -167,8 +165,8 @@ export class VouchersComponent implements OnInit {
     const all = this.vouchers();
     const receipts = all.filter(v => v.voucherType === 'receipt');
     const payments = all.filter(v => v.voucherType === 'payment');
-    const totalReceipt = receipts.reduce((s, v) => s + parseFloat(v.amount || 0), 0);
-    const totalPayment = payments.reduce((s, v) => s + parseFloat(v.amount || 0), 0);
+    const totalReceipt = receipts.reduce((s, v) => s + Number.parseFloat(v.amount || 0), 0);
+    const totalPayment = payments.reduce((s, v) => s + Number.parseFloat(v.amount || 0), 0);
     const drafts = all.filter(v => v.status === 'draft').length;
     const confirmed = all.filter(v => v.status === 'confirmed').length;
     const cancelled = all.filter(v => v.status === 'cancelled').length;
@@ -192,11 +190,8 @@ export class VouchersComponent implements OnInit {
     { value: 'cancelled', label: 'ملغي', icon: 'cancel', color: '#ef4444' },
   ];
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      await Promise.all([this.loadVouchers(), this.loadOperationTypes(), this.loadAccounts(), this.loadFunds()]);
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    void Promise.all([this.loadVouchers(), this.loadOperationTypes(), this.loadAccounts(), this.loadFunds()]);
   }
 
   async loadVouchers() {
@@ -221,13 +216,13 @@ export class VouchersComponent implements OnInit {
       const result = await this.api.getVouchersEnhanced(this.bizId, filters);
       this.vouchers.set(result.vouchers || result);
       this.totalVouchers.set(result.total || (result.vouchers || result).length);
-    } catch (e: any) {
+    } catch (e: unknown) {
       try {
         const data = await this.api.getVouchers(this.bizId);
         this.vouchers.set(data);
         this.totalVouchers.set(data.length);
-      } catch (e2: any) {
-        this.error.set(e2.message);
+      } catch (fallbackError: unknown) {
+        this.error.set(fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
       }
     } finally {
       this.loading.set(false);
@@ -238,21 +233,21 @@ export class VouchersComponent implements OnInit {
     try {
       const data = await this.api.getOperationTypes(this.bizId);
       this.operationTypes.set(data);
-    } catch (e) { /* ignore */ }
+    } catch { /* non-critical: enhanced types not available */ }
   }
 
   async loadAccounts() {
     try {
       const data = await this.api.getAccounts(this.bizId);
       this.accounts.set(data);
-    } catch (e) { /* ignore */ }
+    } catch { /* non-critical: accounts list unavailable */ }
   }
 
   async loadFunds() {
     try {
       const data = await this.api.getFunds(this.bizId);
       this.funds.set(data);
-    } catch (e) { /* ignore */ }
+    } catch { /* non-critical: funds list unavailable */ }
   }
 
   // ===================== Filters =====================
@@ -405,7 +400,7 @@ export class VouchersComponent implements OnInit {
     try {
       const result = await this.api.getAccountBalance(this.bizId, accountId);
       this.accountBalances.update(b => ({ ...b, [accountId]: result.balance || 0 }));
-    } catch (e) { /* ignore */ }
+    } catch { /* non-critical: balance fetch failed */ }
   }
 
   getAccountBalanceDisplay(accountId: number): string {
@@ -418,7 +413,7 @@ export class VouchersComponent implements OnInit {
   async saveVoucher() {
     const f = this.form();
     if (!f.operationTypeId) { this.error.set('يجب اختيار نوع العملية (القالب) أولاً'); return; }
-    if (!f.amount || parseFloat(f.amount) <= 0) { this.error.set('أدخل المبلغ'); return; }
+    if (!f.amount || Number.parseFloat(f.amount) <= 0) { this.error.set('أدخل المبلغ'); return; }
     if (!f.description) { this.error.set('أدخل البيان'); return; }
 
     this.saving.set(true);
@@ -427,26 +422,24 @@ export class VouchersComponent implements OnInit {
       const payload = {
         ...f,
         voucherType: this.voucherType(),
-        amount: String(parseFloat(f.amount)),
+        amount: String(Number.parseFloat(f.amount)),
         currencyId: f.currencyId || 1,
       };
 
       if (this.isEditing() && this.editingVoucher()) {
         await this.api.updateVoucher(this.bizId, this.editingVoucher().id, payload);
         this.toast.success('تم تعديل السند بنجاح');
+      } else if (f.status === 'draft') {
+        await this.api.createVoucherDraft(this.bizId, payload);
+        this.toast.success('تم حفظ السند كمسودة');
       } else {
-        if (f.status === 'draft') {
-          await this.api.createVoucherDraft(this.bizId, payload);
-          this.toast.success('تم حفظ السند كمسودة');
-        } else {
-          await this.api.createVoucher(this.bizId, payload);
-          this.toast.success('تم إنشاء السند بنجاح');
-        }
+        await this.api.createVoucher(this.bizId, payload);
+        this.toast.success('تم إنشاء السند بنجاح');
       }
       this.showForm.set(false);
       await this.loadVouchers();
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
       this.saving.set(false);
     }
@@ -467,8 +460,8 @@ export class VouchersComponent implements OnInit {
       await this.api.changeVoucherStatus(this.bizId, voucher.id, newStatus);
       this.toast.success(`تم تغيير الحالة إلى ${statusLabels[newStatus]}`);
       await this.loadVouchers();
-    } catch (e: any) {
-      this.error.set(e.message || 'خطأ في تغيير الحالة');
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : 'خطأ في تغيير الحالة');
     } finally {
       this.saving.set(false);
     }
@@ -496,7 +489,7 @@ export class VouchersComponent implements OnInit {
     try {
       const details = await this.api.getVoucherDetails(this.bizId, voucher.id);
       this.detailsVoucher.set(details);
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.detailsVoucher.set(voucher);
     } finally {
       this.detailsLoading.set(false);
@@ -542,8 +535,8 @@ export class VouchersComponent implements OnInit {
     try {
       await this.api.deleteVoucher(id);
       await this.loadVouchers();
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -563,8 +556,8 @@ export class VouchersComponent implements OnInit {
       this.showReverseDialog.set(false);
       this.toast.success('تم عكس السند بنجاح');
       await this.loadVouchers();
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -587,14 +580,14 @@ export class VouchersComponent implements OnInit {
       });
       this.attachmentForm.set({ fileName: '', filePath: '', fileType: '', description: '' });
       this.attachments.set(await this.api.getAttachments('voucher', this.attachmentTargetId()!));
-    } catch (e: any) { this.error.set(e.message); }
+    } catch (e: unknown) { this.error.set(e instanceof Error ? e.message : String(e)); }
   }
 
   async removeAttachment(id: number) {
     try {
       await this.api.deleteAttachment(this.bizId, id);
       this.attachments.set(await this.api.getAttachments('voucher', this.attachmentTargetId()!));
-    } catch (e: any) { this.error.set(e.message); }
+    } catch (e: unknown) { this.error.set(e instanceof Error ? e.message : String(e)); }
   }
 
   getAccountName(id: number): string {
@@ -627,18 +620,16 @@ export class VouchersComponent implements OnInit {
     return m[t] || '#64748b';
   }
 
-  formatAmount(amount: any): string {
-    return parseFloat(amount || 0).toLocaleString('ar-YE');
+  formatAmount(amount: unknown): string {
+    return formatAmountShared(amount);
   }
 
   formatDate(d: string): string {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-YE');
+    return formatDateShared(d || '');
   }
 
   formatDateTime(d: string): string {
-    if (!d) return '';
-    return new Date(d).toLocaleString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatDateTimeShared(d || '');
   }
 
   trackById(_: number, item: any) { return item.id; }

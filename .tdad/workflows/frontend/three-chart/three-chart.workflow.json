@@ -1,0 +1,394 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "three-chart-after-view-init",
+      "workflowId": "frontend/three-chart",
+      "title": "Initialize Chart After View",
+      "description": "When Angular calls ngAfterViewInit, mark initialized=true and invoke buildChart(). Success: scene pipeline can start; failure logs by browser runtime and component remains no-op until next init cycle.",
+      "nodeType": "feature",
+      "fileName": "three-chart-after-view-init",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-on-data-or-type-change",
+      "workflowId": "frontend/three-chart",
+      "title": "React To Inputs Change",
+      "description": "On ngOnChanges, when `data` or `type` changes while initialized=true, rebuild is required.",
+      "nodeType": "feature",
+      "fileName": "three-chart-on-data-or-type-change",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [
+        "three-chart-after-view-init"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-cleanup-before-rebuild",
+      "workflowId": "frontend/three-chart",
+      "title": "Cleanup Previous Scene Before Rebuild",
+      "description": "Before any rebuild, remove mouse event listeners, destroy existing three scene, reset bars/labels/managed pointers/hover state, hide tooltip.",
+      "nodeType": "feature",
+      "fileName": "three-chart-cleanup-before-rebuild",
+      "position": {
+        "x": 300,
+        "y": 280
+      },
+      "dependencies": [
+        "three-chart-on-data-or-type-change"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-dispatch-build",
+      "workflowId": "frontend/three-chart",
+      "title": "Dispatch Build By Type",
+      "description": "Resolve `type` input and create chart scene through specialized builders. If `type !== 'gauge'` and data is empty, abort build and keep no-op. If gauge, build even without external data.",
+      "nodeType": "feature",
+      "fileName": "three-chart-dispatch-build",
+      "position": {
+        "x": 500,
+        "y": 220
+      },
+      "dependencies": [
+        "three-chart-after-view-init",
+        "three-chart-cleanup-before-rebuild"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-build-bar",
+      "workflowId": "frontend/three-chart",
+      "title": "Build Bar 3D Scene",
+      "description": "When type='bar': create scene with dark/light materials, floor, rim lights and grid; compute scaled bar heights, labels, animated growth per bar, and attach data in userData for interaction.",
+      "nodeType": "feature",
+      "fileName": "three-chart-build-bar",
+      "position": {
+        "x": 800,
+        "y": 80
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-build-pie-donut",
+      "workflowId": "frontend/three-chart",
+      "title": "Build Pie / Donut 3D Scene",
+      "description": "When type='pie' or 'donut': build ring/arc shapes with explode offsets, color palette, animated entry scale/elastic timing, and per-segment labels with percentages.",
+      "nodeType": "feature",
+      "fileName": "three-chart-build-pie-donut",
+      "position": {
+        "x": 800,
+        "y": 220
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-build-line-area",
+      "workflowId": "frontend/three-chart",
+      "title": "Build Line / Area 3D Scene",
+      "description": "When type='line' or 'area': create Catmull-Rom line geometry, optional filled area mesh, point markers with animated entrance, and floating animation over timeline.",
+      "nodeType": "feature",
+      "fileName": "three-chart-build-line-area",
+      "position": {
+        "x": 800,
+        "y": 360
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-build-waterfall",
+      "workflowId": "frontend/three-chart",
+      "title": "Build Waterfall 3D Scene",
+      "description": "When type='waterfall': calculate positive/negative running totals, create segment boxes/arrows, animate growth per segment and connect using line links.",
+      "nodeType": "feature",
+      "fileName": "three-chart-build-waterfall",
+      "position": {
+        "x": 800,
+        "y": 500
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-build-gauge",
+      "workflowId": "frontend/three-chart",
+      "title": "Build Gauge 3D Scene",
+      "description": "When type='gauge': create radial arc gauge, animated needle oscillation, numeric and percentage sprites, and particle background. gaugeValue/gaugeMax control ratio and threshold color.",
+      "nodeType": "feature",
+      "fileName": "three-chart-build-gauge",
+      "position": {
+        "x": 800,
+        "y": 640
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-build-treemap",
+      "workflowId": "frontend/three-chart",
+      "title": "Build Treemap 3D Scene",
+      "description": "When type='treemap': create treemap blocks via three service utility, assign userData per item, animate vertical entrance and keep item labels.",
+      "nodeType": "feature",
+      "fileName": "three-chart-build-treemap",
+      "position": {
+        "x": 800,
+        "y": 780
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-enable-interactivity",
+      "workflowId": "frontend/three-chart",
+      "title": "Enable Interactivity Handlers",
+      "description": "If interactive=true, register mousemove/click/mouseleave listeners and pipe raycast results against chart meshes; otherwise keep plain rendering.",
+      "nodeType": "feature",
+      "fileName": "three-chart-enable-interactivity",
+      "position": {
+        "x": 1100,
+        "y": 240
+      },
+      "dependencies": [
+        "three-chart-build-bar",
+        "three-chart-build-pie-donut",
+        "three-chart-build-line-area",
+        "three-chart-build-waterfall",
+        "three-chart-build-gauge",
+        "three-chart-build-treemap"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-tooltip-and-hover",
+      "workflowId": "frontend/three-chart",
+      "title": "Update Tooltip On Hover",
+      "description": "On mouse move with a hit object: compute tooltip coordinates relative to container, format number and percent, show tooltip, update cursor to pointer, and switch hovered style. On miss: hide tooltip and restore cursor.",
+      "nodeType": "feature",
+      "fileName": "three-chart-tooltip-and-hover",
+      "position": {
+        "x": 1350,
+        "y": 160
+      },
+      "dependencies": [
+        "three-chart-enable-interactivity"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-emit-click-event",
+      "workflowId": "frontend/three-chart",
+      "title": "Emit Clicked Chart Item",
+      "description": "On click, if hit object has chartItem userData, emit `chartClick` output with index and item so parent pages can navigate to related routes.",
+      "nodeType": "feature",
+      "fileName": "three-chart-emit-click-event",
+      "position": {
+        "x": 1350,
+        "y": 340
+      },
+      "dependencies": [
+        "three-chart-enable-interactivity"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-export-image",
+      "workflowId": "frontend/three-chart",
+      "title": "Export Current Chart Image",
+      "description": "When export button pressed: generate PNG filename using title + timestamp and call three.exportAsImage for scene snapshot.",
+      "nodeType": "feature",
+      "fileName": "three-chart-export-image",
+      "position": {
+        "x": 1100,
+        "y": 520
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-toggle-fullscreen",
+      "workflowId": "frontend/three-chart",
+      "title": "Toggle Fullscreen",
+      "description": "When fullscreen button pressed and container exists: call requestFullscreen on open and exitFullscreen on close while syncing `isFullscreen` state.",
+      "nodeType": "feature",
+      "fileName": "three-chart-toggle-fullscreen",
+      "position": {
+        "x": 1100,
+        "y": 680
+      },
+      "dependencies": [
+        "three-chart-dispatch-build"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "three-chart-destroy-component",
+      "workflowId": "frontend/three-chart",
+      "title": "Destroy Scene On Component Destroy",
+      "description": "On ngOnDestroy remove listeners and call three.destroyScene(sceneId), ensuring no memory leaks and all 3D resources release.",
+      "nodeType": "feature",
+      "fileName": "three-chart-destroy-component",
+      "position": {
+        "x": 1100,
+        "y": 860
+      },
+      "dependencies": [
+        "three-chart-after-view-init"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "init-to-dispatch",
+      "source": "three-chart-after-view-init",
+      "target": "three-chart-dispatch-build"
+    },
+    {
+      "id": "change-to-cleanup",
+      "source": "three-chart-on-data-or-type-change",
+      "target": "three-chart-cleanup-before-rebuild"
+    },
+    {
+      "id": "cleanup-to-dispatch",
+      "source": "three-chart-cleanup-before-rebuild",
+      "target": "three-chart-dispatch-build"
+    },
+    {
+      "id": "dispatch-to-bar",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-build-bar"
+    },
+    {
+      "id": "dispatch-to-pie-donut",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-build-pie-donut"
+    },
+    {
+      "id": "dispatch-to-line-area",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-build-line-area"
+    },
+    {
+      "id": "dispatch-to-waterfall",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-build-waterfall"
+    },
+    {
+      "id": "dispatch-to-gauge",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-build-gauge"
+    },
+    {
+      "id": "dispatch-to-treemap",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-build-treemap"
+    },
+    {
+      "id": "bar-to-interactive",
+      "source": "three-chart-build-bar",
+      "target": "three-chart-enable-interactivity"
+    },
+    {
+      "id": "pie-to-interactive",
+      "source": "three-chart-build-pie-donut",
+      "target": "three-chart-enable-interactivity"
+    },
+    {
+      "id": "line-to-interactive",
+      "source": "three-chart-build-line-area",
+      "target": "three-chart-enable-interactivity"
+    },
+    {
+      "id": "waterfall-to-interactive",
+      "source": "three-chart-build-waterfall",
+      "target": "three-chart-enable-interactivity"
+    },
+    {
+      "id": "gauge-to-interactive",
+      "source": "three-chart-build-gauge",
+      "target": "three-chart-enable-interactivity"
+    },
+    {
+      "id": "treemap-to-interactive",
+      "source": "three-chart-build-treemap",
+      "target": "three-chart-enable-interactivity"
+    },
+    {
+      "id": "interactive-to-hover",
+      "source": "three-chart-enable-interactivity",
+      "target": "three-chart-tooltip-and-hover"
+    },
+    {
+      "id": "interactive-to-click",
+      "source": "three-chart-enable-interactivity",
+      "target": "three-chart-emit-click-event"
+    },
+    {
+      "id": "dispatch-to-export",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-export-image"
+    },
+    {
+      "id": "dispatch-to-fullscreen",
+      "source": "three-chart-dispatch-build",
+      "target": "three-chart-toggle-fullscreen"
+    }
+  ]
+}

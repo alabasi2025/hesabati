@@ -2,46 +2,29 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-businesses",
+      "id": "display-business-cards",
       "workflowId": "frontend/business-select",
-      "title": "Load Businesses List",
-      "description": "pages/business-select/business-select.ts: Calls api.getBusinesses() on init. Displays business cards.",
+      "title": "Display Business Cards",
+      "description": "When user navigates to /businesses, fetch GET /api/businesses and display each business as a card with name, description, icon. Success: show cards. Empty: show empty state. Failure: show error message.",
       "nodeType": "feature",
-      "fileName": "load-businesses",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "display-business-cards",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "ui",
-        "api"
-      ]
+      "testLayers": ["ui", "api"]
     },
     {
-      "id": "select-business",
+      "id": "navigate-to-business-on-click",
       "workflowId": "frontend/business-select",
-      "title": "Select Business",
-      "description": "pages/business-select/business-select.ts: On card click, navigates to /biz/:bizId (dashboard).",
+      "title": "Navigate To Business On Click",
+      "description": "When user clicks a business card, set current business in BusinessService and navigate to /biz/:bizId (dashboard). URL updates. Sidebar loads for that business.",
       "nodeType": "feature",
-      "fileName": "select-business",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "load-businesses"
-      ],
-      "testLayers": [
-        "ui"
-      ]
+      "fileName": "navigate-to-business-on-click",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["display-business-cards"],
+      "testLayers": ["ui"]
     }
   ],
   "edges": [
-    {
-      "id": "load-businesses-to-select-business",
-      "source": "load-businesses",
-      "target": "select-business"
-    }
+    { "id": "cards-to-navigate", "source": "display-business-cards", "target": "navigate-to-business-on-click" }
   ]
 }

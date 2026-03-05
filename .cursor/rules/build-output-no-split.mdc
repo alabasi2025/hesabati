@@ -1,0 +1,12 @@
+---
+description: Ignore file size / split warnings for generated frontend build output
+globs: backend/public/**/*.js
+alwaysApply: false
+---
+
+# Build output – do not split
+
+- `backend/public/` contains **generated** minified JS chunks from the Angular build (`ng build`).
+- **Do not suggest splitting** these files: they are build artifacts, not source modules.
+- Ignore any "File size … KB", "Consider splitting into smaller modules", or "Split or Die" warnings for files in `backend/public/`.
+- Chunk filenames (e.g. `chunk-4556IMQO.js`) are hashed and change on each build.

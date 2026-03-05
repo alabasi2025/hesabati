@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-journal-categories',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './journal-categories.html',
   styleUrl: './journal-categories.scss',
 })
-export class JournalCategoriesComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class JournalCategoriesComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   categories = signal<any[]>([]);
   loading = signal(true);
   showForm = signal(false);
@@ -29,11 +26,8 @@ export class JournalCategoriesComponent implements OnInit {
     name: '', categoryKey: '', description: '', icon: 'book', color: '#6366f1',
   };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -75,8 +69,8 @@ export class JournalCategoriesComponent implements OnInit {
       }
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
     }
   }
 
@@ -91,8 +85,8 @@ export class JournalCategoriesComponent implements OnInit {
         await this.api.deleteJournalEntryCategory(c.id);
         this.toast.success('تم حذف التصنيف');
         await this.load();
-      } catch (e: any) {
-        this.toast.error(e?.message || 'حدث خطأ');
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
       }
     }
   }

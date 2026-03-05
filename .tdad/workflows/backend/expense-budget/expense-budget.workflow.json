@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "get-expense-categories",
+      "workflowId": "backend/expense-budget",
+      "title": "Get Expense Categories",
+      "description": "GET /api/businesses/:bizId/expense-categories. Returns array of expense categories for business. Returns 200 with [{id, name, sortOrder, ...}].",
+      "nodeType": "feature",
+      "fileName": "get-expense-categories",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-expense-budget",
+      "workflowId": "backend/expense-budget",
+      "title": "Get Expense Budget",
+      "description": "GET /api/businesses/:bizId/expense-budget with optional query month and year. Returns array of budget items. Returns 200 with [{id, name, amount, currencyId, month, year, ...}].",
+      "nodeType": "feature",
+      "fileName": "get-expense-budget",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    }
+  ],
+  "edges": []
+}

@@ -74,8 +74,8 @@ interface BreadcrumbItem {
   `]
 })
 export class BreadcrumbsComponent implements OnDestroy {
-  private router = inject(Router);
-  biz = inject(BusinessService);
+  private readonly router = inject(Router);
+  readonly biz = inject(BusinessService);
   items: BreadcrumbItem[] = [];
   private sub: Subscription;
 

@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-expense-categories",
+      "workflowId": "frontend/expense-categories",
+      "title": "عرض تصنيفات المصروفات",
+      "description": "عند الدخول إلى /biz/:bizId/expense-categories يتم جلب قائمة التصنيفات وعرضها. Success: عرض القائمة وإضافة/تعديل/حذف. Failure: رسالة خطأ.",
+      "nodeType": "feature",
+      "fileName": "display-expense-categories",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": []
+}

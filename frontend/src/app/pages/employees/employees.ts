@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-employees',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './employees.html',
   styleUrl: './employees.scss',
 })
-export class EmployeesComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class EmployeesComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   employees = signal<any[]>([]);
   stations = signal<any[]>([]);
   loading = signal(true);
@@ -29,11 +26,8 @@ export class EmployeesComponent implements OnInit {
 
   form: any = { fullName: '', jobTitle: '', stationId: null, department: '', salary: 0, salaryCurrency: 'YER', phone: '', status: 'active', notes: '' };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -41,9 +35,9 @@ export class EmployeesComponent implements OnInit {
     try {
       const [emps, sts] = await Promise.all([this.api.getEmployees(this.bizId), this.api.getStations(this.bizId)]);
       this.employees.set(emps); this.stations.set(sts);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل بيانات الموظفين');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل بيانات الموظفين');
     }
     this.loading.set(false);
   }
@@ -74,9 +68,9 @@ export class EmployeesComponent implements OnInit {
       this.showForm.set(false);
       this.toast.success(this.editingId() ? 'تم تحديث بيانات الموظف بنجاح' : 'تم إضافة الموظف بنجاح');
       await this.load();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ بيانات الموظف');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ بيانات الموظف');
     }
   }
 
@@ -87,9 +81,9 @@ export class EmployeesComponent implements OnInit {
         await this.api.deleteEmployee(id);
         this.toast.success('تم حذف الموظف بنجاح');
         await this.load();
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        this.toast.error(e?.message || 'حدث خطأ أثناء حذف الموظف');
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حذف الموظف');
       }
     }
   }

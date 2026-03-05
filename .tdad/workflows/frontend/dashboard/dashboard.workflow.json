@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-dashboard-data",
+      "id": "fetch-stations-for-dashboard",
       "workflowId": "frontend/dashboard",
-      "title": "Load Dashboard Data",
-      "description": "pages/dashboard/dashboard.ts: Calls 8 APIs in parallel: getStations, getEmployees, getAccounts, getFunds, getSuppliers, getPendingAccounts, getBusiness, getWarehouses.",
+      "title": "Fetch Stations For Dashboard",
+      "description": "On dashboard page load (/biz/:bizId), call GET /api/businesses/:bizId/stations. Success: stores stations in signal. Failure: stores empty array and shows error in console. Used for station count stat card.",
       "nodeType": "feature",
-      "fileName": "load-dashboard-data",
+      "fileName": "fetch-stations-for-dashboard",
       "position": {
         "x": 100,
         "y": 100
@@ -19,18 +19,163 @@
       ]
     },
     {
-      "id": "display-dashboard",
+      "id": "fetch-employees-for-dashboard",
       "workflowId": "frontend/dashboard",
-      "title": "Display Dashboard",
-      "description": "pages/dashboard/dashboard.ts: Renders loaded data in dashboard layout.",
+      "title": "Fetch Employees For Dashboard",
+      "description": "On dashboard load, call GET /api/businesses/:bizId/employees. Success: stores employees in signal. Failure: stores empty array. Used for employee count stat card.",
       "nodeType": "feature",
-      "fileName": "display-dashboard",
+      "fileName": "fetch-employees-for-dashboard",
       "position": {
         "x": 300,
         "y": 100
       },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "fetch-accounts-for-dashboard",
+      "workflowId": "frontend/dashboard",
+      "title": "Fetch Accounts For Dashboard",
+      "description": "On dashboard load, call GET /api/businesses/:bizId/accounts. Success: stores accounts with balances in signal. Failure: stores empty array. Used for account count and balance charts.",
+      "nodeType": "feature",
+      "fileName": "fetch-accounts-for-dashboard",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "fetch-funds-for-dashboard",
+      "workflowId": "frontend/dashboard",
+      "title": "Fetch Funds For Dashboard",
+      "description": "On dashboard load, call GET /api/businesses/:bizId/funds. Success: stores funds with balances in signal. Failure: stores empty array. Used for fund count and cash flow visualization.",
+      "nodeType": "feature",
+      "fileName": "fetch-funds-for-dashboard",
+      "position": {
+        "x": 700,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "fetch-additional-entities",
+      "workflowId": "frontend/dashboard",
+      "title": "Fetch Additional Entities",
+      "description": "On dashboard load, parallel fetch suppliers, pendingAccounts, business details, and warehouses. Calls GET /api/businesses/:bizId/suppliers, /pending-accounts, /:id, /warehouses. Success: stores all in respective signals. Failure: uses fallback empty arrays. All fetches run in Promise.allSettled to handle partial failures gracefully.",
+      "nodeType": "feature",
+      "fileName": "fetch-additional-entities",
+      "position": {
+        "x": 400,
+        "y": 250
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "calculate-financial-summary",
+      "workflowId": "frontend/dashboard",
+      "title": "Calculate Financial Summary",
+      "description": "After fetching accounts and funds, calculate totalReceipts, totalPayments, operationsCount, and netBalance from account and fund data. Updates chart signals (chartData, waterfallData, treemapData) with calculated values. No API call - pure computation on loaded data.",
+      "nodeType": "feature",
+      "fileName": "calculate-financial-summary",
+      "position": {
+        "x": 100,
+        "y": 400
+      },
       "dependencies": [
-        "load-dashboard-data"
+        "fetch-accounts-for-dashboard",
+        "fetch-funds-for-dashboard"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "render-stats-cards",
+      "workflowId": "frontend/dashboard",
+      "title": "Render Stats Cards",
+      "description": "After all data loaded, display stat cards using ThreeStatCardComponent. Shows cards for: stations count, employees count, accounts count, funds count, suppliers count, warehouses count, total salaries. Each card clickable to navigate to respective page. Loading state shows skeleton cards.",
+      "nodeType": "feature",
+      "fileName": "render-stats-cards",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "dependencies": [
+        "fetch-stations-for-dashboard",
+        "fetch-employees-for-dashboard",
+        "fetch-accounts-for-dashboard",
+        "fetch-funds-for-dashboard",
+        "fetch-additional-entities"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "render-financial-charts",
+      "workflowId": "frontend/dashboard",
+      "title": "Render Financial Charts",
+      "description": "After calculating financial summary, render 3D charts using ThreeChartComponent. Displays bar chart (chartData), waterfall chart (waterfallData), treemap (treemapData), and gauge (gaugeValue/gaugeMax). Charts are interactive - clicking triggers handleChartClick to navigate. Empty state shows placeholder message.",
+      "nodeType": "feature",
+      "fileName": "render-financial-charts",
+      "position": {
+        "x": 500,
+        "y": 400
+      },
+      "dependencies": [
+        "calculate-financial-summary"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "toggle-presentation-mode",
+      "workflowId": "frontend/dashboard",
+      "title": "Toggle Presentation Mode",
+      "description": "When user clicks presentation mode button, toggle presentationMode signal. When true: hides sidebar, maximizes charts to fullscreen, enables auto-rotation animations. When false: restores normal layout. Updates UI classes and chart configurations accordingly.",
+      "nodeType": "feature",
+      "fileName": "toggle-presentation-mode",
+      "position": {
+        "x": 700,
+        "y": 400
+      },
+      "dependencies": [
+        "render-financial-charts"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "handle-chart-click-navigation",
+      "workflowId": "frontend/dashboard",
+      "title": "Handle Chart Click Navigation",
+      "description": "When user clicks on a chart section (bar, waterfall segment, treemap node), extract clicked data label. Navigate to corresponding page: 'Stations' → /stations, 'Employees' → /employees, 'Accounts' → /accounts, etc. Shows toast with navigation message.",
+      "nodeType": "feature",
+      "fileName": "handle-chart-click-navigation",
+      "position": {
+        "x": 500,
+        "y": 550
+      },
+      "dependencies": [
+        "render-financial-charts"
       ],
       "testLayers": [
         "ui"
@@ -39,9 +184,54 @@
   ],
   "edges": [
     {
-      "id": "load-dashboard-data-to-display-dashboard",
-      "source": "load-dashboard-data",
-      "target": "display-dashboard"
+      "id": "accounts-to-calc",
+      "source": "fetch-accounts-for-dashboard",
+      "target": "calculate-financial-summary"
+    },
+    {
+      "id": "funds-to-calc",
+      "source": "fetch-funds-for-dashboard",
+      "target": "calculate-financial-summary"
+    },
+    {
+      "id": "stations-to-cards",
+      "source": "fetch-stations-for-dashboard",
+      "target": "render-stats-cards"
+    },
+    {
+      "id": "employees-to-cards",
+      "source": "fetch-employees-for-dashboard",
+      "target": "render-stats-cards"
+    },
+    {
+      "id": "accounts-to-cards",
+      "source": "fetch-accounts-for-dashboard",
+      "target": "render-stats-cards"
+    },
+    {
+      "id": "funds-to-cards",
+      "source": "fetch-funds-for-dashboard",
+      "target": "render-stats-cards"
+    },
+    {
+      "id": "additional-to-cards",
+      "source": "fetch-additional-entities",
+      "target": "render-stats-cards"
+    },
+    {
+      "id": "calc-to-charts",
+      "source": "calculate-financial-summary",
+      "target": "render-financial-charts"
+    },
+    {
+      "id": "charts-to-presentation",
+      "source": "render-financial-charts",
+      "target": "toggle-presentation-mode"
+    },
+    {
+      "id": "charts-to-click",
+      "source": "render-financial-charts",
+      "target": "handle-chart-click-navigation"
     }
   ]
 }

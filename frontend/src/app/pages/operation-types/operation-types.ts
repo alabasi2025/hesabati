@@ -1,9 +1,9 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-operation-types',
@@ -12,12 +12,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './operation-types.html',
   styleUrl: './operation-types.scss',
 })
-export class OperationTypesComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private api = inject(ApiService);
-  private toast = inject(ToastService);
+export class OperationTypesComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   loading = signal(true);
   saving = signal(false);
   error = signal('');
@@ -298,11 +296,8 @@ export class OperationTypesComponent implements OnInit {
     return '';
   });
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      await this.loadAll();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    void this.loadAll();
   }
 
   async loadAll() {
@@ -318,8 +313,8 @@ export class OperationTypesComponent implements OnInit {
       this.accounts.set(allAccs.accounts);
       this.funds.set(fnds);
       this.warehouses.set(whs);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
       this.loading.set(false);
     }
@@ -404,8 +399,8 @@ export class OperationTypesComponent implements OnInit {
       }
       this.closeCategoryForm();
       await this.loadAll();
-    } catch (e: any) {
-      this.showError(e.message || 'خطأ في حفظ التصنيف');
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : 'خطأ في حفظ التصنيف');
     }
     this.saving.set(false);
   }
@@ -426,8 +421,8 @@ export class OperationTypesComponent implements OnInit {
       }
       this.showSuccess(`تم حذف التصنيف "${cat}" بنجاح`);
       await this.loadAll();
-    } catch (e: any) {
-      this.showError(e.message || 'خطأ في حذف التصنيف');
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : 'خطأ في حذف التصنيف');
     }
     this.saving.set(false);
   }
@@ -759,8 +754,8 @@ export class OperationTypesComponent implements OnInit {
       this.showWizard.set(false);
       this.showSuccess(this.editingId() ? 'تم تعديل القالب بنجاح' : 'تم إنشاء القالب بنجاح');
       await this.loadAll();
-    } catch (e: any) {
-      this.showError(e.message || 'خطأ في الحفظ');
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : 'خطأ في الحفظ');
     }
     this.saving.set(false);
   }
@@ -774,8 +769,8 @@ export class OperationTypesComponent implements OnInit {
       await this.api.cloneOperationType(this.bizId, ot.id);
       this.showSuccess(`تم نسخ القالب "${ot.name}" بنجاح`);
       await this.loadAll();
-    } catch (e: any) {
-      this.showError(e.message || 'خطأ في نسخ القالب');
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : 'خطأ في نسخ القالب');
     }
     this.saving.set(false);
   }
@@ -787,8 +782,8 @@ export class OperationTypesComponent implements OnInit {
       await this.api.toggleOperationType(this.bizId, ot.id);
       this.showSuccess(ot.isActive ? `تم تعطيل "${ot.name}"` : `تم تفعيل "${ot.name}"`);
       await this.loadAll();
-    } catch (e: any) {
-      this.showError(e.message || 'خطأ في تغيير الحالة');
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : 'خطأ في تغيير الحالة');
     }
     this.saving.set(false);
   }
@@ -799,8 +794,8 @@ export class OperationTypesComponent implements OnInit {
       const stats = await this.api.getOperationTypesStats(this.bizId);
       this.operationStats.set(stats);
       this.showStatsView.set(true);
-    } catch (e: any) {
-      this.showError(e.message || 'خطأ في جلب الإحصائيات');
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : 'خطأ في جلب الإحصائيات');
     }
   }
 
@@ -827,8 +822,8 @@ export class OperationTypesComponent implements OnInit {
     try {
       await this.api.deleteOperationType(id);
       await this.loadAll();
-    } catch (e: any) {
-      this.showError(e.message);
+    } catch (e: unknown) {
+      this.showError(e instanceof Error ? e.message : String(e));
     }
   }
 

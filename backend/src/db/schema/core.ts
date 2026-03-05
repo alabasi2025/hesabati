@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date } from 'drizzle-orm/pg-core';
 
 // ===================== ENUMS =====================
 
@@ -688,6 +688,9 @@ export const operationTypes = pgTable('operation_types', {
   sourceAccountId: integer('source_account_id').references(() => accounts.id), // الطرف الأول (المصدر) - حساب بنك/صراف/محفظة
   sourceFundId: integer('source_fund_id').references(() => funds.id), // الطرف الأول (المصدر) - صندوق
   sourceWarehouseId: integer('source_warehouse_id').references(() => warehouses.id), // الطرف الأول (المصدر) - مخزن
+  mainAccountId: integer('main_account_id').references(() => accounts.id), // الحساب الرئيسي لهذا النوع
+  mainFundId: integer('main_fund_id').references(() => funds.id), // الصندوق الرئيسي لهذا النوع
+  templateTypeId: integer('template_type_id'), // معرّف القالب (إن وُجد)
   screens: text('screens').default('{}'), // PostgreSQL text[] stored as text for Drizzle compat
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),

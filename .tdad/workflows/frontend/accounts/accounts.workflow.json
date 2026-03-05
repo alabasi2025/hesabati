@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-accounts-tree",
+      "id": "display-accounts-list",
       "workflowId": "frontend/accounts",
-      "title": "Load Accounts Tree",
-      "description": "pages/accounts/accounts.ts: Calls api.getAccounts(bizId). Displays hierarchical tree.",
+      "title": "Display Accounts List",
+      "description": "When user navigates to /biz/:bizId/accounts, fetch GET /api/businesses/:bizId/accounts. Success: display list or table of accounts with name, type, number. Empty: show empty state. Failure: show error.",
       "nodeType": "feature",
-      "fileName": "load-accounts-tree",
+      "fileName": "display-accounts-list",
       "position": {
         "x": 100,
         "y": 100
@@ -17,80 +17,7 @@
         "ui",
         "api"
       ]
-    },
-    {
-      "id": "create-account-ui",
-      "workflowId": "frontend/accounts",
-      "title": "Create Account",
-      "description": "pages/accounts/accounts.ts: Form to create account. Calls api.createAccount(bizId, data).",
-      "nodeType": "feature",
-      "fileName": "create-account-ui",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "load-accounts-tree"
-      ],
-      "testLayers": [
-        "ui",
-        "api"
-      ]
-    },
-    {
-      "id": "update-account-ui",
-      "workflowId": "frontend/accounts",
-      "title": "Update Account",
-      "description": "pages/accounts/accounts.ts: Edit form. Calls api.updateAccount(editingId, data).",
-      "nodeType": "feature",
-      "fileName": "update-account-ui",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "load-accounts-tree"
-      ],
-      "testLayers": [
-        "ui",
-        "api"
-      ]
-    },
-    {
-      "id": "delete-account-ui",
-      "workflowId": "frontend/accounts",
-      "title": "Delete Account",
-      "description": "pages/accounts/accounts.ts: Calls api.deleteAccount(id).",
-      "nodeType": "feature",
-      "fileName": "delete-account-ui",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "load-accounts-tree"
-      ],
-      "testLayers": [
-        "ui",
-        "api"
-      ]
     }
   ],
-  "edges": [
-    {
-      "id": "load-accounts-tree-to-create-account-ui",
-      "source": "load-accounts-tree",
-      "target": "create-account-ui"
-    },
-    {
-      "id": "load-accounts-tree-to-update-account-ui",
-      "source": "load-accounts-tree",
-      "target": "update-account-ui"
-    },
-    {
-      "id": "load-accounts-tree-to-delete-account-ui",
-      "source": "load-accounts-tree",
-      "target": "delete-account-ui"
-    }
-  ]
+  "edges": []
 }

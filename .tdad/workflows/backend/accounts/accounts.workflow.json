@@ -2,206 +2,108 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-accounts",
+      "id": "get-accounts-list",
       "workflowId": "backend/accounts",
-      "title": "GET /businesses/:bizId/accounts",
-      "description": "api.ts line 285: Protected by bizAuthMiddleware(). Joins accounts with account_balances and currencies. Returns accounts with balances grouped by currency. Supports tree structure via parentId.",
+      "title": "Get Accounts List",
+      "description": "GET /api/businesses/:bizId/accounts. Returns array of accounts for business with balances joined. Requires Authorization header and bizId membership. Returns 200 with [{id, name, accountType, accountNumber, provider, subType, balance, isActive, createdAt}]. Accounts ordered by accountType and name. Returns 401 if unauthorized. Returns 403 if not member of business.",
       "nodeType": "feature",
-      "fileName": "list-accounts",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-accounts-list",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "get-account",
+      "id": "post-account-create",
       "workflowId": "backend/accounts",
-      "title": "GET /accounts/:id",
-      "description": "api.ts line 493: Queries single account by id from accounts table. Returns account object or 404.",
+      "title": "Post Account Create",
+      "description": "POST /api/businesses/:bizId/accounts with body {name, accountType, accountNumber, provider, subType, currency, initialBalance}. Validates accountType in allowed list (asset, liability, revenue, expense, equity). Inserts into accounts table and creates initial balance record if initialBalance provided. Returns 201 with created account {id, name, accountType, ...}. Returns 400 if validation fails or accountType invalid. Requires accounts create permission.",
       "nodeType": "feature",
-      "fileName": "get-account",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-accounts"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-account-create",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "create-account",
+      "id": "put-account-update",
       "workflowId": "backend/accounts",
-      "title": "POST /businesses/:bizId/accounts",
-      "description": "api.ts line 402: Accepts {name, accountType, parentId, currencyId, ...}. Inserts into accounts table. Creates initial account_balance record with 0 balance.",
+      "title": "Put Account Update",
+      "description": "PUT /api/businesses/:bizId/accounts/:id with body fields to update (name, accountNumber, provider, subType, isActive). Validates accountId belongs to business. Cannot change accountType after creation. Updates accounts table. Returns 200 with updated account. Returns 404 if account not found. Returns 403 if account not in business or no permission.",
       "nodeType": "feature",
-      "fileName": "create-account",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-accounts"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "update-account",
-      "workflowId": "backend/accounts",
-      "title": "PUT /businesses/:bizId/accounts/:id",
-      "description": "api.ts line 430: Updates account fields. Validates account belongs to business.",
-      "nodeType": "feature",
-      "fileName": "update-account",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-accounts"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "put-account-update",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": ["get-accounts-list"],
+      "testLayers": ["api"]
     },
     {
       "id": "delete-account",
       "workflowId": "backend/accounts",
-      "title": "DELETE /businesses/:bizId/accounts/:id",
-      "description": "api.ts line 451: Deletes account by id. Validates account belongs to business.",
+      "title": "Delete Account",
+      "description": "DELETE /api/businesses/:bizId/accounts/:id. Validates ownership then deletes from accounts table (cascade deletes balances and links). Returns 200 with {success: true}. Returns 404 if not found. Returns 403 if not authorized. Returns 400 if account has transactions (cannot delete). Requires accounts delete permission.",
       "nodeType": "feature",
       "fileName": "delete-account",
-      "position": {
-        "x": 500,
-        "y": 250
-      },
-      "dependencies": [
-        "list-accounts"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "position": { "x": 700, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "get-allowed-links",
+      "id": "get-account-by-id",
       "workflowId": "backend/accounts",
-      "title": "GET /accounts/:id/allowed-links",
-      "description": "api.ts line 521: Queries account_allowed_links table for given account. Returns linked account ids.",
+      "title": "Get Account By Id",
+      "description": "GET /accounts/:id. Returns single account with balance. Returns 200 with {id, name, accountType, balance, ...}. Returns 404 if not found. Used for lookups when creating vouchers or journal entries.",
       "nodeType": "feature",
-      "fileName": "get-allowed-links",
-      "position": {
-        "x": 100,
-        "y": 400
-      },
-      "dependencies": [
-        "get-account"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-account-by-id",
+      "position": { "x": 100, "y": 300 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "create-account-link",
+      "id": "get-allowed-links-for-account",
       "workflowId": "backend/accounts",
-      "title": "POST /account-links",
-      "description": "api.ts line 534: Accepts {accountId, linkedAccountId}. Inserts into account_allowed_links table.",
+      "title": "Get Allowed Links For Account",
+      "description": "GET /accounts/:id/allowed-links. Returns array of account IDs that this account can link to based on account_allowed_links table. Returns 200 with [{targetAccountId, targetAccountName}]. Empty array if no links configured. Used for restricting voucher target accounts.",
       "nodeType": "feature",
-      "fileName": "create-account-link",
-      "position": {
-        "x": 300,
-        "y": 400
-      },
-      "dependencies": [
-        "get-allowed-links"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-allowed-links-for-account",
+      "position": { "x": 300, "y": 300 },
+      "dependencies": ["get-account-by-id"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-allowed-targets-for-account",
+      "workflowId": "backend/accounts",
+      "title": "Get Allowed Targets For Account",
+      "description": "GET /accounts/:id/allowed-targets. Returns array of valid target accounts for this account based on links or business rules. Returns 200 with [{id, name, accountType}]. Used in voucher form dropdowns to show only valid target accounts.",
+      "nodeType": "feature",
+      "fileName": "get-allowed-targets-for-account",
+      "position": { "x": 500, "y": 300 },
+      "dependencies": ["get-account-by-id"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "post-account-link-create",
+      "workflowId": "backend/accounts",
+      "title": "Post Account Link Create",
+      "description": "POST /account-links with body {sourceAccountId, targetAccountId}. Creates allowed link in account_allowed_links table. Validates both accounts exist. Returns 201 with {id, sourceAccountId, targetAccountId}. Returns 400 if accounts invalid or link already exists.",
+      "nodeType": "feature",
+      "fileName": "post-account-link-create",
+      "position": { "x": 100, "y": 500 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
       "id": "delete-account-link",
       "workflowId": "backend/accounts",
-      "title": "DELETE /account-links/:id",
-      "description": "api.ts line 546: Deletes record from account_allowed_links by id.",
+      "title": "Delete Account Link",
+      "description": "DELETE /account-links/:id. Removes link from account_allowed_links table. Returns 200 with {success: true}. Returns 404 if link not found. Returns 400 if linkId invalid.",
       "nodeType": "feature",
       "fileName": "delete-account-link",
-      "position": {
-        "x": 500,
-        "y": 400
-      },
-      "dependencies": [
-        "get-allowed-links"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "get-allowed-targets",
-      "workflowId": "backend/accounts",
-      "title": "GET /accounts/:id/allowed-targets",
-      "description": "api.ts line 553: Queries allowed target accounts for transfers. Returns filtered account list.",
-      "nodeType": "feature",
-      "fileName": "get-allowed-targets",
-      "position": {
-        "x": 200,
-        "y": 550
-      },
-      "dependencies": [
-        "get-account"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "position": { "x": 300, "y": 500 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
   "edges": [
-    {
-      "id": "list-accounts-to-get-account",
-      "source": "list-accounts",
-      "target": "get-account"
-    },
-    {
-      "id": "list-accounts-to-create-account",
-      "source": "list-accounts",
-      "target": "create-account"
-    },
-    {
-      "id": "list-accounts-to-update-account",
-      "source": "list-accounts",
-      "target": "update-account"
-    },
-    {
-      "id": "list-accounts-to-delete-account",
-      "source": "list-accounts",
-      "target": "delete-account"
-    },
-    {
-      "id": "get-account-to-get-allowed-links",
-      "source": "get-account",
-      "target": "get-allowed-links"
-    },
-    {
-      "id": "get-allowed-links-to-create-account-link",
-      "source": "get-allowed-links",
-      "target": "create-account-link"
-    },
-    {
-      "id": "get-allowed-links-to-delete-account-link",
-      "source": "get-allowed-links",
-      "target": "delete-account-link"
-    },
-    {
-      "id": "get-account-to-get-allowed-targets",
-      "source": "get-account",
-      "target": "get-allowed-targets"
-    }
+    { "id": "list-to-update", "source": "get-accounts-list", "target": "put-account-update" },
+    { "id": "byid-to-links", "source": "get-account-by-id", "target": "get-allowed-links-for-account" },
+    { "id": "byid-to-targets", "source": "get-account-by-id", "target": "get-allowed-targets-for-account" }
   ]
 }

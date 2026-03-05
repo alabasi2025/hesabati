@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-warehouses",
+      "id": "load-warehouses-stations-types",
       "workflowId": "frontend/warehouse",
-      "title": "Load Warehouses",
-      "description": "pages/warehouse/warehouse.ts: Calls api.getWarehouses, getStations, getWarehouseTypes.",
+      "title": "Load Warehouses, Stations, Types",
+      "description": "On page enter and after each successful mutation, call Promise.allSettled([api.getWarehouses(bizId), api.getStations(bizId), api.getWarehouseTypes(bizId)]). Success: set warehouses/stations/warehouseTypes from fulfilled responses, missing responses become empty arrays.",
       "nodeType": "feature",
-      "fileName": "load-warehouses",
+      "fileName": "load-warehouses-stations-types",
       "position": {
         "x": 100,
         "y": 100
@@ -19,18 +19,90 @@
       ]
     },
     {
-      "id": "crud-warehouses",
+      "id": "compute-warehouse-summary",
       "workflowId": "frontend/warehouse",
-      "title": "CRUD Warehouses",
-      "description": "pages/warehouse/warehouse.ts: Calls api.createWarehouse, updateWarehouse, deleteWarehouse.",
+      "title": "Compute Warehouse Summary",
+      "description": "After loading, derive mainCount, stationCount, subCount and dynamic subTypeFilters data from warehouses and warehouseTypes. Used to render summary cards and chips.",
       "nodeType": "feature",
-      "fileName": "crud-warehouses",
+      "fileName": "compute-warehouse-summary",
       "position": {
-        "x": 300,
+        "x": 320,
         "y": 100
       },
       "dependencies": [
-        "load-warehouses"
+        "load-warehouses-stations-types"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "set-warehouse-filters",
+      "workflowId": "frontend/warehouse",
+      "title": "Update Warehouse Filters",
+      "description": "When user clicks main/station/sub filters or subtype chips, update filterType and filterSubType signals. filteredWarehouses() recomputes immediately and updates visible card list.",
+      "nodeType": "feature",
+      "fileName": "set-warehouse-filters",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [
+        "compute-warehouse-summary"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "open-warehouse-form",
+      "workflowId": "frontend/warehouse",
+      "title": "Open Warehouse Form",
+      "description": "On add/edit clicks, open warehouse modal. Add mode resets name/fields and default type main; edit mode pre-fills all fields including location, station, notes.",
+      "nodeType": "feature",
+      "fileName": "open-warehouse-form",
+      "position": {
+        "x": 100,
+        "y": 460
+      },
+      "dependencies": [
+        "load-warehouses-stations-types"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "validate-warehouse-form",
+      "workflowId": "frontend/warehouse",
+      "title": "Validate Warehouse Form",
+      "description": "Before save, validate required name not empty. Failure: show toast error and block save. Success: continue to API save.",
+      "nodeType": "feature",
+      "fileName": "validate-warehouse-form",
+      "position": {
+        "x": 320,
+        "y": 460
+      },
+      "dependencies": [
+        "open-warehouse-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "persist-warehouse",
+      "workflowId": "frontend/warehouse",
+      "title": "Persist Warehouse",
+      "description": "After validation, call api.updateWarehouse(id, payload) for edit mode or api.createWarehouse(bizId, payload) for add mode. Success: close form, toast success, reload all data. Failure: show error toast and keep form open.",
+      "nodeType": "feature",
+      "fileName": "persist-warehouse",
+      "position": {
+        "x": 540,
+        "y": 460
+      },
+      "dependencies": [
+        "validate-warehouse-form"
       ],
       "testLayers": [
         "ui",
@@ -38,18 +110,92 @@
       ]
     },
     {
-      "id": "crud-warehouse-types-ui",
+      "id": "remove-warehouse-with-confirm",
       "workflowId": "frontend/warehouse",
-      "title": "CRUD Warehouse Types",
-      "description": "pages/warehouse/warehouse.ts: Calls api.createWarehouseType, updateWarehouseType, deleteWarehouseType.",
+      "title": "Remove Warehouse With Confirm",
+      "description": "When user clicks delete on a warehouse card, open confirm dialog via toast.confirm and only if confirmed call api.deleteWarehouse(id). Success: toast success and reload. Failure: show error toast and keep state as is.",
       "nodeType": "feature",
-      "fileName": "crud-warehouse-types-ui",
+      "fileName": "remove-warehouse-with-confirm",
       "position": {
         "x": 100,
-        "y": 250
+        "y": 640
       },
       "dependencies": [
-        "load-warehouses"
+        "load-warehouses-stations-types"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "open-warehouse-type-form",
+      "workflowId": "frontend/warehouse",
+      "title": "Open Warehouse Type Form",
+      "description": "When managing types, open form modal. Add mode resets form; edit mode fills name, subTypeKey, description, icon and color.",
+      "nodeType": "feature",
+      "fileName": "open-warehouse-type-form",
+           "position": {
+        "x": 520,
+        "y": 640
+      },
+      "dependencies": [
+        "load-warehouses-stations-types"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "validate-warehouse-type-form",
+      "workflowId": "frontend/warehouse",
+      "title": "Validate Type Form",
+      "description": "Before saving type, require name and subTypeKey; otherwise show error toast and prevent submit.",
+      "nodeType": "feature",
+      "fileName": "validate-warehouse-type-form",
+      "position": {
+        "x": 760,
+        "y": 640
+      },
+      "dependencies": [
+        "open-warehouse-type-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "persist-warehouse-type",
+      "workflowId": "frontend/warehouse",
+      "title": "Persist Warehouse Type",
+      "description": "After validation, call api.updateWarehouseType(id, payload) in edit mode or api.createWarehouseType(bizId, payload) in add mode. Success: close modal and reload all reference data. Failure: error toast and keep modal open.",
+      "nodeType": "feature",
+      "fileName": "persist-warehouse-type",
+      "position": {
+        "x": 980,
+        "y": 640
+      },
+      "dependencies": [
+        "validate-warehouse-type-form"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "remove-warehouse-type-with-confirm",
+      "workflowId": "frontend/warehouse",
+      "title": "Remove Warehouse Type With Confirm",
+      "description": "On delete type action, run toast.confirm with warning. On confirmation call api.deleteWarehouseType(id). Success: toast success and reload all data; failure: show error toast.",
+      "nodeType": "feature",
+      "fileName": "remove-warehouse-type-with-confirm",
+      "position": {
+        "x": 760,
+        "y": 840
+      },
+      "dependencies": [
+        "load-warehouses-stations-types"
       ],
       "testLayers": [
         "ui",
@@ -59,14 +205,54 @@
   ],
   "edges": [
     {
-      "id": "load-warehouses-to-crud-warehouses",
-      "source": "load-warehouses",
-      "target": "crud-warehouses"
+      "id": "warehouse-load-to-summary",
+      "source": "load-warehouses-stations-types",
+      "target": "compute-warehouse-summary"
     },
     {
-      "id": "load-warehouses-to-crud-warehouse-types-ui",
-      "source": "load-warehouses",
-      "target": "crud-warehouse-types-ui"
+      "id": "warehouse-summary-to-filters",
+      "source": "compute-warehouse-summary",
+      "target": "set-warehouse-filters"
+    },
+    {
+      "id": "warehouse-form-open-to-validate",
+      "source": "open-warehouse-form",
+      "target": "validate-warehouse-form"
+    },
+    {
+      "id": "warehouse-validate-to-save",
+      "source": "validate-warehouse-form",
+      "target": "persist-warehouse"
+    },
+    {
+      "id": "warehouse-save-to-reload",
+      "source": "persist-warehouse",
+      "target": "load-warehouses-stations-types"
+    },
+    {
+      "id": "warehouse-type-open-to-validate",
+      "source": "open-warehouse-type-form",
+      "target": "validate-warehouse-type-form"
+    },
+    {
+      "id": "warehouse-type-validate-to-save",
+      "source": "validate-warehouse-type-form",
+      "target": "persist-warehouse-type"
+    },
+    {
+      "id": "warehouse-type-save-to-reload",
+      "source": "persist-warehouse-type",
+      "target": "load-warehouses-stations-types"
+    },
+    {
+      "id": "warehouse-remove-to-reload",
+      "source": "remove-warehouse-with-confirm",
+      "target": "load-warehouses-stations-types"
+    },
+    {
+      "id": "warehouse-type-remove-to-reload",
+      "source": "remove-warehouse-type-with-confirm",
+      "target": "load-warehouses-stations-types"
     }
   ]
 }

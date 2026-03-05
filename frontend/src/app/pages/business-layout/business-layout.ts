@@ -52,23 +52,25 @@ import { ApiService } from '../../services/api.service';
   `]
 })
 export class BusinessLayoutComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private bizService = inject(BusinessService);
-  private api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly bizService = inject(BusinessService);
+  private readonly api = inject(ApiService);
 
   ngOnInit() {
-    this.route.params.subscribe(async (params) => {
-      const bizId = parseInt(params['bizId']);
-      if (bizId) {
-        try {
-          const biz = await this.api.getBusiness(bizId);
+    const setFromParams = (params: { bizId?: string }) => {
+      const bizId = Number.parseInt(params['bizId'] ?? '', 10);
+      if (!bizId) return;
+      this.bizService.setBusinessId(bizId);
+      this.api.getBusiness(bizId).then(
+        (biz) => {
           const bizType: BusinessType = (biz.type as BusinessType) || 'stations';
           this.bizService.setBusiness(biz.id, biz.name, biz.color, biz.icon, bizType);
-        } catch (e) {
-          this.router.navigate(['/']);
-        }
-      }
-    });
+        },
+        () => this.router.navigate(['/'])
+      );
+    };
+    setFromParams(this.route.snapshot.params);
+    this.route.params.subscribe(setFromParams);
   }
 }

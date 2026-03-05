@@ -1,35 +1,15 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
+import { ACCOUNT_TYPE_META, FUND_TYPE_LABELS, getAccTypeMeta } from '../../shared/constants/account-types';
 import { ThreeNetworkComponent, NetworkNode, NetworkLink } from '../../components/three-network/three-network';
 
-// خريطة ثابتة لأيقونات وألوان أنواع الحسابات المعروفة
-const ACCOUNT_TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
-  billing:      { label: 'فوترة',    icon: 'receipt',                  color: '#a855f7' },
-  fund:         { label: 'صندوق',    icon: 'savings',                  color: '#22c55e' },
-  bank:         { label: 'بنك',      icon: 'account_balance',          color: '#3b82f6' },
-  e_wallet:     { label: 'محفظة',    icon: 'account_balance_wallet',   color: '#8b5cf6' },
-  exchange:     { label: 'صراف',     icon: 'currency_exchange',        color: '#f59e0b' },
-  accounting:   { label: 'محاسبي',   icon: 'book',                     color: '#14b8a6' },
-  intermediary: { label: 'وسيط',     icon: 'swap_horiz',               color: '#f97316' },
-  cash:         { label: 'نقد',      icon: 'payments',                 color: '#84cc16' },
-  custody:      { label: 'عهدة',     icon: 'lock',                     color: '#ec4899' },
-  service:      { label: 'خدمة',     icon: 'miscellaneous_services',   color: '#06b6d4' },
-  warehouse:    { label: 'مخزن',     icon: 'warehouse',                color: '#f59e0b' },
-};
-
-// ترجمة أنواع الصناديق
-const FUND_TYPE_LABELS: Record<string, string> = {
-  collection: 'تحصيل وتوريد', salary_advance: 'سلف', custody: 'عهدة',
-  safe: 'خزنة', expense: 'مصروفات', deposit: 'إيداع', personal: 'شخصي',
-};
-
 function getTypeMeta(type: string) {
-  return ACCOUNT_TYPE_META[type] ?? { label: type, icon: 'account_balance_wallet', color: '#64748b' };
+  return getAccTypeMeta(type);
 }
 
 interface AccountGroup {
@@ -49,13 +29,9 @@ interface AccountGroup {
   templateUrl: './accounts.html',
   styleUrl: './accounts.scss',
 })
-export class AccountsComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private api = inject(ApiService);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
-
-  bizId = 0;
+export class AccountsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
   loading = signal(true);
   accounts = signal<any[]>([]);
   allStations = signal<any[]>([]);
@@ -97,7 +73,7 @@ export class AccountsComponent implements OnInit {
     const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
     // ترتيب: فوترة أولاً، ثم صندوق، ثم بنك، ثم صراف، ثم محفظة، ثم الباقي
     const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
-    const sorted = typesInDB.sort((a, b) => {
+    const sorted = [...typesInDB].sort((a, b) => {
       const ia = priority.indexOf(a);
       const ib = priority.indexOf(b);
       if (ia >= 0 && ib >= 0) return ia - ib;
@@ -120,8 +96,8 @@ export class AccountsComponent implements OnInit {
     const type = this.activeType();
     if (type === 'all') return [];
     const typeAccounts = this.accounts().filter(a => a.accountType === type && a.stationId);
-    const stationIds = [...new Set(typeAccounts.map(a => a.stationId))];
-    return this.allStations().filter(s => stationIds.includes(s.id));
+    const stationIds = new Set(typeAccounts.map(a => a.stationId));
+    return this.allStations().filter(s => stationIds.has(s.id));
   });
 
   // ===== فلاتر فرعية ديناميكية حسب النوع المختار =====
@@ -322,7 +298,7 @@ export class AccountsComponent implements OnInit {
         label: groupLabel,
         icon: meta.icon,
         color: meta.color,
-        accounts: items.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ar')),
+        accounts: [...items].sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ar')),
         count: items.length,
         collapsed: collapsed.has(`${type}_${groupLabel}`),
       };
@@ -341,14 +317,16 @@ export class AccountsComponent implements OnInit {
     };
   });
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      await this.loadAccounts();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    if (this.bizId <= 0) return;
+    void this.loadAccounts();
   }
 
   async loadAccounts() {
+    if (this.bizId <= 0) {
+      this.loading.set(false);
+      return;
+    }
     this.loading.set(true);
     try {
       const [allData, fundTypesData, bankTypesData, exchangeTypesData, walletTypesData] = await Promise.all([
@@ -367,8 +345,8 @@ export class AccountsComponent implements OnInit {
         e_wallet: walletTypesData,
       });
       this.buildNetworkData();
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : JSON.stringify(e));
     } finally {
       this.loading.set(false);
     }
@@ -518,7 +496,7 @@ export class AccountsComponent implements OnInit {
   openCreate() {
     this.editingId.set(null);
     this.form.set({
-      name: '', accountType: this.activeType() !== 'all' ? this.activeType() : 'fund',
+      name: '', accountType: this.activeType() === 'all' ? 'fund' : this.activeType(),
       accountNumber: '', provider: '', subType: '', responsiblePerson: '',
       notes: '', isActive: true,
     });
@@ -572,8 +550,8 @@ export class AccountsComponent implements OnInit {
       }
       this.showForm.set(false);
       await this.loadAccounts();
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : JSON.stringify(e));
     }
   }
 
@@ -588,8 +566,8 @@ export class AccountsComponent implements OnInit {
         await this.api.deleteAccount(acc.id);
       }
       await this.loadAccounts();
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : JSON.stringify(e));
     }
   }
 

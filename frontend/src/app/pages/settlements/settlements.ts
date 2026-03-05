@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-settlements',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './settlements.html',
   styleUrl: './settlements.scss',
 })
-export class SettlementsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class SettlementsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   settlements = signal<any[]>([]);
   accounts = signal<any[]>([]);
   funds = signal<any[]>([]);
@@ -37,11 +34,8 @@ export class SettlementsComponent implements OnInit {
     notes: '',
   };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -57,9 +51,9 @@ export class SettlementsComponent implements OnInit {
       this.accounts.set(accs);
       this.funds.set(fds);
       this.stations.set(sts);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل بيانات التصفيات');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل بيانات التصفيات');
     }
     this.loading.set(false);
   }
@@ -114,9 +108,9 @@ export class SettlementsComponent implements OnInit {
       this.showForm.set(false);
       this.toast.success(this.editingId() ? 'تم تحديث التصفية بنجاح' : 'تم إنشاء التصفية بنجاح');
       await this.load();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ التصفية');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ التصفية');
     }
   }
 
@@ -127,9 +121,9 @@ export class SettlementsComponent implements OnInit {
         await this.api.deleteSettlement(r.id);
         this.toast.success('تم حذف التصفية بنجاح');
         await this.load();
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        this.toast.error(e?.message || 'حدث خطأ أثناء الحذف');
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
       }
     }
   }

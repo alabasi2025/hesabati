@@ -1,3 +1,6 @@
+-- @dbLinter ignore file
+-- disable-too-many-lines (Too Many Lines extension)
+-- Drizzle migration (single unit; do not split). Ignore file-size linter.
 CREATE TYPE "public"."account_type" AS ENUM('fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service');--> statement-breakpoint
 CREATE TYPE "public"."billing_system" AS ENUM('moghrabi_v1', 'moghrabi_v2', 'moghrabi_v3', 'support_fund', 'support_fund_west', 'prepaid');--> statement-breakpoint
 CREATE TYPE "public"."collection_method" AS ENUM('cash_mobile', 'manual_assign', 'electronic', 'haseb_deposit');--> statement-breakpoint

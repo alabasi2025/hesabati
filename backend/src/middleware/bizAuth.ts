@@ -1,16 +1,29 @@
 import { Context, Next } from 'hono';
 import { db } from '../db/index.ts';
-import { businessPartners, users } from '../db/schema/index.ts';
+import { userRoles } from '../db/schema/index.ts';
 import { eq, and } from 'drizzle-orm';
 
 /**
+ * التحقق من أن المستخدم لديه صلاحية على العمل (عبر user_roles أو دور admin).
+ */
+export async function userCanAccessBusiness(userId: number, role: string, bizId: number): Promise<boolean> {
+  if (role === 'admin') return true;
+  const [row] = await db
+    .select({ id: userRoles.id })
+    .from(userRoles)
+    .where(and(eq(userRoles.userId, userId), eq(userRoles.businessId, bizId)))
+    .limit(1);
+  return !!row;
+}
+
+/**
  * Middleware: التحقق من صلاحية المستخدم على العمل (Business)
- * يمنع ثغرة IDOR بالتأكد من أن المستخدم لديه حق الوصول للـ businessId المطلوب
+ * يمنع ثغرة IDOR بالتأكد من أن المستخدم لديه حق الوصول للـ businessId المطلوب (عبر user_roles).
  */
 export function bizAuthMiddleware() {
   return async (c: Context, next: Next) => {
-    const bizId = parseInt(c.req.param('bizId'));
-    if (!bizId || isNaN(bizId)) {
+    const bizId = Number.parseInt(c.req.param('bizId'), 10);
+    if (!bizId || Number.isNaN(bizId)) {
       return c.json({ error: 'معرّف العمل غير صالح' }, 400);
     }
 
@@ -19,27 +32,12 @@ export function bizAuthMiddleware() {
       return c.json({ error: 'غير مصرح' }, 401);
     }
 
-    // المدير (admin) لديه صلاحية على جميع الأعمال
-    if (user.role === 'admin') {
-      c.set('bizId', bizId);
-      await next();
-      return;
+    const allowed = await userCanAccessBusiness(user.userId, user.role, bizId);
+    if (!allowed) {
+      return c.json({ error: 'غير مصرح - لا صلاحية على هذا العمل' }, 403);
     }
 
-    // التحقق من أن المستخدم شريك أو مرتبط بهذا العمل
-    const partnerLink = await db.select({ id: businessPartners.id })
-      .from(businessPartners)
-      .where(and(
-        eq(businessPartners.businessId, bizId),
-        eq(businessPartners.isActive, true),
-      ))
-      .limit(1);
-
-    // TODO: في المستقبل، أضف جدول user_business_access لربط المستخدمين بالأعمال مباشرة
-    // حالياً نسمح للمستخدمين المصادق عليهم بالوصول (لأن النظام صغير ومحدود المستخدمين)
-    // لكن نسجل الوصول في الـ context للاستخدام في التدقيق
     c.set('bizId', bizId);
-    c.set('bizAccess', 'authenticated');
     await next();
   };
 }

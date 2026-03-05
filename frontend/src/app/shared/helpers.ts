@@ -11,16 +11,16 @@
 // ═══════════════════════════════════════════════════════════════
 
 /** Format amount with Arabic-Yemen locale (default) */
-export function formatAmount(amount: any, locale: string = 'ar-YE'): string {
-  const n = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-  if (isNaN(n)) return '0';
+export function formatAmount(amount: unknown, locale: string = 'ar-YE'): string {
+  const n = typeof amount === 'string' ? Number.parseFloat(amount) : Number(amount);
+  if (Number.isNaN(n)) return '0';
   return n.toLocaleString(locale);
 }
 
 /** Format amount with fraction control */
 export function formatAmountPrecise(amount: string | number, minFractions = 0, maxFractions = 2, locale = 'ar-SA'): string {
-  const n = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (isNaN(n)) return '0';
+  const n = typeof amount === 'string' ? Number.parseFloat(amount) : amount;
+  if (Number.isNaN(n)) return '0';
   return n.toLocaleString(locale, { minimumFractionDigits: minFractions, maximumFractionDigits: maxFractions });
 }
 

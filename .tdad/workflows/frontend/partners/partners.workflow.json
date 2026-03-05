@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-partners",
+      "id": "load-partners-and-business",
       "workflowId": "frontend/partners",
-      "title": "Load Partners",
-      "description": "pages/partners/partners.ts: Calls api.getBusiness(bizId) and api.getPartners(bizId).",
+      "title": "Load Business And Partners",
+      "description": "On page load, run Promise.all([api.getBusiness(bizId), api.getPartners(bizId)]). Success: update business and partners signals and render list. Failure: log error and end loading without new data.",
       "nodeType": "feature",
-      "fileName": "load-partners",
+      "fileName": "load-partners-and-business",
       "position": {
         "x": 100,
         "y": 100
@@ -19,18 +19,89 @@
       ]
     },
     {
-      "id": "crud-partners",
+      "id": "calculate-share-distribution",
       "workflowId": "frontend/partners",
-      "title": "CRUD Partners",
-      "description": "pages/partners/partners.ts: Calls api.createPartner, updatePartner, deletePartner.",
+      "title": "Compute Share Distribution",
+      "description": "After loading, compute totalShares by summing partner.sharePercentage for rendering summary progress bar and chart segment percentages.",
       "nodeType": "feature",
-      "fileName": "crud-partners",
+      "fileName": "calculate-share-distribution",
       "position": {
         "x": 300,
         "y": 100
       },
       "dependencies": [
-        "load-partners"
+        "load-partners-and-business"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "open-partner-form",
+      "workflowId": "frontend/partners",
+      "title": "Open Partner Form",
+      "description": "When user clicks add/edit, show form modal. In add mode reset fields (fullName, sharePercentage, phone, role, notes). In edit mode prefill selected partner fields and set editingId.",
+      "nodeType": "feature",
+      "fileName": "open-partner-form",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "persist-partner-form",
+      "workflowId": "frontend/partners",
+      "title": "Persist Partner",
+      "description": "Construct payload as { ...form, sharePercentage: String(form.sharePercentage), businessId: bizId }. Call PUT /api/partners/:id for edit mode or POST /api/businesses/:bizId/partners for add mode. Success: close modal, show success toast, and reload partners. Failure: show backend error and keep modal open.",
+      "nodeType": "feature",
+      "fileName": "persist-partner-form",
+      "position": {
+        "x": 300,
+        "y": 280
+      },
+      "dependencies": [
+        "open-partner-form"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "open-partner-delete-confirm",
+      "workflowId": "frontend/partners",
+      "title": "Open Delete Confirmation",
+      "description": "When user clicks delete, store selected partner in deleteTarget and open modal. Cancel only closes modal.",
+      "nodeType": "feature",
+      "fileName": "open-partner-delete-confirm",
+      "position": {
+        "x": 100,
+        "y": 460
+      },
+      "dependencies": [
+        "load-partners-and-business"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "delete-partner",
+      "workflowId": "frontend/partners",
+      "title": "Delete Partner",
+      "description": "After confirm click, call DELETE /api/partners/:id. Success: clear deleteTarget, close modal, show success toast, and reload partner data. Failure: show error toast and keep confirmation visible.",
+      "nodeType": "feature",
+      "fileName": "delete-partner",
+      "position": {
+        "x": 300,
+        "y": 460
+      },
+      "dependencies": [
+        "open-partner-delete-confirm"
       ],
       "testLayers": [
         "ui",
@@ -40,9 +111,29 @@
   ],
   "edges": [
     {
-      "id": "load-partners-to-crud-partners",
-      "source": "load-partners",
-      "target": "crud-partners"
+      "id": "load-to-share-summary",
+      "source": "load-partners-and-business",
+      "target": "calculate-share-distribution"
+    },
+    {
+      "id": "partner-form-to-save",
+      "source": "open-partner-form",
+      "target": "persist-partner-form"
+    },
+    {
+      "id": "partner-save-to-reload",
+      "source": "persist-partner-form",
+      "target": "load-partners-and-business"
+    },
+    {
+      "id": "partner-load-to-delete",
+      "source": "load-partners-and-business",
+      "target": "open-partner-delete-confirm"
+    },
+    {
+      "id": "partner-delete-to-reload",
+      "source": "open-partner-delete-confirm",
+      "target": "delete-partner"
     }
   ]
 }

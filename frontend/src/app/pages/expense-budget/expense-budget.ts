@@ -1,10 +1,10 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-expense-budget',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './expense-budget.html',
   styleUrl: './expense-budget.scss',
 })
-export class ExpenseBudgetComponent implements OnInit {
+export class ExpenseBudgetComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
   private readonly toast = inject(ToastService);
 
-  bizId = 0;
   items = signal<any[]>([]);
   currencies = signal<any[]>([]);
   stations = signal<any[]>([]);
@@ -33,17 +30,15 @@ export class ExpenseBudgetComponent implements OnInit {
   years: number[] = [];
   form: any = { name: '', stationId: null as number | null, amount: 0, currencyId: 1, expenseType: 'variable', month: null as number | null, year: null as number | null, notes: '' };
 
-  ngOnInit() {
+  ngOnInit(): void {
     const y = new Date().getFullYear();
     for (let i = y; i >= y - 5; i--) this.years.push(i);
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = Number.parseInt(params['bizId'], 10);
-      if (this.bizId) {
-        this.load();
-        this.api.getCurrencies().then(c => this.currencies.set(c || []));
-        this.api.getStations(this.bizId).then(s => this.stations.set(s || []));
-      }
-    });
+  }
+
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
+    this.api.getCurrencies().then(c => this.currencies.set(c || []));
+    this.api.getStations(this.bizId).then(s => this.stations.set(s || []));
   }
 
   async load() {
@@ -88,7 +83,7 @@ export class ExpenseBudgetComponent implements OnInit {
       }
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) { this.toast.error(e?.message || 'حدث خطأ'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
   }
 
   async remove(item: any) {
@@ -98,7 +93,7 @@ export class ExpenseBudgetComponent implements OnInit {
         await this.api.deleteExpenseBudget(item.id);
         this.toast.success('تم الحذف');
         await this.load();
-      } catch (e: any) { this.toast.error(e?.message || 'حدث خطأ'); }
+      } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
     }
   }
 

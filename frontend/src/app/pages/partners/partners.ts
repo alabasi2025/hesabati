@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-partners',
@@ -13,13 +13,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './partners.html',
   styleUrl: './partners.scss',
 })
-export class PartnersComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class PartnersComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   business = signal<any>(null);
   partners = signal<any[]>([]);
   loading = signal(true);
@@ -30,11 +27,8 @@ export class PartnersComponent implements OnInit {
 
   form: any = { fullName: '', sharePercentage: 0, phone: '', role: '', notes: '' };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -80,7 +74,7 @@ export class PartnersComponent implements OnInit {
       this.showForm.set(false);
       this.toast.success(this.editingId() ? 'تم تحديث الشريك بنجاح' : 'تم إضافة الشريك بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ الشريك'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الشريك'); }
   }
 
   confirmDelete(p: any) {
@@ -97,7 +91,7 @@ export class PartnersComponent implements OnInit {
       this.deleteTarget.set(null);
       this.toast.success('تم حذف الشريك بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
   }
 
   getShareColor(pct: number): string {

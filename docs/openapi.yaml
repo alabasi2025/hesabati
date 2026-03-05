@@ -1,0 +1,368 @@
+# مواصفة OpenAPI 3.0 لـ API حساباتي
+# مصدر الحقيقة: مسارات الـ Backend (backend/src/routes)
+# آخر تحديث: 2026-03-05
+
+openapi: 3.0.3
+info:
+  title: حساباتي API
+  description: نظام إدارة مالية شخصية شاملة — واجهة برمجية للواجهة الأمامية والتحقق الآلي.
+  version: 1.3.0
+  contact:
+    name: فريق حساباتي
+
+servers:
+  - url: http://localhost:3000
+    description: بيئة التطوير
+
+tags:
+  - name: auth
+    description: المصادقة والتسجيل
+  - name: businesses
+    description: الأعمال والمحطات
+  - name: accounts
+    description: الحسابات والصناديق
+  - name: vouchers
+    description: السندات والقيود
+  - name: references
+    description: أنواع وعناوين مرجعية
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: رمز JWT من تسجيل الدخول (رأس Authorization)
+  parameters:
+    bizId:
+      name: bizId
+      in: path
+      required: true
+      description: معرّف العمل
+      schema:
+        type: integer
+        example: 1
+    id:
+      name: id
+      in: path
+      required: true
+      description: معرّف المورد
+      schema:
+        type: integer
+
+paths:
+  # ===================== المصادقة =====================
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: تسجيل الدخول
+      description: إرجاع JWT عند نجاح المصادقة.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: نجاح — يُرجع token وبيانات المستخدم
+        '401':
+          description: فشل المصادقة
+  /api/auth/register:
+    post:
+      tags: [auth]
+      summary: تسجيل مستخدم جديد
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, fullName]
+              properties:
+                username: { type: string }
+                password: { type: string }
+                fullName: { type: string }
+      responses:
+        '201':
+          description: تم إنشاء الحساب
+        '400':
+          description: بيانات غير صالحة أو اسم مستخدم مكرر
+  /api/auth/me:
+    get:
+      tags: [auth]
+      summary: جلب المستخدم الحالي
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: بيانات المستخدم المرتبط بالـ JWT
+        '401':
+          description: غير مصرح
+
+  # ===================== الأعمال =====================
+  /api/businesses:
+    get:
+      tags: [businesses]
+      summary: جلب قائمة الأعمال
+      description: قائمة الأعمال مع إحصائيات (محطات، موظفين، حسابات، صناديق، موردين، حسابات معلقة).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: مصفوفة أعمال مع stats
+        '401':
+          description: غير مصرح
+  /api/businesses/{bizId}:
+    get:
+      tags: [businesses]
+      summary: جلب تفاصيل عمل
+      description: يتطلب صلاحية دخول العمل (bizAuth).
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      responses:
+        '200':
+          description: تفاصيل العمل
+        '403':
+          description: لا صلاحية لهذا العمل
+        '404':
+          description: عمل غير موجود
+
+  # ===================== المحطات =====================
+  /api/businesses/{bizId}/stations:
+    get:
+      tags: [businesses]
+      summary: جلب المحطات
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      responses:
+        '200':
+          description: قائمة المحطات
+    post:
+      tags: [businesses]
+      summary: إضافة محطة
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name: { type: string }
+                code: { type: string }
+      responses:
+        '201':
+          description: تم إنشاء المحطة
+        '400':
+          description: اسم أو كود مطلوب
+  /api/businesses/{bizId}/stations/{id}:
+    get:
+      tags: [businesses]
+      summary: جلب تفاصيل محطة
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: المحطة مع الموظفين والصناديق
+        '404':
+          description: محطة غير موجودة
+    delete:
+      tags: [businesses]
+      summary: حذف محطة
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: تم الحذف
+        '404':
+          description: محطة غير موجودة
+
+  # ===================== الحسابات =====================
+  /api/businesses/{bizId}/accounts:
+    get:
+      tags: [accounts]
+      summary: جلب الحسابات
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      responses:
+        '200':
+          description: قائمة الحسابات
+    post:
+      tags: [accounts]
+      summary: إضافة حساب
+      description: يتطلب صلاحية accounts.create.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                accountType: { type: string }
+                accountNumber: { type: string }
+      responses:
+        '201':
+          description: تم إنشاء الحساب
+        '400':
+          description: تحقق فاشل
+  /api/businesses/{bizId}/accounts/{id}:
+    put:
+      tags: [accounts]
+      summary: تعديل حساب
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: تم التعديل
+        '403':
+          description: لا ملكية للمورد
+        '404':
+          description: حساب غير موجود
+    delete:
+      tags: [accounts]
+      summary: حذف حساب
+      description: يتطلب صلاحية accounts.delete.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: تم الحذف
+        '403':
+          description: لا ملكية للمورد
+        '404':
+          description: حساب غير موجود
+
+  # ===================== الصناديق =====================
+  /api/businesses/{bizId}/funds:
+    get:
+      tags: [accounts]
+      summary: جلب الصناديق
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      responses:
+        '200':
+          description: قائمة الصناديق
+    post:
+      tags: [accounts]
+      summary: إضافة صندوق
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: تم إنشاء الصندوق
+    put:
+      tags: [accounts]
+      summary: تعديل صندوق
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: تم التعديل
+    delete:
+      tags: [accounts]
+      summary: حذف صندوق
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: تم الحذف
+
+  # ===================== السندات =====================
+  /api/businesses/{bizId}/vouchers:
+    get:
+      tags: [vouchers]
+      summary: جلب السندات
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      responses:
+        '200':
+          description: قائمة السندات
+    post:
+      tags: [vouchers]
+      summary: إضافة سند
+      description: يتطلب صلاحية vouchers.create.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                voucherType: { type: string }
+                amount: { type: number }
+                currencyId: { type: integer }
+      responses:
+        '201':
+          description: تم إنشاء السند
+        '400':
+          description: تحقق فاشل
+  /api/businesses/{bizId}/vouchers/{id}:
+    delete:
+      tags: [vouchers]
+      summary: حذف سند
+      description: يتطلب صلاحية vouchers.delete.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/bizId' }, { $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: تم الحذف
+        '403':
+          description: لا ملكية للمورد
+        '404':
+          description: سند غير موجود
+
+  # ===================== لوحة التحكم =====================
+  /api/dashboard/stats:
+    get:
+      tags: [businesses]
+      summary: إحصائيات لوحة التحكم
+      description: يُستخدم من لوحة التحكم (مع bizId في الاستعلام أو الهيدر).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: إحصائيات موجزة
+        '401':
+          description: غير مصرح
+
+  # ===================== الصحة =====================
+  /health:
+    get:
+      tags: []
+      summary: فحص صحة الخادم
+      responses:
+        '200':
+          description: الخادم يعمل
+  /health/db:
+    get:
+      tags: []
+      summary: فحص اتصال قاعدة البيانات
+      responses:
+        '200':
+          description: قاعدة البيانات متصلة
+        '503':
+          description: فشل الاتصال
+
+security:
+  - bearerAuth: []

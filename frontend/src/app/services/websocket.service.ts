@@ -9,10 +9,10 @@ export interface WSMessage {
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
   private ws: WebSocket | null = null;
-  private reconnectTimer: any = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | undefined = undefined;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
-  private reconnectDelay = 3000;
+  private readonly maxReconnectAttempts = 10;
+  private readonly reconnectDelay = 3000;
 
   connected = signal(false);
   lastMessage = signal<WSMessage | null>(null);
@@ -22,8 +22,8 @@ export class WebSocketService {
   connect(userId: number, bizId: number) {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
+    const protocol = globalThis.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = globalThis.location.hostname;
     const port = '3000';
     const url = `${protocol}//${host}:${port}/ws?userId=${userId}&bizId=${bizId}`;
 
@@ -46,7 +46,7 @@ export class WebSocketService {
             this.notifications.set([msg, ...current].slice(0, 50));
             this.unreadCount.set(this.unreadCount() + 1);
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.warn('Invalid WS message', event.data);
         }
       };
@@ -59,7 +59,7 @@ export class WebSocketService {
       this.ws.onerror = () => {
         this.connected.set(false);
       };
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn('WebSocket connection failed', e);
     }
   }

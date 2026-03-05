@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-warehouse',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './warehouse.html',
   styleUrl: './warehouse.scss',
 })
-export class WarehouseComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class WarehouseComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   warehouses = signal<any[]>([]);
   stations = signal<any[]>([]);
   warehouseTypes = signal<any[]>([]);
@@ -42,11 +39,8 @@ export class WarehouseComponent implements OnInit {
     name: '', subTypeKey: '', description: '', icon: 'warehouse', color: '#4CAF50',
   };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -142,8 +136,8 @@ export class WarehouseComponent implements OnInit {
       }
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
     }
   }
 
@@ -158,8 +152,8 @@ export class WarehouseComponent implements OnInit {
         await this.api.deleteWarehouse(w.id);
         this.toast.success('تم حذف المخزن');
         await this.load();
-      } catch (e: any) {
-        this.toast.error(e?.message || 'حدث خطأ');
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
       }
     }
   }
@@ -195,8 +189,8 @@ export class WarehouseComponent implements OnInit {
       }
       this.showTypeForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
     }
   }
 
@@ -211,8 +205,8 @@ export class WarehouseComponent implements OnInit {
         await this.api.deleteWarehouseType(t.id);
         this.toast.success('تم حذف التصنيف');
         await this.load();
-      } catch (e: any) {
-        this.toast.error(e?.message || 'حدث خطأ');
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
       }
     }
   }

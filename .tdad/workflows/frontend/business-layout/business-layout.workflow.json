@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "render-business-layout",
+      "workflowId": "frontend/business-layout",
+      "title": "Render Business Layout Shell",
+      "description": "When route /biz/:bizId activates, render `app-sidebar`, `app-header`, `app-breadcrumbs`, and a `router-outlet` inside a RTL container. Layout holds header + breadcrumbs + content area as the shared shell for all business pages.",
+      "nodeType": "feature",
+      "fileName": "render-business-layout",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui"]
+    },
+    {
+      "id": "watch-and-handle-bizid-change",
+      "workflowId": "frontend/business-layout",
+      "title": "Watch bizId Route Parameter",
+      "description": "When `bizId` changes in the parent route params, BasePageComponent triggers onBizIdChange with parsed integer. If `bizId` is valid, flow continues to refresh business context.",
+      "nodeType": "feature",
+      "fileName": "watch-and-handle-bizid-change",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["render-business-layout"],
+      "testLayers": ["ui"]
+    },
+    {
+      "id": "load-business-context-into-service",
+      "workflowId": "frontend/business-layout",
+      "title": "Load and Save Business Context",
+      "description": "When bizId is valid, call `api.getBusiness(bizId)` and then `bizService.setBusiness(biz.id, biz.name, biz.color, biz.icon, biz.type ?? 'stations')`. Success: shared state is updated so header/sidebar reflect selected business.",
+      "nodeType": "feature",
+      "fileName": "load-business-context-into-service",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": ["watch-and-handle-bizid-change"],
+      "testLayers": ["ui", "api"]
+    },
+    {
+      "id": "fallback-to-login-on-business-error",
+      "workflowId": "frontend/business-layout",
+      "title": "Fallback To Home On Invalid Business",
+      "description": "When loading business context fails (network/auth/invalid id), clear error handling by navigating to `/`. Failure behavior should keep user out of stale layout state.",
+      "nodeType": "feature",
+      "fileName": "fallback-to-login-on-business-error",
+      "position": { "x": 700, "y": 100 },
+      "dependencies": ["load-business-context-into-service"],
+      "testLayers": ["ui"]
+    }
+  ],
+  "edges": [
+    { "id": "layout-to-watch-bizid", "source": "render-business-layout", "target": "watch-and-handle-bizid-change" },
+    { "id": "watch-bizid-to-load", "source": "watch-and-handle-bizid-change", "target": "load-business-context-into-service" },
+    { "id": "load-bizid-to-fallback", "source": "load-business-context-into-service", "target": "fallback-to-login-on-business-error" }
+  ]
+}

@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-suppliers",
+      "id": "load-suppliers-list",
       "workflowId": "frontend/suppliers",
-      "title": "Load Suppliers",
-      "description": "pages/suppliers/suppliers.ts: Calls api.getSuppliers(bizId).",
+      "title": "Load Suppliers List",
+      "description": "When page loads or after mutation, set loading=true and call GET /api/businesses/:bizId/suppliers. Success: stores suppliers and renders list. Failure: keeps existing list and shows error toast before ending loading.",
       "nodeType": "feature",
-      "fileName": "load-suppliers",
+      "fileName": "load-suppliers-list",
       "position": {
         "x": 100,
         "y": 100
@@ -19,18 +19,107 @@
       ]
     },
     {
-      "id": "crud-suppliers",
+      "id": "compute-supplier-summary",
       "workflowId": "frontend/suppliers",
-      "title": "CRUD Suppliers",
-      "description": "pages/suppliers/suppliers.ts: Calls api.createSupplier, updateSupplier, deleteSupplier.",
+      "title": "Compute Supplier Summary",
+      "description": "After loading suppliers, derive total supplier count and unique category count used by summary cards. Empty data renders zeros.",
       "nodeType": "feature",
-      "fileName": "crud-suppliers",
+      "fileName": "compute-supplier-summary",
       "position": {
         "x": 300,
         "y": 100
       },
       "dependencies": [
-        "load-suppliers"
+        "load-suppliers-list"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "filter-suppliers-list",
+      "workflowId": "frontend/suppliers",
+      "title": "Filter Suppliers By Search And Category",
+      "description": "When user changes filterCategory or searchQuery, recompute filteredSuppliers: first by exact category unless 'all', then by case-insensitive match over supplier name and contactPerson.",
+      "nodeType": "feature",
+      "fileName": "filter-suppliers-list",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "compute-supplier-summary"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "open-supplier-form",
+      "workflowId": "frontend/suppliers",
+      "title": "Open Supplier Form",
+      "description": "When user clicks add/edit, open supplier modal. In add mode reset form fields. In edit mode copy selected supplier into form and set editingId.",
+      "nodeType": "feature",
+      "fileName": "open-supplier-form",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "persist-supplier-form",
+      "workflowId": "frontend/suppliers",
+      "title": "Persist Supplier",
+      "description": "On save, call api.createSupplier(bizId, form) in add mode or api.updateSupplier(id, form) in edit mode. Success: close modal, show success toast, and re-load suppliers. Failure: show backend error while keeping form open.",
+      "nodeType": "feature",
+      "fileName": "persist-supplier-form",
+      "position": {
+        "x": 300,
+        "y": 280
+      },
+      "dependencies": [
+        "open-supplier-form"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "open-supplier-delete-confirm",
+      "workflowId": "frontend/suppliers",
+      "title": "Open Supplier Delete Confirmation",
+      "description": "When user clicks delete, call toast.confirm with supplier label. Cancel stops flow. Confirm continues to deletion node.",
+      "nodeType": "feature",
+      "fileName": "open-supplier-delete-confirm",
+      "position": {
+        "x": 100,
+        "y": 460
+      },
+      "dependencies": [
+        "load-suppliers-list"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "delete-supplier",
+      "workflowId": "frontend/suppliers",
+      "title": "Delete Supplier",
+      "description": "After confirmation, call DELETE /api/suppliers/:id. Success: show 'تم حذف المورد بنجاح' and reload list. Failure: show backend error.",
+      "nodeType": "feature",
+      "fileName": "delete-supplier",
+      "position": {
+        "x": 300,
+        "y": 460
+      },
+      "dependencies": [
+        "open-supplier-delete-confirm"
       ],
       "testLayers": [
         "ui",
@@ -40,9 +129,34 @@
   ],
   "edges": [
     {
-      "id": "load-suppliers-to-crud-suppliers",
-      "source": "load-suppliers",
-      "target": "crud-suppliers"
+      "id": "load-to-summary",
+      "source": "load-suppliers-list",
+      "target": "compute-supplier-summary"
+    },
+    {
+      "id": "summary-to-filter",
+      "source": "compute-supplier-summary",
+      "target": "filter-suppliers-list"
+    },
+    {
+      "id": "form-open-to-save",
+      "source": "open-supplier-form",
+      "target": "persist-supplier-form"
+    },
+    {
+      "id": "save-to-reload",
+      "source": "persist-supplier-form",
+      "target": "load-suppliers-list"
+    },
+    {
+      "id": "list-to-delete",
+      "source": "load-suppliers-list",
+      "target": "open-supplier-delete-confirm"
+    },
+    {
+      "id": "delete-to-reload",
+      "source": "open-supplier-delete-confirm",
+      "target": "delete-supplier"
     }
   ]
 }

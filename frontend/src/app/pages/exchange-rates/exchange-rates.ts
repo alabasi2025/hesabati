@@ -13,9 +13,9 @@ import { ToastService } from '../../services/toast.service';
   styleUrl: './exchange-rates.scss',
 })
 export class ExchangeRatesComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private toast = inject(ToastService);
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly toast = inject(ToastService);
 
   bizId = 0;
   rates: any[] = [];
@@ -51,8 +51,10 @@ export class ExchangeRatesComponent implements OnInit {
       else { await this.api.createExchangeRate(this.bizId, data); }
       this.toast.success('تم الحفظ بنجاح');
       this.cancel(); this.load();
-    } catch (e: any) {
-      this.toast.error(e?.error?.error || 'حدث خطأ');
+    } catch (e: unknown) {
+      const errObj = e && typeof e === 'object' && 'error' in e ? (e as { error?: { error?: string } }).error : undefined;
+      const msg = e instanceof Error ? e.message : (errObj && typeof errObj === 'object' && errObj.error) ? errObj.error : undefined;
+      this.toast.error(msg || 'حدث خطأ');
     }
   }
 

@@ -26,7 +26,7 @@ interface BusinessSummary {
   styleUrl: './summary.scss',
 })
 export class SummaryComponent implements OnInit {
-  private api = inject(ApiService);
+  private readonly api = inject(ApiService);
 
   businesses = signal<BusinessSummary[]>([]);
   loading = signal(true);
@@ -77,8 +77,8 @@ export class SummaryComponent implements OnInit {
       }), { stations: 0, employees: 0, accounts: 0, funds: 0, suppliers: 0, pendingAccounts: 0 });
 
       this.totals.set(totals);
-    } catch (e: any) {
-      this.error.set(e.message || 'خطأ في تحميل البيانات');
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : 'خطأ في تحميل البيانات');
     } finally {
       this.loading.set(false);
     }

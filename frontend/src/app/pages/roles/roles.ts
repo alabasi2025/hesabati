@@ -28,9 +28,9 @@ const ACTION_LABELS: Record<string, string> = { create: 'إنشاء', read: 'ع�
   styleUrl: './roles.scss',
 })
 export class RolesComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private toast = inject(ToastService);
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly toast = inject(ToastService);
 
   bizId = 0;
   roles: any[] = [];
@@ -94,8 +94,8 @@ export class RolesComponent implements OnInit {
       else { await this.api.createRole(this.bizId, data); }
       this.toast.success('تم الحفظ بنجاح');
       this.cancelForm(); this.load();
-    } catch (e: any) {
-      this.toast.error(e?.error?.error || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error((e as { error?: { error?: string } })?.error?.error || 'حدث خطأ');
     }
   }
 
@@ -115,8 +115,8 @@ export class RolesComponent implements OnInit {
       await this.api.assignUserRole(this.bizId, { userId: Number(this.assignUserId), roleId: Number(this.assignRoleId) });
       this.toast.success('تم التعيين بنجاح');
       this.load();
-    } catch (e: any) {
-      this.toast.error(e?.error?.error || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error((e as { error?: { error?: string } })?.error?.error || 'حدث خطأ');
     }
   }
 

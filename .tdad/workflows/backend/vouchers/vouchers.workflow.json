@@ -2,229 +2,97 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-vouchers",
+      "id": "get-vouchers-list",
       "workflowId": "backend/vouchers",
-      "title": "GET /businesses/:bizId/vouchers",
-      "description": "api.ts line 647: Protected by bizAuthMiddleware(). Queries vouchers table filtered by businessId. Returns array of voucher objects.",
+      "title": "Get Vouchers List",
+      "description": "GET /api/businesses/:bizId/vouchers with optional query type=receipt|payment|transfer. Returns array of vouchers for business ordered by createdAt desc. Requires Authorization header and bizId membership. Returns 200 with [{id, voucherType, voucherNumber, amount, fromAccountId, toAccountId, categoryId, status, description, voucherDate, createdAt, createdBy}]. Returns 401 if unauthorized. Returns 403 if not member of business.",
       "nodeType": "feature",
-      "fileName": "list-vouchers",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-vouchers-list",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "list-vouchers-enhanced",
+      "id": "post-voucher-create-receipt",
       "workflowId": "backend/vouchers",
-      "title": "GET /businesses/:bizId/vouchers-enhanced",
-      "description": "enhancements.ts line 20: Enhanced voucher listing with filters (type, status, dateFrom, dateTo, search). Joins with accounts and users. Supports pagination.",
+      "title": "Post Voucher Create Receipt",
+      "description": "POST /api/businesses/:bizId/vouchers with body {voucherType: 'receipt', amount, toAccountId, fromAccountId, categoryId, description, voucherDate}. Validates amount > 0 and accounts belong to business. Generates sequential voucherNumber. Creates voucher record and journal entry lines (debit toAccount, credit fromAccount). Updates account balances. Returns 201 with created voucher {id, voucherNumber, ...}. Returns 400 if amount invalid or accounts missing. Returns 403 if accounts not in business. Requires vouchers create permission.",
       "nodeType": "feature",
-      "fileName": "list-vouchers-enhanced",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-vouchers"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-voucher-create-receipt",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "create-voucher",
+      "id": "post-voucher-create-payment",
       "workflowId": "backend/vouchers",
-      "title": "POST /businesses/:bizId/vouchers",
-      "description": "api.ts line 656: Validates operationTypeId is required. Validates source/target accounts belong to business. Blocks safe-to-safe transfers. Generates sequence number. Updates account_balances and fund_balances. Uses database transaction.",
+      "title": "Post Voucher Create Payment",
+      "description": "POST /api/businesses/:bizId/vouchers with body {voucherType: 'payment', amount, toAccountId, fromAccountId, categoryId, description, voucherDate}. Same validation as receipt. Debits fromAccountId and credits toAccountId. Creates voucher and journal lines. Updates balances. Returns 201 with voucher. Returns 400 if validation fails. Requires vouchers create permission.",
       "nodeType": "feature",
-      "fileName": "create-voucher",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-vouchers"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-voucher-create-payment",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "create-voucher-draft",
+      "id": "post-voucher-create-transfer",
       "workflowId": "backend/vouchers",
-      "title": "POST /businesses/:bizId/vouchers-draft",
-      "description": "enhancements.ts line 672: Creates voucher with status='draft'. Does NOT update balances. Stores for later confirmation.",
+      "title": "Post Voucher Create Transfer",
+      "description": "POST /api/businesses/:bizId/vouchers with body {voucherType: 'transfer', amount, toAccountId, fromAccountId, description, voucherDate}. Transfers amount between two accounts within same business. Creates voucher and journal lines. Returns 201 with voucher. Returns 400 if validation fails.",
       "nodeType": "feature",
-      "fileName": "create-voucher-draft",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-vouchers"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-voucher-create-transfer",
+      "position": { "x": 700, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "update-voucher",
+      "id": "post-voucher-reverse",
       "workflowId": "backend/vouchers",
-      "title": "PUT /businesses/:bizId/vouchers/:id",
-      "description": "enhancements.ts line 92: Updates voucher fields (amount, description, date, etc). Validates voucher belongs to business.",
+      "title": "Post Voucher Reverse",
+      "description": "POST /api/businesses/:bizId/vouchers/:id/reverse with optional body {reverseDate, note}. Creates reversing voucher with opposite journal entries. Original voucher status updated to 'reversed'. Balances adjusted back. Returns 200 with reversed voucher {id, voucherNumber, isReversed: true, originalVoucherId}. Returns 404 if voucher not found. Returns 400 if already reversed or invalid state. Requires vouchers reverse permission.",
       "nodeType": "feature",
-      "fileName": "update-voucher",
-      "position": {
-        "x": 500,
-        "y": 250
-      },
-      "dependencies": [
-        "list-vouchers"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-voucher-reverse",
+      "position": { "x": 300, "y": 300 },
+      "dependencies": ["get-vouchers-list"],
+      "testLayers": ["api"]
     },
     {
       "id": "delete-voucher",
       "workflowId": "backend/vouchers",
-      "title": "DELETE /businesses/:bizId/vouchers/:id",
-      "description": "api.ts line 882: Deletes voucher. REVERSES account_balances and fund_balances (debit becomes credit, credit becomes debit). Uses database transaction.",
+      "title": "Delete Voucher",
+      "description": "DELETE /api/businesses/:bizId/vouchers/:id. Validates ownership. Deletes voucher and related journal lines. Reverses balance changes. Returns 200 with {success: true}. Returns 404 if not found. Returns 400 if voucher already posted or reversed (cannot delete). Requires vouchers delete permission.",
       "nodeType": "feature",
       "fileName": "delete-voucher",
-      "position": {
-        "x": 100,
-        "y": 400
-      },
-      "dependencies": [
-        "create-voucher"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "position": { "x": 100, "y": 300 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "reverse-voucher",
+      "id": "get-voucher-transitions",
       "workflowId": "backend/vouchers",
-      "title": "POST /businesses/:bizId/vouchers/:id/reverse",
-      "description": "api.ts line 2940: Creates a new reversal voucher with swapped debit/credit. Updates balances accordingly. Links to original voucher.",
+      "title": "Get Voucher Transitions",
+      "description": "GET /api/businesses/:bizId/vouchers/:voucherId/transitions. Returns array of available workflow transitions for voucher based on current status and operation type. Returns 200 with [{id, fromStatus, toStatus, label, requiresApproval}]. Empty array if no transitions available. Used for workflow state machine.",
       "nodeType": "feature",
-      "fileName": "reverse-voucher",
-      "position": {
-        "x": 300,
-        "y": 400
-      },
-      "dependencies": [
-        "create-voucher"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-voucher-transitions",
+      "position": { "x": 500, "y": 300 },
+      "dependencies": ["get-vouchers-list"],
+      "testLayers": ["api"]
     },
     {
-      "id": "change-voucher-status",
+      "id": "post-execute-transition",
       "workflowId": "backend/vouchers",
-      "title": "POST /businesses/:bizId/vouchers/:id/status",
-      "description": "enhancements.ts line 124: Changes voucher status (draft->confirmed, confirmed->cancelled). When confirming draft: updates balances. When cancelling: reverses balances.",
+      "title": "Post Execute Transition",
+      "description": "POST /api/businesses/:bizId/vouchers/:voucherId/transition with body {transitionId, note}. Executes workflow transition. Updates voucher status. Logs transition in workflow_history. Returns 200 with updated voucher and new status. Returns 404 if voucher or transition not found. Returns 400 if transition not allowed from current status. Requires workflow execute permission.",
       "nodeType": "feature",
-      "fileName": "change-voucher-status",
-      "position": {
-        "x": 500,
-        "y": 400
-      },
-      "dependencies": [
-        "create-voucher"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "get-voucher-details",
-      "workflowId": "backend/vouchers",
-      "title": "GET /businesses/:bizId/vouchers/:id/details",
-      "description": "enhancements.ts line 232: Returns full voucher details with joined account names, fund names, user info, and operation type.",
-      "nodeType": "feature",
-      "fileName": "get-voucher-details",
-      "position": {
-        "x": 200,
-        "y": 550
-      },
-      "dependencies": [
-        "list-vouchers"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "get-account-balance",
-      "workflowId": "backend/vouchers",
-      "title": "GET /businesses/:bizId/account-balance/:accountId",
-      "description": "enhancements.ts line 209: Returns current balance for specific account from account_balances table.",
-      "nodeType": "feature",
-      "fileName": "get-account-balance",
-      "position": {
-        "x": 400,
-        "y": 550
-      },
-      "dependencies": [
-        "list-vouchers"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-execute-transition",
+      "position": { "x": 700, "y": 300 },
+      "dependencies": ["get-voucher-transitions"],
+      "testLayers": ["api"]
     }
   ],
   "edges": [
-    {
-      "id": "list-vouchers-to-list-vouchers-enhanced",
-      "source": "list-vouchers",
-      "target": "list-vouchers-enhanced"
-    },
-    {
-      "id": "list-vouchers-to-create-voucher",
-      "source": "list-vouchers",
-      "target": "create-voucher"
-    },
-    {
-      "id": "list-vouchers-to-create-voucher-draft",
-      "source": "list-vouchers",
-      "target": "create-voucher-draft"
-    },
-    {
-      "id": "list-vouchers-to-update-voucher",
-      "source": "list-vouchers",
-      "target": "update-voucher"
-    },
-    {
-      "id": "create-voucher-to-delete-voucher",
-      "source": "create-voucher",
-      "target": "delete-voucher"
-    },
-    {
-      "id": "create-voucher-to-reverse-voucher",
-      "source": "create-voucher",
-      "target": "reverse-voucher"
-    },
-    {
-      "id": "create-voucher-to-change-voucher-status",
-      "source": "create-voucher",
-      "target": "change-voucher-status"
-    },
-    {
-      "id": "list-vouchers-to-get-voucher-details",
-      "source": "list-vouchers",
-      "target": "get-voucher-details"
-    },
-    {
-      "id": "list-vouchers-to-get-account-balance",
-      "source": "list-vouchers",
-      "target": "get-account-balance"
-    }
+    { "id": "list-to-reverse", "source": "get-vouchers-list", "target": "post-voucher-reverse" },
+    { "id": "list-to-transitions", "source": "get-vouchers-list", "target": "get-voucher-transitions" },
+    { "id": "transitions-to-execute", "source": "get-voucher-transitions", "target": "post-execute-transition" }
   ]
 }

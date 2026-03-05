@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-ui-builder",
+      "workflowId": "frontend/ui-builder",
+      "title": "عرض منشئ الواجهة",
+      "description": "عند الدخول إلى /biz/:bizId/ui-builder يتم عرض واجهة إنشاء الصفحات والمكونات. Success: عرض الصفحات وإدارة المكونات ومصادر البيانات. Failure: رسالة خطأ.",
+      "nodeType": "feature",
+      "fileName": "display-ui-builder",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": []
+}

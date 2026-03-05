@@ -1,5 +1,15 @@
 # أدوات مساعدة (حساباتي)
 
+## تقليل أخطاء Angular Language Service ("No config file")
+
+عند فتح **مجلد المشروع كاملاً** قد تظهر رسائل مثل: `No config file for ... backend/...` أو `... e2e/...` لأن هذه الملفات ليست جزءاً من مشروع Angular.
+
+**الحل الموصى به:** افتح المشروع عبر **ملف الـ Workspace** حتى يعمل Angular فقط داخل Frontend:
+- **File → Open Workspace from File...** ثم اختر `hesabati.code-workspace` من جذر المشروع.
+- سترى مجلدين: **Frontend (Angular)** و **Backend**. خدمة لغة Angular تعمل فقط داخل Frontend، فلا تظهر رسائل "No config file" لملفات الـ Backend أو e2e.
+
+تم أيضاً تضمين `src/**/*.html` و `src/**/*.scss` في `frontend/tsconfig.app.json` لربط القوالب والأنماط بمشروع Angular.
+
 ## إضافات مُوصى بها
 
 عند فتح المشروع، Cursor/VS Code قد يقترح تثبيت الإضافات التالية. يُفضّل قبولها لتجربة أفضل:

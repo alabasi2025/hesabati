@@ -12,18 +12,22 @@
   </div>
 
   <!-- تحميل -->
-  <div *ngIf="loading()" class="loading-state">
-    <span class="material-icons spinning">refresh</span>
-    <p>جاري تحميل البيانات...</p>
-  </div>
+  @if (loading()) {
+    <div class="loading-state">
+      <span class="material-icons spinning">refresh</span>
+      <p>جاري تحميل البيانات...</p>
+    </div>
+  }
 
   <!-- خطأ -->
-  <div *ngIf="error()" class="error-state">
-    <span class="material-icons">error_outline</span>
-    <p>{{ error() }}</p>
-  </div>
+  @if (error()) {
+    <div class="error-state">
+      <span class="material-icons">error_outline</span>
+      <p>{{ error() }}</p>
+    </div>
+  }
 
-  <ng-container *ngIf="!loading() && !error()">
+  @if (!loading() && !error()) {
 
     <!-- بطاقات الإجماليات الكبيرة -->
     <div class="totals-grid">
@@ -78,8 +82,8 @@
     </div>
 
     <div class="businesses-grid">
+      @for (biz of businesses(); track biz.id) {
       <div
-        *ngFor="let biz of businesses()"
         class="biz-card"
         [style.--biz-color]="biz.color"
       >
@@ -102,53 +106,67 @@
 
         <!-- إحصائيات العمل -->
         <div class="biz-stats">
-          <div class="stat-item" *ngIf="biz.stations > 0">
+          @if (biz.stations > 0) {
+          <div class="stat-item">
             <span class="material-icons">bolt</span>
             <span class="stat-val">{{ biz.stations }}</span>
             <span class="stat-lbl">محطة</span>
           </div>
-          <div class="stat-item" *ngIf="biz.employees > 0">
+          }
+          @if (biz.employees > 0) {
+          <div class="stat-item">
             <span class="material-icons">groups</span>
             <span class="stat-val">{{ biz.employees }}</span>
             <span class="stat-lbl">موظف</span>
           </div>
+          }
           <div class="stat-item">
             <span class="material-icons">account_balance_wallet</span>
             <span class="stat-val">{{ biz.accounts }}</span>
             <span class="stat-lbl">حساب</span>
           </div>
-          <div class="stat-item" *ngIf="biz.funds > 0">
+          @if (biz.funds > 0) {
+          <div class="stat-item">
             <span class="material-icons">savings</span>
             <span class="stat-val">{{ biz.funds }}</span>
             <span class="stat-lbl">صندوق</span>
           </div>
-          <div class="stat-item" *ngIf="biz.suppliers > 0">
+          }
+          @if (biz.suppliers > 0) {
+          <div class="stat-item">
             <span class="material-icons">local_shipping</span>
             <span class="stat-val">{{ biz.suppliers }}</span>
             <span class="stat-lbl">مورد</span>
           </div>
+          }
         </div>
 
         <!-- الشركاء -->
-        <div class="biz-partners" *ngIf="biz.partners && biz.partners.length > 0">
+        @if (biz.partners && biz.partners.length > 0) {
+        <div class="biz-partners">
           <div class="partners-title">
             <span class="material-icons">handshake</span>
             الشركاء
           </div>
           <div class="partners-list">
-            <div *ngFor="let p of biz.partners" class="partner-chip">
+            @for (p of biz.partners; track p.id) {
+            <div class="partner-chip">
               <span class="material-icons">person</span>
               <span>{{ p.fullName }}</span>
               <span class="partner-share">{{ p.sharePercentage }}%</span>
             </div>
+            }
           </div>
         </div>
+        }
 
         <!-- تنبيه حسابات معلقة -->
-        <div class="pending-alert" *ngIf="biz.pendingAccounts > 0">
+        @if (biz.pendingAccounts > 0) {
+        <div class="pending-alert">
           <span class="material-icons">warning</span>
           <span>{{ biz.pendingAccounts }} حساب معلق يحتاج تصفية</span>
         </div>
+        }
 
         <!-- زر الدخول -->
         <a [routerLink]="['/biz', biz.id]" class="enter-biz-btn">
@@ -156,8 +174,8 @@
           الدخول على {{ biz.name }}
         </a>
       </div>
+      }
     </div>
 
-  </ng-container>
-
+  }
 </div>

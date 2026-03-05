@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-wallets',
@@ -13,13 +13,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './wallets.html',
   styleUrl: './wallets.scss',
 })
-export class WalletsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class WalletsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   accounts = signal<any[]>([]);
   walletTypes = signal<any[]>([]);
   loading = signal(true);
@@ -42,11 +39,8 @@ export class WalletsComponent implements OnInit {
     'credit_card', 'attach_money', 'monetization_on', 'toll', 'local_atm',
   ];
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -105,7 +99,7 @@ export class WalletsComponent implements OnInit {
       this.showAccountForm.set(false);
       this.toast.success(this.editingAccountId() ? 'تم تحديث المحفظة بنجاح' : 'تم إنشاء المحفظة بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ المحفظة'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ المحفظة'); }
   }
 
   openAddType() {
@@ -130,7 +124,7 @@ export class WalletsComponent implements OnInit {
       this.showTypeForm.set(false);
       this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ النوع'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع'); }
   }
 
   confirmDelete(type: 'account' | 'type', id: number, name: string) {
@@ -148,7 +142,7 @@ export class WalletsComponent implements OnInit {
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
   }
 
   getBalanceDisplay(acc: any): string {

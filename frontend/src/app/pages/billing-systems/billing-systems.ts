@@ -1,9 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-billing-systems',
@@ -12,12 +12,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './billing-systems.html',
   styleUrl: './billing-systems.scss',
 })
-export class BillingSystemsComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private toast = inject(ToastService);
-  private api = inject(ApiService);
+export class BillingSystemsComponent extends BasePageComponent {
+  private readonly toast = inject(ToastService);
+  private readonly api = inject(ApiService);
 
-  bizId = 0;
   loading = signal(true);
   error = signal('');
   successMsg = signal('');
@@ -173,11 +171,8 @@ export class BillingSystemsComponent implements OnInit {
     { value: 'haseb_deposit', label: 'إيداع حاسب' },
   ];
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      await this.loadAll();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    void this.loadAll();
   }
 
   async loadAll() {
@@ -195,8 +190,8 @@ export class BillingSystemsComponent implements OnInit {
       this.accountTypes.set(types);
       this.stations.set(stations);
       this.employees.set(emps);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
       this.loading.set(false);
     }
@@ -254,8 +249,8 @@ export class BillingSystemsComponent implements OnInit {
     }
 
     const accountData: any = {
-      employeeId: parseInt(f.employeeId),
-      stationId: parseInt(f.stationId),
+      employeeId: Number.parseInt(f.employeeId, 10),
+      stationId: Number.parseInt(f.stationId, 10),
       billingSystem: f.billingSystem,
       collectionMethod: f.collectionMethod,
       label: this.accountForm().label || f.label,
@@ -273,8 +268,8 @@ export class BillingSystemsComponent implements OnInit {
       this.showAccountForm.set(false);
       await this.loadAll();
       setTimeout(() => this.successMsg.set(''), 4000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -284,8 +279,8 @@ export class BillingSystemsComponent implements OnInit {
       await this.loadAll();
       this.successMsg.set(acc.isActive ? 'تم إيقاف الحساب' : 'تم تفعيل الحساب');
       setTimeout(() => this.successMsg.set(''), 3000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -297,8 +292,8 @@ export class BillingSystemsComponent implements OnInit {
       await this.loadAll();
       this.successMsg.set('تم حذف الحساب');
       setTimeout(() => this.successMsg.set(''), 3000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -366,8 +361,8 @@ export class BillingSystemsComponent implements OnInit {
       await this.loadAll();
       this.successMsg.set(`تم إضافة نظام "${f.name}" بنجاح`);
       setTimeout(() => this.successMsg.set(''), 4000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -379,8 +374,8 @@ export class BillingSystemsComponent implements OnInit {
       await this.loadAll();
       this.successMsg.set('تم حذف النظام');
       setTimeout(() => this.successMsg.set(''), 3000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -411,8 +406,8 @@ export class BillingSystemsComponent implements OnInit {
       this.showTypeForm.set(false);
       await this.loadAll();
       setTimeout(() => this.successMsg.set(''), 3000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -424,8 +419,8 @@ export class BillingSystemsComponent implements OnInit {
       await this.loadAll();
       this.successMsg.set('تم حذف النوع');
       setTimeout(() => this.successMsg.set(''), 3000);
-    } catch (e: any) {
-      this.error.set(e.message);
+    } catch (e: unknown) {
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
 

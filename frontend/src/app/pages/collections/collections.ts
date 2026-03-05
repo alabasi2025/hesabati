@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
+import { formatAmount as formatAmountShared, formatDate as formatDateShared } from '../../shared/helpers';
 
 @Component({
   selector: 'app-collections',
@@ -13,13 +14,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './collections.html',
   styleUrl: './collections.scss',
 })
-export class CollectionsComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private api = inject(ApiService);
-  private toast = inject(ToastService);
-  biz = inject(BusinessService);
+export class CollectionsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   loading = signal(true);
   saving = signal(false);
   error = signal('');
@@ -60,10 +58,10 @@ export class CollectionsComponent implements OnInit {
   ));
 
   collectionTotal = computed(() =>
-    this.collectionEntries().reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+    this.collectionEntries().reduce((s, e) => s + (Number.parseFloat(e.amount) || 0), 0)
   );
   deliveryTotal = computed(() =>
-    this.deliveryEntries().reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+    this.deliveryEntries().reduce((s, e) => s + (Number.parseFloat(e.amount) || 0), 0)
   );
 
   historyStats = computed(() => {
@@ -71,8 +69,8 @@ export class CollectionsComponent implements OnInit {
     const receipts = all.filter(v => v.voucherType === 'receipt');
     const payments = all.filter(v => v.voucherType === 'payment');
     return {
-      totalReceipts: receipts.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
-      totalPayments: payments.reduce((s: number, v: any) => s + parseFloat(v.amount || 0), 0),
+      totalReceipts: receipts.reduce((s: number, v: any) => s + Number.parseFloat(v.amount || 0), 0),
+      totalPayments: payments.reduce((s: number, v: any) => s + Number.parseFloat(v.amount || 0), 0),
       receiptCount: receipts.length,
       paymentCount: payments.length,
     };
@@ -87,11 +85,8 @@ export class CollectionsComponent implements OnInit {
     !['collection', 'salary_advance', 'custody', 'safe'].includes(f.fundType)
   ));
 
-  async ngOnInit() {
-    this.route.parent?.params.subscribe(async (params) => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) await this.loadAll();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    void this.loadAll();
   }
 
   async loadAll() {
@@ -107,7 +102,7 @@ export class CollectionsComponent implements OnInit {
       this.accounts.set(accs);
       this.funds.set(fds);
       this.vouchers.set(vcs);
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.error.set('خطأ في تحميل البيانات');
     }
     this.loading.set(false);
@@ -135,11 +130,11 @@ export class CollectionsComponent implements OnInit {
   }
 
   async saveCollection() {
-    const entries = this.collectionEntries().filter(e => parseFloat(e.amount) > 0);
+    const entries = this.collectionEntries().filter(e => Number.parseFloat(e.amount) > 0);
     if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
 
-    const total = entries.reduce((s, e) => s + parseFloat(e.amount), 0);
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const total = entries.reduce((s, e) => s + Number.parseFloat(e.amount), 0);
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد التحصيل - ${this.selectedCollectionOT()?.name || ''}`,
       message: `سيتم تنفيذ ${entries.length} عملية تحصيل بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
@@ -158,14 +153,14 @@ export class CollectionsComponent implements OnInit {
             voucherType: 'receipt',
             operationTypeId: this.selectedCollectionOT()?.id,
             toAccountId: entry.accountId,
-            amount: parseFloat(entry.amount),
+            amount: Number.parseFloat(entry.amount),
             currencyId: 1,
             description: this.collectionDescription() || `تحصيل - ${entry.accountName}`,
             voucherDate: this.collectionDate(),
           });
           results.push(result);
-        } catch (e: any) {
-          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+        } catch (e: unknown) {
+          errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`);
         }
       }
       if (results.length > 0 && errors.length === 0) {
@@ -182,7 +177,7 @@ export class CollectionsComponent implements OnInit {
       this.collectionDescription.set('');
       this.activeOpsTab.set('history');
       await this.loadAll();
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.showError('خطأ في الحفظ');
     }
     this.saving.set(false);
@@ -211,11 +206,11 @@ export class CollectionsComponent implements OnInit {
   }
 
   async saveDelivery() {
-    const entries = this.deliveryEntries().filter(e => parseFloat(e.amount) > 0);
+    const entries = this.deliveryEntries().filter(e => Number.parseFloat(e.amount) > 0);
     if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
 
-    const total = entries.reduce((s, e) => s + parseFloat(e.amount), 0);
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const total = entries.reduce((s, e) => s + Number.parseFloat(e.amount), 0);
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد التوريد - ${this.selectedDeliveryOT()?.name || ''}`,
       message: `سيتم تنفيذ ${entries.length} عملية توريد بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
@@ -234,15 +229,15 @@ export class CollectionsComponent implements OnInit {
             voucherType: 'payment',
             operationTypeId: this.selectedDeliveryOT()?.id,
             toAccountId: entry.accountId,
-            amount: parseFloat(entry.amount),
+            amount: Number.parseFloat(entry.amount),
             currencyId: 1,
             description: this.deliveryDescription() || `توريد - ${entry.accountName}`,
             voucherDate: this.deliveryDate(),
             reference: entry.reference,
           });
           results.push(result);
-        } catch (e: any) {
-          errors.push(`${entry.accountName}: ${e.message || 'خطأ'}`);
+        } catch (e: unknown) {
+          errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`);
         }
       }
       if (results.length > 0 && errors.length === 0) {
@@ -259,7 +254,7 @@ export class CollectionsComponent implements OnInit {
       this.deliveryDescription.set('');
       this.activeOpsTab.set('history');
       await this.loadAll();
-    } catch (e: any) {
+    } catch (e: unknown) {
       this.showError('خطأ في الحفظ');
     }
     this.saving.set(false);
@@ -278,8 +273,8 @@ export class CollectionsComponent implements OnInit {
     const all = this.vouchers();
     let balance = 0;
     for (const v of all) {
-      if (v.toFundId === fund.id) balance += parseFloat(v.amount || 0);
-      if (v.fromFundId === fund.id) balance -= parseFloat(v.amount || 0);
+      if (v.toFundId === fund.id) balance += Number.parseFloat(v.amount || 0);
+      if (v.fromFundId === fund.id) balance -= Number.parseFloat(v.amount || 0);
     }
     return balance;
   }
@@ -349,16 +344,15 @@ export class CollectionsComponent implements OnInit {
     setTimeout(() => this.error.set(''), 4000);
   }
 
-  formatAmount(amount: any): string {
-    return parseFloat(amount || 0).toLocaleString('ar-YE');
+  formatAmount(amount: unknown): string {
+    return formatAmountShared(amount);
   }
 
   formatDate(d: string): string {
-    if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateShared(d || '');
   }
 
-  parseFloat(v: any): number { return parseFloat(v) || 0; }
+  parseFloat(v: any): number { return Number.parseFloat(v) || 0; }
   trackById(_: number, item: any) { return item.id; }
   trackByIndex(i: number) { return i; }
 }

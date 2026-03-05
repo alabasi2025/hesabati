@@ -45,7 +45,7 @@ authRoutes.post('/login', async (c) => {
         role: user.role,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error);
     return c.json({ error: 'حدث خطأ في تسجيل الدخول' }, 500);
   }
@@ -76,7 +76,7 @@ authRoutes.post('/register', async (c) => {
         role: newUser.role,
       },
     }, 201);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Register error:', error);
     return c.json({ error: 'حدث خطأ في التسجيل' }, 500);
   }
@@ -85,7 +85,7 @@ authRoutes.post('/register', async (c) => {
 // === GET /me - جلب بيانات المستخدم الحالي ===
 authRoutes.get('/me', authMiddleware(), async (c: any) => {
   try {
-    const decoded = c.get('user') as any;
+    const decoded = c.get('user') as { userId: number; role: string } | undefined;
     if (!decoded?.userId) return c.json({ error: 'توكن غير صالح' }, 401);
 
     const [user] = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
@@ -98,7 +98,7 @@ authRoutes.get('/me', authMiddleware(), async (c: any) => {
       role: user.role,
       isActive: user.isActive,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Auth me error:', error);
     return c.json({ error: 'حدث خطأ في جلب بيانات المستخدم' }, 500);
   }

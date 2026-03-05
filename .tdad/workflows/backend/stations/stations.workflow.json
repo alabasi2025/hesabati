@@ -2,91 +2,63 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-stations",
+      "id": "get-stations-list",
       "workflowId": "backend/stations",
-      "title": "GET /businesses/:bizId/stations",
-      "description": "api.ts line 127: Returns all stations for business.",
+      "title": "Get Stations List",
+      "description": "GET /api/businesses/:bizId/stations. Returns array of stations for business ordered by id. Requires Authorization header and bizId membership. Returns 200 with [{id, name, code, location, manager, phone, isActive, createdAt}]. Returns 401 if unauthorized. Returns 403 if not member of business.",
       "nodeType": "feature",
-      "fileName": "list-stations",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-stations-list",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "create-station",
+      "id": "get-station-details",
       "workflowId": "backend/stations",
-      "title": "POST /businesses/:bizId/stations",
-      "description": "api.ts line 133: Creates station.",
+      "title": "Get Station Details",
+      "description": "GET /api/businesses/:bizId/stations/:id. Returns single station with related employees and funds. Returns 200 with {id, name, code, location, employees: [...], funds: [...]}. Returns 404 if station not found. Returns 403 if station not in business.",
       "nodeType": "feature",
-      "fileName": "create-station",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-stations"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-station-details",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": ["get-stations-list"],
+      "testLayers": ["api"]
     },
     {
-      "id": "update-station",
+      "id": "post-station-create",
       "workflowId": "backend/stations",
-      "title": "PUT /businesses/:bizId/stations/:id",
-      "description": "api.ts line 148: Updates station.",
+      "title": "Post Station Create",
+      "description": "POST /api/businesses/:bizId/stations with body {name, code, location, manager, phone}. Validates name and code are required. Inserts into stations table. Returns 201 with created station {id, name, code, ...}. Returns 400 if name or code missing or code already exists in business.",
       "nodeType": "feature",
-      "fileName": "update-station",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-stations"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-station-create",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "put-station-update",
+      "workflowId": "backend/stations",
+      "title": "Put Station Update",
+      "description": "PUT /api/businesses/:bizId/stations/:id with body fields to update (name, location, manager, phone, isActive). Validates stationId belongs to business. Updates stations table. Returns 200 with updated station. Returns 404 if station not found. Returns 403 if station not in business.",
+      "nodeType": "feature",
+      "fileName": "put-station-update",
+      "position": { "x": 100, "y": 300 },
+      "dependencies": ["get-stations-list"],
+      "testLayers": ["api"]
     },
     {
       "id": "delete-station",
       "workflowId": "backend/stations",
-      "title": "DELETE /businesses/:bizId/stations/:id",
-      "description": "api.ts line 162: Deletes station.",
+      "title": "Delete Station",
+      "description": "DELETE /api/businesses/:bizId/stations/:id. Validates ownership then deletes from stations table. Returns 200 with {success: true}. Returns 404 if not found. Returns 403 if not authorized. Returns 400 if station has employees or funds (cannot delete - must reassign first).",
       "nodeType": "feature",
       "fileName": "delete-station",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-stations"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "position": { "x": 300, "y": 300 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
   "edges": [
-    {
-      "id": "list-stations-to-create-station",
-      "source": "list-stations",
-      "target": "create-station"
-    },
-    {
-      "id": "list-stations-to-update-station",
-      "source": "list-stations",
-      "target": "update-station"
-    },
-    {
-      "id": "list-stations-to-delete-station",
-      "source": "list-stations",
-      "target": "delete-station"
-    }
+    { "id": "list-to-details", "source": "get-stations-list", "target": "get-station-details" },
+    { "id": "list-to-update", "source": "get-stations-list", "target": "put-station-update" }
   ]
 }

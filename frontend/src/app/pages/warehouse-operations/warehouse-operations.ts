@@ -1,10 +1,11 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
+import { formatDate as formatDateShared } from '../../shared/helpers';
 
 interface OperationItem {
   itemName: string;
@@ -30,13 +31,10 @@ const OPERATION_TYPE_META: Record<string, { label: string; icon: string; color: 
   templateUrl: './warehouse-operations.html',
   styleUrl: './warehouse-operations.scss',
 })
-export class WarehouseOperationsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class WarehouseOperationsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   operations = signal<any[]>([]);
   warehouses = signal<any[]>([]);
   suppliers = signal<any[]>([]);
@@ -66,11 +64,8 @@ export class WarehouseOperationsComponent implements OnInit {
     items: [this.newItem()] as OperationItem[],
   };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -216,8 +211,8 @@ export class WarehouseOperationsComponent implements OnInit {
       this.toast.success('تم إنشاء العملية المخزنية بنجاح');
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ أثناء إنشاء العملية');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء إنشاء العملية');
     }
     this.saving.set(false);
   }
@@ -227,8 +222,8 @@ export class WarehouseOperationsComponent implements OnInit {
       const detail = await this.api.getWarehouseOperation(op.id);
       this.selectedOperation.set(detail);
       this.showDetail.set(true);
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
     }
   }
 
@@ -256,7 +251,7 @@ export class WarehouseOperationsComponent implements OnInit {
   formatDate(d: string): string {
     if (!d) return '-';
     try {
-      return new Date(d).toLocaleDateString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric' });
+      return formatDateShared(d);
     } catch { return d; }
   }
 

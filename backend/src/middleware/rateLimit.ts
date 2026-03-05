@@ -18,9 +18,9 @@ const store = new Map<string, RateLimitEntry>();
 // تنظيف دوري للذاكرة كل 5 دقائق
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of store) {
+  for (const [storeKey, entry] of store) {
     if (entry.resetAt < now) {
-      store.delete(key);
+      store.delete(storeKey);
     }
   }
 }, 5 * 60 * 1000);
@@ -71,5 +71,13 @@ export function loginRateLimitMiddleware() {
   return rateLimitMiddleware({
     windowMs: 15 * 60 * 1000, // 15 دقيقة
     maxRequests: 20, // 20 محاولة (بدلاً من 10)
+  });
+}
+
+/** تسجيل مستخدم جديد: 10 محاولات / 15 دقيقة */
+export function registerRateLimitMiddleware() {
+  return rateLimitMiddleware({
+    windowMs: 15 * 60 * 1000,
+    maxRequests: 10,
   });
 }

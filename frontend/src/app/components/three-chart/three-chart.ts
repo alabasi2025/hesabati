@@ -11,8 +11,9 @@ import {
   CatmullRomCurve3, DoubleSide,
 } from 'three';
 import { ThreeService, ManagedScene } from '../../services/three.service';
+import type { ExtendedMeshWithState } from '../../shared/types/three-extended';
 
-export interface ChartDataItem {
+export interface ChartDataItem extends Record<string, unknown> {
   label: string;
   value: number;
   color?: string;
@@ -22,6 +23,8 @@ export interface ChartClickEvent {
   item: ChartDataItem;
   index: number;
 }
+
+type ChartMesh = ExtendedMeshWithState<ChartDataItem>;
 
 @Component({
   selector: 'app-three-chart',
@@ -136,7 +139,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
   private labels: Sprite[] = [];
   private initialized = false;
   private managed: ManagedScene | null = null;
-  private hoveredObject: Object3D | null = null;
+  private hoveredObject: ChartMesh | null = null;
 
   // Event handlers
   private mouseMoveHandler!: (e: MouseEvent) => void;
@@ -221,7 +224,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
         // Hover effect
         if (this.hoveredObject !== hit.object) {
           this.resetHover();
-          this.hoveredObject = hit.object;
+          this.hoveredObject = hit.object as ChartMesh;
           this.applyHover(hit.object);
         }
 
@@ -258,17 +261,21 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
 
   private applyHover(obj: Object3D): void {
     if (obj instanceof Mesh) {
-      const mat = obj.material as MeshPhysicalMaterial;
-      (obj as any)._origEmissive = mat.emissiveIntensity;
+      const mesh = obj as ChartMesh;
+      const mat = mesh.material as MeshPhysicalMaterial;
+      mesh._origEmissive = mat.emissiveIntensity;
       mat.emissiveIntensity = 0.5;
-      obj.scale.multiplyScalar(1.08);
+      mesh.scale.multiplyScalar(1.08);
+      mesh._isHovered = true;
     }
   }
 
   private resetHover(): void {
     if (this.hoveredObject instanceof Mesh) {
-      const mat = this.hoveredObject.material as MeshPhysicalMaterial;
-      mat.emissiveIntensity = (this.hoveredObject as any)._origEmissive ?? 0.1;
+      const mesh = this.hoveredObject as ChartMesh;
+      const mat = mesh.material as MeshPhysicalMaterial;
+      mat.emissiveIntensity = mesh._origEmissive ?? 0.1;
+      mesh._isHovered = false;
       this.hoveredObject.scale.divideScalar(1.08);
     }
   }
@@ -354,18 +361,18 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
         clearcoat: 0.8, clearcoatRoughness: 0.1,
         emissive: color, emissiveIntensity: this.darkMode ? 0.15 : 0.05,
       });
-      const bar = new Mesh(geo, mat);
+      const bar = new Mesh(geo, mat) as ChartMesh;
       bar.position.set(x, 0.005, 0);
       bar.castShadow = true;
       bar.receiveShadow = true;
 
       bar.userData = { chartItem: item, chartIndex: i };
 
-      (bar as any)._targetHeight = targetHeight;
-      (bar as any)._currentHeight = 0.01;
-      (bar as any)._growing = true;
-      (bar as any)._growDelay = i * 0.15;
-      (bar as any)._growStarted = false;
+      bar._targetHeight = targetHeight;
+      bar._currentHeight = 0.01;
+      bar._growing = true;
+      bar._growDelay = i * 0.15;
+      bar._growStarted = false;
       this.bars.push(bar);
       scene.add(bar);
 
@@ -378,7 +385,7 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
         const reflection = new Mesh(reflGeo, reflMat);
         reflection.position.set(x, -0.005, 0);
         reflection.scale.y = -1;
-        (bar as any)._reflection = reflection;
+        bar._reflection = reflection as Mesh;
         scene.add(reflection);
       }
 
@@ -406,26 +413,26 @@ export class ThreeChartComponent implements AfterViewInit, OnDestroy, OnChanges 
     const managed = this.managed;
     this.three.animate(this.sceneId, (delta, elapsed) => {
       this.bars.forEach(obj => {
-        const bar = obj as Mesh;
-        if ((bar as any)._growing) {
-          if (!(bar as any)._growStarted) {
-            if (elapsed >= (bar as any)._growDelay) (bar as any)._growStarted = true;
+        const bar = obj as ChartMesh;
+        if (bar._growing) {
+          if (!bar._growStarted) {
+            if (elapsed >= (bar._growDelay ?? 0)) bar._growStarted = true;
             else return;
           }
-          const target = (bar as any)._targetHeight;
-          const progress = 1 - Math.pow(1 - Math.min((elapsed - (bar as any)._growDelay) * 1.5, 1), 3);
+          const target = bar._targetHeight ?? 0.01;
+          const progress = 1 - Math.pow(1 - Math.min((elapsed - (bar._growDelay ?? 0)) * 1.5, 1), 3);
           let current = target * progress;
-          if (progress >= 0.99) { current = target; (bar as any)._growing = false; }
-          (bar as any)._currentHeight = current;
+          if (progress >= 0.99) { current = target; bar._growing = false; }
+          bar._currentHeight = current;
           bar.scale.y = Math.max(current / 0.01, 1);
           bar.position.y = current / 2;
-          if ((bar as any)._reflection) {
-            (bar as any)._reflection.scale.y = -Math.max(current / 0.01, 1) * 0.3;
-            (bar as any)._reflection.position.y = -current * 0.15;
+          if (bar._reflection) {
+            bar._reflection.scale.y = -Math.max(current / 0.01, 1) * 0.3;
+            bar._reflection.position.y = -current * 0.15;
           }
         }
         const mat = bar.material as MeshPhysicalMaterial;
-        if (mat.emissiveIntensity !== undefined && !(bar as any)._isHovered) {
+        if (mat.emissiveIntensity !== undefined && !bar._isHovered) {
           mat.emissiveIntensity = (this.darkMode ? 0.1 : 0.03) + Math.sin(elapsed * 1.5) * 0.05;
         }
       });

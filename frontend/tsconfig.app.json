@@ -7,9 +7,14 @@
     "types": []
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.html",
+    "src/**/*.scss"
   ],
   "exclude": [
-    "src/**/*.spec.ts"
+    "src/**/*.spec.ts",
+    "e2e",
+    "playwright-report",
+    "playwright.config.ts"
   ]
 }

@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "load-sidebar-from-api",
+      "workflowId": "frontend/sidebar",
+      "title": "Load Sidebar From API",
+      "description": "When business layout loads, GET /api/businesses/:bizId/users/:userId/sidebar. Success: display sidebar with sections and items, only visible items. Failure or empty: use fallback menu from buildFallbackMenu. Sections show title; items are links with icon and label.",
+      "nodeType": "feature",
+      "fileName": "load-sidebar-from-api",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "navigate-on-sidebar-click",
+      "workflowId": "frontend/sidebar",
+      "title": "Navigate On Sidebar Click",
+      "description": "When user clicks a sidebar item link, navigate to item route (e.g. /biz/1/accounts). RouterLinkActive marks current item as active. No full page reload.",
+      "nodeType": "feature",
+      "fileName": "navigate-on-sidebar-click",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "load-sidebar-from-api"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-to-navigate",
+      "source": "load-sidebar-from-api",
+      "target": "navigate-on-sidebar-click"
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-funds',
@@ -13,13 +13,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './funds.html',
   styleUrl: './funds.scss',
 })
-export class FundsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class FundsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   // إصلاح #4: استخدام funds بدلاً من accounts
   fundsData = signal<any[]>([]);
   fundTypes = signal<any[]>([]);
@@ -54,11 +51,8 @@ export class FundsComponent implements OnInit {
   get accountForm() { return this.fundForm; }
   set accountForm(v: any) { this.fundForm = v; }
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -73,7 +67,7 @@ export class FundsComponent implements OnInit {
       this.fundsData.set(fundsList);
       this.fundTypes.set(types);
       this.stations.set(sts);
-    } catch (e) { console.error(e); }
+    } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
 
@@ -128,7 +122,7 @@ export class FundsComponent implements OnInit {
     try {
       const data = { ...this.fundForm };
       if (data.stationId === '' || data.stationId === null) delete data.stationId;
-      
+
       if (this.editingFundId()) {
         await this.api.updateFund(this.bizId, this.editingFundId()!, data);
       } else {
@@ -137,7 +131,7 @@ export class FundsComponent implements OnInit {
       this.showFundForm.set(false);
       this.toast.success(this.editingFundId() ? 'تم تحديث الصندوق بنجاح' : 'تم إنشاء الصندوق بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ الصندوق'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الصندوق'); }
   }
 
   // ============ Type CRUD ============
@@ -163,13 +157,13 @@ export class FundsComponent implements OnInit {
       this.showTypeForm.set(false);
       this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء حفظ النوع'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع'); }
   }
 
   // ============ Delete ============
   confirmDelete(type: 'fund' | 'type' | 'account', id: number, name: string) {
     const actualType = type === 'account' ? 'fund' : type;
-    this.deleteTarget.set({ type: actualType as 'fund' | 'type', id, name });
+    this.deleteTarget.set({ type: actualType === 'fund' ? 'fund' : 'type', id, name });
     this.showDeleteConfirm.set(true);
   }
 
@@ -188,7 +182,7 @@ export class FundsComponent implements OnInit {
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e: any) { console.error(e); this.toast.error(e?.message || 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
   }
 
   getBalanceDisplay(fund: any): string {

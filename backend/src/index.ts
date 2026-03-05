@@ -1,17 +1,21 @@
 import 'dotenv/config';
 import { serve } from '@hono/node-server';
+import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { wsService } from './services/websocket.service.ts';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import authRoutes from './routes/auth.ts';
 import dashboardRoutes from './routes/dashboard.ts';
-import apiRoutes from './routes/api.ts';
+import apiRoutes from './routes/api/index.ts';
 import enhancementRoutes from './routes/enhancements.ts';
-import { authMiddleware } from './middleware/auth.ts';
+import maintenanceRoutes from './routes/maintenance.ts';
+import { authMiddleware, adminMiddleware } from './middleware/auth.ts';
 import { db, closeDatabase } from './db/index.ts';
 import { sql } from 'drizzle-orm';
-import { rateLimitMiddleware, loginRateLimitMiddleware } from './middleware/rateLimit.ts';
+import { rateLimitMiddleware, loginRateLimitMiddleware, registerRateLimitMiddleware } from './middleware/rateLimit.ts';
 import { xssSanitizeMiddleware } from './middleware/validation.ts';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -43,6 +47,8 @@ app.use('*', logger());
 // ===================== Rate Limiting =====================
 // تسجيل الدخول: 20 محاولة / 15 دقيقة
 app.use('/api/auth/login', loginRateLimitMiddleware());
+// التسجيل: 10 محاولات / 15 دقيقة
+app.use('/api/auth/register', registerRateLimitMiddleware());
 // API عام: 1000 طلب / دقيقة
 app.use('/api/*', rateLimitMiddleware({ windowMs: 60000, maxRequests: 1000 }));
 
@@ -73,33 +79,22 @@ app.route('/api/auth', authRoutes);
 
 // ===================== Protected routes =====================
 app.use('/api/*', authMiddleware());
+
+// مسارات الصيانة: محمية بـ auth + دور admin فقط
+app.use('/api/maintenance', adminMiddleware());
+app.route('/api/maintenance', maintenanceRoutes);
+
 app.route('/api/dashboard', dashboardRoutes);
 app.route('/api', apiRoutes);
 app.route('/api', enhancementRoutes);
 
-// ===================== Global Error Handler =====================
-app.onError((err, c) => {
-  console.error(`[${new Date().toISOString()}] خطأ غير متوقع:`, err);
-  return c.json({ 
-    error: 'حدث خطأ غير متوقع في الخادم - حاول مرة أخرى',
-    details: !isProduction ? err.message : undefined
-  }, 500);
-});
-
-// ===================== 404 Handler =====================
-app.notFound((c) => {
-  return c.json({ error: 'المسار المطلوب غير موجود' }, 404);
-});
-
-// Health check
+// ===================== Health (قبل المعالج العام حتى لا يلتقطها app.get('*')) =====================
 app.get('/health', (c) => c.json({ 
   status: 'ok', 
   message: 'حساباتي - النظام يعمل بنجاح',
   environment: process.env.NODE_ENV || 'development',
   uptime: Math.floor(process.uptime()),
 }));
-
-// فحص اتصال قاعدة البيانات
 app.get('/health/db', async (c) => {
   try {
     const start = Date.now();
@@ -111,24 +106,63 @@ app.get('/health/db', async (c) => {
       latency: `${latency}ms`,
       timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return c.json({
       status: 'disconnected',
       message: 'فشل الاتصال بقاعدة البيانات',
-      error: err.message,
+      error: err instanceof Error ? err.message : JSON.stringify(err),
       timestamp: new Date().toISOString(),
     }, 503);
   }
 });
 
-// Root
-app.get('/', (c) => c.json({
-  name: 'حساباتي API',
-  version: '1.3.0',
-  description: 'نظام إدارة مالية شخصية شاملة',
-}));
+// ===================== تقديم الواجهة الأمامية (من backend/public) =====================
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicDir = path.join(__dirname, '..', 'public');
+const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.ico': 'image/x-icon', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+app.get('*', async (c) => {
+  const url = new URL(c.req.url);
+  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/health')) {
+    return c.json({ error: 'المسار المطلوب غير موجود' }, 404);
+  }
+  const isRoot = url.pathname === '/' || url.pathname === '';
+  let filePath = isRoot ? path.join(publicDir, 'index.html') : path.join(publicDir, url.pathname.replace(/^\//, '').replaceAll('..', ''));
+  if (!filePath.startsWith(publicDir)) {
+    filePath = path.join(publicDir, 'index.html');
+  }
+  if (!existsSync(filePath)) {
+    const indexHtml = path.join(publicDir, 'index.html');
+    if (existsSync(indexHtml)) {
+      const html = readFileSync(indexHtml, 'utf-8');
+      return c.html(html);
+    }
+    return c.json({ error: 'المسار المطلوب غير موجود' }, 404);
+  }
+  try {
+    const ext = path.extname(filePath);
+    const mime = MIME[ext] || 'application/octet-stream';
+    const body = readFileSync(filePath);
+    c.header('Content-Type', mime);
+    return c.body(body);
+  } catch {
+    return c.json({ error: 'خطأ في قراءة الملف' }, 500);
+  }
+});
 
-const port = parseInt(process.env.PORT || '3000');
+// ===================== Global Error Handler =====================
+app.onError((err, c) => {
+  console.error(`[${new Date().toISOString()}] خطأ غير متوقع:`, err);
+  return c.json({ 
+    error: 'حدث خطأ غير متوقع في الخادم - حاول مرة أخرى',
+    details: isProduction ? undefined : err.message
+  }, 500);
+});
+
+app.notFound((c) => {
+  return c.json({ error: 'المسار المطلوب غير موجود' }, 404);
+});
+
+const port = Number.parseInt(process.env.PORT || '3000', 10);
 console.log(`🚀 حساباتي API يعمل على المنفذ ${port} (${process.env.NODE_ENV || 'development'})`);
 
 const server = serve({ fetch: app.fetch, port });
@@ -155,7 +189,7 @@ async function gracefulShutdown(signal: string) {
   // إغلاق قاعدة البيانات
   try {
     await closeDatabase();
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('❌ خطأ في إغلاق قاعدة البيانات:', err);
   }
   

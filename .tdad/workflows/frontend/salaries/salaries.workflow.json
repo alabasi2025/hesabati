@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "display-salaries",
+      "workflowId": "frontend/salaries",
+      "title": "عرض سجلات الرواتب",
+      "description": "عند الدخول إلى /biz/:bizId/salaries يتم جلب سجلات الرواتب وعرضها. Success: عرض القائمة وإضافة/تعديل/حذف. Failure: رسالة خطأ.",
+      "nodeType": "feature",
+      "fileName": "display-salaries",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": []
+}

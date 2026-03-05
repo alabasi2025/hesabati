@@ -21,6 +21,7 @@
 
 import { db } from '../db/index.ts';
 import { eq, and, sql, asc } from 'drizzle-orm';
+import { normalizeDbResult } from '../utils/db-result.ts';
 import {
   uiPages, uiComponents, uiDataSources,
 } from '../db/schema/index.ts';
@@ -252,7 +253,7 @@ export async function executeDataSource(bizId: number, dataSourceId: number, par
       WHERE business_id = ${bizId}
       LIMIT ${limit} OFFSET ${offset}
     `);
-    const rows = Array.isArray(result) ? result : (result as any).rows || [];
+    const rows = normalizeDbResult(result);
     return { data: rows, total: rows.length };
   }
 
@@ -260,7 +261,7 @@ export async function executeDataSource(bizId: number, dataSourceId: number, par
     // تنفيذ query مخصص (مع حماية bizId)
     const safeQuery = ds.queryTemplate.replace(/\$\{bizId\}/g, String(bizId));
     const result = await db.execute(sql.raw(safeQuery));
-    const rows = Array.isArray(result) ? result : (result as any).rows || [];
+    const rows = normalizeDbResult(result);
     return { data: rows, total: rows.length };
   }
 

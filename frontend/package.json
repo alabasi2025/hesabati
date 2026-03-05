@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "check:tdad": "node ../.tdad/scripts/validate-workflows.mjs"
   },
   "private": true,
   "packageManager": "pnpm@10.29.2",

@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-journal",
+      "id": "display-journal-entries",
       "workflowId": "frontend/journal",
-      "title": "Load Journal Entries",
-      "description": "pages/journal/journal.ts: Calls api.getJournalEntries, getAccounts, getOperationTypes.",
+      "title": "Display Journal Entries",
+      "description": "When user navigates to /biz/:bizId/journal, fetch GET /api/businesses/:bizId/journal-entries. Success: display list of journal entries with date, description, lines. Empty: show empty state. Failure: show error.",
       "nodeType": "feature",
-      "fileName": "load-journal",
+      "fileName": "display-journal-entries",
       "position": {
         "x": 100,
         "y": 100
@@ -17,56 +17,7 @@
         "ui",
         "api"
       ]
-    },
-    {
-      "id": "create-journal-ui",
-      "workflowId": "frontend/journal",
-      "title": "Create Journal Entry",
-      "description": "pages/journal/journal.ts: Calls api.createJournalEntry(bizId, {operationTypeId, lines, ...}).",
-      "nodeType": "feature",
-      "fileName": "create-journal-ui",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "load-journal"
-      ],
-      "testLayers": [
-        "ui",
-        "api"
-      ]
-    },
-    {
-      "id": "delete-journal-ui",
-      "workflowId": "frontend/journal",
-      "title": "Delete Journal Entry",
-      "description": "pages/journal/journal.ts: Calls api.deleteJournalEntry(id).",
-      "nodeType": "feature",
-      "fileName": "delete-journal-ui",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "load-journal"
-      ],
-      "testLayers": [
-        "ui",
-        "api"
-      ]
     }
   ],
-  "edges": [
-    {
-      "id": "load-journal-to-create-journal-ui",
-      "source": "load-journal",
-      "target": "create-journal-ui"
-    },
-    {
-      "id": "load-journal-to-delete-journal-ui",
-      "source": "load-journal",
-      "target": "delete-journal-ui"
-    }
-  ]
+  "edges": []
 }

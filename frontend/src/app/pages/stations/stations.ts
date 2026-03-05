@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-stations',
@@ -13,13 +13,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './stations.html',
   styleUrl: './stations.scss',
 })
-export class StationsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class StationsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   stations = signal<any[]>([]);
   loading = signal(true);
   saving = signal(false);
@@ -42,11 +39,8 @@ export class StationsComponent implements OnInit {
     billingSystemsStr: '',
   });
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -54,9 +48,9 @@ export class StationsComponent implements OnInit {
     try {
       const data = await this.api.getStations(this.bizId);
       this.stations.set(data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل المحطات');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل المحطات');
     }
     this.loading.set(false);
   }
@@ -130,8 +124,8 @@ export class StationsComponent implements OnInit {
       }
       this.closeForm();
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ أثناء الحفظ');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحفظ');
     } finally {
       this.saving.set(false);
     }
@@ -149,8 +143,8 @@ export class StationsComponent implements OnInit {
       await this.api.deleteStation(this.bizId, s.id);
       this.toast.success('تم حذف المحطة');
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ أثناء الحذف');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
     }
   }
 

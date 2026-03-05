@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-expense-categories',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './expense-categories.html',
   styleUrl: './expense-categories.scss',
 })
-export class ExpenseCategoriesComponent implements OnInit {
+export class ExpenseCategoriesComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
   private readonly toast = inject(ToastService);
 
-  bizId = 0;
   categories = signal<any[]>([]);
   loading = signal(true);
   showForm = signal(false);
@@ -27,11 +24,8 @@ export class ExpenseCategoriesComponent implements OnInit {
 
   form: any = { name: '', description: '', icon: 'receipt_long', color: '#3b82f6', sortOrder: 0, isActive: true };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = Number.parseInt(params['bizId'], 10);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -74,8 +68,8 @@ export class ExpenseCategoriesComponent implements OnInit {
       }
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) {
-      this.toast.error(e?.message || 'حدث خطأ');
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
     }
   }
 
@@ -90,8 +84,8 @@ export class ExpenseCategoriesComponent implements OnInit {
         await this.api.deleteExpenseCategory(c.id);
         this.toast.success('تم حذف التصنيف');
         await this.load();
-      } catch (e: any) {
-        this.toast.error(e?.message || 'حدث خطأ');
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
       }
     }
   }

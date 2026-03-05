@@ -10,16 +10,24 @@ import {
   users, auditLog,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId } from '../middleware/helpers.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
 import { postTransaction } from '../services/transaction.service.ts';
+import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
+import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
 
 const enhancements = new Hono();
+
+interface PeriodStatsRow {
+  receipts: string | number;
+  payments: string | number;
+  operations_count: string | number;
+}
 
 // ===================== تحسينات السندات (Vouchers) =====================
 
 // 1. جلب السندات مع فلترة متقدمة + pagination
 enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), safeHandler('جلب السندات المحسن', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const typeFilter = c.req.query('type');
   const statusFilter = c.req.query('status');
   const dateFrom = c.req.query('dateFrom');
@@ -66,8 +74,8 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
   const countResult = await db.execute(sql`
     SELECT COUNT(*) as total FROM vouchers v WHERE ${conditions}
   `);
-  const countRows = Array.isArray(countResult) ? countResult : (countResult as any).rows || [];
-  const total = Number((countRows[0] as any)?.total || 0);
+  const countRows = normalizeDbResult<{ total: string }>(countResult);
+  const total = Number(getFirstRow<{ total: string }>(countResult)?.total ?? 0);
 
   // إحصائيات
   const statsResult = await db.execute(sql`
@@ -82,17 +90,17 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
       COUNT(CASE WHEN v.status = 'cancelled' THEN 1 END) as cancelled_count
     FROM vouchers v WHERE ${conditions}
   `);
-  const statsRows = Array.isArray(statsResult) ? statsResult : (statsResult as any).rows || [];
+  const statsRows = normalizeDbResult(statsResult);
   const stats = statsRows[0] || {};
 
-  const resultRows = Array.isArray(rows) ? rows : (rows as any).rows || [];
+  const resultRows = normalizeDbResult(rows);
   return c.json({ vouchers: resultRows, total, stats, limit, offset });
 }));
 
 // 2. تعديل سند (قبل الاعتماد)
 enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('تعديل سند', async (c) => {
-  const bizId = c.get('bizId') as number;
-  const userId = (c.get('user') as any)?.userId;
+  const bizId = getBizId(c);
+  const userId = getUserId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
@@ -102,7 +110,7 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تعديل سند ملغي' }, 400);
 
   const body = normalizeBody(await c.req.json());
-  const updateData: any = { updatedAt: new Date() };
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (body.description !== undefined) updateData.description = body.description;
   if (body.reference !== undefined) updateData.reference = body.reference;
   if (body.amount !== undefined) updateData.amount = String(body.amount);
@@ -123,8 +131,8 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
 
 // 3. تغيير حالة السند (مسودة → معتمد → ملغي)
 enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(), safeHandler('تغيير حالة السند', async (c) => {
-  const bizId = c.get('bizId') as number;
-  const userId = (c.get('user') as any)?.userId;
+  const bizId = getBizId(c);
+  const userId = getUserId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
@@ -211,14 +219,14 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
     });
 
     return c.json(updated);
-  } catch (err: any) {
-    return c.json({ error: err.message || 'فشل في تغيير حالة السند' }, 400);
+  } catch (err: unknown) {
+    return c.json({ error: toErrorMessage(err) || 'فشل في تغيير حالة السند' }, 400);
   }
 }));
 
 // 4. جلب رصيد حساب (لعرضه أثناء إنشاء العملية)
 enhancements.get('/businesses/:bizId/account-balance/:accountId', bizAuthMiddleware(), safeHandler('جلب رصيد حساب', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const accountId = parseId(c.req.param('accountId'));
   if (!accountId) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
 
@@ -231,7 +239,7 @@ enhancements.get('/businesses/:bizId/account-balance/:accountId', bizAuthMiddlew
     LEFT JOIN currencies c ON c.id = ab.currency_id
     WHERE ab.account_id = ${accountId}
   `);
-  const balanceRows = Array.isArray(balances) ? balances : (balances as any).rows || [];
+  const balanceRows = normalizeDbResult(balances);
 
   return c.json({
     accountId, accountName: account.name, accountType: account.accountType,
@@ -241,7 +249,7 @@ enhancements.get('/businesses/:bizId/account-balance/:accountId', bizAuthMiddlew
 
 // 5. جلب تفاصيل عملية (drill-down)
 enhancements.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(), safeHandler('تفاصيل السند', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
@@ -258,7 +266,7 @@ enhancements.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(),
     WHERE je.reference = ${voucher.voucherNumber} AND je.business_id = ${bizId}
     ORDER BY jel.sort_order
   `);
-  const journalRows = Array.isArray(journalResult) ? journalResult : (journalResult as any).rows || [];
+  const journalRows = normalizeDbResult(journalResult);
 
   // جلب نوع العملية
   let opType = null;
@@ -282,7 +290,7 @@ enhancements.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(),
   const auditResult = await db.execute(sql`
     SELECT * FROM audit_log WHERE table_name = 'vouchers' AND record_id = ${id} ORDER BY created_at DESC
   `);
-  const auditRows = Array.isArray(auditResult) ? auditResult : (auditResult as any).rows || [];
+  const auditRows = normalizeDbResult(auditResult);
 
   return c.json({
     voucher, operationType: opType, fromAccount, toAccount,
@@ -294,7 +302,7 @@ enhancements.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(),
 
 // 6. نسخ/استنساخ نوع عملية
 enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddleware(), safeHandler('نسخ نوع عملية', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
 
@@ -345,7 +353,7 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
 
 // 7. تفعيل/تعطيل نوع عملية
 enhancements.post('/businesses/:bizId/operation-types/:id/toggle', bizAuthMiddleware(), safeHandler('تفعيل/تعطيل نوع عملية', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
 
@@ -361,7 +369,7 @@ enhancements.post('/businesses/:bizId/operation-types/:id/toggle', bizAuthMiddle
 
 // 8. إحصائيات استخدام أنواع العمليات
 enhancements.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware(), safeHandler('إحصائيات أنواع العمليات', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
 
   const result = await db.execute(sql`
     SELECT
@@ -375,13 +383,13 @@ enhancements.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware()
     GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.category, ot.voucher_type, ot.is_active
     ORDER BY usage_count DESC
   `);
-  const rows = Array.isArray(result) ? result : (result as any).rows || [];
+  const rows = normalizeDbResult(result);
   return c.json(rows);
 }));
 
 // 9. التحقق من تكرار اسم نوع العملية
 enhancements.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddleware(), safeHandler('التحقق من تكرار اسم', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const name = c.req.query('name');
   const excludeId = c.req.query('excludeId');
   if (!name) return c.json({ error: 'الاسم مطلوب' }, 400);
@@ -390,8 +398,8 @@ enhancements.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddlew
   if (excludeId) conditions = sql`${conditions} AND id != ${parseInt(excludeId)}`;
 
   const result = await db.execute(sql`SELECT COUNT(*) as cnt FROM operation_types WHERE ${conditions}`);
-  const rows = Array.isArray(result) ? result : (result as any).rows || [];
-  const exists = Number((rows[0] as any)?.cnt || 0) > 0;
+  const first = getFirstRow<{ cnt: string }>(result);
+  const exists = Number(first?.cnt ?? 0) > 0;
 
   return c.json({ exists, name });
 }));
@@ -400,7 +408,7 @@ enhancements.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddlew
 
 // 10. نسخ إعدادات من مستخدم لآخر
 enhancements.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddleware(), safeHandler('نسخ إعدادات السايدبار', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const body = normalizeBody(await c.req.json());
   const { fromUserId, toUserId } = body;
   if (!fromUserId || !toUserId) return c.json({ error: 'fromUserId و toUserId مطلوبان' }, 400);
@@ -434,7 +442,7 @@ enhancements.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddleware(),
 
 // 11. إعادة تعيين الإعدادات الافتراضية
 enhancements.post('/businesses/:bizId/sidebar-config/reset/:userId', bizAuthMiddleware(), safeHandler('إعادة تعيين إعدادات السايدبار', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const userId = parseId(c.req.param('userId'));
   if (!userId) return c.json({ error: 'معرّف المستخدم غير صالح' }, 400);
 
@@ -462,7 +470,7 @@ enhancements.post('/businesses/:bizId/sidebar-config/reset/:userId', bizAuthMidd
 
 // 12. بحث متقدم في سجل العمليات
 enhancements.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), safeHandler('سجل العمليات المحسن', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
   const opTypeId = c.req.query('operationTypeId');
@@ -498,19 +506,17 @@ enhancements.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), 
   `);
 
   const countResult = await db.execute(sql`SELECT COUNT(*) as total FROM journal_entries je WHERE ${conditions}`);
-  const countRows = Array.isArray(countResult) ? countResult : (countResult as any).rows || [];
-
-  const resultRows = Array.isArray(rows) ? rows : (rows as any).rows || [];
+  const resultRows = normalizeDbResult(rows);
   return c.json({
     entries: resultRows,
-    total: Number((countRows[0] as any)?.total || 0),
+    total: Number(getFirstRow<{ total: string }>(countResult)?.total ?? 0),
     limit, offset,
   });
 }));
 
 // 13. إحصائيات متقدمة مع مقارنة فترات
 enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware(), safeHandler('إحصائيات متقدمة', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const period = c.req.query('period') || 'month'; // day, week, month, year
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
@@ -570,7 +576,7 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
     AND COALESCE(v.reversal_status, 'original') = 'original'
     AND v.voucher_date >= ${currentFrom}::date AND v.voucher_date <= ${currentTo}::date
   `);
-  const currentRows = Array.isArray(currentResult) ? currentResult : (currentResult as any).rows || [];
+  const currentRows = normalizeDbResult<PeriodStatsRow>(currentResult);
 
   // الفترة السابقة
   const prevResult = await db.execute(sql`
@@ -584,7 +590,7 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
     AND COALESCE(v.reversal_status, 'original') = 'original'
     AND v.voucher_date >= ${prevFrom}::date AND v.voucher_date <= ${prevTo}::date
   `);
-  const prevRows = Array.isArray(prevResult) ? prevResult : (prevResult as any).rows || [];
+  const prevRows = normalizeDbResult<PeriodStatsRow>(prevResult);
 
   const current = currentRows[0] || { receipts: 0, payments: 0, operations_count: 0 };
   const prev = prevRows[0] || { receipts: 0, payments: 0, operations_count: 0 };
@@ -617,7 +623,7 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
 
 // 14. رسم بياني متقدم مع فلترة فترات
 enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware(), safeHandler('رسم بياني متقدم', async (c) => {
-  const bizId = c.get('bizId') as number;
+  const bizId = getBizId(c);
   const groupBy = c.req.query('groupBy') || 'month'; // day, week, month
   const months = parseInt(c.req.query('months') || '6');
   const dateFrom = c.req.query('dateFrom');
@@ -665,7 +671,7 @@ enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware()
     GROUP BY ${groupExpr}, ${labelExpr}
     ORDER BY period ASC
   `);
-  const rows = Array.isArray(result) ? result : (result as any).rows || [];
+  const rows = normalizeDbResult(result);
 
   return c.json({
     groupBy, fromDate, toDate,
@@ -681,8 +687,8 @@ enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware()
 
 // 15. إنشاء سند كمسودة
 enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safeHandler('إنشاء سند كمسودة', async (c) => {
-  const bizId = c.get('bizId') as number;
-  const userId = (c.get('user') as any)?.userId;
+  const bizId = getBizId(c);
+  const userId = getUserId(c);
   const body = normalizeBody(await c.req.json());
 
   const amount = parseFloat(body.amount);
@@ -693,8 +699,8 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
   const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
   const prefix = vType === 'receipt' ? 'RCV' : vType === 'payment' ? 'PAY' : 'TRF';
   const seqResult = await db.execute(sql.raw(`SELECT nextval('${seqName}')`));
-  const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
-  const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
+  const seqRow = getFirstRow<{ nextval: string }>(seqResult);
+  const seqVal = parseInt(String(seqRow?.nextval ?? 1), 10);
   const voucherNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
 
   const [created] = await db.insert(vouchers).values({

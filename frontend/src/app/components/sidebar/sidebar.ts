@@ -33,9 +33,9 @@ interface MenuSection {
   }
 })
 export class SidebarComponent {
-  private auth = inject(AuthService);
-  private router = inject(Router);
-  private api = inject(ApiService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
   biz = inject(BusinessService);
 
   isCollapsed = signal(false);
@@ -131,7 +131,7 @@ export class SidebarComponent {
       }
 
       this.menuSections.set(sections);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading sidebar config:', err);
       this.buildFallbackMenu(bizId, type);
     } finally {
@@ -160,7 +160,7 @@ export class SidebarComponent {
    * التحقق إذا كان الـ route يحتوي على query params
    */
   hasQueryParams(route: string | undefined): boolean {
-    return !!(route && route.includes('?'));
+    return !!(route?.includes('?'));
   }
 
   /**
@@ -175,7 +175,7 @@ export class SidebarComponent {
    * الحصول على الـ query params كـ object (لـ [queryParams])
    */
   getQueryParams(route: string | undefined): Record<string, string> {
-    if (!route || !route.includes('?')) return {};
+    if (!route?.includes('?')) return {};
     const { queryParams } = this.parseRoute(route);
     return queryParams;
   }
@@ -229,7 +229,6 @@ export class SidebarComponent {
         { icon: 'bolt', label: 'المحطات', route: `${b}/stations` },
         { icon: 'groups', label: 'الموظفين', route: `${b}/employees` },
         { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
-        { icon: 'summarize', label: 'ملخص الأعمال', route: `${b}/summary` },
       ]},
       { title: '3. الحسابات والأرصدة', items: [
         { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
@@ -342,6 +341,7 @@ export class SidebarComponent {
         { icon: 'dashboard', label: 'لوحة التحكم', route: b },
         { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
         { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
+        { icon: 'summarize', label: 'ملخص الأعمال', route: `${b}/summary` },
       ]},
       { title: '3. الحسابات والأرصدة', items: [
         { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
@@ -411,7 +411,7 @@ export class SidebarComponent {
   // ============================================
   // Icon Color System - Professional Unique Colors
   // ============================================
-  private iconColorMap: Record<string, [string, string]> = {
+  private readonly iconColorMap: Record<string, [string, string]> = {
     'dashboard':              ['#3b82f6', '#60a5fa'],
     'arrow_forward':          ['#94a3b8', '#cbd5e1'],
     'bolt':                   ['#f59e0b', '#fbbf24'],

@@ -4,18 +4,13 @@
     {
       "id": "get-dashboard-stats",
       "workflowId": "backend/dashboard",
-      "title": "GET /dashboard/stats",
-      "description": "dashboard.ts line 18: Returns dashboard statistics.",
+      "title": "Get Dashboard Stats",
+      "description": "GET /api/dashboard/stats. Returns counts for businesses, stations, employees, accounts, funds, suppliers, partners, vouchers, pendingAccounts, warehouses and totalSalaries. Returns 200 with {businesses, stations, employees, accounts, funds, suppliers, partners, vouchers, pendingAccounts, warehouses, totalSalaries}. No bizId required.",
       "nodeType": "feature",
       "fileName": "get-dashboard-stats",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     }
   ],
   "edges": []

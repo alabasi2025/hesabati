@@ -1,10 +1,11 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
+import { BasePageComponent } from '../../shared/base-page.component';
+import { formatAmount as formatAmountShared, formatDate as formatDateShared } from '../../shared/helpers';
 
 @Component({
   selector: 'app-reports',
@@ -13,14 +14,10 @@ import { ToastService } from '../../services/toast.service';
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
 })
-export class ReportsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private toast = inject(ToastService);
-  biz = inject(BusinessService);
+export class ReportsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   loading = signal(true);
   activeReport = signal<string>('overview');
 
@@ -61,11 +58,8 @@ export class ReportsComponent implements OnInit {
     { id: 'journal', label: 'القيود', icon: 'menu_book' },
   ];
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -116,8 +110,8 @@ export class ReportsComponent implements OnInit {
       if (this.trialDateTo()) params.dateTo = this.trialDateTo();
       const result = await this.api.getTrialBalance(this.bizId, params.dateFrom, params.dateTo);
       this.trialBalance.set(Array.isArray(result) ? result : (result as any).accounts || []);
-    } catch (e: any) {
-      this.toast.error('خطأ في جلب ميزان المراجعة: ' + (e.message || ''));
+    } catch (e: unknown) {
+      this.toast.error('خطأ في جلب ميزان المراجعة: ' + (e instanceof Error ? e.message : ''));
       this.trialBalance.set([]);
     }
     this.trialLoading.set(false);
@@ -147,8 +141,8 @@ export class ReportsComponent implements OnInit {
       const result = await this.api.getAccountStatement(this.bizId, accId, params.dateFrom, params.dateTo);
       this.statementData.set(Array.isArray(result) ? result : (result as any).entries || []);
       this.statementAccount.set(this.accounts().find(a => a.id === accId));
-    } catch (e: any) {
-      this.toast.error('خطأ في جلب كشف الحساب: ' + (e.message || ''));
+    } catch (e: unknown) {
+      this.toast.error('خطأ في جلب كشف الحساب: ' + (e instanceof Error ? e.message : ''));
       this.statementData.set([]);
     }
     this.statementLoading.set(false);
@@ -256,12 +250,12 @@ export class ReportsComponent implements OnInit {
     return map[t] || t;
   }
 
-  formatAmount(n: any): string {
-    return parseFloat(n || 0).toLocaleString('ar-YE');
+  formatAmount(n: unknown): string {
+    return formatAmountShared(n);
   }
 
   formatDate(d: string): string {
     if (!d) return '-';
-    return new Date(d).toLocaleDateString('ar-YE');
+    return formatDateShared(d);
   }
 }

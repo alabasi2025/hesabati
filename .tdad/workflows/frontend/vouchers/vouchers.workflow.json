@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-vouchers-list",
+      "id": "fetch-vouchers-list",
       "workflowId": "frontend/vouchers",
-      "title": "Load Vouchers List",
-      "description": "pages/vouchers/vouchers.ts: Calls api.getVouchersEnhanced(bizId, filters) or api.getVouchers(bizId). Also loads getOperationTypes, getAccounts, getFunds.",
+      "title": "Fetch Vouchers List",
+      "description": "When user navigates to /biz/:bizId/vouchers, show loading skeleton on table. Call GET /api/businesses/:bizId/vouchers with optional query ?type=receipt|payment|transfer from selected tab filter. Success: stores vouchers array in signal, hides loading. Empty: stores empty array. Failure: shows error toast 'فشل تحميل السندات - حاول مرة أخرى', hides loading.",
       "nodeType": "feature",
-      "fileName": "load-vouchers-list",
+      "fileName": "fetch-vouchers-list",
       "position": {
         "x": 100,
         "y": 100
@@ -19,75 +19,88 @@
       ]
     },
     {
-      "id": "create-voucher-ui",
+      "id": "render-vouchers-table",
       "workflowId": "frontend/vouchers",
-      "title": "Create Voucher",
-      "description": "pages/vouchers/vouchers.ts: Validates operationTypeId is selected before submit. Calls api.createVoucher(bizId, payload) with {operationTypeId, type, sourceAccountId, targetAccountId, amount, ...}.",
+      "title": "Render Vouchers Table",
+      "description": "After fetching vouchers, display table with columns: [رقم السند (voucherNumber), النوع (receipt/payment/transfer badge), المبلغ (formatted with currency), من حساب, إلى حساب, الحالة (status badge), التاريخ (formatted voucherDate), إجراءات (edit/delete/reverse buttons)]. Each row clickable to view details. Loading shows skeleton rows. Empty state shows 'لا توجد سندات - ابدأ بإنشاء سند جديد' with create button. Rows alternate colors for readability.",
       "nodeType": "feature",
-      "fileName": "create-voucher-ui",
+      "fileName": "render-vouchers-table",
       "position": {
         "x": 300,
         "y": 100
       },
       "dependencies": [
-        "load-vouchers-list"
+        "fetch-vouchers-list"
       ],
       "testLayers": [
-        "ui",
-        "api"
+        "ui"
       ]
     },
     {
-      "id": "create-draft-ui",
+      "id": "filter-vouchers-by-type",
       "workflowId": "frontend/vouchers",
-      "title": "Create Draft Voucher",
-      "description": "pages/vouchers/vouchers.ts: Calls api.createVoucherDraft(bizId, payload). Saves without updating balances.",
+      "title": "Filter Vouchers By Type",
+      "description": "When user clicks type filter tabs (الكل / قبض / صرف / تحويل), update selectedType signal and re-fetch vouchers with ?type query. Tab UI shows active state for selected type. Triggers fetch-vouchers-list with new filter. No separate API call - reuses fetch logic.",
       "nodeType": "feature",
-      "fileName": "create-draft-ui",
+      "fileName": "filter-vouchers-by-type",
       "position": {
         "x": 500,
         "y": 100
       },
       "dependencies": [
-        "load-vouchers-list"
+        "fetch-vouchers-list"
       ],
       "testLayers": [
-        "ui",
-        "api"
+        "ui"
       ]
     },
     {
-      "id": "update-voucher-ui",
+      "id": "open-create-voucher-modal",
       "workflowId": "frontend/vouchers",
-      "title": "Update Voucher",
-      "description": "pages/vouchers/vouchers.ts: Calls api.updateVoucher(bizId, id, payload).",
+      "title": "Open Create Voucher Modal",
+      "description": "When user clicks 'إضافة سند قبض' or 'إضافة سند صرف' button, open modal/form component. Sets voucherType signal to 'receipt' or 'payment'. Form shows: type (locked), amount input, from account dropdown, to account dropdown, category dropdown, description textarea, date picker (defaults to today). Dropdowns load from accounts and categories APIs. Modal has submit and cancel buttons.",
       "nodeType": "feature",
-      "fileName": "update-voucher-ui",
+      "fileName": "open-create-voucher-modal",
       "position": {
         "x": 100,
-        "y": 250
+        "y": 300
       },
-      "dependencies": [
-        "load-vouchers-list"
-      ],
+      "dependencies": [],
       "testLayers": [
-        "ui",
-        "api"
+        "ui"
       ]
     },
     {
-      "id": "change-status-ui",
+      "id": "validate-voucher-form",
       "workflowId": "frontend/vouchers",
-      "title": "Change Voucher Status",
-      "description": "pages/vouchers/vouchers.ts: Calls api.changeVoucherStatus(bizId, id, newStatus).",
+      "title": "Validate Voucher Form",
+      "description": "When user clicks submit on voucher form, validate: amount > 0, fromAccount selected, toAccount selected, fromAccount ≠ toAccount. Success: proceed to submit-voucher-to-api. Failure: show field errors in red below inputs ('المبلغ مطلوب', 'يجب اختيار حساب مختلف للطرف الآخر', etc), keep form open, keep submit button enabled.",
       "nodeType": "feature",
-      "fileName": "change-status-ui",
+      "fileName": "validate-voucher-form",
       "position": {
         "x": 300,
-        "y": 250
+        "y": 300
       },
       "dependencies": [
-        "load-vouchers-list"
+        "open-create-voucher-modal"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "submit-voucher-to-api",
+      "workflowId": "frontend/vouchers",
+      "title": "Submit Voucher To API",
+      "description": "After validation passes, set submitting signal to true (disables submit button, shows spinner). Call POST /api/businesses/:bizId/vouchers with body {voucherType, amount, fromAccountId, toAccountId, categoryId, description, voucherDate}. Success: shows success toast 'تم إنشاء السند بنجاح', closes modal, triggers refresh-vouchers-list. Failure: shows error toast with server error message ('المبلغ غير صالح', 'الحساب غير موجود', etc), keeps modal open, re-enables button. Finally: sets submitting to false.",
+      "nodeType": "feature",
+      "fileName": "submit-voucher-to-api",
+      "position": {
+        "x": 500,
+        "y": 300
+      },
+      "dependencies": [
+        "validate-voucher-form"
       ],
       "testLayers": [
         "ui",
@@ -95,18 +108,55 @@
       ]
     },
     {
-      "id": "check-balance-ui",
+      "id": "refresh-vouchers-list",
       "workflowId": "frontend/vouchers",
-      "title": "Check Account Balance",
-      "description": "pages/vouchers/vouchers.ts: Calls api.getAccountBalance(bizId, accountId) to show current balance.",
+      "title": "Refresh Vouchers List",
+      "description": "After successful voucher creation, deletion, or reversal, re-call fetch-vouchers-list to reload table data with updated vouchers. Maintains current filter (type) and shows loading briefly. Ensures user sees latest state after mutations.",
       "nodeType": "feature",
-      "fileName": "check-balance-ui",
+      "fileName": "refresh-vouchers-list",
       "position": {
-        "x": 500,
-        "y": 250
+        "x": 300,
+        "y": 450
       },
       "dependencies": [
-        "load-vouchers-list"
+        "submit-voucher-to-api"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "delete-voucher-with-confirm",
+      "workflowId": "frontend/vouchers",
+      "title": "Delete Voucher With Confirm",
+      "description": "When user clicks delete icon on voucher row, show confirmation modal 'هل أنت متأكد من حذف السند؟ لا يمكن التراجع عن هذا الإجراء'. User clicks: تأكيد → calls DELETE /api/businesses/:bizId/vouchers/:id. Success: shows toast 'تم حذف السند', closes modal, triggers refresh-vouchers-list. Failure: shows error toast, keeps modal open. Cancel button closes modal with no action.",
+      "nodeType": "feature",
+      "fileName": "delete-voucher-with-confirm",
+      "position": {
+        "x": 100,
+        "y": 450
+      },
+      "dependencies": [
+        "render-vouchers-table"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "reverse-voucher-with-confirm",
+      "workflowId": "frontend/vouchers",
+      "title": "Reverse Voucher With Confirm",
+      "description": "When user clicks reverse icon on voucher row, show confirmation modal 'عكس السند سينشئ سند معاكس - هل تريد المتابعة؟'. User confirms → calls POST /api/businesses/:bizId/vouchers/:id/reverse. Success: shows toast 'تم عكس السند بنجاح', triggers refresh-vouchers-list, original voucher now shows 'معكوس' badge. Failure: shows error toast ('السند معكوس مسبقاً', 'حالة السند لا تسمح بالعكس'), keeps modal open.",
+      "nodeType": "feature",
+      "fileName": "reverse-voucher-with-confirm",
+      "position": {
+        "x": 500,
+        "y": 450
+      },
+      "dependencies": [
+        "render-vouchers-table"
       ],
       "testLayers": [
         "ui",
@@ -116,29 +166,39 @@
   ],
   "edges": [
     {
-      "id": "load-vouchers-list-to-create-voucher-ui",
-      "source": "load-vouchers-list",
-      "target": "create-voucher-ui"
+      "id": "fetch-to-render",
+      "source": "fetch-vouchers-list",
+      "target": "render-vouchers-table"
     },
     {
-      "id": "load-vouchers-list-to-create-draft-ui",
-      "source": "load-vouchers-list",
-      "target": "create-draft-ui"
+      "id": "fetch-to-filter",
+      "source": "fetch-vouchers-list",
+      "target": "filter-vouchers-by-type"
     },
     {
-      "id": "load-vouchers-list-to-update-voucher-ui",
-      "source": "load-vouchers-list",
-      "target": "update-voucher-ui"
+      "id": "modal-to-validate",
+      "source": "open-create-voucher-modal",
+      "target": "validate-voucher-form"
     },
     {
-      "id": "load-vouchers-list-to-change-status-ui",
-      "source": "load-vouchers-list",
-      "target": "change-status-ui"
+      "id": "validate-to-submit",
+      "source": "validate-voucher-form",
+      "target": "submit-voucher-to-api"
     },
     {
-      "id": "load-vouchers-list-to-check-balance-ui",
-      "source": "load-vouchers-list",
-      "target": "check-balance-ui"
+      "id": "submit-to-refresh",
+      "source": "submit-voucher-to-api",
+      "target": "refresh-vouchers-list"
+    },
+    {
+      "id": "table-to-delete",
+      "source": "render-vouchers-table",
+      "target": "delete-voucher-with-confirm"
+    },
+    {
+      "id": "table-to-reverse",
+      "source": "render-vouchers-table",
+      "target": "reverse-voucher-with-confirm"
     }
   ]
 }

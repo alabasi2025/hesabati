@@ -1,0 +1,241 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "render-login-form",
+      "workflowId": "frontend/auth",
+      "title": "Render Login Form",
+      "description": "When user navigates to /login, render form with username, password, submit button, error message area, and register link. Username input has autocomplete='username'. Password input has eye icon toggle and is controlled through showPassword signal.",
+      "nodeType": "feature",
+      "fileName": "render-login-form",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "toggle-login-password-visibility",
+      "workflowId": "frontend/auth",
+      "title": "Toggle Login Password Visibility",
+      "description": "When user clicks login eye icon button, toggle showPassword signal. When true password field type becomes 'text'; when false it becomes 'password'.",
+      "nodeType": "feature",
+      "fileName": "toggle-login-password-visibility",
+      "position": {
+        "x": 300,
+        "y": 100
+      },
+      "dependencies": [
+        "render-login-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "validate-login-fields",
+      "workflowId": "frontend/auth",
+      "title": "Validate Login Fields",
+      "description": "When user clicks submit, ensure username and password are not empty. Success: proceed to submit-login-credentials. Failure: set error message 'يرجى إدخال اسم المستخدم وكلمة المرور' and keep form enabled.",
+      "nodeType": "feature",
+      "fileName": "validate-login-fields",
+      "position": {
+        "x": 100,
+        "y": 250
+      },
+      "dependencies": [
+        "render-login-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "submit-login-credentials",
+      "workflowId": "frontend/auth",
+      "title": "Submit Login Credentials",
+      "description": "After validation passes, set isLoading=true, call auth.login(username, password) which POSTS to /api/auth/login. Success: persist token/user in auth service/localStorage, clear error, navigate to /businesses. Failure: set server error (e.g., invalid credentials) in error signal. Finally: isLoading=false.",
+      "nodeType": "feature",
+      "fileName": "submit-login-credentials",
+      "position": {
+        "x": 300,
+        "y": 250
+      },
+      "dependencies": [
+        "validate-login-fields"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "navigate-to-register",
+      "workflowId": "frontend/auth",
+      "title": "Navigate To Register",
+      "description": "When user clicks 'إنشاء حساب جديد' on login form, navigate to /register route using RouterLink. No API call.",
+      "nodeType": "feature",
+      "fileName": "navigate-to-register",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [
+        "render-login-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "render-register-form",
+      "workflowId": "frontend/auth",
+      "title": "Render Register Form",
+      "description": "When user navigates to /register, render form with fullName, username, password, role selector, submit button, link to login, and error message area.",
+      "nodeType": "feature",
+      "fileName": "render-register-form",
+      "position": {
+        "x": 700,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "toggle-register-password-visibility",
+      "workflowId": "frontend/auth",
+      "title": "Toggle Register Password Visibility",
+      "description": "When user clicks register eye icon button, toggle showPassword signal. When true: type='text'; when false: type='password'.",
+      "nodeType": "feature",
+      "fileName": "toggle-register-password-visibility",
+      "position": {
+        "x": 900,
+        "y": 100
+      },
+      "dependencies": [
+        "render-register-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "validate-register-fields",
+      "workflowId": "frontend/auth",
+      "title": "Validate Register Fields",
+      "description": "When user submits registration, trim username/fullName and validate password length >= 6. Failure: set error 'يرجى تعبئة جميع الحقول المطلوبة' or 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'. Success: continue to submit-register-form.",
+      "nodeType": "feature",
+      "fileName": "validate-register-fields",
+      "position": {
+        "x": 700,
+        "y": 300
+      },
+      "dependencies": [
+        "render-register-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "submit-register-form",
+      "workflowId": "frontend/auth",
+      "title": "Submit Register Form",
+      "description": "After validation, set isLoading=true and clear error, then call auth.register(username, password, fullName, role). Success: clear loading and navigate to /login. Failure: set error message (server error or 'فشل إنشاء الحساب'). Finally: isLoading=false.",
+      "nodeType": "feature",
+      "fileName": "submit-register-form",
+      "position": {
+        "x": 900,
+        "y": 300
+      },
+      "dependencies": [
+        "validate-register-fields"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "navigate-to-login-from-register",
+      "workflowId": "frontend/auth",
+      "title": "Navigate To Login From Register",
+      "description": "When user clicks login link on register page, navigate to /login route using RouterLink.",
+      "nodeType": "feature",
+      "fileName": "navigate-to-login-from-register",
+      "position": {
+        "x": 1100,
+        "y": 100
+      },
+      "dependencies": [
+        "render-register-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "redirect-if-authenticated",
+      "workflowId": "frontend/auth",
+      "title": "Redirect If Authenticated",
+      "description": "When user visits /login or /register and already has valid token, redirect to /businesses. Uses loginGuard. No API call; checks auth service state.",
+      "nodeType": "feature",
+      "fileName": "redirect-if-authenticated",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "dependencies": [],
+      "testLayers": [
+        "ui"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "login-form-to-toggle",
+      "source": "render-login-form",
+      "target": "toggle-login-password-visibility"
+    },
+    {
+      "id": "login-form-to-validate",
+      "source": "render-login-form",
+      "target": "validate-login-fields"
+    },
+    {
+      "id": "login-validate-to-submit",
+      "source": "validate-login-fields",
+      "target": "submit-login-credentials"
+    },
+    {
+      "id": "login-form-to-register",
+      "source": "render-login-form",
+      "target": "navigate-to-register"
+    },
+    {
+      "id": "register-form-to-toggle",
+      "source": "render-register-form",
+      "target": "toggle-register-password-visibility"
+    },
+    {
+      "id": "register-form-to-validate",
+      "source": "render-register-form",
+      "target": "validate-register-fields"
+    },
+    {
+      "id": "register-validate-to-submit",
+      "source": "validate-register-fields",
+      "target": "submit-register-form"
+    },
+    {
+      "id": "register-form-to-login",
+      "source": "render-register-form",
+      "target": "navigate-to-login-from-register"
+    }
+  ]
+}

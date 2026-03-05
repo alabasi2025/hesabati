@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-salaries',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './salaries.html',
   styleUrl: './salaries.scss',
 })
-export class SalariesComponent implements OnInit {
+export class SalariesComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
   private readonly toast = inject(ToastService);
 
-  bizId = 0;
   items = signal<any[]>([]);
   employees = signal<any[]>([]);
   currencies = signal<any[]>([]);
@@ -43,17 +40,15 @@ export class SalariesComponent implements OnInit {
     return b - a - d;
   });
 
-  ngOnInit() {
+  ngOnInit(): void {
     const y = new Date().getFullYear();
     for (let i = y; i >= y - 5; i--) this.years.push(i);
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = Number.parseInt(params['bizId'], 10);
-      if (this.bizId) {
-        this.load();
-        this.api.getEmployees(this.bizId).then(e => this.employees.set(e || []));
-        this.api.getCurrencies().then(c => this.currencies.set(c || []));
-      }
-    });
+  }
+
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
+    this.api.getEmployees(this.bizId).then(e => this.employees.set(e || []));
+    this.api.getCurrencies().then(c => this.currencies.set(c || []));
   }
 
   async load() {
@@ -106,7 +101,7 @@ export class SalariesComponent implements OnInit {
       }
       this.showForm.set(false);
       await this.load();
-    } catch (e: any) { this.toast.error(e?.message || 'حدث خطأ'); }
+    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
   }
 
   async remove(item: any) {
@@ -117,7 +112,7 @@ export class SalariesComponent implements OnInit {
         await this.api.deleteSalaryRecord(item.id);
         this.toast.success('تم الحذف');
         await this.load();
-      } catch (e: any) { this.toast.error(e?.message || 'حدث خطأ'); }
+      } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
     }
   }
 

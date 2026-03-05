@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-funds",
+      "id": "load-funds-and-support-data",
       "workflowId": "frontend/funds",
-      "title": "Load Funds & Types",
-      "description": "pages/funds/funds.ts: Calls api.getFunds, getFundTypes, getStations in parallel.",
+      "title": "Load Funds And Support Data",
+      "description": "On initialization and after successful mutations, call Promise.all([api.getFunds(bizId), api.getFundTypes(bizId), api.getStations(bizId)]). Success: fill fundsData, fundTypes, stations and clear loading; failure keeps existing values and only logs error.",
       "nodeType": "feature",
-      "fileName": "load-funds",
+      "fileName": "load-funds-and-support-data",
       "position": {
         "x": 100,
         "y": 100
@@ -19,18 +19,72 @@
       ]
     },
     {
-      "id": "crud-funds-ui",
+      "id": "compute-fund-filter-tabs",
       "workflowId": "frontend/funds",
-      "title": "CRUD Funds",
-      "description": "pages/funds/funds.ts: Create/update/delete funds. Calls api.createFund, updateFund, deleteAccount.",
+      "title": "Compute Fund Filter Tabs",
+      "description": "After loading funds and types, compute filter tabs model with 'all' plus one chip per type and its current fund count. The computed model drives the chip list in template.",
       "nodeType": "feature",
-      "fileName": "crud-funds-ui",
+      "fileName": "compute-fund-filter-tabs",
       "position": {
         "x": 300,
         "y": 100
       },
       "dependencies": [
-        "load-funds"
+        "load-funds-and-support-data"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "set-fund-filter",
+      "workflowId": "frontend/funds",
+      "title": "Set Active Fund Filter",
+      "description": "When a filter chip is clicked, set activeFilter signal. Template immediately updates filtered list using filteredAccounts() without extra API requests.",
+      "nodeType": "feature",
+      "fileName": "set-fund-filter",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [
+        "compute-fund-filter-tabs"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "open-fund-form",
+      "workflowId": "frontend/funds",
+      "title": "Open Fund Form",
+      "description": "When user clicks add or edit, open fund modal. Add mode resets form and selects first available fund type if any; edit mode pre-fills fields and sets editingFundId.",
+      "nodeType": "feature",
+      "fileName": "open-fund-form",
+      "position": {
+        "x": 500,
+        "y": 280
+      },
+      "dependencies": [
+        "load-funds-and-support-data"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "save-fund-form",
+      "workflowId": "frontend/funds",
+      "title": "Persist Fund",
+      "description": "On save button, remove stationId from payload when empty. Call api.updateFund(bizId, id, payload) in edit mode, or api.createFund(bizId, payload) in add mode. Success closes modal, shows toast, then reloads lists.",
+      "nodeType": "feature",
+      "fileName": "save-fund-form",
+      "position": {
+        "x": 700,
+        "y": 280
+      },
+      "dependencies": [
+        "open-fund-form"
       ],
       "testLayers": [
         "ui",
@@ -38,18 +92,73 @@
       ]
     },
     {
-      "id": "crud-fund-types-ui",
+      "id": "open-fund-type-form",
       "workflowId": "frontend/funds",
-      "title": "CRUD Fund Types",
-      "description": "pages/funds/funds.ts: Create/update/delete fund types. Calls api.createFundType, updateFundType, deleteFundType.",
+      "title": "Open Fund Type Form",
+      "description": "When managing fund types, open type modal in add/edit mode and prefill icon/color/name/typeKey fields in edit mode.",
       "nodeType": "feature",
-      "fileName": "crud-fund-types-ui",
+      "fileName": "open-fund-type-form",
       "position": {
         "x": 100,
-        "y": 250
+        "y": 460
       },
       "dependencies": [
-        "load-funds"
+        "load-funds-and-support-data"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "save-fund-type-form",
+      "workflowId": "frontend/funds",
+      "title": "Persist Fund Type",
+      "description": "On save, call api.updateFundType(id, typeForm) when editing or api.createFundType(bizId, typeForm) when adding. Success closes modal and reloads page data.",
+      "nodeType": "feature",
+      "fileName": "save-fund-type-form",
+      "position": {
+        "x": 300,
+        "y": 460
+      },
+      "dependencies": [
+        "open-fund-type-form"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "open-fund-delete-confirm",
+      "workflowId": "frontend/funds",
+      "title": "Open Fund Delete Confirmation",
+      "description": "When user clicks delete on fund or type action, set deleteTarget and open confirmation modal. Cancel closes modal without API call.",
+      "nodeType": "feature",
+      "fileName": "open-fund-delete-confirm",
+      "position": {
+        "x": 500,
+        "y": 640
+      },
+      "dependencies": [
+        "load-funds-and-support-data"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "delete-fund-or-type",
+      "workflowId": "frontend/funds",
+      "title": "Delete Fund Or Fund Type",
+      "description": "After confirmation, call api.deleteFund(bizId, id) when target.type is 'fund', otherwise call api.deleteFundType(id). Success: hide modal, show success toast, and reload all page data.",
+      "nodeType": "feature",
+      "fileName": "delete-fund-or-type",
+      "position": {
+        "x": 700,
+        "y": 640
+      },
+      "dependencies": [
+        "open-fund-delete-confirm"
       ],
       "testLayers": [
         "ui",
@@ -59,14 +168,44 @@
   ],
   "edges": [
     {
-      "id": "load-funds-to-crud-funds-ui",
-      "source": "load-funds",
-      "target": "crud-funds-ui"
+      "id": "funds-load-to-filters",
+      "source": "load-funds-and-support-data",
+      "target": "compute-fund-filter-tabs"
     },
     {
-      "id": "load-funds-to-crud-fund-types-ui",
-      "source": "load-funds",
-      "target": "crud-fund-types-ui"
+      "id": "funds-filters-to-filter-set",
+      "source": "compute-fund-filter-tabs",
+      "target": "set-fund-filter"
+    },
+    {
+      "id": "fund-form-open-to-save",
+      "source": "open-fund-form",
+      "target": "save-fund-form"
+    },
+    {
+      "id": "fund-save-to-reload",
+      "source": "save-fund-form",
+      "target": "load-funds-and-support-data"
+    },
+    {
+      "id": "type-form-open-to-save",
+      "source": "open-fund-type-form",
+      "target": "save-fund-type-form"
+    },
+    {
+      "id": "type-save-to-reload",
+      "source": "save-fund-type-form",
+      "target": "load-funds-and-support-data"
+    },
+    {
+      "id": "funds-load-to-delete-confirm",
+      "source": "load-funds-and-support-data",
+      "target": "open-fund-delete-confirm"
+    },
+    {
+      "id": "fund-delete-confirm-to-delete",
+      "source": "open-fund-delete-confirm",
+      "target": "delete-fund-or-type"
     }
   ]
 }

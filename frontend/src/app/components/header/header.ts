@@ -13,10 +13,10 @@ import { ApiService } from '../../services/api.service';
   styleUrl: './header.scss',
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  private auth = inject(AuthService);
-  private api = inject(ApiService);
-  themeService = inject(ThemeService);
-  biz = inject(BusinessService);
+  private readonly auth = inject(AuthService);
+  private readonly api = inject(ApiService);
+  readonly themeService = inject(ThemeService);
+  readonly biz = inject(BusinessService);
 
   pageTitle = input<string>('لوحة التحكم');
   user = this.auth.user;

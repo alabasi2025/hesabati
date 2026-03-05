@@ -2,68 +2,64 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "login",
+      "id": "validate-login-credentials",
       "workflowId": "backend/auth",
-      "title": "POST /auth/login",
-      "description": "auth.ts line 10: Accepts {username, password}. Queries users table by username. Compares password with bcrypt. Returns JWT token with {userId, username} payload. Uses JWT_SECRET from env. Returns 401 on invalid credentials.",
+      "title": "Validate Login Credentials",
+      "description": "POST /api/auth/login with {username, password}. Compares password with bcrypt. Returns {token, user: {id, username, fullName, role}} on success. Returns 401 with {error: 'اسم المستخدم أو كلمة المرور غير صحيحة'} on invalid credentials. Returns 403 with {error: 'الحساب معطل'} if user is inactive. Returns 400 if username or password missing.",
       "nodeType": "feature",
-      "fileName": "login",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "validate-login-credentials",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "register",
+      "id": "hash-password-on-register",
       "workflowId": "backend/auth",
-      "title": "POST /auth/register",
-      "description": "auth.ts line 54: Accepts {username, password, name}. Checks if username already exists (returns 409 if duplicate). Hashes password with bcrypt (10 rounds). Inserts into users table. Returns JWT token.",
+      "title": "Hash Password On Register",
+      "description": "When processing POST /api/auth/register, hash plaintext password using bcrypt with 10 salt rounds. Input: password string from body. Output: hashed string stored in users table. Never return hashed password in response.",
       "nodeType": "feature",
-      "fileName": "register",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "login"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "hash-password-on-register",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "get-me",
+      "id": "check-username-uniqueness",
       "workflowId": "backend/auth",
-      "title": "GET /auth/me",
-      "description": "auth.ts line 86: Protected by authMiddleware(). Extracts userId from JWT via c.get('user'). Queries users table by id. Returns {id, username, name}. Returns 404 if user not found.",
+      "title": "Check Username Uniqueness",
+      "description": "On register, check users table for existing username. If exists return 400 with {error: 'اسم المستخدم مستخدم بالفعل'}. If not exists proceed to create user record.",
       "nodeType": "feature",
-      "fileName": "get-me",
-      "position": {
-        "x": 200,
-        "y": 250
-      },
-      "dependencies": [
-        "login"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "check-username-uniqueness",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "create-user-record",
+      "workflowId": "backend/auth",
+      "title": "Create User Record",
+      "description": "POST /api/auth/register with {username, password, fullName, role}. Inserts row into users table with hashed password. Returns 201 with {user: {id, username, fullName, role}} on success. Role defaults to 'viewer' if omitted.",
+      "nodeType": "feature",
+      "fileName": "create-user-record",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": ["hash-password-on-register", "check-username-uniqueness"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "return-jwt-on-login",
+      "workflowId": "backend/auth",
+      "title": "Return JWT On Login",
+      "description": "After validating credentials, generate JWT with payload {userId, username, role}. Return {token, user} in response. Token is used in Authorization header for protected routes.",
+      "nodeType": "feature",
+      "fileName": "return-jwt-on-login",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": ["validate-login-credentials"],
+      "testLayers": ["api"]
     }
   ],
   "edges": [
-    {
-      "id": "login-to-register",
-      "source": "login",
-      "target": "register"
-    },
-    {
-      "id": "login-to-get-me",
-      "source": "login",
-      "target": "get-me"
-    }
+    { "id": "hash-to-create", "source": "hash-password-on-register", "target": "create-user-record" },
+    { "id": "check-to-create", "source": "check-username-uniqueness", "target": "create-user-record" },
+    { "id": "validate-to-jwt", "source": "validate-login-credentials", "target": "return-jwt-on-login" }
   ]
 }

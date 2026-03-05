@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-stations-page",
+      "id": "load-stations-list",
       "workflowId": "frontend/stations",
-      "title": "Load Stations",
-      "description": "pages/stations/stations.ts: Calls api.getStations(bizId). Display only, no CRUD in this page.",
+      "title": "Load Stations List",
+      "description": "When page mounts or after mutation, call api.getStations(bizId), set loading=true during request. Success: store stations in signal and render cards/empty-state. Failure: show error toast and keep the page usable with empty list.",
       "nodeType": "feature",
-      "fileName": "load-stations-page",
+      "fileName": "load-stations-list",
       "position": {
         "x": 100,
         "y": 100
@@ -17,7 +17,153 @@
         "ui",
         "api"
       ]
+    },
+    {
+      "id": "open-station-form",
+      "workflowId": "frontend/stations",
+      "title": "Open Station Form",
+      "description": "When user clicks add or edit button, open modal. In edit mode, prefill form from selected station and set readonly code input. In add mode, reset all fields and set editingStation to null.",
+      "nodeType": "feature",
+      "fileName": "open-station-form",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [
+        "load-stations-list"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "normalize-station-billing-systems",
+      "workflowId": "frontend/stations",
+      "title": "Normalize Billing Systems Input",
+      "description": "Before save, station.billingSystemsStr is split by comma, trimmed, filtered for non-empty tokens, and used as payload array in billingSystems property.",
+      "nodeType": "feature",
+      "fileName": "normalize-station-billing-systems",
+      "position": {
+        "x": 300,
+        "y": 280
+      },
+      "dependencies": [
+        "open-station-form"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "validate-station-form",
+      "workflowId": "frontend/stations",
+      "title": "Validate Station Form",
+      "description": "Validate required fields before submit: name and code must be provided (code can only be set in add mode in UI behavior). Failure shows toast warning and keeps modal open. Success proceeds to persistence.",
+      "nodeType": "feature",
+      "fileName": "validate-station-form",
+      "position": {
+        "x": 500,
+        "y": 280
+      },
+      "dependencies": [
+        "normalize-station-billing-systems"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "save-station",
+      "workflowId": "frontend/stations",
+      "title": "Save Station",
+      "description": "After validation, call api.updateStationByBiz(bizId, id, payload) for edit mode or api.createStation(bizId, payload) for add mode. On success, close form, show success toast, and reload stations list. On failure, keep modal open and show backend error.",
+      "nodeType": "feature",
+      "fileName": "save-station",
+      "position": {
+        "x": 700,
+        "y": 280
+      },
+      "dependencies": [
+        "validate-station-form"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "open-station-delete-confirm",
+      "workflowId": "frontend/stations",
+      "title": "Open Station Delete Confirmation",
+      "description": "When user clicks delete on a card, open a confirm dialog with warning message. Cancel cancels mutation. Confirm continues with deletion node.",
+      "nodeType": "feature",
+      "fileName": "open-station-delete-confirm",
+      "position": {
+        "x": 100,
+        "y": 460
+      },
+      "dependencies": [
+        "load-stations-list"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "delete-station",
+      "workflowId": "frontend/stations",
+      "title": "Delete Station",
+      "description": "After confirmation, call api.deleteStation(bizId, id). Success: show success toast and reload station list. Failure: show error toast and retain current selection.",
+      "nodeType": "feature",
+      "fileName": "delete-station",
+      "position": {
+        "x": 300,
+        "y": 460
+      },
+      "dependencies": [
+        "open-station-delete-confirm"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "stations-load-to-form",
+      "source": "load-stations-list",
+      "target": "open-station-form"
+    },
+    {
+      "id": "station-form-to-normalize",
+      "source": "open-station-form",
+      "target": "normalize-station-billing-systems"
+    },
+    {
+      "id": "station-normalize-to-validate",
+      "source": "normalize-station-billing-systems",
+      "target": "validate-station-form"
+    },
+    {
+      "id": "station-validate-to-save",
+      "source": "validate-station-form",
+      "target": "save-station"
+    },
+    {
+      "id": "station-save-to-reload",
+      "source": "save-station",
+      "target": "load-stations-list"
+    },
+    {
+      "id": "stations-load-to-delete-confirm",
+      "source": "load-stations-list",
+      "target": "open-station-delete-confirm"
+    },
+    {
+      "id": "stations-delete",
+      "source": "open-station-delete-confirm",
+      "target": "delete-station"
+    }
+  ]
 }

@@ -1,16 +1,15 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import {
-  Scene, PerspectiveCamera, WebGLRenderer, Clock, Vector2, Vector3,
+  Scene, PerspectiveCamera, WebGLRenderer, Timer, Vector2, Vector3,
   Raycaster, Object3D, Mesh, Points, Line, Sprite, SpriteMaterial,
   BufferGeometry, BufferAttribute, Material, MeshStandardMaterial,
-  MeshPhysicalMaterial, MeshBasicMaterial, PointsMaterial, LineBasicMaterial,
-  BoxGeometry, SphereGeometry, TorusGeometry, TorusKnotGeometry,
-  ConeGeometry, OctahedronGeometry, DodecahedronGeometry, TetrahedronGeometry,
-  IcosahedronGeometry, PlaneGeometry, CircleGeometry,
+  MeshPhysicalMaterial, PointsMaterial, LineBasicMaterial,
+  BoxGeometry, SphereGeometry, TorusGeometry,
+  ConeGeometry,
   AmbientLight, DirectionalLight, PointLight, Fog, FogExp2,
   GridHelper, LOD, Group, CanvasTexture,
-  QuadraticBezierCurve3, AdditiveBlending, DoubleSide,
-  PCFSoftShadowMap, ACESFilmicToneMapping,
+  QuadraticBezierCurve3, AdditiveBlending,
+  PCFShadowMap, ACESFilmicToneMapping,
 } from 'three';
 
 export interface SceneConfig {
@@ -37,7 +36,7 @@ export interface ManagedScene {
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
   animationId: number | null;
-  clock: Clock;
+  clock: Timer;
   container: HTMLElement;
   /** هل المكون مرئي في viewport */
   isVisible: boolean;
@@ -62,16 +61,16 @@ export interface TooltipConfig {
 
 @Injectable({ providedIn: 'root' })
 export class ThreeService {
-  private ngZone = inject(NgZone);
-  private scenes = new Map<string, ManagedScene>();
+  private readonly ngZone = inject(NgZone);
+  private readonly scenes = new Map<string, ManagedScene>();
 
   // ═══ Object Pool ═══
-  private geometryPool = new Map<string, BufferGeometry[]>();
-  private materialPool = new Map<string, Material[]>();
+  private readonly geometryPool = new Map<string, BufferGeometry[]>();
+  private readonly materialPool = new Map<string, Material[]>();
 
   // ═══ IntersectionObserver مشترك ═══
   private visibilityObserver: IntersectionObserver | null = null;
-  private visibilityMap = new Map<HTMLElement, string>(); // container -> sceneId
+  private readonly visibilityMap = new Map<HTMLElement, string>(); // container -> sceneId
 
   constructor() {
     this.initVisibilityObserver();
@@ -92,7 +91,6 @@ export class ThreeService {
           managed.isVisible = entry.isIntersecting;
           if (entry.isIntersecting && !managed.isActive) {
             managed.isActive = true;
-            managed.clock.start();
           }
         });
       },
@@ -127,7 +125,7 @@ export class ThreeService {
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setClearColor(clearColor, clearAlpha);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = PCFSoftShadowMap;
+    renderer.shadowMap.type = PCFShadowMap;
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
@@ -157,7 +155,7 @@ export class ThreeService {
     }
 
     const managed: ManagedScene = {
-      scene, camera, renderer, animationId: null, clock: new Clock(),
+      scene, camera, renderer, animationId: null, clock: new Timer(),
       container, isVisible: true, isActive: true,
     };
     this.scenes.set(id, managed);
@@ -197,7 +195,7 @@ export class ThreeService {
         if (!managed.isVisible) return;
 
         const delta = managed.clock.getDelta();
-        const elapsed = managed.clock.getElapsedTime();
+        const elapsed = managed.clock.getElapsed();
         callback(delta, elapsed);
         managed.renderer.render(managed.scene, managed.camera);
       };
@@ -242,15 +240,15 @@ export class ThreeService {
       }
       if (obj instanceof Points) {
         obj.geometry?.dispose();
-        this.disposeMaterial(obj.material as Material);
+        this.disposeMaterial(obj.material);
       }
       if (obj instanceof Line) {
         obj.geometry?.dispose();
-        this.disposeMaterial(obj.material as Material);
+        this.disposeMaterial(obj.material);
       }
       if (obj instanceof Sprite) {
-        (obj.material as SpriteMaterial)?.map?.dispose();
-        this.disposeMaterial(obj.material as Material);
+        obj.material?.map?.dispose();
+        this.disposeMaterial(obj.material);
       }
     });
 
@@ -260,12 +258,9 @@ export class ThreeService {
     // تنظيف Renderer
     managed.renderer.dispose();
     managed.renderer.forceContextLoss();
-    if (managed.renderer.domElement.parentNode) {
-      managed.renderer.domElement.parentNode.removeChild(managed.renderer.domElement);
-    }
+    managed.renderer.domElement.remove();
 
-    // إيقاف الساعة
-    managed.clock.stop();
+    // Timer يعمل تلقائياً ولا يحتاج stop
 
     // تنظيف camera animation
     (managed as any)._cameraAnimation = null;
@@ -296,8 +291,8 @@ export class ThreeService {
   // Raycasting & تفاعلية
   // ═══════════════════════════════════════════════════════════
 
-  private raycaster = new Raycaster();
-  private pointer = new Vector2();
+  private readonly raycaster = new Raycaster();
+  private readonly pointer = new Vector2();
 
   raycast(sceneId: string, event: MouseEvent, targets: Object3D[]): RaycastHit | null {
     const managed = this.scenes.get(sceneId);
@@ -852,10 +847,10 @@ export class ThreeService {
     if (!managed) return;
 
     const startPos = managed.camera.position.clone();
-    const startTime = managed.clock.getElapsedTime();
+    const startTime = managed.clock.getElapsed();
 
     const moveCamera = () => {
-      const elapsed = managed.clock.getElapsedTime() - startTime;
+      const elapsed = managed.clock.getElapsed() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = progress < 0.5
         ? 4 * progress * progress * progress

@@ -437,3 +437,28 @@ $stat-palette: (
   7: (color: $color-orange, light: $color-orange-light),
   8: (color: $color-cyan,   light: $color-cyan-light),
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 16. DESIGN SYSTEM CSS CUSTOM PROPERTIES (API for components)
+// Used by styles.scss for :root / [data-theme]. Components use var(--name).
+// Defines: --text-primary, --text-secondary, --text-muted, --bg-surface, --bg-card, --border-color, --type-color
+// ─────────────────────────────────────────────────────────────────────────────
+@mixin design-system-css-vars($theme: dark) {
+  @if $theme == dark {
+    --text-primary:   #{$dark-text-primary};
+    --text-secondary: #{$dark-text-secondary};
+    --text-muted:     #{$dark-text-tertiary};
+    --bg-surface:     #{$dark-bg-depth-2};
+    --bg-card:        #{$dark-bg-depth-3};
+    --border-color:   #{$dark-border-default};
+    --type-color:     #{$color-blue};
+  } @else {
+    --text-primary:   #{$light-text-primary};
+    --text-secondary: #{$light-text-secondary};
+    --text-muted:     #{$light-text-tertiary};
+    --bg-surface:     #{$light-bg-depth-1};
+    --bg-card:        #{$light-bg-depth-2};
+    --border-color:   #{$light-border-default};
+    --type-color:     #{$color-blue};
+  }
+}

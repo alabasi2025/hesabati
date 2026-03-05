@@ -19,5 +19,40 @@
   "cSpell.enabled": true,
   "cSpell.enableFiletypes": ["html", "scss", "typescript", "javascript", "json", "markdown"],
   "cSpell.language": "en,ar",
-  "rest-client.previewResponseInUntitledDocument": true
+  "cSpell.diagnosticLevel": "Hint",
+  "cSpell.maxNumberOfProblems": 50,
+  "rest-client.previewResponseInUntitledDocument": true,
+  "split-or-die.ignore": [
+    "**/backend/drizzle/**/*.sql",
+    "**/drizzle/**/*.sql",
+    "**/0000_faithful_groot.sql",
+    "drizzle/**",
+    "drizzle/**/*.sql",
+    "backend/drizzle/0000_faithful_groot.sql",
+    "**/0000_faithful_groot.sql",
+    "**/backend/public/**",
+    "backend/public/**",
+    "**/chunk-*.js"
+  ],
+  "split-or-die.exclude": "**/backend/drizzle/**,**/backend/public/**,**/chunk-*.js",
+  "split-or-die.maxLines": 2000,
+  "split-or-die.threshold": 2000,
+  "split-or-die.ignorePatterns": [
+    "**/drizzle/**",
+    "**/*_faithful_groot.sql",
+    "**/0000_faithful_groot.sql",
+    "backend/drizzle/**",
+    "**/backend/public/**",
+    "**/chunk-*.js"
+  ],
+  "dblinter.exclude": ["**/backend/drizzle/**", "**/drizzle/**"],
+  "dblinter.analysisExclude": ["**/backend/drizzle/**", "**/drizzle/**"],
+  "fileLengthLint.exclude": [
+    "**/backend/drizzle/**",
+    "**/drizzle/**",
+    "**/0000_faithful_groot.sql",
+    "**/backend/public/**"
+  ],
+  "fileLengthLint.maxLines": 2000,
+  "fileLengthLint.disabledLanguages": ["sql"]
 }

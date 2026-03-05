@@ -19,6 +19,9 @@
   <div class="welcome-section">
     <h1 class="welcome-title">{{ getGreeting() }}، <span class="gradient-text">{{ userName() }}</span></h1>
     <p class="welcome-subtitle">اختر العمل الذي تريد الدخول إليه</p>
+    @if (noAccessMessage()) {
+      <p class="no-access-msg">{{ noAccessMessage() }}</p>
+    }
   </div>
 
   <!-- Loading -->
@@ -29,8 +32,19 @@
     </div>
   }
 
+  <!-- خطأ التحميل -->
+  @if (!loading() && loadError()) {
+    <div class="error-state">
+      <span class="material-icons-round">error_outline</span>
+      <p>{{ loadError() }}</p>
+      <button class="retry-btn" (click)="loadBusinesses()">
+        <span class="material-icons-round">refresh</span> إعادة المحاولة
+      </button>
+    </div>
+  }
+
   <!-- Business Cards -->
-  @if (!loading()) {
+  @if (!loading() && !loadError()) {
     <div class="businesses-grid">
       @for (biz of businesses(); track biz.id) {
         <div class="business-card" [style.--biz-color]="biz.color" (click)="enterBusiness(biz)">

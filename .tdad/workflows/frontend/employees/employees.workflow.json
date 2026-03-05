@@ -2,12 +2,12 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "load-employees-page",
+      "id": "load-employees-and-stations",
       "workflowId": "frontend/employees",
-      "title": "Load Employees",
-      "description": "pages/employees/employees.ts: Calls api.getEmployees(bizId).",
+      "title": "Load Employees And Stations",
+      "description": "On page load, call Promise.all([api.getEmployees(bizId), api.getStations(bizId)]). Success: populate employees and stations signals. Failure: show error toast and keep loading false.",
       "nodeType": "feature",
-      "fileName": "load-employees-page",
+      "fileName": "load-employees-and-stations",
       "position": {
         "x": 100,
         "y": 100
@@ -19,18 +19,109 @@
       ]
     },
     {
-      "id": "crud-employees-ui",
+      "id": "compute-employees-summary",
       "workflowId": "frontend/employees",
-      "title": "CRUD Employees",
-      "description": "pages/employees/employees.ts: Calls create/update/delete employee APIs.",
+      "title": "Compute Employees Summary",
+      "description": "After loading employees, derive filtered employee view and totalSalaries from filteredEmployees() based on current filterStation signal.",
       "nodeType": "feature",
-      "fileName": "crud-employees-ui",
+      "fileName": "compute-employees-summary",
       "position": {
         "x": 300,
         "y": 100
       },
       "dependencies": [
-        "load-employees-page"
+        "load-employees-and-stations"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "set-station-filter",
+      "workflowId": "frontend/employees",
+      "title": "Set Station Filter",
+      "description": "When user clicks filter tabs (الكل/الإدارة/محطة), update filterStation signal. filteredEmployees() recalculates reactively by station id or admin fallback for empty station value.",
+      "nodeType": "feature",
+      "fileName": "set-station-filter",
+      "position": {
+        "x": 100,
+        "y": 280
+      },
+      "dependencies": [
+        "compute-employees-summary"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "open-employee-form",
+      "workflowId": "frontend/employees",
+      "title": "Open Employee Form",
+      "description": "When user clicks add/edit, open modal and populate form with defaults or selected employee. In edit mode set editingId before save.",
+      "nodeType": "feature",
+      "fileName": "open-employee-form",
+      "position": {
+        "x": 500,
+        "y": 280
+      },
+      "dependencies": [
+        "load-employees-and-stations"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "save-employee",
+      "workflowId": "frontend/employees",
+      "title": "Save Employee",
+      "description": "On save, call api.updateEmployee(id, data) for edit mode or api.createEmployee(bizId, data) for add mode (salary serialized as string). Success: close modal, show success toast, and reload employees/stations. Failure: show backend error toast.",
+      "nodeType": "feature",
+      "fileName": "save-employee",
+      "position": {
+        "x": 700,
+        "y": 280
+      },
+      "dependencies": [
+        "open-employee-form"
+      ],
+      "testLayers": [
+        "ui",
+        "api"
+      ]
+    },
+    {
+      "id": "open-employee-delete-confirm",
+      "workflowId": "frontend/employees",
+      "title": "Open Employee Delete Confirmation",
+      "description": "When user clicks delete, call toast.confirm with warning text. Cancel keeps page unchanged. Confirm continues with delete API.",
+      "nodeType": "feature",
+      "fileName": "open-employee-delete-confirm",
+      "position": {
+        "x": 100,
+        "y": 460
+      },
+      "dependencies": [
+        "load-employees-and-stations"
+      ],
+      "testLayers": [
+        "ui"
+      ]
+    },
+    {
+      "id": "delete-employee",
+      "workflowId": "frontend/employees",
+      "title": "Delete Employee",
+      "description": "After confirmation, call DELETE /api/employees/:id. Success: show success toast and reload list. Failure: show error toast.",
+      "nodeType": "feature",
+      "fileName": "delete-employee",
+      "position": {
+        "x": 300,
+        "y": 460
+      },
+      "dependencies": [
+        "open-employee-delete-confirm"
       ],
       "testLayers": [
         "ui",
@@ -40,9 +131,34 @@
   ],
   "edges": [
     {
-      "id": "load-employees-page-to-crud-employees-ui",
-      "source": "load-employees-page",
-      "target": "crud-employees-ui"
+      "id": "load-employees-to-summary",
+      "source": "load-employees-and-stations",
+      "target": "compute-employees-summary"
+    },
+    {
+      "id": "summary-to-filter",
+      "source": "compute-employees-summary",
+      "target": "set-station-filter"
+    },
+    {
+      "id": "open-to-save",
+      "source": "open-employee-form",
+      "target": "save-employee"
+    },
+    {
+      "id": "save-to-reload",
+      "source": "save-employee",
+      "target": "load-employees-and-stations"
+    },
+    {
+      "id": "load-to-delete-confirm",
+      "source": "load-employees-and-stations",
+      "target": "open-employee-delete-confirm"
+    },
+    {
+      "id": "delete-confirm-to-delete",
+      "source": "open-employee-delete-confirm",
+      "target": "delete-employee"
     }
   ]
 }

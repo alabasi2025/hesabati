@@ -15,15 +15,20 @@ test.describe('تسجيل الدخول والتبويب الجانبي', () => {
 
     await expect(page).toHaveURL(/\/(businesses|biz)/, { timeout: 20000 });
 
-    // اختيار أول عمل — النقر على أول بطاقة عمل
-    const firstCard = page.locator('.business-card').first();
-    if (await firstCard.isVisible().catch(() => false)) {
-      await firstCard.click();
-      await expect(page).toHaveURL(/\/biz\/\d+/, { timeout: 10000 });
+    // إذا كنا على صفحة اختيار العمل، ننتظر ظهور البطاقات ثم ننقر على أول عمل
+    if (page.url().includes('/businesses')) {
+      const firstCard = page.locator('.business-card:not(.add-card)').first();
+      await expect(firstCard).toBeVisible({ timeout: 15000 });
+      await Promise.all([
+        page.waitForURL(/\/biz\/\d+/, { timeout: 15000 }),
+        firstCard.click(),
+      ]);
     }
 
-    const sidebar = page.locator('nav, aside, [class*="sidebar"], [class*="menu"], .sidebar').first();
-    await expect(sidebar).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/biz\/\d+/, { timeout: 5000 });
+
+    const sidebar = page.locator('aside.sidebar, .sidebar');
+    await expect(sidebar).toBeVisible({ timeout: 15000 });
 
     await expect(page.locator('body')).toContainText(/المستخدمون والصلاحيات|الرئيسية|الحسابات|العمليات المالية|التقارير|الرواتب والميزانية/i, { timeout: 8000 });
   });
@@ -35,10 +40,14 @@ test.describe('تسجيل الدخول والتبويب الجانبي', () => {
     await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
     await expect(page).toHaveURL(/\/(businesses|biz)/, { timeout: 20000 });
-    const firstCard = page.locator('.business-card').first();
-    if (await firstCard.isVisible().catch(() => false)) {
-      await firstCard.click();
-      await expect(page).toHaveURL(/\/biz\/\d+/, { timeout: 10000 });
+
+    if (page.url().includes('/businesses')) {
+      const firstCard = page.locator('.business-card:not(.add-card)').first();
+      await expect(firstCard).toBeVisible({ timeout: 15000 });
+      await Promise.all([
+        page.waitForURL(/\/biz\/\d+/, { timeout: 15000 }),
+        firstCard.click(),
+      ]);
     }
 
     await expect(page.locator('body')).toContainText(/إعدادات التبويب/i, { timeout: 10000 });

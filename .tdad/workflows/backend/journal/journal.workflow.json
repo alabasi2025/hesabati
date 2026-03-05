@@ -2,91 +2,27 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-journal-entries",
+      "id": "get-journal-entries",
       "workflowId": "backend/journal",
-      "title": "GET /businesses/:bizId/journal-entries",
-      "description": "api.ts: Protected by bizAuthMiddleware(). Queries journal_entries with journal_entry_lines. Returns entries with line details.",
+      "title": "Get Journal Entries",
+      "description": "GET /api/businesses/:bizId/journal-entries. Returns array of journal entries for business ordered by date. Requires Authorization and bizId. Returns 200 with [{id, description, entryDate, lines, ...}].",
       "nodeType": "feature",
-      "fileName": "list-journal-entries",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-journal-entries",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "create-journal-entry",
+      "id": "post-journal-entry",
       "workflowId": "backend/journal",
-      "title": "POST /businesses/:bizId/journal-entries",
-      "description": "api.ts: Validates operationTypeId is required. Calculates totalDebit and totalCredit from lines. Sets isBalanced = (totalDebit === totalCredit). Inserts journal_entries and journal_entry_lines. Updates account_balances.",
+      "title": "Post Journal Entry",
+      "description": "POST /api/businesses/:bizId/journal-entries with body {description, entryDate, lines: [{accountId, debit, credit}]}. Validates lines balance (sum debit = sum credit). Creates journal_entry and journal_entry_lines. Returns 201 with created entry. Returns 400 if lines do not balance.",
       "nodeType": "feature",
-      "fileName": "create-journal-entry",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-journal-entries"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "update-journal-entry",
-      "workflowId": "backend/journal",
-      "title": "PUT /businesses/:bizId/journal-entries/:id",
-      "description": "api.ts: Updates journal entry fields.",
-      "nodeType": "feature",
-      "fileName": "update-journal-entry",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-journal-entries"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "delete-journal-entry",
-      "workflowId": "backend/journal",
-      "title": "DELETE /businesses/:bizId/journal-entries/:id",
-      "description": "api.ts: Deletes journal entry and its lines.",
-      "nodeType": "feature",
-      "fileName": "delete-journal-entry",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-journal-entries"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-journal-entry",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
-  "edges": [
-    {
-      "id": "list-journal-entries-to-create-journal-entry",
-      "source": "list-journal-entries",
-      "target": "create-journal-entry"
-    },
-    {
-      "id": "list-journal-entries-to-update-journal-entry",
-      "source": "list-journal-entries",
-      "target": "update-journal-entry"
-    },
-    {
-      "id": "list-journal-entries-to-delete-journal-entry",
-      "source": "list-journal-entries",
-      "target": "delete-journal-entry"
-    }
-  ]
+  "edges": []
 }

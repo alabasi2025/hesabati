@@ -2,585 +2,95 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "fe-login",
+      "id": "auth",
       "workflowId": "frontend",
-      "title": "Login Page",
-      "description": "pages/login: Calls auth.login(username, password). Redirects to /businesses on success.",
+      "title": "Auth",
+      "description": "Login and register pages",
       "nodeType": "folder",
-      "folderPath": "login",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "folderPath": "frontend/auth",
+      "position": { "x": 100, "y": 100 },
       "dependencies": []
     },
     {
-      "id": "fe-business-select",
+      "id": "business-select",
       "workflowId": "frontend",
       "title": "Business Select",
-      "description": "pages/business-select: Calls api.getBusinesses(). Displays business cards. Navigates to /biz/:bizId.",
+      "description": "Business selection and layout",
       "nodeType": "folder",
-      "folderPath": "business-select",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "fe-login"
-      ]
+      "folderPath": "frontend/business-select",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": []
     },
     {
-      "id": "fe-dashboard",
-      "workflowId": "frontend",
-      "title": "Dashboard",
-      "description": "pages/dashboard: Loads stations, employees, accounts, funds, suppliers, pendingAccounts, business, warehouses.",
-      "nodeType": "folder",
-      "folderPath": "dashboard",
-      "position": {
-        "x": 500,
-        "y": 100
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-accounts",
-      "workflowId": "frontend",
-      "title": "Accounts",
-      "description": "pages/accounts: CRUD accounts with tree view. Calls getAccounts, createAccount, updateAccount, deleteAccount.",
-      "nodeType": "folder",
-      "folderPath": "accounts",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-funds",
-      "workflowId": "frontend",
-      "title": "Funds",
-      "description": "pages/funds: CRUD funds + fund types. Calls getFunds, getFundTypes, getStations, create/update/delete.",
-      "nodeType": "folder",
-      "folderPath": "funds",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-vouchers",
+      "id": "vouchers",
       "workflowId": "frontend",
       "title": "Vouchers",
-      "description": "pages/vouchers: Enhanced list, create, draft, update, status change. Calls getVouchersEnhanced, getOperationTypes, getAccounts, getFunds, getAccountBalance, createVoucher, createVoucherDraft, updateVoucher, changeVoucherStatus.",
+      "description": "Vouchers list and create form",
       "nodeType": "folder",
-      "folderPath": "vouchers",
-      "position": {
-        "x": 500,
-        "y": 250
-      },
-      "dependencies": [
-        "fe-accounts",
-        "fe-funds"
-      ]
+      "folderPath": "frontend/vouchers",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": []
     },
     {
-      "id": "fe-journal",
+      "id": "journal",
       "workflowId": "frontend",
       "title": "Journal",
-      "description": "pages/journal: CRUD journal entries. Calls getJournalEntries, getAccounts, getOperationTypes, createJournalEntry, deleteJournalEntry.",
+      "description": "Journal entries page",
       "nodeType": "folder",
-      "folderPath": "journal",
-      "position": {
-        "x": 700,
-        "y": 250
-      },
-      "dependencies": [
-        "fe-accounts"
-      ]
+      "folderPath": "frontend/journal",
+      "position": { "x": 100, "y": 250 },
+      "dependencies": []
     },
     {
-      "id": "fe-operation-types",
+      "id": "accounts",
       "workflowId": "frontend",
-      "title": "Operation Types",
-      "description": "pages/operation-types: CRUD + clone. Calls getOperationTypes, getAllAccounts, getFunds, getWarehouses, create/update/delete/cloneOperationType.",
+      "title": "Accounts",
+      "description": "Accounts list and forms",
       "nodeType": "folder",
-      "folderPath": "operation-types",
-      "position": {
-        "x": 100,
-        "y": 400
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
+      "folderPath": "frontend/accounts",
+      "position": { "x": 300, "y": 250 },
+      "dependencies": []
     },
     {
-      "id": "fe-custom-screens",
+      "id": "sidebar",
       "workflowId": "frontend",
-      "title": "Custom Screens",
-      "description": "pages/custom-screens: Complex screen with widgets. Calls getScreens, getCollectionStyleConfig, getWidgetLogEnhanced, getWidgetStatsEnhanced, getWidgetChartEnhanced, getWidgetAccounts, getWarehouseInventory, createVoucher, saveCollectionStyleConfig.",
+      "title": "Sidebar",
+      "description": "Sidebar nav and settings page",
       "nodeType": "folder",
-      "folderPath": "custom-screens",
-      "position": {
-        "x": 300,
-        "y": 400
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
+      "folderPath": "frontend/sidebar",
+      "position": { "x": 500, "y": 250 },
+      "dependencies": []
     },
     {
-      "id": "fe-sidebar-settings",
+      "id": "dashboard",
       "workflowId": "frontend",
-      "title": "Sidebar Settings",
-      "description": "pages/sidebar-settings: Manage sidebar sections/items/user config. Calls getUsers, getSidebarSections, getSidebarItems, getUserSidebar, updateUserSidebar, create/update/deleteSidebarSection, createSidebarItem, updateSidebarItem.",
+      "title": "Dashboard",
+      "description": "Dashboard and stats display",
       "nodeType": "folder",
-      "folderPath": "sidebar-settings",
-      "position": {
-        "x": 500,
-        "y": 400
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
+      "folderPath": "frontend/dashboard",
+      "position": { "x": 100, "y": 400 },
+      "dependencies": []
     },
     {
-      "id": "fe-reports",
+      "id": "business-layout",
       "workflowId": "frontend",
-      "title": "Reports (Basic)",
-      "description": "pages/reports: Basic reports view. Calls getAccounts, getFunds, getEmployees, getVouchers, getJournalEntries.",
+      "title": "Business Layout",
+      "description": "Business scoped shell with shared sidebar/header/breadcrumbs.",
       "nodeType": "folder",
-      "folderPath": "reports",
-      "position": {
-        "x": 700,
-        "y": 400
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
+      "folderPath": "frontend/business-layout",
+      "position": { "x": 300, "y": 400 },
+      "dependencies": []
     },
     {
-      "id": "fe-reports-advanced",
+      "id": "three-chart",
       "workflowId": "frontend",
-      "title": "Reports (Advanced)",
-      "description": "pages/reports-advanced: Advanced reports. Calls getAccounts, getProfitLossReport, getAccountStatement, getDailySummary, getTrialBalance.",
+      "title": "Three Chart",
+      "description": "3D chart component used in dashboard and dashboard widgets.",
       "nodeType": "folder",
-      "folderPath": "reports-advanced",
-      "position": {
-        "x": 100,
-        "y": 550
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-banks",
-      "workflowId": "frontend",
-      "title": "Banks",
-      "description": "pages/banks: CRUD bank accounts + bank types. Calls getAccounts, getBankTypes, create/update/delete.",
-      "nodeType": "folder",
-      "folderPath": "banks",
-      "position": {
-        "x": 300,
-        "y": 550
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-exchanges",
-      "workflowId": "frontend",
-      "title": "Exchanges",
-      "description": "pages/exchanges: CRUD exchange accounts + exchange types. Calls getAccounts, getExchangeTypes, create/update/delete.",
-      "nodeType": "folder",
-      "folderPath": "exchanges",
-      "position": {
-        "x": 500,
-        "y": 550
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-wallets",
-      "workflowId": "frontend",
-      "title": "Wallets",
-      "description": "pages/wallets: CRUD wallet accounts + e-wallet types. Calls getAccounts, getEWalletTypes, create/update/delete.",
-      "nodeType": "folder",
-      "folderPath": "wallets",
-      "position": {
-        "x": 700,
-        "y": 550
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-partners",
-      "workflowId": "frontend",
-      "title": "Partners",
-      "description": "pages/partners: CRUD partners. Calls getBusiness, getPartners, create/update/deletePartner.",
-      "nodeType": "folder",
-      "folderPath": "partners",
-      "position": {
-        "x": 100,
-        "y": 700
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-warehouse",
-      "workflowId": "frontend",
-      "title": "Warehouse",
-      "description": "pages/warehouse: CRUD warehouses + warehouse types. Calls getWarehouses, getStations, getWarehouseTypes, create/update/delete.",
-      "nodeType": "folder",
-      "folderPath": "warehouse",
-      "position": {
-        "x": 300,
-        "y": 700
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-warehouse-ops",
-      "workflowId": "frontend",
-      "title": "Warehouse Operations",
-      "description": "pages/warehouse-operations: Create and view operations. Calls getWarehouseOperations, getWarehouses, getSuppliers, getOperationTypes, createWarehouseOperation, getWarehouseOperation.",
-      "nodeType": "folder",
-      "folderPath": "warehouse-operations",
-      "position": {
-        "x": 500,
-        "y": 700
-      },
-      "dependencies": [
-        "fe-warehouse"
-      ]
-    },
-    {
-      "id": "fe-suppliers",
-      "workflowId": "frontend",
-      "title": "Suppliers",
-      "description": "pages/suppliers: CRUD suppliers. Calls getSuppliers, create/update/deleteSupplier.",
-      "nodeType": "folder",
-      "folderPath": "suppliers",
-      "position": {
-        "x": 700,
-        "y": 700
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-settlements",
-      "workflowId": "frontend",
-      "title": "Settlements",
-      "description": "pages/settlements: CRUD settlements. Calls getSettlements, getAccounts, getFunds, getStations, create/update/deleteSettlement.",
-      "nodeType": "folder",
-      "folderPath": "settlements",
-      "position": {
-        "x": 100,
-        "y": 850
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-pending-accounts",
-      "workflowId": "frontend",
-      "title": "Pending Accounts",
-      "description": "pages/pending-accounts: CRUD pending accounts. Calls getPendingAccounts, create/update/deletePendingAccount.",
-      "nodeType": "folder",
-      "folderPath": "pending-accounts",
-      "position": {
-        "x": 300,
-        "y": 850
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-exchange-rates",
-      "workflowId": "frontend",
-      "title": "Exchange Rates",
-      "description": "pages/exchange-rates: CRUD exchange rates + convert. Calls getCurrencies, getExchangeRates, create/update/deleteExchangeRate, convertCurrency.",
-      "nodeType": "folder",
-      "folderPath": "exchange-rates",
-      "position": {
-        "x": 500,
-        "y": 850
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-roles",
-      "workflowId": "frontend",
-      "title": "Roles",
-      "description": "pages/roles: CRUD roles + user assignment. Calls getRoles, getUsers, getUserRoles, create/update/deleteRole, assignUserRole, removeUserRole.",
-      "nodeType": "folder",
-      "folderPath": "roles",
-      "position": {
-        "x": 700,
-        "y": 850
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-collections",
-      "workflowId": "frontend",
-      "title": "Collections",
-      "description": "pages/collections: Create vouchers from collections. Calls getOperationTypes, getAccounts, getFunds, getVouchers, createVoucher.",
-      "nodeType": "folder",
-      "folderPath": "collections",
-      "position": {
-        "x": 100,
-        "y": 1000
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-billing",
-      "workflowId": "frontend",
-      "title": "Billing Systems",
-      "description": "pages/billing-systems: CRUD billing accounts, config, types. Calls getEmployeeBillingAccounts, getBillingSystemsConfig, getBillingAccountTypes, getStations, getEmployees, create/update/delete.",
-      "nodeType": "folder",
-      "folderPath": "billing-systems",
-      "position": {
-        "x": 300,
-        "y": 1000
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-journal-categories",
-      "workflowId": "frontend",
-      "title": "Journal Categories",
-      "description": "pages/journal-categories: CRUD categories. Calls getJournalEntryCategories, create/update/deleteJournalEntryCategory.",
-      "nodeType": "folder",
-      "folderPath": "journal-categories",
-      "position": {
-        "x": 500,
-        "y": 1000
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-stations",
-      "workflowId": "frontend",
-      "title": "Stations",
-      "description": "pages/stations: View stations. Calls getStations.",
-      "nodeType": "folder",
-      "folderPath": "stations",
-      "position": {
-        "x": 700,
-        "y": 1000
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-employees",
-      "workflowId": "frontend",
-      "title": "Employees",
-      "description": "pages/employees: CRUD employees. Calls getEmployees, create/update/deleteEmployee.",
-      "nodeType": "folder",
-      "folderPath": "employees",
-      "position": {
-        "x": 100,
-        "y": 1150
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
-    },
-    {
-      "id": "fe-summary",
-      "workflowId": "frontend",
-      "title": "Summary",
-      "description": "pages/summary: Business summary. Calls getBusinesses.",
-      "nodeType": "folder",
-      "folderPath": "summary",
-      "position": {
-        "x": 300,
-        "y": 1150
-      },
-      "dependencies": [
-        "fe-business-select"
-      ]
+      "folderPath": "frontend/three-chart",
+      "position": { "x": 700, "y": 400 },
+      "dependencies": []
     }
   ],
-  "edges": [
-    {
-      "id": "fe-login-to-fe-business-select",
-      "source": "fe-login",
-      "target": "fe-business-select"
-    },
-    {
-      "id": "fe-business-select-to-fe-dashboard",
-      "source": "fe-business-select",
-      "target": "fe-dashboard"
-    },
-    {
-      "id": "fe-business-select-to-fe-accounts",
-      "source": "fe-business-select",
-      "target": "fe-accounts"
-    },
-    {
-      "id": "fe-business-select-to-fe-funds",
-      "source": "fe-business-select",
-      "target": "fe-funds"
-    },
-    {
-      "id": "fe-accounts-to-fe-vouchers",
-      "source": "fe-accounts",
-      "target": "fe-vouchers"
-    },
-    {
-      "id": "fe-funds-to-fe-vouchers",
-      "source": "fe-funds",
-      "target": "fe-vouchers"
-    },
-    {
-      "id": "fe-accounts-to-fe-journal",
-      "source": "fe-accounts",
-      "target": "fe-journal"
-    },
-    {
-      "id": "fe-business-select-to-fe-operation-types",
-      "source": "fe-business-select",
-      "target": "fe-operation-types"
-    },
-    {
-      "id": "fe-business-select-to-fe-custom-screens",
-      "source": "fe-business-select",
-      "target": "fe-custom-screens"
-    },
-    {
-      "id": "fe-business-select-to-fe-sidebar-settings",
-      "source": "fe-business-select",
-      "target": "fe-sidebar-settings"
-    },
-    {
-      "id": "fe-business-select-to-fe-reports",
-      "source": "fe-business-select",
-      "target": "fe-reports"
-    },
-    {
-      "id": "fe-business-select-to-fe-reports-advanced",
-      "source": "fe-business-select",
-      "target": "fe-reports-advanced"
-    },
-    {
-      "id": "fe-business-select-to-fe-banks",
-      "source": "fe-business-select",
-      "target": "fe-banks"
-    },
-    {
-      "id": "fe-business-select-to-fe-exchanges",
-      "source": "fe-business-select",
-      "target": "fe-exchanges"
-    },
-    {
-      "id": "fe-business-select-to-fe-wallets",
-      "source": "fe-business-select",
-      "target": "fe-wallets"
-    },
-    {
-      "id": "fe-business-select-to-fe-partners",
-      "source": "fe-business-select",
-      "target": "fe-partners"
-    },
-    {
-      "id": "fe-business-select-to-fe-warehouse",
-      "source": "fe-business-select",
-      "target": "fe-warehouse"
-    },
-    {
-      "id": "fe-warehouse-to-fe-warehouse-ops",
-      "source": "fe-warehouse",
-      "target": "fe-warehouse-ops"
-    },
-    {
-      "id": "fe-business-select-to-fe-suppliers",
-      "source": "fe-business-select",
-      "target": "fe-suppliers"
-    },
-    {
-      "id": "fe-business-select-to-fe-settlements",
-      "source": "fe-business-select",
-      "target": "fe-settlements"
-    },
-    {
-      "id": "fe-business-select-to-fe-pending-accounts",
-      "source": "fe-business-select",
-      "target": "fe-pending-accounts"
-    },
-    {
-      "id": "fe-business-select-to-fe-exchange-rates",
-      "source": "fe-business-select",
-      "target": "fe-exchange-rates"
-    },
-    {
-      "id": "fe-business-select-to-fe-roles",
-      "source": "fe-business-select",
-      "target": "fe-roles"
-    },
-    {
-      "id": "fe-business-select-to-fe-collections",
-      "source": "fe-business-select",
-      "target": "fe-collections"
-    },
-    {
-      "id": "fe-business-select-to-fe-billing",
-      "source": "fe-business-select",
-      "target": "fe-billing"
-    },
-    {
-      "id": "fe-business-select-to-fe-journal-categories",
-      "source": "fe-business-select",
-      "target": "fe-journal-categories"
-    },
-    {
-      "id": "fe-business-select-to-fe-stations",
-      "source": "fe-business-select",
-      "target": "fe-stations"
-    },
-    {
-      "id": "fe-business-select-to-fe-employees",
-      "source": "fe-business-select",
-      "target": "fe-employees"
-    },
-    {
-      "id": "fe-business-select-to-fe-summary",
-      "source": "fe-business-select",
-      "target": "fe-summary"
-    }
-  ]
+  "edges": []
 }

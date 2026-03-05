@@ -2,91 +2,27 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-settlements",
+      "id": "get-pending-accounts",
       "workflowId": "backend/settlements",
-      "title": "GET /businesses/:bizId/settlements",
-      "description": "api.ts: Returns all settlements/reconciliations for business.",
+      "title": "Get Pending Accounts",
+      "description": "GET /api/businesses/:bizId/pending-accounts. Returns array of pending accounts for business. Returns 200 with [{id, personOrEntity, description, status, ...}].",
       "nodeType": "feature",
-      "fileName": "list-settlements",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-pending-accounts",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "create-settlement",
+      "id": "get-settlements-list",
       "workflowId": "backend/settlements",
-      "title": "POST /businesses/:bizId/settlements",
-      "description": "api.ts: Creates settlement.",
+      "title": "Get Settlements List",
+      "description": "GET /api/businesses/:bizId/settlements. Returns array of reconciliations for business ordered by createdAt desc. Returns 200 with [{id, reconciliationType, expectedAmount, actualAmount, ...}].",
       "nodeType": "feature",
-      "fileName": "create-settlement",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-settlements"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "update-settlement",
-      "workflowId": "backend/settlements",
-      "title": "PUT /businesses/:bizId/settlements/:id",
-      "description": "api.ts: Updates settlement.",
-      "nodeType": "feature",
-      "fileName": "update-settlement",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-settlements"
-      ],
-      "testLayers": [
-        "api"
-      ]
-    },
-    {
-      "id": "delete-settlement",
-      "workflowId": "backend/settlements",
-      "title": "DELETE /businesses/:bizId/settlements/:id",
-      "description": "api.ts: Deletes settlement.",
-      "nodeType": "feature",
-      "fileName": "delete-settlement",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-settlements"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "get-settlements-list",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
-  "edges": [
-    {
-      "id": "list-settlements-to-create-settlement",
-      "source": "list-settlements",
-      "target": "create-settlement"
-    },
-    {
-      "id": "list-settlements-to-update-settlement",
-      "source": "list-settlements",
-      "target": "update-settlement"
-    },
-    {
-      "id": "list-settlements-to-delete-settlement",
-      "source": "list-settlements",
-      "target": "delete-settlement"
-    }
-  ]
+  "edges": []
 }

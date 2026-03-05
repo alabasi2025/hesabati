@@ -2,91 +2,97 @@
   "version": "1.0",
   "nodes": [
     {
-      "id": "list-employees",
+      "id": "get-employees-list",
       "workflowId": "backend/employees",
-      "title": "GET /businesses/:bizId/employees",
-      "description": "api.ts line 175: Returns all employees for business.",
+      "title": "Get Employees List",
+      "description": "GET /api/businesses/:bizId/employees. Returns array of employees for business. Requires Authorization header and bizId membership. Returns 200 with [{id, fullName, jobTitle, stationId, salary, hireDate, phone, email, isActive, createdAt}]. Returns 401 if unauthorized. Returns 403 if not member of business.",
       "nodeType": "feature",
-      "fileName": "list-employees",
-      "position": {
-        "x": 100,
-        "y": 100
-      },
+      "fileName": "get-employees-list",
+      "position": { "x": 100, "y": 100 },
       "dependencies": [],
-      "testLayers": [
-        "api"
-      ]
+      "testLayers": ["api"]
     },
     {
-      "id": "create-employee",
+      "id": "post-employee-create",
       "workflowId": "backend/employees",
-      "title": "POST /businesses/:bizId/employees",
-      "description": "api.ts line 183: Creates employee.",
+      "title": "Post Employee Create",
+      "description": "POST /api/businesses/:bizId/employees with body {fullName, jobTitle, stationId, salary, hireDate, phone, email}. Validates required fields and stationId belongs to business. Inserts into employees table. Returns 201 with created employee {id, fullName, jobTitle, ...}. Returns 400 if validation fails or stationId invalid.",
       "nodeType": "feature",
-      "fileName": "create-employee",
-      "position": {
-        "x": 300,
-        "y": 100
-      },
-      "dependencies": [
-        "list-employees"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "post-employee-create",
+      "position": { "x": 300, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
     },
     {
-      "id": "update-employee",
+      "id": "put-employee-update",
       "workflowId": "backend/employees",
-      "title": "PUT /businesses/:bizId/employees/:id",
-      "description": "api.ts line 192: Updates employee.",
+      "title": "Put Employee Update",
+      "description": "PUT /api/businesses/:bizId/employees/:id with body fields to update. Validates employeeId belongs to business. Updates employees table. Returns 200 with updated employee. Returns 404 if employee not found. Returns 403 if employee not in business.",
       "nodeType": "feature",
-      "fileName": "update-employee",
-      "position": {
-        "x": 100,
-        "y": 250
-      },
-      "dependencies": [
-        "list-employees"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "fileName": "put-employee-update",
+      "position": { "x": 500, "y": 100 },
+      "dependencies": ["get-employees-list"],
+      "testLayers": ["api"]
     },
     {
       "id": "delete-employee",
       "workflowId": "backend/employees",
-      "title": "DELETE /businesses/:bizId/employees/:id",
-      "description": "api.ts line 203: Deletes employee.",
+      "title": "Delete Employee",
+      "description": "DELETE /api/businesses/:bizId/employees/:id. Validates ownership then deletes from employees table. Returns 200 with {success: true}. Returns 404 if not found. Returns 403 if not authorized.",
       "nodeType": "feature",
       "fileName": "delete-employee",
-      "position": {
-        "x": 300,
-        "y": 250
-      },
-      "dependencies": [
-        "list-employees"
-      ],
-      "testLayers": [
-        "api"
-      ]
+      "position": { "x": 700, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "get-salaries-list",
+      "workflowId": "backend/employees",
+      "title": "Get Salaries List",
+      "description": "GET /api/businesses/:bizId/salaries with optional query params month and year (e.g., ?month=3&year=2026). Returns array of salary records with employee names joined. Returns 200 with [{id, employeeId, employeeName, month, year, baseSalary, advance, deductions, netSalary, isPaid, paidAt, notes, createdAt}]. Empty array if no records found.",
+      "nodeType": "feature",
+      "fileName": "get-salaries-list",
+      "position": { "x": 100, "y": 300 },
+      "dependencies": [],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "post-salary-record",
+      "workflowId": "backend/employees",
+      "title": "Post Salary Record",
+      "description": "POST /api/businesses/:bizId/salaries with body {employeeId, month, year, baseSalary, advance, deductions, isPaid, notes}. Validates employeeId belongs to business. Calculates netSalary = baseSalary - advance - deductions. Inserts into salary_records table. Returns 201 with created record {id, employeeId, month, year, baseSalary, netSalary, ...}. Returns 400 if validation fails or employeeId invalid.",
+      "nodeType": "feature",
+      "fileName": "post-salary-record",
+      "position": { "x": 300, "y": 300 },
+      "dependencies": ["get-employees-list"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "put-salary-record",
+      "workflowId": "backend/employees",
+      "title": "Put Salary Record",
+      "description": "PUT /salaries/:id with body {baseSalary, advance, deductions, isPaid, paidAt, notes}. Recalculates netSalary = baseSalary - advance - deductions. Updates salary_records table. Returns 200 with updated record. Returns 404 if record not found. Returns 400 if validation fails.",
+      "nodeType": "feature",
+      "fileName": "put-salary-record",
+      "position": { "x": 500, "y": 300 },
+      "dependencies": ["get-salaries-list"],
+      "testLayers": ["api"]
+    },
+    {
+      "id": "delete-salary-record",
+      "workflowId": "backend/employees",
+      "title": "Delete Salary Record",
+      "description": "DELETE /salaries/:id. Deletes salary record from salary_records table. Returns 200 with {success: true}. Returns 404 if not found. Returns 400 if salaryId invalid.",
+      "nodeType": "feature",
+      "fileName": "delete-salary-record",
+      "position": { "x": 700, "y": 300 },
+      "dependencies": [],
+      "testLayers": ["api"]
     }
   ],
   "edges": [
-    {
-      "id": "list-employees-to-create-employee",
-      "source": "list-employees",
-      "target": "create-employee"
-    },
-    {
-      "id": "list-employees-to-update-employee",
-      "source": "list-employees",
-      "target": "update-employee"
-    },
-    {
-      "id": "list-employees-to-delete-employee",
-      "source": "list-employees",
-      "target": "delete-employee"
-    }
+    { "id": "list-to-update", "source": "get-employees-list", "target": "put-employee-update" },
+    { "id": "emp-to-salary", "source": "get-employees-list", "target": "post-salary-record" },
+    { "id": "sal-list-to-update", "source": "get-salaries-list", "target": "put-salary-record" }
   ]
 }

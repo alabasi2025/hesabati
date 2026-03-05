@@ -50,10 +50,10 @@ interface AppUser {
   styleUrl: './sidebar-settings.scss',
 })
 export class SidebarSettingsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  private auth = inject(AuthService);
-  private toast = inject(ToastService);
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   bizId = 0;
   activeTab = signal<'users' | 'sections' | 'items'>('users');
@@ -102,6 +102,7 @@ export class SidebarSettingsComponent implements OnInit {
 
   async loadData() {
     this.loading.set(true);
+    this.message.set('');
     try {
       const [users, sections, items] = await Promise.all([
         this.api.getUsers(),
@@ -111,8 +112,11 @@ export class SidebarSettingsComponent implements OnInit {
       this.users.set(users);
       this.sections.set(sections);
       this.allItems.set(items);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'فشل تحميل البيانات';
+      this.message.set(msg);
+      this.messageType.set('error');
+      this.toast.error(msg, 'خطأ');
     } finally {
       this.loading.set(false);
     }
@@ -267,7 +271,7 @@ export class SidebarSettingsComponent implements OnInit {
     const [sourceSec, sourceIdxStr] = data.split(':');
     if (sourceSec !== sectionName) return; // Only reorder within same section
 
-    const sourceIdx = parseInt(sourceIdxStr);
+    const sourceIdx = Number.parseInt(sourceIdxStr, 10);
     const sectionItems = this.getItemsForSection(sectionName);
     const item = sectionItems[sourceIdx];
     if (!item) return;
@@ -495,8 +499,8 @@ export class SidebarSettingsComponent implements OnInit {
       // إعادة تحميل إعدادات المستخدم المحدد إذا كان هو المستهدف
       const sel = this.selectedUser();
       if (sel && sel.id === to) await this.selectUser(sel);
-    } catch (e: any) {
-      this.showMessage(e.message || 'خطأ في نسخ الإعدادات', 'error');
+    } catch (e: unknown) {
+      this.showMessage(e instanceof Error ? e.message : 'خطأ في نسخ الإعدادات', 'error');
     } finally {
       this.copying.set(false);
     }
@@ -518,8 +522,8 @@ export class SidebarSettingsComponent implements OnInit {
       this.showMessage(`تم إعادة التعيين بنجاح (${result.itemCount} عنصر)`, 'success');
       const sel = this.selectedUser();
       if (sel && sel.id === userId) await this.selectUser(sel);
-    } catch (e: any) {
-      this.showMessage(e.message || 'خطأ في إعادة التعيين', 'error');
+    } catch (e: unknown) {
+      this.showMessage(e instanceof Error ? e.message : 'خطأ في إعادة التعيين', 'error');
     } finally {
       this.resetting.set(false);
     }

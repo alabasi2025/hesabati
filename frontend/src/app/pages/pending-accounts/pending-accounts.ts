@@ -1,10 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
+import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
   selector: 'app-pending-accounts',
@@ -13,13 +13,10 @@ import { BusinessService } from '../../services/business.service';
   templateUrl: './pending-accounts.html',
   styleUrl: './pending-accounts.scss',
 })
-export class PendingAccountsComponent implements OnInit {
-  private api = inject(ApiService);
-  private route = inject(ActivatedRoute);
-  biz = inject(BusinessService);
-  private toast = inject(ToastService);
+export class PendingAccountsComponent extends BasePageComponent {
+  private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
-  bizId = 0;
   items = signal<any[]>([]);
   loading = signal(true);
   showForm = signal(false);
@@ -28,11 +25,8 @@ export class PendingAccountsComponent implements OnInit {
 
   form: any = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '' };
 
-  ngOnInit() {
-    this.route.parent?.params.subscribe(params => {
-      this.bizId = parseInt(params['bizId']);
-      if (this.bizId) this.load();
-    });
+  protected override onBizIdChange(_bizId: number): void {
+    this.load();
   }
 
   async load() {
@@ -40,9 +34,9 @@ export class PendingAccountsComponent implements OnInit {
     try {
       const data = await this.api.getPendingAccounts(this.bizId);
       this.items.set(data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء تحميل الحسابات المعلقة');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل الحسابات المعلقة');
     }
     this.loading.set(false);
   }
@@ -83,9 +77,9 @@ export class PendingAccountsComponent implements OnInit {
       this.showForm.set(false);
       this.toast.success(this.editingId() ? 'تم تحديث الحساب المعلق بنجاح' : 'تم إضافة الحساب المعلق بنجاح');
       await this.load();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      this.toast.error(e?.message || 'حدث خطأ أثناء حفظ الحساب المعلق');
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الحساب المعلق');
     }
   }
 
@@ -96,9 +90,9 @@ export class PendingAccountsComponent implements OnInit {
         await this.api.deletePendingAccount(item.id);
         this.toast.success('تم حذف الحساب المعلق بنجاح');
         await this.load();
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        this.toast.error(e?.message || 'حدث خطأ أثناء الحذف');
+        this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
       }
     }
   }

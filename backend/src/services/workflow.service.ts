@@ -19,6 +19,7 @@ import { eq, and, sql, desc } from 'drizzle-orm';
 import {
   vouchers, operationTypes, workflowTransitions, workflowHistory,
 } from '../db/schema/index.ts';
+import { normalizeDbResult } from '../utils/db-result.ts';
 
 // ===================== أنواع البيانات =====================
 
@@ -199,7 +200,7 @@ export async function getWorkflowHistory(bizId: number, voucherId: number) {
     WHERE wh.business_id = ${bizId} AND wh.voucher_id = ${voucherId}
     ORDER BY wh.executed_at ASC
   `);
-  const rows = Array.isArray(history) ? history : (history as any).rows || [];
+  const rows = normalizeDbResult(history);
   return rows;
 }
 
