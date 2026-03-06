@@ -26,7 +26,7 @@ import {
   accountBalances, fundBalances,
   auditLog,
 } from '../db/schema/index.ts';
-import { generateOperationSequences, TYPE_PREFIXES } from '../middleware/sequencing.ts';
+import { generateOperationSequences, generateVoucherFullSequence, TYPE_PREFIXES, ARABIC_LABELS } from '../middleware/sequencing.ts';
 import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
 
 // ===================== الأنواع (Types) =====================
@@ -136,23 +136,50 @@ export async function postTransaction(
   // === تنفيذ العملية داخل transaction واحد ===
   const result = await db.transaction(async (tx) => {
 
-    // --- 1. توليد رقم السند ---
+    // --- 1. توليد رقم السند بالنظام الجديد ---
     let voucherNumber = data.voucherNumber;
-    if (!voucherNumber) {
-      const seqName = data.voucherType === 'receipt' ? 'voucher_receipt_seq'
-        : data.voucherType === 'payment' ? 'voucher_payment_seq'
-        : 'voucher_transfer_seq';
-      const prefix = TYPE_PREFIXES[data.voucherType] || 'VCH';
-      const seqResult = await tx.execute(sql.raw(`SELECT nextval('${seqName}')`));
-      const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
-      const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
-      voucherNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
-    }
-
-    // --- 1.1 توليد الأرقام التسلسلية الذكية (حساب + قالب) ---
+    let fullSequenceNumber: string | null = null;
     let accountSequence: string | null = null;
     let templateSequence: string | null = null;
+
+    // جلب معلومات الخزينة (صندوق أو حساب) للترقيم
+    const primaryFundId = data.toFundId || data.fromFundId;
     const primaryAccountId = data.debitAccountId;
+
+    if (primaryFundId) {
+      // السند مرتبط بصندوق - جلب معلومات التصنيف والترقيم
+      const [fund] = await tx.select().from(funds).where(eq(funds.id, primaryFundId));
+      if (fund && fund.subTypeId && fund.sequenceNumber) {
+        // جلب رقم التصنيف
+        const categorySeqNum = fund.subTypeId; // سيتم تحسينه لاحقاً لجلب sequenceNumber من جدول التصنيف
+        const seqResult = await generateVoucherFullSequence(
+          bizId, categorySeqNum, fund.sequenceNumber,
+          fund.fundType, data.voucherType, primaryFundId
+        );
+        fullSequenceNumber = seqResult.fullSequenceNumber;
+        voucherNumber = voucherNumber || fullSequenceNumber;
+      }
+    } else if (primaryAccountId) {
+      // السند مرتبط بحساب (بنك/صراف/محفظة)
+      const [account] = await tx.select().from(accounts).where(eq(accounts.id, primaryAccountId));
+      if (account && account.subTypeId && account.sequenceNumber) {
+        const seqResult = await generateVoucherFullSequence(
+          bizId, account.subTypeId, account.sequenceNumber,
+          account.accountType, data.voucherType, primaryAccountId
+        );
+        fullSequenceNumber = seqResult.fullSequenceNumber;
+        voucherNumber = voucherNumber || fullSequenceNumber;
+      }
+    }
+
+    // في حالة عدم توفر معلومات الترقيم، استخدم رقم بسيط
+    if (!voucherNumber) {
+      const prefix = TYPE_PREFIXES[data.voucherType] || 'VCH';
+      const simpleSeq = Date.now();
+      voucherNumber = `${prefix}-${String(simpleSeq).slice(-6)}`;
+    }
+
+    // توليد الأرقام التسلسلية القديمة (للتوافق)
     if (primaryAccountId) {
       const seqs = await generateOperationSequences(
         bizId, primaryAccountId, data.operationTypeId || null, 'voucher'
@@ -183,6 +210,7 @@ export async function postTransaction(
       createdBy: userId,
       accountSequence,
       templateSequence,
+      fullSequenceNumber,
     }).returning();
 
     // --- 3. إنشاء القيد المحاسبي المتوازن ---

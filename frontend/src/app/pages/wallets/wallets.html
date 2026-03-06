@@ -29,7 +29,7 @@
       @for (t of walletTypes(); track t.id) {
         <div class="type-chip" [style.border-color]="t.color">
           <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
-          <span class="type-chip-name">{{ t.name }}</span>
+          @if (t.sequenceNumber) { <span class="type-chip-seq" [style.background]="t.color + '20'" [style.color]="t.color">#{{ t.sequenceNumber }}</span> } <span class="type-chip-name">{{ t.name }}</span>
           <span class="type-chip-key">({{ t.subTypeKey }})</span>
           <button class="chip-action" (click)="openEditType(t)"><span class="material-icons-round">edit</span></button>
           <button class="chip-action delete" (click)="confirmDelete('type', t.id, t.name)"><span class="material-icons-round">close</span></button>
@@ -58,7 +58,11 @@
             </div>
           </div>
           <h3 class="card-name">{{ acc.name }}</h3>
+          <div class="card-badges">
           <span class="card-type-badge" [style.color]="getTypeInfo(acc.subType).color" [style.background]="getTypeInfo(acc.subType).color + '20'">{{ getTypeInfo(acc.subType).name }}</span>
+            @if (acc.sequenceNumber) { <span class="card-seq-badge">#{{ acc.sequenceNumber }}</span> }
+            @if (acc.code) { <span class="card-code-badge">{{ acc.code }}</span> }
+          </div>
           @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
           @if (acc.provider) { <div class="card-detail"><span class="material-icons-round">phone_android</span> {{ acc.provider }}</div> }
           @if (acc.responsiblePerson) { <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }

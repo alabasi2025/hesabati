@@ -114,7 +114,15 @@
               <span class="material-icons-round">{{ getTypeIcon(v.voucherType) }}</span>
             </div>
             <div class="vr-main">
-              <div class="vr-desc">{{ v.description || 'بدون بيان' }}</div>
+              <div class="vr-desc">
+                @if (v.fullSequenceNumber) {
+                  <span class="vr-seq-badge" [style.color]="getTypeColor(v.voucherType)">
+                    <span class="material-icons-round" style="font-size:14px">tag</span>
+                    {{ v.fullSequenceNumber }}
+                  </span>
+                }
+                {{ v.description || 'بدون بيان' }}
+              </div>
               <div class="vr-meta">
                 <span class="vr-date">
                   <span class="material-icons-round">calendar_today</span>
@@ -404,6 +412,12 @@
             <div style="text-align:center;padding:40px"><span class="material-icons-round spin" style="font-size:32px;color:#6366f1">sync</span></div>
           } @else if (detailsVoucher()) {
             <div class="details-grid">
+              @if (detailsVoucher().fullSequenceNumber) {
+                <div class="detail-row" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;padding:12px">
+                  <span class="detail-label" style="font-weight:600;color:#0369a1">الرقم التسلسلي</span>
+                  <span class="detail-value" style="font-family:monospace;font-size:16px;font-weight:700;color:#0c4a6e;letter-spacing:1px">{{ detailsVoucher().fullSequenceNumber }}</span>
+                </div>
+              }
               <div class="detail-row">
                 <span class="detail-label">رقم السند</span>
                 <span class="detail-value">{{ detailsVoucher().voucherNumber || '-' }}</span>
@@ -483,6 +497,9 @@
       <div class="print-header">
         <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
         <h3>{{ getTypeLabel(printingVoucher().voucherType) }}</h3>
+        @if (printingVoucher().fullSequenceNumber) {
+          <p style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:1px">الرقم التسلسلي: {{ printingVoucher().fullSequenceNumber }}</p>
+        }
         <p>رقم السند: {{ printingVoucher().voucherNumber || '-' }}</p>
       </div>
       <div class="print-row">

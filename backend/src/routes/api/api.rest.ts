@@ -32,7 +32,7 @@ import {
   employeeBillingAccountSchema,
 } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired, toErrorMessage } from '../../middleware/helpers.ts';
-import { getNextSequence, formatSequenceNumber, TYPE_PREFIXES, generateItemCode } from '../../middleware/sequencing.ts';
+import { getNextSequence, formatSequenceNumber, TYPE_PREFIXES, generateItemCode, getNextCategorySequence, getNextItemInCategorySequence, generateVoucherFullSequence, generateWarehouseOpFullSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
 import { postTransaction, cancelTransaction, reverseTransaction } from '../../services/transaction.service.ts';
 import { getProfitAndLoss, getTrialBalance, getAccountStatement, getDailySummary, getAggregatedProfitAndLoss, getAggregatedSummary, getMonthlyRevenueExpenses } from '../../services/reporting.service.ts';
 import { getAvailableTransitions, executeTransition, getWorkflowHistory, setupDefaultWorkflow, getOperationTypeTransitions, addTransition, deleteTransition } from '../../services/workflow.service.ts';
@@ -251,10 +251,14 @@ api.post('/businesses/:bizId/accounts', bizAuthMiddleware(), checkPermission('ac
   
   // ترقيم تلقائي داخل التصنيف
   if (accountData.subTypeId) {
-    const seq = await getNextSequence(bizId, 'account_in_type', accountData.subTypeId, 0);
-    accountData.sequenceNumber = seq;
-    const prefix = TYPE_PREFIXES[accountData.accountType] || 'ACC';
-    accountData.code = generateItemCode(prefix, seq);
+    // تحديد نوع الخزينة للترقيم
+    const treasuryTypeMap: Record<string, 'bank' | 'exchange' | 'e_wallet'> = {
+      bank: 'bank', e_wallet: 'e_wallet', exchange: 'exchange',
+    };
+    const treasuryType = treasuryTypeMap[accountData.accountType] || 'bank';
+    const { sequenceNumber, code } = await getNextItemInCategorySequence(bizId, treasuryType, accountData.subTypeId);
+    accountData.sequenceNumber = sequenceNumber;
+    accountData.code = code;
   }
   
   const [created] = await db.insert(accounts).values({ ...accountData, businessId: bizId }).returning();
@@ -900,12 +904,14 @@ api.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('إض
   const data = validation.data as any;
   
   // ترقيم تلقائي داخل التصنيف
-  if (data.subType) {
-    const subTypeId = Number.parseInt(data.subType);
+  const subTypeRaw = data.subType ?? data.subTypeId;
+  if (subTypeRaw) {
+    const subTypeId = Number.parseInt(String(subTypeRaw));
     if (!Number.isNaN(subTypeId)) {
-      const seq = await getNextSequence(bizId, 'warehouse_in_type', subTypeId, 0);
-      data.sequenceNumber = seq;
-      data.code = generateItemCode(TYPE_PREFIXES.warehouse || 'WHS', seq);
+      data.subTypeId = subTypeId;
+      const { sequenceNumber, code } = await getNextItemInCategorySequence(bizId, 'warehouse', subTypeId);
+      data.sequenceNumber = sequenceNumber;
+      data.code = code;
     }
   }
   
@@ -1598,7 +1604,8 @@ api.post('/businesses/:bizId/fund-types', bizAuthMiddleware(), safeHandler('إض
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(fundTypes).values({ ...validation.data, businessId: bizId }).returning();
+  const seqNum = await getNextCategorySequence(bizId, 'fund');
+  const [created] = await db.insert(fundTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
   return c.json(created, 201);
 }));
 
@@ -1636,7 +1643,8 @@ api.post('/businesses/:bizId/bank-types', bizAuthMiddleware(), safeHandler('إض
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(bankTypes).values({ ...validation.data, businessId: bizId }).returning();
+  const seqNum = await getNextCategorySequence(bizId, 'bank');
+  const [created] = await db.insert(bankTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
   return c.json(created, 201);
 }));
 
@@ -1674,7 +1682,8 @@ api.post('/businesses/:bizId/exchange-types', bizAuthMiddleware(), safeHandler('
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(exchangeTypes).values({ ...validation.data, businessId: bizId }).returning();
+  const seqNum = await getNextCategorySequence(bizId, 'exchange');
+  const [created] = await db.insert(exchangeTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
   return c.json(created, 201);
 }));
 
@@ -1712,7 +1721,8 @@ api.post('/businesses/:bizId/e-wallet-types', bizAuthMiddleware(), safeHandler('
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(eWalletTypes).values({ ...validation.data, businessId: bizId }).returning();
+  const seqNum = await getNextCategorySequence(bizId, 'e_wallet');
+  const [created] = await db.insert(eWalletTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
   return c.json(created, 201);
 }));
 
@@ -3633,7 +3643,8 @@ api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler(
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(warehouseTypes).values({ ...validation.data, businessId: bizId }).returning();
+  const seqNum = await getNextCategorySequence(bizId, 'warehouse');
+  const [created] = await db.insert(warehouseTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
   return c.json(created, 201);
 }));
 

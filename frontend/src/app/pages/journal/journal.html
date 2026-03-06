@@ -48,6 +48,9 @@
         <div class="journal-card" [class.unbalanced]="!entry.isBalanced">
           <div class="jc-header">
             <div class="jc-badge"><span class="material-icons-round">menu_book</span> {{ entry.entryNumber }}</div>
+            @if (entry.fullSequenceNumber) {
+              <span class="card-seq-badge" style="font-size:12px">{{ entry.fullSequenceNumber }}</span>
+            }
             <span class="status-badge" [class]="getStatusClass(entry.status)">{{ getStatusLabel(entry.status) }}</span>
           </div>
           <div class="jc-amount">{{ formatAmount(entry.totalDebit) }} <span class="currency">ر.ي</span></div>
