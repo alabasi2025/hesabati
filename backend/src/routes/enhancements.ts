@@ -12,6 +12,7 @@ import {
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
 import { postTransaction } from '../services/transaction.service.ts';
+import { getNextSequence } from '../middleware/sequencing.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
 import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
 
@@ -697,7 +698,6 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
   // توليد رقم السند باستخدام النظام الجديد
   const vType = body.voucherType || 'receipt';
   const prefix = vType === 'receipt' ? 'RCV' : vType === 'payment' ? 'PAY' : 'TRF';
-  const { getNextSequence } = await import('../middleware/sequencing.ts');
   const year = new Date().getFullYear();
   const draftEntityId = body.fromFundId || body.fromAccountId || 0;
   const seqVal = await getNextSequence(bizId, `voucher_draft_${vType}`, draftEntityId, year);
@@ -719,6 +719,7 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
     reference: body.reference || null,
     voucherDate: body.voucherDate ? new Date(body.voucherDate) : new Date(),
     createdBy: userId,
+    fullSequenceNumber: voucherNumber,
   }).returning();
 
   return c.json(created, 201);

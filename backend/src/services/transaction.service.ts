@@ -25,8 +25,9 @@ import {
   journalEntries, journalEntryLines,
   accountBalances, fundBalances,
   auditLog,
+  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
 } from '../db/schema/index.ts';
-import { generateOperationSequences, generateVoucherFullSequence, TYPE_PREFIXES, ARABIC_LABELS } from '../middleware/sequencing.ts';
+import { generateVoucherFullSequence, getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
 import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
 
 // ===================== الأنواع (Types) =====================
@@ -150,8 +151,10 @@ export async function postTransaction(
       // السند مرتبط بصندوق - جلب معلومات التصنيف والترقيم
       const [fund] = await tx.select().from(funds).where(eq(funds.id, primaryFundId));
       if (fund && fund.subTypeId && fund.sequenceNumber) {
-        // جلب رقم التصنيف
-        const categorySeqNum = fund.subTypeId; // سيتم تحسينه لاحقاً لجلب sequenceNumber من جدول التصنيف
+        // جلب sequenceNumber الحقيقي من جدول التصنيف
+        const [categoryRow] = await tx.select({ sequenceNumber: fundTypes.sequenceNumber })
+          .from(fundTypes).where(eq(fundTypes.id, fund.subTypeId));
+        const categorySeqNum = categoryRow?.sequenceNumber || 1;
         const seqResult = await generateVoucherFullSequence(
           bizId, categorySeqNum, fund.sequenceNumber,
           fund.fundType, data.voucherType, primaryFundId
@@ -163,8 +166,19 @@ export async function postTransaction(
       // السند مرتبط بحساب (بنك/صراف/محفظة)
       const [account] = await tx.select().from(accounts).where(eq(accounts.id, primaryAccountId));
       if (account && account.subTypeId && account.sequenceNumber) {
+        // جلب sequenceNumber الحقيقي من جدول التصنيف المناسب
+        let categorySeqNum = 1;
+        const categoryTypeMap: Record<string, typeof bankTypes | typeof exchangeTypes | typeof eWalletTypes> = {
+          bank: bankTypes, exchange: exchangeTypes, e_wallet: eWalletTypes,
+        };
+        const categoryTable = categoryTypeMap[account.accountType];
+        if (categoryTable) {
+          const [categoryRow] = await tx.select({ sequenceNumber: categoryTable.sequenceNumber })
+            .from(categoryTable).where(eq(categoryTable.id, account.subTypeId));
+          categorySeqNum = categoryRow?.sequenceNumber || 1;
+        }
         const seqResult = await generateVoucherFullSequence(
-          bizId, account.subTypeId, account.sequenceNumber,
+          bizId, categorySeqNum, account.sequenceNumber,
           account.accountType, data.voucherType, primaryAccountId
         );
         fullSequenceNumber = seqResult.fullSequenceNumber;
@@ -172,20 +186,25 @@ export async function postTransaction(
       }
     }
 
-    // في حالة عدم توفر معلومات الترقيم، استخدم رقم بسيط
+    // في حالة عدم توفر معلومات الترقيم، استخدم رقم تسلسلي حقيقي
     if (!voucherNumber) {
+      const year = new Date().getFullYear();
       const prefix = TYPE_PREFIXES[data.voucherType] || 'VCH';
-      const simpleSeq = Date.now();
-      voucherNumber = `${prefix}-${String(simpleSeq).slice(-6)}`;
+      const fallbackEntityId = primaryFundId || primaryAccountId || 0;
+      const fallbackSeq = await getNextSequence(bizId, `voucher_${data.voucherType}`, fallbackEntityId, year);
+      voucherNumber = `${year}-${prefix}-${String(fallbackSeq).padStart(4, '0')}`;
+      fullSequenceNumber = voucherNumber;
     }
 
-    // توليد الأرقام التسلسلية القديمة (للتوافق)
+    // توليد الأرقام التسلسلية للحساب والقالب
     if (primaryAccountId) {
-      const seqs = await generateOperationSequences(
-        bizId, primaryAccountId, data.operationTypeId || null, 'voucher'
-      );
-      accountSequence = seqs.accountSequence ? String(seqs.accountSequence) : null;
-      templateSequence = seqs.templateSequence ? String(seqs.templateSequence) : null;
+      const year = new Date().getFullYear();
+      const accSeq = await getNextSequence(bizId, 'account_voucher', primaryAccountId, year);
+      accountSequence = String(accSeq);
+      if (data.operationTypeId) {
+        const tmplSeq = await getNextSequence(bizId, 'template_voucher', data.operationTypeId, year);
+        templateSequence = String(tmplSeq);
+      }
     }
 
     // --- 2. إنشاء المستند المصدر (السند) ---
@@ -412,9 +431,8 @@ export async function reverseTransaction(
   const currencyId = original.currencyId || 1;
 
   const result = await db.transaction(async (tx) => {
-    // استخدام النظام الجديد بدلاً من PostgreSQL sequence
+    // استخدام النظام الجديد
     const year = new Date().getFullYear();
-    const { getNextSequence } = await import('../middleware/sequencing.ts');
     const revSeq = await getNextSequence(bizId, 'voucher_reversal', original.fromFundId || original.fromAccountId || 0, year);
     const voucherNumber = `REV-${year}-${String(revSeq).padStart(6, '0')}`;
 

@@ -32,7 +32,7 @@ import {
   employeeBillingAccountSchema,
 } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired, toErrorMessage } from '../../middleware/helpers.ts';
-import { getNextSequence, formatSequenceNumber, TYPE_PREFIXES, generateItemCode, getNextCategorySequence, getNextItemInCategorySequence, generateVoucherFullSequence, generateWarehouseOpFullSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
+import { getNextSequence, getNextCategorySequence, getNextItemInCategorySequence, generateWarehouseOpFullSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
 import { postTransaction, cancelTransaction, reverseTransaction } from '../../services/transaction.service.ts';
 import { getProfitAndLoss, getTrialBalance, getAccountStatement, getDailySummary, getAggregatedProfitAndLoss, getAggregatedSummary, getMonthlyRevenueExpenses } from '../../services/reporting.service.ts';
 import { getAvailableTransitions, executeTransition, getWorkflowHistory, setupDefaultWorkflow, getOperationTypeTransitions, addTransition, deleteTransition } from '../../services/workflow.service.ts';
@@ -1335,9 +1335,44 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermiss
   }
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
+  // ترقيم ذكي للقيد
+  const year = new Date().getFullYear();
+  let journalFullSeqNum: string | null = null;
+  let journalCategorySeq: string | null = null;
+  let journalTemplateSeq: string | null = null;
+  let entryNumber = entryData.reference || '';
+
+  // جلب معلومات القالب للترقيم
+  if (entryData.operationTypeId) {
+    const [opType] = await db.select().from(operationTypes).where(eq(operationTypes.id, entryData.operationTypeId));
+    if (opType) {
+      // جلب رقم التصنيف من journalEntryCategories إن وجد
+      let catSeqNum = 1;
+      const catName = opType.category || 'عام';
+      const [jeCat] = await db.select().from(journalEntryCategories)
+        .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, catName)));
+      if (jeCat?.sequenceNumber) catSeqNum = jeCat.sequenceNumber;
+
+      const jeSeqResult = await generateJournalEntryFullSequence(
+        bizId, catSeqNum, entryData.operationTypeId, year
+      );
+      journalFullSeqNum = jeSeqResult.fullSequenceNumber;
+      entryNumber = entryNumber || journalFullSeqNum;
+      journalCategorySeq = String(catSeqNum);
+      journalTemplateSeq = String(jeSeqResult.sequentialNumber);
+    }
+  }
+
+  // fallback إذا لم يتوفر ترقيم
+  if (!entryNumber) {
+    const fallbackSeq = await getNextSequence(bizId, 'journal_entry', 0, year);
+    entryNumber = `JE-${year}-${String(fallbackSeq).padStart(4, '0')}`;
+    journalFullSeqNum = entryNumber;
+  }
+
   const [entry] = await db.insert(journalEntries).values({
     businessId: bizId,
-    entryNumber: entryData.reference || `JE-${Date.now()}`,
+    entryNumber,
     entryDate,
     description: entryData.description || '',
     reference: entryData.reference || null,
@@ -1346,6 +1381,9 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermiss
     totalCredit: String(totalCredit),
     isBalanced,
     createdBy: getUserId(c),
+    fullSequenceNumber: journalFullSeqNum,
+    categorySequence: journalCategorySeq,
+    templateSequence: journalTemplateSeq,
   }).returning();
   
   for (let i = 0; i < lines.length; i++) {
@@ -3566,18 +3604,29 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
   const year = new Date().getFullYear();
   const mainWarehouseId = body.sourceWarehouseId || body.destinationWarehouseId;
 
-  // تسلسل المخزن
-  const whSeq = await getNextSequence(bizId, 'warehouse', mainWarehouseId, year);
+  // جلب معلومات المخزن للترقيم
+  const [mainWh] = await db.select().from(warehouses).where(eq(warehouses.id, mainWarehouseId));
+  let categorySeqNum = 1;
+  let warehouseSeqNum = mainWh?.sequenceNumber || 1;
+  if (mainWh?.subTypeId) {
+    const [whCategory] = await db.select({ sequenceNumber: warehouseTypes.sequenceNumber })
+      .from(warehouseTypes).where(eq(warehouseTypes.id, mainWh.subTypeId));
+    categorySeqNum = whCategory?.sequenceNumber || 1;
+  }
+
+  // توليد الرقم المنسق الكامل
+  const whSeqResult = await generateWarehouseOpFullSequence(
+    bizId, categorySeqNum, warehouseSeqNum,
+    body.operationType, mainWarehouseId, year
+  );
+  const operationNumber = whSeqResult.fullSequenceNumber;
+  const whSeq = whSeqResult.sequentialNumber;
 
   // تسلسل القالب
   let tmplSeq: number | null = null;
   if (body.operationTypeId) {
     tmplSeq = await getNextSequence(bizId, 'template', body.operationTypeId, year);
   }
-
-  // رقم العملية
-  const prefix = TYPE_PREFIXES[body.operationType] || 'WH';
-  const operationNumber = formatSequenceNumber(year, prefix, mainWarehouseId, whSeq);
 
   const [created] = await db.insert(warehouseOperations).values({
     businessId: bizId,
@@ -3597,6 +3646,7 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
     totalItems,
     warehouseSequence: whSeq,
     templateSequence: tmplSeq,
+    fullSequenceNumber: operationNumber,
     createdBy: userId,
   }).returning();
 

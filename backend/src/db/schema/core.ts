@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // ===================== ENUMS =====================
 
@@ -237,7 +237,9 @@ export const accountBalances = pgTable('account_balances', {
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
   balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  accountCurrencyUnique: uniqueIndex('account_balances_account_currency_unique').on(table.accountId, table.currencyId),
+}));
 
 // ===================== EMPLOYEE BILLING ACCOUNTS (حسابات الموظفين في أنظمة الفوترة) =====================
 
@@ -313,7 +315,9 @@ export const fundBalances = pgTable('fund_balances', {
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
   balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  fundCurrencyUnique: uniqueIndex('fund_balances_fund_currency_unique').on(table.fundId, table.currencyId),
+}));
 
 // ===================== SUPPLIERS =====================
 
