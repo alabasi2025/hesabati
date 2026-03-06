@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique } from 'drizzle-orm/pg-core';
 
 // ===================== ENUMS =====================
 
@@ -981,10 +981,11 @@ export const sequenceCounters = pgTable('sequence_counters', {
   entityId: integer('entity_id').notNull(), // معرف الحساب أو القالب أو التصنيف
   year: integer('year').notNull(), // السنة الميلادية
   lastNumber: integer('last_number').notNull().default(0), // آخر رقم تسلسلي
-  prefix: varchar('prefix', { length: 30 }), // البادئة (مثل FND01, RCV01)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueCounter: unique('sequence_counters_unique').on(table.businessId, table.counterType, table.entityId, table.year),
+}));
 
 // ===================== WAREHOUSE TYPES (أنواع/تصنيفات المخازن) =====================
 

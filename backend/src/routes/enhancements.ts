@@ -694,14 +694,14 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
   const amount = parseFloat(body.amount);
   if (isNaN(amount) || amount <= 0) return c.json({ error: 'المبلغ يجب أن يكون رقماً موجباً' }, 400);
 
-  // توليد رقم السند
+  // توليد رقم السند باستخدام النظام الجديد
   const vType = body.voucherType || 'receipt';
-  const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
   const prefix = vType === 'receipt' ? 'RCV' : vType === 'payment' ? 'PAY' : 'TRF';
-  const seqResult = await db.execute(sql.raw(`SELECT nextval('${seqName}')`));
-  const seqRow = getFirstRow<{ nextval: string }>(seqResult);
-  const seqVal = parseInt(String(seqRow?.nextval ?? 1), 10);
-  const voucherNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
+  const { getNextSequence } = await import('../middleware/sequencing.ts');
+  const year = new Date().getFullYear();
+  const draftEntityId = body.fromFundId || body.fromAccountId || 0;
+  const seqVal = await getNextSequence(bizId, `voucher_draft_${vType}`, draftEntityId, year);
+  const voucherNumber = `${prefix}-DRAFT-${year}-${String(seqVal).padStart(6, '0')}`;
 
   const [created] = await db.insert(vouchers).values({
     businessId: bizId,

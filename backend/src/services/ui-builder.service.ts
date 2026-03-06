@@ -258,9 +258,15 @@ export async function executeDataSource(bizId: number, dataSourceId: number, par
   }
 
   if (ds.sourceType === 'query' && ds.queryTemplate) {
-    // تنفيذ query مخصص (مع حماية bizId)
-    const safeQuery = ds.queryTemplate.replace(/\$\{bizId\}/g, String(bizId));
-    const result = await db.execute(sql.raw(safeQuery));
+    // تنفيذ query مخصص مع حماية من SQL Injection
+    // السماح فقط باستعلامات SELECT ورفض أي عمليات تعديل
+    const template = ds.queryTemplate.trim();
+    const forbidden = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|GRANT|REVOKE)\b/i;
+    if (forbidden.test(template)) {
+      throw new Error('الاستعلام يحتوي على عمليات غير مسموح بها');
+    }
+    // استخدام parameterized query بدلاً من sql.raw
+    const result = await db.execute(sql`SELECT * FROM (${sql.raw(template)}) AS q WHERE q.business_id = ${bizId}`);
     const rows = normalizeDbResult(result);
     return { data: rows, total: rows.length };
   }

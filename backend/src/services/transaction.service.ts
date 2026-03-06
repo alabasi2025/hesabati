@@ -412,10 +412,11 @@ export async function reverseTransaction(
   const currencyId = original.currencyId || 1;
 
   const result = await db.transaction(async (tx) => {
-    const seqResult = await tx.execute(sql.raw(`SELECT nextval('voucher_reversal_seq')`));
-    const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
-    const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
-    const voucherNumber = `REV-${String(seqVal).padStart(6, '0')}`;
+    // استخدام النظام الجديد بدلاً من PostgreSQL sequence
+    const year = new Date().getFullYear();
+    const { getNextSequence } = await import('../middleware/sequencing.ts');
+    const revSeq = await getNextSequence(bizId, 'voucher_reversal', original.fromFundId || original.fromAccountId || 0, year);
+    const voucherNumber = `REV-${year}-${String(revSeq).padStart(6, '0')}`;
 
     const [reversalVoucher] = await tx.insert(vouchers).values({
       businessId: bizId,
