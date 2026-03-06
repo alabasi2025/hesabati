@@ -3,8 +3,9 @@
   "private": true,
   "description": "نظام حساباتي - إدارة مالية شاملة",
   "scripts": {
-    "check": "pnpm -C backend run build && pnpm -C frontend run build && pnpm -C backend run db:check && node .tdad/scripts/validate-workflows.mjs",
+    "check": "pnpm -C backend run build && pnpm -C frontend run build && pnpm -C backend run db:check && node .tdad/scripts/validate-workflows.mjs && pnpm run check:security",
     "check:tdad": "node .tdad/scripts/validate-workflows.mjs",
-    "check:spell": "npx cspell \"frontend/src/**\" \"backend/src/**\" --no-progress"
+    "check:spell": "npx cspell \"frontend/src/**\" \"backend/src/**\" --no-progress",
+    "check:security": "pnpm -C backend audit --prod --audit-level low && pnpm -C backend audit --dev --audit-level low && pnpm -C frontend audit --prod --audit-level low && pnpm -C frontend audit --dev --audit-level low"
   }
 }
