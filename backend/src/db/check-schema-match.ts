@@ -7,7 +7,7 @@ import postgres from "postgres";
 
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/hesabati";
+  "postgresql://postgres:774424555@localhost:5432/hesabati";
 
 // الجداول والأعمدة المتوقعة من السكما (core.ts) - أسماء الجداول والأعمدة كما في PostgreSQL
 const expectedTables: Record<string, string[]> = {

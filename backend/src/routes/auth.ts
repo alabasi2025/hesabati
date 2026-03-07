@@ -4,12 +4,15 @@ import { users } from '../db/schema/index.ts';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { generateToken, authMiddleware } from '../middleware/auth.ts';
+import { getBody } from '../middleware/helpers.ts';
 
 const authRoutes = new Hono();
 
 authRoutes.post('/login', async (c) => {
   try {
-    const { username, password } = await c.req.json();
+    const body = await getBody(c);
+    const username = body?.username;
+    const password = body?.password;
 
     if (!username || !password) {
       return c.json({ error: 'اسم المستخدم وكلمة المرور مطلوبان' }, 400);
@@ -53,7 +56,15 @@ authRoutes.post('/login', async (c) => {
 
 authRoutes.post('/register', async (c) => {
   try {
-    const { username, password, fullName, role } = await c.req.json();
+    const body = await getBody(c);
+    const username = body?.username;
+    const password = body?.password;
+    const fullName = body?.fullName;
+    const role = body?.role;
+
+    if (!username || !password || !fullName) {
+      return c.json({ error: 'اسم المستخدم وكلمة المرور والاسم الكامل مطلوبان' }, 400);
+    }
 
     const existing = await db.select().from(users).where(eq(users.username, username)).limit(1);
     if (existing.length > 0) {

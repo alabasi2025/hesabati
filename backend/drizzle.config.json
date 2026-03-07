@@ -3,6 +3,6 @@
   "schema": "./src/db/schema/core.ts",
   "out": "./drizzle",
   "dbCredentials": {
-    "url": "postgresql://postgres:postgres@localhost:5432/hesabati"
+    "url": "postgresql://postgres:774424555@localhost:5432/hesabati"
   }
 }

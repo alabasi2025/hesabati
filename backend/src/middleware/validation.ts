@@ -2,6 +2,13 @@ import { Context, Next } from 'hono';
 import { z } from 'zod';
 
 /**
+ * سياسة التحقق: كل مسار يعدّل بيانات (POST/PUT/PATCH) يجب أن يمرّر body عبر
+ * validateBody(schema, body) قبل الاستخدام. الـ schemas المعرّفة أدناه تغطي
+ * معظم الكيانات؛ للمسارات الجديدة أضف schema هنا واستخدمه في الـ handler.
+ * انظر ARCHITECTURE.md — تحقق المدخلات.
+ */
+
+/**
  * XSS Sanitizer: تنظيف المدخلات النصية من أكواد HTML/JS الخبيثة
  */
 export function sanitizeString(input: string): string {

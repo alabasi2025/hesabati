@@ -8,7 +8,7 @@ import { eq, desc, count } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema/index.ts';
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hesabati';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:774424555@localhost:5432/hesabati';
 const client = postgres(connectionString);
 const db = drizzle(client, { schema });
 

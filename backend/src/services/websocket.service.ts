@@ -1,5 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
+import { verifyToken } from '../middleware/auth.ts';
+import { userCanAccessBusiness } from '../middleware/bizAuth.ts';
 
 interface WSClient {
   ws: WebSocket;
@@ -14,16 +16,31 @@ class WebSocketService {
   init(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws' });
 
-    this.wss.on('connection', (ws, req) => {
+    this.wss.on('connection', async (ws, req) => {
       const url = new URL(req.url || '', `http://${req.headers.host}`);
-      const userId = parseInt(url.searchParams.get('userId') || '0');
-      const bizId = parseInt(url.searchParams.get('bizId') || '0');
-      const clientId = `${userId}_${bizId}_${Date.now()}`;
+      const token = url.searchParams.get('token');
+      const bizIdParam = url.searchParams.get('bizId');
+      const bizId = parseInt(bizIdParam || '0', 10);
 
-      if (!userId || !bizId) {
-        ws.close(4001, 'userId and bizId required');
+      if (!token || !bizIdParam || !bizId) {
+        ws.close(4001, 'token and bizId required');
         return;
       }
+
+      const payload = verifyToken(token);
+      if (!payload) {
+        ws.close(4001, 'invalid or expired token');
+        return;
+      }
+
+      const allowed = await userCanAccessBusiness(payload.userId, payload.role, bizId);
+      if (!allowed) {
+        ws.close(4003, 'not allowed for this business');
+        return;
+      }
+
+      const userId = payload.userId;
+      const clientId = `${userId}_${bizId}_${Date.now()}`;
 
       this.clients.set(clientId, { ws, userId, bizId });
       console.log(`🔌 WebSocket connected: user=${userId}, biz=${bizId}`);
@@ -37,7 +54,6 @@ class WebSocketService {
         this.clients.delete(clientId);
       });
 
-      // إرسال رسالة ترحيب
       ws.send(JSON.stringify({ type: 'connected', message: 'متصل بنجاح' }));
     });
 

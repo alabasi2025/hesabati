@@ -11,3 +11,7 @@ package-lock.json
 **/package-lock.json
 npm-shrinkwrap.json
 yarn.lock
+
+
+#Ignore cursor AI rules
+.cursor\rules\codacy.mdc

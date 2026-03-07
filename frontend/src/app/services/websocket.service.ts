@@ -19,13 +19,20 @@ export class WebSocketService {
   notifications = signal<WSMessage[]>([]);
   unreadCount = signal(0);
 
-  connect(userId: number, bizId: number) {
-    if (this.ws?.readyState === WebSocket.OPEN) return;
-
+  private getWsBaseUrl(): string {
     const protocol = globalThis.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = globalThis.location.hostname;
-    const port = '3000';
-    const url = `${protocol}//${host}:${port}/ws?userId=${userId}&bizId=${bizId}`;
+    const port = globalThis.location.port || '80';
+    return `${protocol}//${host}${port === '80' || port === '443' ? '' : ':' + port}`;
+  }
+
+  /** الاتصال باستخدام token (JWT) و bizId — مطلوب للمصادقة على الباك اند. */
+  connect(token: string, bizId: number) {
+    if (this.ws?.readyState === WebSocket.OPEN) return;
+    if (!token || !bizId) return;
+
+    const base = this.getWsBaseUrl();
+    const url = `${base}/ws?token=${encodeURIComponent(token)}&bizId=${bizId}`;
 
     try {
       this.ws = new WebSocket(url);
@@ -53,7 +60,7 @@ export class WebSocketService {
 
       this.ws.onclose = () => {
         this.connected.set(false);
-        this.tryReconnect(userId, bizId);
+        this.tryReconnect(token, bizId);
       };
 
       this.ws.onerror = () => {
@@ -64,12 +71,12 @@ export class WebSocketService {
     }
   }
 
-  private tryReconnect(userId: number, bizId: number) {
+  private tryReconnect(token: string, bizId: number) {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
     this.reconnectAttempts++;
     clearTimeout(this.reconnectTimer);
     this.reconnectTimer = setTimeout(() => {
-      this.connect(userId, bizId);
+      this.connect(token, bizId);
     }, this.reconnectDelay * Math.min(this.reconnectAttempts, 5));
   }
 

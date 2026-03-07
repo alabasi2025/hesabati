@@ -11,7 +11,7 @@ import {
   users, auditLog,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
+import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
 import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
 import { checkPermission } from '../middleware/permissions.ts';
 import { getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
@@ -227,7 +227,7 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
   if (existing.status === 'confirmed') return c.json({ error: 'لا يمكن تعديل سند معتمد. يمكنك عكسه فقط.' }, 400);
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تعديل سند ملغي' }, 400);
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (body.description !== undefined) updateData.description = body.description;
   if (body.reference !== undefined) updateData.reference = body.reference;
@@ -254,7 +254,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const newStatus = body.status;
   if (!['draft', 'confirmed', 'cancelled'].includes(newStatus)) {
     return c.json({ error: 'الحالة غير صالحة. القيم المسموحة: draft, confirmed, cancelled' }, 400);
@@ -427,7 +427,7 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
   const [original] = await db.select().from(operationTypes).where(and(eq(operationTypes.id, id), eq(operationTypes.businessId, bizId)));
   if (!original) return c.json({ error: 'نوع العملية غير موجود' }, 404);
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const newName = body.name || `${original.name} (نسخة)`;
 
   // إنشاء النسخة
@@ -545,7 +545,7 @@ enhancements.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddlew
 // 10. نسخ إعدادات من مستخدم لآخر
 enhancements.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddleware(), safeHandler('نسخ إعدادات السايدبار', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const { fromUserId, toUserId } = body;
   if (!fromUserId || !toUserId) return c.json({ error: 'fromUserId و toUserId مطلوبان' }, 400);
   if (fromUserId === toUserId) return c.json({ error: 'لا يمكن النسخ لنفس المستخدم' }, 400);
@@ -825,7 +825,7 @@ enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware()
 enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safeHandler('إنشاء سند كمسودة', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
 
   const amount = parseFloat(body.amount);
   if (isNaN(amount) || amount <= 0) return c.json({ error: 'المبلغ يجب أن يكون رقماً موجباً' }, 400);

@@ -15,11 +15,127 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
+/** عنصر قائمة احتياطية مع تحديد نوع العمل الذي يراه */
+interface FallbackItemDef {
+  icon: string;
+  label: string;
+  path: string; // مسار نسبي مثل 'accounts' أو مطلق مثل '/businesses'
+  showFor: BusinessType[];
+  badge?: number;
+  badgeColor?: string;
+}
+
+interface FallbackSectionDef {
+  title: string;
+  items: FallbackItemDef[];
+}
+
 interface MenuSection {
   title: string;
   sectionId?: number;
   items: MenuItem[];
 }
+
+/** تعريف موحّد للقائمة الاحتياطية — مصدر واحد للحقيقة حسب نوع العمل */
+const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
+  {
+    title: '1. المستخدمون والصلاحيات',
+    items: [
+      { icon: 'admin_panel_settings', label: 'الصلاحيات والأدوار', path: 'roles', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'tune', label: 'إعدادات التبويب', path: 'sidebar-settings', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+  {
+    title: '2. الرئيسية والأعمال',
+    items: [
+      { icon: 'dashboard', label: 'لوحة التحكم', path: '', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'arrow_forward', label: 'العودة للأعمال', path: '/businesses', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'bolt', label: 'المحطات', path: 'stations', showFor: ['stations'] },
+      { icon: 'groups', label: 'الموظفين', path: 'employees', showFor: ['stations', 'single_station'] },
+      { icon: 'handshake', label: 'الشركاء', path: 'partners', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'summarize', label: 'ملخص الأعمال', path: 'summary', showFor: ['personal'] },
+    ],
+  },
+  {
+    title: '3. الحسابات والأرصدة',
+    items: [
+      { icon: 'account_balance_wallet', label: 'الحسابات', path: 'accounts', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'savings', label: 'الصناديق', path: 'funds', showFor: ['stations', 'single_station'] },
+      { icon: 'account_balance', label: 'البنوك', path: 'banks', showFor: ['stations', 'single_station'] },
+      { icon: 'currency_exchange', label: 'الصرافين', path: 'exchangers', showFor: ['stations', 'single_station'] },
+      { icon: 'wallet', label: 'المحافظ الإلكترونية', path: 'wallets', showFor: ['stations', 'single_station'] },
+    ],
+  },
+  {
+    title: '4. العمليات المالية',
+    items: [
+      { icon: 'receipt_long', label: 'سندات الصرف والقبض', path: 'vouchers', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'menu_book', label: 'القيود المحاسبية', path: 'journal', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'label', label: 'تصنيفات القيود', path: 'journal-categories', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+  {
+    title: '5. القوالب والترقيم',
+    items: [
+      { icon: 'category', label: 'أنواع العمليات', path: 'operation-types', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+  {
+    title: '6. المخزون والمخازن',
+    items: [
+      { icon: 'warehouse', label: 'المخزن', path: 'warehouse', showFor: ['stations', 'single_station'] },
+      { icon: 'inventory_2', label: 'العمليات المخزنية', path: 'warehouse-operations', showFor: ['stations', 'single_station'] },
+    ],
+  },
+  {
+    title: '7. الموردين',
+    items: [
+      { icon: 'local_shipping', label: 'الموردين', path: 'suppliers', showFor: ['stations', 'single_station'] },
+    ],
+  },
+  {
+    title: '8. التحصيل والفوترة',
+    items: [
+      { icon: 'receipt_long', label: 'التحصيل والتوريد', path: 'collections', showFor: ['stations'] },
+      { icon: 'receipt', label: 'أنظمة الفوترة', path: 'billing-systems', showFor: ['stations'] },
+    ],
+  },
+  {
+    title: '9. التقارير',
+    items: [
+      { icon: 'assessment', label: 'التقارير', path: 'reports', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'analytics', label: 'التقارير المتقدمة', path: 'reports-advanced', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+  {
+    title: '10. بناء الواجهات',
+    items: [
+      { icon: 'space_dashboard', label: 'الشاشات المخصصة', path: 'custom-screens', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'dashboard_customize', label: 'بناء الواجهات', path: 'ui-builder', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+  {
+    title: '11. العملات وأسعار الصرف',
+    items: [
+      { icon: 'currency_exchange', label: 'أسعار الصرف', path: 'exchange-rates', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+  {
+    title: '12. المعلقات والتصفيات',
+    items: [
+      { icon: 'balance', label: 'التصفيات', path: 'settlements', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'warning', label: 'حسابات معلقة', path: 'pending', showFor: ['stations'], badge: 3, badgeColor: 'red' },
+    ],
+  },
+  {
+    title: '13. الرواتب والميزانية',
+    items: [
+      { icon: 'category', label: 'تصنيفات المصروفات', path: 'expense-categories', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'account_balance_wallet', label: 'ميزانية المصروفات', path: 'expense-budget', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'payments', label: 'الرواتب', path: 'salaries', showFor: ['stations', 'single_station', 'personal'] },
+    ],
+  },
+];
 
 @Component({
   selector: 'app-sidebar',
@@ -217,171 +333,29 @@ export class SidebarComponent {
   private buildFallbackMenu(bizId: number, type: BusinessType) {
     const b = `/biz/${bizId}`;
 
-    // أقسام التبويب حسب الوحدات الـ13 (MODULES.md) — نفس ترتيب seed
-    const sectionsStations: MenuSection[] = [
-      { title: '1. المستخدمون والصلاحيات', items: [
-        { icon: 'admin_panel_settings', label: 'الصلاحيات والأدوار', route: `${b}/roles` },
-        { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
-      ]},
-      { title: '2. الرئيسية والأعمال', items: [
-        { icon: 'dashboard', label: 'لوحة التحكم', route: b },
-        { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
-        { icon: 'bolt', label: 'المحطات', route: `${b}/stations` },
-        { icon: 'groups', label: 'الموظفين', route: `${b}/employees` },
-        { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
-      ]},
-      { title: '3. الحسابات والأرصدة', items: [
-        { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
-        { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
-        { icon: 'account_balance', label: 'البنوك', route: `${b}/banks` },
-        { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
-        { icon: 'wallet', label: 'المحافظ الإلكترونية', route: `${b}/wallets` },
-      ]},
-      { title: '4. العمليات المالية', items: [
-        { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
-        { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-        { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
-      ]},
-      { title: '5. القوالب والترقيم', items: [
-        { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
-      ]},
-      { title: '6. المخزون والمخازن', items: [
-        { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
-        { icon: 'inventory_2', label: 'العمليات المخزنية', route: `${b}/warehouse-operations` },
-      ]},
-      { title: '7. الموردين', items: [
-        { icon: 'local_shipping', label: 'الموردين', route: `${b}/suppliers` },
-      ]},
-      { title: '8. التحصيل والفوترة', items: [
-        { icon: 'receipt_long', label: 'التحصيل والتوريد', route: `${b}/collections` },
-        { icon: 'receipt', label: 'أنظمة الفوترة', route: `${b}/billing-systems` },
-      ]},
-      { title: '9. التقارير', items: [
-        { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
-        { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
-      ]},
-      { title: '10. بناء الواجهات', items: [
-        { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
-        { icon: 'dashboard_customize', label: 'بناء الواجهات', route: `${b}/ui-builder` },
-      ]},
-      { title: '11. العملات وأسعار الصرف', items: [
-        { icon: 'currency_exchange', label: 'أسعار الصرف', route: `${b}/exchange-rates` },
-      ]},
-      { title: '12. المعلقات والتصفيات', items: [
-        { icon: 'balance', label: 'التصفيات', route: `${b}/settlements` },
-        { icon: 'warning', label: 'حسابات معلقة', route: `${b}/pending`, badge: 3, badgeColor: 'red' },
-      ]},
-      { title: '13. الرواتب والميزانية', items: [
-        { icon: 'category', label: 'تصنيفات المصروفات', route: `${b}/expense-categories` },
-        { icon: 'account_balance_wallet', label: 'ميزانية المصروفات', route: `${b}/expense-budget` },
-        { icon: 'payments', label: 'الرواتب', route: `${b}/salaries` },
-      ]},
-    ];
+    const sections: MenuSection[] = FALLBACK_MENU_DEF
+      .map(sec => {
+        const items: MenuItem[] = sec.items
+          .filter(it => it.showFor.includes(type))
+          .map(it => {
+            const route = it.path === ''
+              ? b
+              : it.path.startsWith('/')
+                ? it.path
+                : `${b}/${it.path}`;
+            return {
+              icon: it.icon,
+              label: it.label,
+              route,
+              badge: it.badge,
+              badgeColor: it.badgeColor,
+            };
+          });
+        return { title: sec.title, items };
+      })
+      .filter(sec => sec.items.length > 0);
 
-    const sectionsSingleStation: MenuSection[] = [
-      { title: '1. المستخدمون والصلاحيات', items: [
-        { icon: 'admin_panel_settings', label: 'الصلاحيات والأدوار', route: `${b}/roles` },
-        { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
-      ]},
-      { title: '2. الرئيسية والأعمال', items: [
-        { icon: 'dashboard', label: 'لوحة التحكم', route: b },
-        { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
-        { icon: 'groups', label: 'الموظفين', route: `${b}/employees` },
-        { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
-      ]},
-      { title: '3. الحسابات والأرصدة', items: [
-        { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
-        { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
-        { icon: 'account_balance', label: 'البنوك', route: `${b}/banks` },
-        { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
-        { icon: 'wallet', label: 'المحافظ الإلكترونية', route: `${b}/wallets` },
-      ]},
-      { title: '4. العمليات المالية', items: [
-        { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
-        { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-        { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
-      ]},
-      { title: '5. القوالب والترقيم', items: [
-        { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
-      ]},
-      { title: '6. المخزون والمخازن', items: [
-        { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
-        { icon: 'inventory_2', label: 'العمليات المخزنية', route: `${b}/warehouse-operations` },
-      ]},
-      { title: '7. الموردين', items: [
-        { icon: 'local_shipping', label: 'الموردين', route: `${b}/suppliers` },
-      ]},
-      { title: '9. التقارير', items: [
-        { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
-        { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
-      ]},
-      { title: '10. بناء الواجهات', items: [
-        { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
-        { icon: 'dashboard_customize', label: 'بناء الواجهات', route: `${b}/ui-builder` },
-      ]},
-      { title: '11. العملات وأسعار الصرف', items: [
-        { icon: 'currency_exchange', label: 'أسعار الصرف', route: `${b}/exchange-rates` },
-      ]},
-      { title: '12. المعلقات والتصفيات', items: [
-        { icon: 'balance', label: 'التصفيات', route: `${b}/settlements` },
-      ]},
-      { title: '13. الرواتب والميزانية', items: [
-        { icon: 'category', label: 'تصنيفات المصروفات', route: `${b}/expense-categories` },
-        { icon: 'account_balance_wallet', label: 'ميزانية المصروفات', route: `${b}/expense-budget` },
-        { icon: 'payments', label: 'الرواتب', route: `${b}/salaries` },
-      ]},
-    ];
-
-    const sectionsPersonal: MenuSection[] = [
-      { title: '1. المستخدمون والصلاحيات', items: [
-        { icon: 'admin_panel_settings', label: 'الصلاحيات والأدوار', route: `${b}/roles` },
-        { icon: 'tune', label: 'إعدادات التبويب', route: `${b}/sidebar-settings` },
-      ]},
-      { title: '2. الرئيسية والأعمال', items: [
-        { icon: 'dashboard', label: 'لوحة التحكم', route: b },
-        { icon: 'arrow_forward', label: 'العودة للأعمال', route: '/businesses' },
-        { icon: 'handshake', label: 'الشركاء', route: `${b}/partners` },
-        { icon: 'summarize', label: 'ملخص الأعمال', route: `${b}/summary` },
-      ]},
-      { title: '3. الحسابات والأرصدة', items: [
-        { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
-      ]},
-      { title: '4. العمليات المالية', items: [
-        { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
-        { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-        { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
-      ]},
-      { title: '5. القوالب والترقيم', items: [
-        { icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` },
-      ]},
-      { title: '9. التقارير', items: [
-        { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
-        { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
-      ]},
-      { title: '10. بناء الواجهات', items: [
-        { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
-        { icon: 'dashboard_customize', label: 'بناء الواجهات', route: `${b}/ui-builder` },
-      ]},
-      { title: '11. العملات وأسعار الصرف', items: [
-        { icon: 'currency_exchange', label: 'أسعار الصرف', route: `${b}/exchange-rates` },
-      ]},
-      { title: '12. المعلقات والتصفيات', items: [
-        { icon: 'balance', label: 'التصفيات', route: `${b}/settlements` },
-      ]},
-      { title: '13. الرواتب والميزانية', items: [
-        { icon: 'category', label: 'تصنيفات المصروفات', route: `${b}/expense-categories` },
-        { icon: 'account_balance_wallet', label: 'ميزانية المصروفات', route: `${b}/expense-budget` },
-        { icon: 'payments', label: 'الرواتب', route: `${b}/salaries` },
-      ]},
-    ];
-
-    if (type === 'stations') {
-      this.menuSections.set(sectionsStations);
-    } else if (type === 'single_station') {
-      this.menuSections.set(sectionsSingleStation);
-    } else {
-      this.menuSections.set(sectionsPersonal);
-    }
+    this.menuSections.set(sections);
   }
 
   /** Reload sidebar from DB (called after settings change) */

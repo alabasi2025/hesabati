@@ -6,6 +6,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { WebSocketService } from '../../services/websocket.service';
 import { BasePageComponent } from '../../shared/base-page.component';
@@ -88,6 +89,7 @@ const TAB_TYPE_OPTIONS = [
 })
 export class CustomScreensComponent extends BasePageComponent implements OnDestroy {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly wsService = inject(WebSocketService);
 
@@ -288,9 +290,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     void this.loadScreens();
     this.loadCurrencies();
     try {
-      const userId = Number.parseInt(localStorage.getItem('userId') || '0', 10);
-      if (userId && this.bizId) {
-        this.wsService.connect(userId, this.bizId);
+      const token = this.auth.getToken();
+      if (token && this.bizId) {
+        this.wsService.connect(token, this.bizId);
       }
     } catch (e) { /* WebSocket optional */ }
   }

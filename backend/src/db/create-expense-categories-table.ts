@@ -5,7 +5,7 @@
 import 'dotenv/config';
 import postgres from 'postgres';
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hesabati';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:774424555@localhost:5432/hesabati';
 const sql = postgres(connectionString);
 
 const CREATE_TABLE = `
