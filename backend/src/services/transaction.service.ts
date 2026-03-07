@@ -339,6 +339,250 @@ export async function postTransaction(
   return result;
 }
 
+/** الحالات التي تعني "اعتماد محاسبي" عند الانتقال إليها من مسودة أو طلب اعتماد */
+const CONFIRMED_STATUSES = ['confirmed', 'approved'];
+
+/**
+ * confirmDraftVoucher - اعتماد سند مسودة عبر المحرك المالي (قيد + أرصدة) دون إنشاء سند جديد
+ * تُستدعى عند: تغيير الحالة من draft → confirmed (enhancements أو سير العمل).
+ */
+export async function confirmDraftVoucher(
+  bizId: number,
+  userId: number,
+  voucherId: number
+): Promise<TransactionResult> {
+  const [existing] = await db.select().from(vouchers)
+    .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
+
+  if (!existing) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
+  if (existing.status !== 'draft') throw new Error('السند ليس مسودة ولا يمكن اعتماده بهذه الطريقة');
+
+  const amount = parseFloat(String(existing.amount));
+  const currencyId = existing.currencyId || 1;
+  const debitAccountId = existing.toAccountId;
+  const creditAccountId = existing.fromAccountId;
+
+  const ownershipError = await validateTransactionOwnership(bizId, {
+    voucherType: existing.voucherType as TransactionData['voucherType'],
+    amount,
+    currencyId,
+    debitAccountId: debitAccountId!,
+    creditAccountId: creditAccountId ?? undefined,
+    toFundId: existing.toFundId ?? undefined,
+    fromFundId: existing.fromFundId ?? undefined,
+  });
+  if (ownershipError) throw new Error(ownershipError);
+
+  const result = await db.transaction(async (tx) => {
+    await tx.update(vouchers).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(vouchers.id, voucherId));
+
+    const entryDate = existing.voucherDate
+      ? new Date(existing.voucherDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    const entryDesc = `اعتماد مسودة - ${existing.description || existing.voucherNumber || ''}`;
+
+    const [entry] = await tx.insert(journalEntries).values({
+      businessId: bizId,
+      entryNumber: `JE-${existing.voucherNumber}`,
+      entryDate,
+      description: entryDesc,
+      reference: existing.voucherNumber,
+      operationTypeId: existing.operationTypeId || null,
+      totalDebit: String(amount),
+      totalCredit: String(amount),
+      isBalanced: true,
+      createdBy: userId,
+    }).returning();
+
+    if (debitAccountId) {
+      await tx.insert(journalEntryLines).values({
+        journalEntryId: entry.id,
+        accountId: debitAccountId,
+        lineType: 'debit',
+        amount: String(amount),
+        description: entryDesc,
+        sortOrder: 0,
+      });
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${debitAccountId}, ${currencyId}, ${amount})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
+      `);
+    }
+    if (creditAccountId) {
+      await tx.insert(journalEntryLines).values({
+        journalEntryId: entry.id,
+        accountId: creditAccountId,
+        lineType: 'credit',
+        amount: String(amount),
+        description: entryDesc,
+        sortOrder: 1,
+      });
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${creditAccountId}, ${currencyId}, ${-amount})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
+      `);
+    }
+
+    if (existing.toFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${existing.toFundId}, ${currencyId}, ${amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance + ${amount}, updated_at = NOW()
+      `);
+    }
+    if (existing.fromFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${existing.fromFundId}, ${currencyId}, ${-amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance - ${amount}, updated_at = NOW()
+      `);
+    }
+
+    await tx.insert(auditLog).values({
+      userId,
+      businessId: bizId,
+      action: 'confirm_draft_voucher',
+      tableName: 'vouchers',
+      recordId: voucherId,
+      newData: { status: 'confirmed', journalEntryId: entry.id },
+    });
+
+    const [updated] = await tx.select().from(vouchers).where(eq(vouchers.id, voucherId));
+    return { voucher: updated, journalEntry: entry };
+  });
+
+  return result;
+}
+
+/**
+ * يُستخدم من سير العمل: هل الانتقال إلى الحالة الجديدة يتطلب تنفيذ القيد والأرصدة؟
+ */
+export function isConfirmingTransition(fromStatus: string, toStatus: string): boolean {
+  return fromStatus === 'draft' && CONFIRMED_STATUSES.includes(toStatus);
+}
+
+/**
+ * تطبيق القيد والأرصدة لسند تمّ تغيير حالته إلى معتمد/اعتماد عبر سير العمل (executeTransition يحدّث الحالة أولاً).
+ * إذا وُجد قيد مسبقاً لنفس السند (reference) لا يُنشأ ثانية (idempotent).
+ */
+export async function applyAccountingForConfirmedVoucher(
+  bizId: number,
+  userId: number,
+  voucherId: number
+): Promise<{ applied: boolean; journalEntryId?: number }> {
+  const [existing] = await db.select().from(vouchers)
+    .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
+
+  if (!existing) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
+  if (!CONFIRMED_STATUSES.includes(existing.status)) {
+    return { applied: false };
+  }
+
+  const amount = parseFloat(String(existing.amount));
+  const currencyId = existing.currencyId || 1;
+  const debitAccountId = existing.toAccountId;
+  const creditAccountId = existing.fromAccountId;
+
+  const ownershipError = await validateTransactionOwnership(bizId, {
+    voucherType: existing.voucherType as TransactionData['voucherType'],
+    amount,
+    currencyId,
+    debitAccountId: debitAccountId!,
+    creditAccountId: creditAccountId ?? undefined,
+    toFundId: existing.toFundId ?? undefined,
+    fromFundId: existing.fromFundId ?? undefined,
+  });
+  if (ownershipError) throw new Error(ownershipError);
+
+  const existingEntry = await db.select({ id: journalEntries.id })
+    .from(journalEntries)
+    .where(and(
+      eq(journalEntries.businessId, bizId),
+      eq(journalEntries.reference, existing.voucherNumber || '')
+    ))
+    .limit(1);
+  if (existingEntry.length > 0) {
+    return { applied: false, journalEntryId: existingEntry[0].id };
+  }
+
+  const entryDate = existing.voucherDate
+    ? new Date(existing.voucherDate).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0];
+  const entryDesc = `اعتماد - ${existing.description || existing.voucherNumber || ''}`;
+
+  const result = await db.transaction(async (tx) => {
+    const [entry] = await tx.insert(journalEntries).values({
+      businessId: bizId,
+      entryNumber: `JE-${existing.voucherNumber}`,
+      entryDate,
+      description: entryDesc,
+      reference: existing.voucherNumber,
+      operationTypeId: existing.operationTypeId || null,
+      totalDebit: String(amount),
+      totalCredit: String(amount),
+      isBalanced: true,
+      createdBy: userId,
+    }).returning();
+
+    if (debitAccountId) {
+      await tx.insert(journalEntryLines).values({
+        journalEntryId: entry.id,
+        accountId: debitAccountId,
+        lineType: 'debit',
+        amount: String(amount),
+        description: entryDesc,
+        sortOrder: 0,
+      });
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${debitAccountId}, ${currencyId}, ${amount})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
+      `);
+    }
+    if (creditAccountId) {
+      await tx.insert(journalEntryLines).values({
+        journalEntryId: entry.id,
+        accountId: creditAccountId,
+        lineType: 'credit',
+        amount: String(amount),
+        description: entryDesc,
+        sortOrder: 1,
+      });
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${creditAccountId}, ${currencyId}, ${-amount})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
+      `);
+    }
+    if (existing.toFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${existing.toFundId}, ${currencyId}, ${amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance + ${amount}, updated_at = NOW()
+      `);
+    }
+    if (existing.fromFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${existing.fromFundId}, ${currencyId}, ${-amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance - ${amount}, updated_at = NOW()
+      `);
+    }
+    await tx.insert(auditLog).values({
+      userId,
+      businessId: bizId,
+      action: 'apply_accounting_workflow_confirm',
+      tableName: 'vouchers',
+      recordId: voucherId,
+      newData: { journalEntryId: entry.id },
+    });
+    return { applied: true, journalEntryId: entry.id };
+  });
+  return result;
+}
+
 // ===================== إلغاء معاملة (Cancel) =====================
 
 /**

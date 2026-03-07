@@ -11,7 +11,7 @@ import {
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { postTransaction } from '../services/transaction.service.ts';
+import { confirmDraftVoucher } from '../services/transaction.service.ts';
 import { getNextSequence } from '../middleware/sequencing.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
 import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
@@ -151,60 +151,9 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   if (existing.status === 'confirmed' && newStatus === 'draft') return c.json({ error: 'لا يمكن إرجاع سند معتمد إلى مسودة' }, 400);
 
   try {
-    // إذا تم اعتماد السند من مسودة → نستخدم محرك المعاملات لتنفيذ القيود المحاسبية
+    // إذا تم اعتماد السند من مسودة → نستخدم محرك المعاملات الموحّد (قيد + أرصدة)
     if (existing.status === 'draft' && newStatus === 'confirmed') {
-      const amount = parseFloat(String(existing.amount));
-      const currencyId = existing.currencyId || 1;
-      const debitAccountId = existing.toAccountId;
-      const creditAccountId = existing.fromAccountId;
-
-      // تنفيذ القيود عبر محرك المعاملات المركزي
-      await db.transaction(async (tx) => {
-        // تحديث حالة السند
-        await tx.update(vouchers).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(vouchers.id, id));
-
-        // إنشاء القيد المحاسبي
-        const entryDate = existing.voucherDate ? new Date(existing.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        const [entry] = await tx.insert(journalEntries).values({
-          businessId: bizId, entryNumber: `JE-${existing.voucherNumber}`,
-          entryDate, description: existing.description || '',
-          reference: existing.voucherNumber, operationTypeId: existing.operationTypeId || null,
-          totalDebit: String(amount), totalCredit: String(amount),
-          isBalanced: true, createdBy: userId,
-        }).returning();
-
-        if (debitAccountId) {
-          await tx.insert(journalEntryLines).values({
-            journalEntryId: entry.id, accountId: debitAccountId,
-            lineType: 'debit', amount: String(amount), description: existing.description || '', sortOrder: 0,
-          });
-          await tx.execute(sql`
-            INSERT INTO account_balances (account_id, currency_id, balance)
-            VALUES (${debitAccountId}, ${currencyId}, ${amount})
-            ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
-          `);
-        }
-        if (creditAccountId) {
-          await tx.insert(journalEntryLines).values({
-            journalEntryId: entry.id, accountId: creditAccountId,
-            lineType: 'credit', amount: String(amount), description: existing.description || '', sortOrder: 1,
-          });
-          await tx.execute(sql`
-            INSERT INTO account_balances (account_id, currency_id, balance)
-            VALUES (${creditAccountId}, ${currencyId}, ${-amount})
-            ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
-          `);
-        }
-
-        // سجل التدقيق
-        await tx.insert(auditLog).values({
-          userId, businessId: bizId, action: 'change_voucher_status',
-          tableName: 'vouchers', recordId: id,
-          oldData: { status: 'draft' }, newData: { status: 'confirmed' },
-        });
-      });
-
-      const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
+      const { voucher: updated } = await confirmDraftVoucher(bizId, userId, id);
       return c.json(updated);
     }
 

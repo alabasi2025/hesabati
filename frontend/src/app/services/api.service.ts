@@ -54,21 +54,21 @@ export class ApiService {
       ...options,
       headers: { ...this.getHeaders(), ...options?.headers },
     });
+    const text = await res.text();
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      // إذا كان الخطأ 401 (غير مصرح) - تسجيل الخروج تلقائياً
+      let err: { error?: string; details?: string; location?: string } = {};
+      try {
+        if (text?.trim()) err = JSON.parse(text);
+      } catch {
+        err = { error: this.getArabicHttpError(res.status) };
+      }
       if (res.status === 401) {
         this.auth.logout();
         throw new Error('الجلسة منتهية - يرجى تسجيل الدخول مجدداً');
       }
-      // بناء رسالة خطأ عربية مفصلة
       let errorMsg = err.error || this.getArabicHttpError(res.status);
-      if (err.details) {
-        errorMsg += ` (التفاصيل: ${err.details})`;
-      }
-      if (err.location) {
-        errorMsg += ` [الموقع: ${err.location}]`;
-      }
+      if (err.details) errorMsg += ` (التفاصيل: ${err.details})`;
+      if (err.location) errorMsg += ` [الموقع: ${err.location}]`;
       const error: any = new Error(errorMsg);
       error.status = res.status;
       error.details = err.details;
@@ -76,7 +76,12 @@ export class ApiService {
       error.originalError = err;
       throw error;
     }
-    return res.json();
+    if (!text?.trim()) return undefined as T;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return undefined as T;
+    }
   }
 
   private getArabicHttpError(status: number): string {
