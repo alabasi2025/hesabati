@@ -2,13 +2,13 @@
  * =====================================================================
  * محرك القيود والمعاملات المركزي (Central Journaling & Transaction Engine)
  * =====================================================================
- * 
+ *
  * الهدف: توحيد جميع العمليات المالية في مكان واحد لضمان الدقة والاتساق
  * ومنع تكرار الكود. كل العمليات المالية في النظام يجب أن تمر من هنا.
- * 
+ *
  * القاعدة الأساسية: كل معاملة معزولة تمامًا داخل businessId واحد.
  * لا يمكن إجراء معاملة بين عملين مختلفين مباشرة.
- * 
+ *
  * الخطوات الداخلية لكل معاملة (Atomic Transaction):
  *   1. التحقق من ملكية كل الحسابات والصناديق لنفس bizId
  *   2. إنشاء المستند المصدر (e.g., voucher)
@@ -18,24 +18,33 @@
  *   6. تسجيل العملية في auditLog
  */
 
-import { db } from '../db/index.ts';
-import { eq, and, sql } from 'drizzle-orm';
+import { db } from "../db/index.ts";
+import { eq, and, sql } from "drizzle-orm";
 import {
-  accounts, funds, vouchers,
-  journalEntries, journalEntryLines,
-  accountBalances, fundBalances,
+  accounts,
+  funds,
+  fundTypes,
+  bankTypes,
+  exchangeTypes,
+  eWalletTypes,
+  operationTypes,
+  vouchers,
+  journalEntries,
+  journalEntryLines,
   auditLog,
-  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
-} from '../db/schema/index.ts';
-import { generateVoucherFullSequence, getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
-import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
+} from "../db/schema/index.ts";
+import { getNextSequence, TYPE_PREFIXES } from "../middleware/sequencing.ts";
+import {
+  verifyAccountOwnership,
+  verifyFundOwnership,
+} from "../routes/api/_shared/ownership.ts";
 
 // ===================== الأنواع (Types) =====================
 
 /** بيانات المعاملة التي يستقبلها المحرك */
 export interface TransactionData {
   /** نوع المعاملة: سند قبض، سند صرف، تحويل، قيد يومية */
-  voucherType: 'receipt' | 'payment' | 'transfer' | 'journal';
+  voucherType: "receipt" | "payment" | "transfer" | "journal";
   /** المبلغ */
   amount: number;
   /** معرّف العملة */
@@ -74,6 +83,49 @@ export interface TransactionResult {
   journalEntry: any;
 }
 
+/** سطر قيد محاسبي (مدين/دائن) */
+export interface TransactionLine {
+  accountId: number;
+  lineType: "debit" | "credit";
+  amount: number;
+  description?: string | null;
+}
+
+/** بيانات معاملة متعددة السطور (سند واحد بعدة سطور قيد) */
+export interface MultiTransactionData {
+  /** نوع المعاملة/السند */
+  voucherType: "receipt" | "payment" | "transfer" | "journal";
+  /** معرّف العملة */
+  currencyId: number;
+  /** سطور القيد */
+  lines: TransactionLine[];
+  /** صندوق الوارد (يزيد رصيده) - اختياري */
+  toFundId?: number | null;
+  /** صندوق الصادر (ينقص رصيده) - اختياري */
+  fromFundId?: number | null;
+  /** معرّف المحطة - اختياري */
+  stationId?: number | null;
+  /** معرّف الموظف - اختياري */
+  employeeId?: number | null;
+  /** معرّف المورد - اختياري */
+  supplierId?: number | null;
+  /** معرّف نوع العملية (القالب) - اختياري */
+  operationTypeId?: number | null;
+  /** اسم نوع العملية (للوصف) - اختياري */
+  operationTypeName?: string | null;
+  /** الوصف */
+  description?: string;
+  /** المرجع */
+  reference?: string | null;
+  /** تاريخ السند */
+  voucherDate?: Date | null;
+  /** رقم السند (إذا كان محدداً مسبقاً) */
+  voucherNumber?: string | null;
+  /** حقول عرضية داخل جدول vouchers (قد تكون متعددة في الواقع) */
+  fromAccountId?: number | null;
+  toAccountId?: number | null;
+}
+
 /** نتيجة عكس المعاملة */
 export interface ReversalResult {
   originalVoucher: any;
@@ -83,20 +135,28 @@ export interface ReversalResult {
 
 // ===================== التحقق من الملكية (مستورد من _shared/ownership) =====================
 // re-export للاستخدام الخارجي إن لزم
-export { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
+export {
+  verifyAccountOwnership,
+  verifyFundOwnership,
+} from "../routes/api/_shared/ownership.ts";
 
 /**
  * التحقق الصارم من ملكية كل الكيانات المالية في المعاملة لنفس bizId
  * يمنع أي معاملة تتضمن حسابات أو صناديق من عمل آخر
  */
-async function validateTransactionOwnership(bizId: number, data: TransactionData): Promise<string | null> {
+async function validateTransactionOwnership(
+  bizId: number,
+  data: TransactionData,
+): Promise<string | null> {
   if (data.debitAccountId) {
     const valid = await verifyAccountOwnership(data.debitAccountId, bizId);
-    if (!valid) return `الحساب المدين (${data.debitAccountId}) لا ينتمي لهذا العمل`;
+    if (!valid)
+      return `الحساب المدين (${data.debitAccountId}) لا ينتمي لهذا العمل`;
   }
   if (data.creditAccountId) {
     const valid = await verifyAccountOwnership(data.creditAccountId, bizId);
-    if (!valid) return `الحساب الدائن (${data.creditAccountId}) لا ينتمي لهذا العمل`;
+    if (!valid)
+      return `الحساب الدائن (${data.creditAccountId}) لا ينتمي لهذا العمل`;
   }
   if (data.toFundId) {
     const valid = await verifyFundOwnership(data.toFundId, bizId);
@@ -109,11 +169,328 @@ async function validateTransactionOwnership(bizId: number, data: TransactionData
   return null;
 }
 
+async function validateMultiTransactionOwnership(
+  bizId: number,
+  data: MultiTransactionData,
+): Promise<string | null> {
+  const accountIds = new Set<number>();
+  for (const l of data.lines) accountIds.add(l.accountId);
+  if (data.fromAccountId) accountIds.add(data.fromAccountId);
+  if (data.toAccountId) accountIds.add(data.toAccountId);
+
+  for (const id of accountIds) {
+    const valid = await verifyAccountOwnership(id, bizId);
+    if (!valid) return `الحساب (${id}) لا ينتمي لهذا العمل`;
+  }
+  if (data.toFundId) {
+    const valid = await verifyFundOwnership(data.toFundId, bizId);
+    if (!valid) return `صندوق الوارد (${data.toFundId}) لا ينتمي لهذا العمل`;
+  }
+  if (data.fromFundId) {
+    const valid = await verifyFundOwnership(data.fromFundId, bizId);
+    if (!valid) return `صندوق الصادر (${data.fromFundId}) لا ينتمي لهذا العمل`;
+  }
+  return null;
+}
+
+function toCents(n: number): number {
+  return Math.round((Number.isFinite(n) ? n : 0) * 100);
+}
+
+function computeBalancedTotals(lines: TransactionLine[]): {
+  total: number;
+  totalDebit: number;
+  totalCredit: number;
+} {
+  const debitCents = lines
+    .filter((l) => l.lineType === "debit")
+    .reduce((s, l) => s + toCents(l.amount), 0);
+  const creditCents = lines
+    .filter((l) => l.lineType === "credit")
+    .reduce((s, l) => s + toCents(l.amount), 0);
+
+  if (debitCents <= 0)
+    throw new Error("القيد يجب أن يحتوي على سطر مدين واحد على الأقل");
+  if (creditCents <= 0)
+    throw new Error("القيد يجب أن يحتوي على سطر دائن واحد على الأقل");
+  if (debitCents !== creditCents)
+    throw new Error("القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن");
+
+  const total = debitCents / 100;
+  return { total, totalDebit: total, totalCredit: total };
+}
+
+function getSequenceYear(d?: Date | null): number {
+  return (d ?? new Date()).getFullYear();
+}
+
+type TreasuryKind = "fund" | "bank" | "exchange" | "e_wallet";
+
+type TreasuryAccountType = "bank" | "exchange" | "e_wallet";
+
+interface TreasuryInfo {
+  kind: TreasuryKind;
+  kindCode: string;
+  categoryNo: number;
+  vaultNo: number;
+  treasuryId: number;
+}
+
+function isTreasuryAccountType(t: unknown): t is TreasuryAccountType {
+  return t === "bank" || t === "exchange" || t === "e_wallet";
+}
+
+function requirePositiveInt(label: string, v: unknown): number {
+  const n = typeof v === "number" ? v : Number.parseInt(String(v ?? ""), 10);
+  if (!Number.isInteger(n) || n <= 0) throw new Error(`${label} غير صالح`);
+  return n;
+}
+
+/** التحقق من وجود رقم خزينة صالح مع رسالة تنبيه واضحة */
+function requireVaultNumber(
+  sequenceNumber: unknown,
+  accountOrFundName: string,
+  fromPage: string,
+): number {
+  const n =
+    typeof sequenceNumber === "number"
+      ? sequenceNumber
+      : Number.parseInt(String(sequenceNumber ?? ""), 10);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error(
+      `رقم الخزينة إلزامي ولا يمكن تركّه فارغاً. من فضلك عيّن رقماً تسلسلياً صحيحاً (عدد صحيح أكبر من 0) من صفحة «${fromPage}» للحساب/الصندوق «${accountOrFundName}».`,
+    );
+  }
+  return n;
+}
+
+async function resolveFundTreasury(
+  tx: any,
+  bizId: number,
+  fundId: number,
+): Promise<TreasuryInfo> {
+  const [fund] = await tx
+    .select({
+      id: funds.id,
+      name: funds.name,
+      fundType: funds.fundType,
+      sequenceNumber: funds.sequenceNumber,
+    })
+    .from(funds)
+    .where(and(eq(funds.id, fundId), eq(funds.businessId, bizId)))
+    .limit(1);
+  if (!fund) throw new Error("الصندوق غير موجود أو لا ينتمي لهذا العمل");
+
+  const vaultNo = requireVaultNumber(
+    fund.sequenceNumber,
+    fund.name,
+    "الصناديق",
+  );
+
+  const [ft] = await tx
+    .select({ sortOrder: fundTypes.sortOrder })
+    .from(fundTypes)
+    .where(
+      and(
+        eq(fundTypes.businessId, bizId),
+        eq(fundTypes.subTypeKey, fund.fundType),
+      ),
+    )
+    .limit(1);
+  const categoryNo = requirePositiveInt("رقم تصنيف الصندوق", ft?.sortOrder);
+
+  return {
+    kind: "fund",
+    kindCode: TYPE_PREFIXES.fund || "FND",
+    categoryNo,
+    vaultNo,
+    treasuryId: fundId,
+  };
+}
+
+async function resolveAccountTreasury(
+  tx: any,
+  bizId: number,
+  accountId: number,
+): Promise<TreasuryInfo> {
+  const [acc] = await tx
+    .select({
+      id: accounts.id,
+      name: accounts.name,
+      accountType: accounts.accountType,
+      subType: accounts.subType,
+      sequenceNumber: accounts.sequenceNumber,
+    })
+    .from(accounts)
+    .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)))
+    .limit(1);
+  if (!acc) throw new Error("الحساب غير موجود أو لا ينتمي لهذا العمل");
+  if (!isTreasuryAccountType(acc.accountType)) {
+    throw new Error(
+      "سندات القبض/الصرف يجب أن تكون مرتبطة بخزينة: صندوق/بنك/صراف/محفظة",
+    );
+  }
+  const subTypeKey = String(acc.subType ?? "").trim();
+  if (!subTypeKey) throw new Error("تصنيف الخزينة مطلوب (subType)");
+  const vaultNo = requireVaultNumber(acc.sequenceNumber, acc.name, "الحسابات");
+
+  let categoryNo = 0;
+  let kind: TreasuryKind = "bank";
+  let kindCode = TYPE_PREFIXES.bank || "BNK";
+
+  if (acc.accountType === "bank") {
+    kind = "bank";
+    kindCode = TYPE_PREFIXES.bank || "BNK";
+    const [t] = await tx
+      .select({ sortOrder: bankTypes.sortOrder })
+      .from(bankTypes)
+      .where(
+        and(
+          eq(bankTypes.businessId, bizId),
+          eq(bankTypes.subTypeKey, subTypeKey),
+        ),
+      )
+      .limit(1);
+    categoryNo = requirePositiveInt("رقم تصنيف البنك", t?.sortOrder);
+  } else if (acc.accountType === "exchange") {
+    kind = "exchange";
+    kindCode = TYPE_PREFIXES.exchange || "EXC";
+    const [t] = await tx
+      .select({ sortOrder: exchangeTypes.sortOrder })
+      .from(exchangeTypes)
+      .where(
+        and(
+          eq(exchangeTypes.businessId, bizId),
+          eq(exchangeTypes.subTypeKey, subTypeKey),
+        ),
+      )
+      .limit(1);
+    categoryNo = requirePositiveInt("رقم تصنيف الصراف", t?.sortOrder);
+  } else {
+    kind = "e_wallet";
+    kindCode = TYPE_PREFIXES.e_wallet || "WLT";
+    const [t] = await tx
+      .select({ sortOrder: eWalletTypes.sortOrder })
+      .from(eWalletTypes)
+      .where(
+        and(
+          eq(eWalletTypes.businessId, bizId),
+          eq(eWalletTypes.subTypeKey, subTypeKey),
+        ),
+      )
+      .limit(1);
+    categoryNo = requirePositiveInt("رقم تصنيف المحفظة", t?.sortOrder);
+  }
+
+  return { kind, kindCode, categoryNo, vaultNo, treasuryId: accountId };
+}
+
+async function resolveTreasuryForVoucher(
+  tx: any,
+  bizId: number,
+  data: TransactionData,
+): Promise<TreasuryInfo> {
+  if (data.voucherType === "receipt") {
+    if (data.toFundId) return resolveFundTreasury(tx, bizId, data.toFundId);
+    return resolveAccountTreasury(tx, bizId, data.debitAccountId);
+  }
+  if (data.voucherType === "payment") {
+    if (data.fromFundId) return resolveFundTreasury(tx, bizId, data.fromFundId);
+    if (!data.creditAccountId)
+      throw new Error("الخزينة المصروف منها مطلوبة (fromAccountId/fromFundId)");
+    return resolveAccountTreasury(tx, bizId, data.creditAccountId);
+  }
+  throw new Error("هذا المسار يدعم سندات القبض/الصرف فقط");
+}
+
+async function resolveTreasuryForMulti(
+  tx: any,
+  bizId: number,
+  data: MultiTransactionData,
+): Promise<TreasuryInfo> {
+  if (data.voucherType === "receipt") {
+    if (data.toFundId) return resolveFundTreasury(tx, bizId, data.toFundId);
+    if (!data.toAccountId)
+      throw new Error("الخزينة المستلمة مطلوبة (toAccountId/toFundId)");
+    return resolveAccountTreasury(tx, bizId, data.toAccountId);
+  }
+  if (data.voucherType === "payment") {
+    if (data.fromFundId) return resolveFundTreasury(tx, bizId, data.fromFundId);
+    if (!data.fromAccountId)
+      throw new Error("الخزينة المصروف منها مطلوبة (fromAccountId/fromFundId)");
+    return resolveAccountTreasury(tx, bizId, data.fromAccountId);
+  }
+  throw new Error("هذا المسار يدعم سندات القبض/الصرف فقط");
+}
+
+async function generateVoucherNumberByTreasury(
+  tx: any,
+  bizId: number,
+  data: TransactionData,
+): Promise<{ voucherNumber: string; accountSequence: string }> {
+  const year = getSequenceYear(data.voucherDate);
+  const treasury = await resolveTreasuryForVoucher(tx, bizId, data);
+  const counterType = `treasury_${treasury.kind}_${data.voucherType}`;
+  const seq = await getNextSequence(
+    bizId,
+    counterType,
+    treasury.treasuryId,
+    year,
+  );
+  const voucherSeq = seq; // يبدأ من 1
+  const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
+  return {
+    voucherNumber: `${vPrefix}-${treasury.kindCode}-${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
+    accountSequence: `${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
+  };
+}
+
+async function generateVoucherNumberByTreasuryMulti(
+  tx: any,
+  bizId: number,
+  data: MultiTransactionData,
+): Promise<{ voucherNumber: string; accountSequence: string }> {
+  const year = getSequenceYear(data.voucherDate);
+  const treasury = await resolveTreasuryForMulti(tx, bizId, data);
+  const counterType = `treasury_${treasury.kind}_${data.voucherType}`;
+  const seq = await getNextSequence(
+    bizId,
+    counterType,
+    treasury.treasuryId,
+    year,
+  );
+  const voucherSeq = seq; // يبدأ من 1
+  const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
+  return {
+    voucherNumber: `${vPrefix}-${treasury.kindCode}-${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
+    accountSequence: `${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
+  };
+}
+
+async function resolveTemplatePrefix(
+  tx: any,
+  bizId: number,
+  operationTypeId: number | null | undefined,
+): Promise<string | null> {
+  if (!operationTypeId) return null;
+  const [row] = await tx
+    .select({ code: operationTypes.code })
+    .from(operationTypes)
+    .where(
+      and(
+        eq(operationTypes.id, operationTypeId),
+        eq(operationTypes.businessId, bizId),
+      ),
+    )
+    .limit(1);
+  return row?.code ? String(row.code) : `OT${operationTypeId}`;
+}
+
 // ===================== الدالة الرئيسية: تنفيذ المعاملة =====================
 
 /**
  * postTransaction - الدالة الرئيسية لتنفيذ أي معاملة مالية
- * 
+ *
  * تنفذ كل الخطوات داخل Drizzle transaction لضمان Atomicity:
  *   1. إنشاء المستند المصدر (voucher)
  *   2. إنشاء القيد الرئيسي (journalEntry)
@@ -125,9 +502,8 @@ async function validateTransactionOwnership(bizId: number, data: TransactionData
 export async function postTransaction(
   bizId: number,
   userId: number,
-  data: TransactionData
+  data: TransactionData,
 ): Promise<TransactionResult> {
-
   // === الخطوة 0: التحقق الصارم من ملكية كل الكيانات لنفس bizId ===
   const ownershipError = await validateTransactionOwnership(bizId, data);
   if (ownershipError) {
@@ -136,128 +512,111 @@ export async function postTransaction(
 
   // === تنفيذ العملية داخل transaction واحد ===
   const result = await db.transaction(async (tx) => {
-
-    // --- 1. توليد رقم السند بالنظام الجديد ---
-    let voucherNumber = data.voucherNumber;
-    let fullSequenceNumber: string | null = null;
+    // --- 1. توليد رقم السند ---
+    const seqYear = getSequenceYear(data.voucherDate);
+    let voucherNumber = data.voucherNumber || null;
     let accountSequence: string | null = null;
     let templateSequence: string | null = null;
 
-    // جلب معلومات الخزينة (صندوق أو حساب) للترقيم
-    const primaryFundId = data.toFundId || data.fromFundId;
-    const primaryAccountId = data.debitAccountId;
+    if (data.voucherType === "receipt" || data.voucherType === "payment") {
+      const gen = await generateVoucherNumberByTreasury(tx, bizId, data);
+      voucherNumber = voucherNumber ?? gen.voucherNumber;
+      accountSequence = gen.accountSequence;
 
-    if (primaryFundId) {
-      // السند مرتبط بصندوق - جلب معلومات التصنيف والترقيم
-      const [fund] = await tx.select().from(funds).where(eq(funds.id, primaryFundId));
-      if (fund && fund.subTypeId && fund.sequenceNumber) {
-        // جلب sequenceNumber الحقيقي من جدول التصنيف
-        const [categoryRow] = await tx.select({ sequenceNumber: fundTypes.sequenceNumber })
-          .from(fundTypes).where(eq(fundTypes.id, fund.subTypeId));
-        const categorySeqNum = categoryRow?.sequenceNumber || 1;
-        const seqResult = await generateVoucherFullSequence(
-          bizId, categorySeqNum, fund.sequenceNumber,
-          fund.fundType, data.voucherType, primaryFundId
+      const tplPrefix = await resolveTemplatePrefix(
+        tx,
+        bizId,
+        data.operationTypeId || null,
+      );
+      if (tplPrefix && data.operationTypeId) {
+        const tCounter = `template_voucher_${data.voucherType}`;
+        const tSeq = await getNextSequence(
+          bizId,
+          tCounter,
+          data.operationTypeId,
+          seqYear,
         );
-        fullSequenceNumber = seqResult.fullSequenceNumber;
-        voucherNumber = voucherNumber || fullSequenceNumber;
+        templateSequence = `${tplPrefix}-${seqYear}-${tSeq}`;
       }
-    } else if (primaryAccountId) {
-      // السند مرتبط بحساب (بنك/صراف/محفظة)
-      const [account] = await tx.select().from(accounts).where(eq(accounts.id, primaryAccountId));
-      if (account && account.subTypeId && account.sequenceNumber) {
-        // جلب sequenceNumber الحقيقي من جدول التصنيف المناسب
-        let categorySeqNum = 1;
-        const categoryTypeMap: Record<string, typeof bankTypes | typeof exchangeTypes | typeof eWalletTypes> = {
-          bank: bankTypes, exchange: exchangeTypes, e_wallet: eWalletTypes,
-        };
-        const categoryTable = categoryTypeMap[account.accountType];
-        if (categoryTable) {
-          const [categoryRow] = await tx.select({ sequenceNumber: categoryTable.sequenceNumber })
-            .from(categoryTable).where(eq(categoryTable.id, account.subTypeId));
-          categorySeqNum = categoryRow?.sequenceNumber || 1;
-        }
-        const seqResult = await generateVoucherFullSequence(
-          bizId, categorySeqNum, account.sequenceNumber,
-          account.accountType, data.voucherType, primaryAccountId
+    } else {
+      // fallback (legacy) للأنواع الأخرى
+      if (!voucherNumber) {
+        const seqName =
+          data.voucherType === "transfer"
+            ? "voucher_transfer_seq"
+            : "voucher_receipt_seq";
+        const prefix = TYPE_PREFIXES[data.voucherType] || "VCH";
+        const seqResult = await tx.execute(
+          sql.raw(`SELECT nextval('${seqName}')`),
         );
-        fullSequenceNumber = seqResult.fullSequenceNumber;
-        voucherNumber = voucherNumber || fullSequenceNumber;
-      }
-    }
-
-    // في حالة عدم توفر معلومات الترقيم، استخدم رقم تسلسلي حقيقي
-    if (!voucherNumber) {
-      const year = new Date().getFullYear();
-      const prefix = TYPE_PREFIXES[data.voucherType] || 'VCH';
-      const fallbackEntityId = primaryFundId || primaryAccountId || 0;
-      const fallbackSeq = await getNextSequence(bizId, `voucher_${data.voucherType}`, fallbackEntityId, year);
-      voucherNumber = `${year}-${prefix}-${String(fallbackSeq).padStart(4, '0')}`;
-      fullSequenceNumber = voucherNumber;
-    }
-
-    // توليد الأرقام التسلسلية للحساب والقالب
-    if (primaryAccountId) {
-      const year = new Date().getFullYear();
-      const accSeq = await getNextSequence(bizId, 'account_voucher', primaryAccountId, year);
-      accountSequence = String(accSeq);
-      if (data.operationTypeId) {
-        const tmplSeq = await getNextSequence(bizId, 'template_voucher', data.operationTypeId, year);
-        templateSequence = String(tmplSeq);
+        const seqRows = Array.isArray(seqResult)
+          ? seqResult
+          : (seqResult as any).rows || [];
+        const seqVal = Number.parseInt(
+          String((seqRows[0] as any)?.nextval || 1),
+          10,
+        );
+        voucherNumber = `${prefix}-${String(seqVal).padStart(5, "0")}`;
       }
     }
 
     // --- 2. إنشاء المستند المصدر (السند) ---
-    const [created] = await tx.insert(vouchers).values({
-      businessId: bizId,
-      voucherNumber,
-      voucherType: data.voucherType,
-      status: 'confirmed',
-      amount: String(data.amount),
-      currencyId: data.currencyId,
-      fromAccountId: data.creditAccountId || null,
-      toAccountId: data.debitAccountId,
-      fromFundId: data.fromFundId || null,
-      toFundId: data.toFundId || null,
-      stationId: data.stationId || null,
-      employeeId: data.employeeId || null,
-      supplierId: data.supplierId || null,
-      operationTypeId: data.operationTypeId || null,
-      description: data.description || '',
-      reference: data.reference || null,
-      voucherDate: data.voucherDate || new Date(),
-      createdBy: userId,
-      accountSequence,
-      templateSequence,
-      fullSequenceNumber,
-    }).returning();
+    const [created] = await tx
+      .insert(vouchers)
+      .values({
+        businessId: bizId,
+        voucherNumber: voucherNumber!,
+        voucherType: data.voucherType,
+        status: "confirmed",
+        amount: String(data.amount),
+        currencyId: data.currencyId,
+        fromAccountId: data.creditAccountId || null,
+        toAccountId: data.debitAccountId,
+        fromFundId: data.fromFundId || null,
+        toFundId: data.toFundId || null,
+        stationId: data.stationId || null,
+        employeeId: data.employeeId || null,
+        supplierId: data.supplierId || null,
+        operationTypeId: data.operationTypeId || null,
+        description: data.description || "",
+        reference: data.reference || null,
+        voucherDate: data.voucherDate || new Date(),
+        createdBy: userId,
+        accountSequence,
+        templateSequence,
+        fullSequenceNumber: null,
+      })
+      .returning();
 
     // --- 3. إنشاء القيد المحاسبي المتوازن ---
     const entryDate = created.voucherDate
-      ? new Date(created.voucherDate).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+      ? new Date(created.voucherDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
     const entryDesc = data.operationTypeName
-      ? `${data.operationTypeName} - ${data.description || ''}`
-      : `سند ${data.voucherType} - ${data.description || ''}`;
+      ? `${data.operationTypeName} - ${data.description || ""}`
+      : `سند ${data.voucherType} - ${data.description || ""}`;
 
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId,
-      entryNumber: `JE-${voucherNumber}`,
-      entryDate,
-      description: entryDesc,
-      reference: voucherNumber,
-      operationTypeId: data.operationTypeId || null,
-      totalDebit: String(data.amount),
-      totalCredit: String(data.amount),
-      isBalanced: true,
-      createdBy: userId,
-    }).returning();
+    const [entry] = await tx
+      .insert(journalEntries)
+      .values({
+        businessId: bizId,
+        entryNumber: `JE-${voucherNumber}`,
+        entryDate,
+        description: entryDesc,
+        reference: voucherNumber,
+        operationTypeId: data.operationTypeId || null,
+        totalDebit: String(data.amount),
+        totalCredit: String(data.amount),
+        isBalanced: true,
+        createdBy: userId,
+      })
+      .returning();
 
     // --- 4. إنشاء سطور القيد - الطرف المدين ---
     await tx.insert(journalEntryLines).values({
       journalEntryId: entry.id,
       accountId: data.debitAccountId,
-      lineType: 'debit',
+      lineType: "debit",
       amount: String(data.amount),
       description: entryDesc,
       sortOrder: 0,
@@ -268,7 +627,7 @@ export async function postTransaction(
       await tx.insert(journalEntryLines).values({
         journalEntryId: entry.id,
         accountId: data.creditAccountId,
-        lineType: 'credit',
+        lineType: "credit",
         amount: String(data.amount),
         description: entryDesc,
         sortOrder: 1,
@@ -319,8 +678,8 @@ export async function postTransaction(
     await tx.insert(auditLog).values({
       userId,
       businessId: bizId,
-      action: 'create_voucher',
-      tableName: 'vouchers',
+      action: "create_voucher",
+      tableName: "vouchers",
       recordId: created.id,
       newData: {
         voucherNumber,
@@ -339,247 +698,193 @@ export async function postTransaction(
   return result;
 }
 
-/** الحالات التي تعني "اعتماد محاسبي" عند الانتقال إليها من مسودة أو طلب اعتماد */
-const CONFIRMED_STATUSES = ['confirmed', 'approved'];
-
 /**
- * confirmDraftVoucher - اعتماد سند مسودة عبر المحرك المالي (قيد + أرصدة) دون إنشاء سند جديد
- * تُستدعى عند: تغيير الحالة من draft → confirmed (enhancements أو سير العمل).
+ * postMultiTransaction - تنفيذ سند/معاملة متعددة السطور
+ *
+ * ينشئ سند واحد + قيد واحد + عدة سطور (مدين/دائن) بشكل متوازن.
  */
-export async function confirmDraftVoucher(
+export async function postMultiTransaction(
   bizId: number,
   userId: number,
-  voucherId: number
+  data: MultiTransactionData,
 ): Promise<TransactionResult> {
-  const [existing] = await db.select().from(vouchers)
-    .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
+  if (!Array.isArray(data.lines) || data.lines.length < 2) {
+    throw new Error("المعاملة متعددة السطور تتطلب سطرين على الأقل");
+  }
+  for (const l of data.lines) {
+    if (!l.accountId) throw new Error("معرّف الحساب مطلوب لكل سطر");
+    if (!["debit", "credit"].includes(l.lineType))
+      throw new Error("نوع السطر غير صالح (debit/credit)");
+    if (!Number.isFinite(l.amount) || l.amount <= 0)
+      throw new Error("المبلغ يجب أن يكون رقماً موجباً");
+  }
 
-  if (!existing) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
-  if (existing.status !== 'draft') throw new Error('السند ليس مسودة ولا يمكن اعتماده بهذه الطريقة');
-
-  const amount = parseFloat(String(existing.amount));
-  const currencyId = existing.currencyId || 1;
-  const debitAccountId = existing.toAccountId;
-  const creditAccountId = existing.fromAccountId;
-
-  const ownershipError = await validateTransactionOwnership(bizId, {
-    voucherType: existing.voucherType as TransactionData['voucherType'],
-    amount,
-    currencyId,
-    debitAccountId: debitAccountId!,
-    creditAccountId: creditAccountId ?? undefined,
-    toFundId: existing.toFundId ?? undefined,
-    fromFundId: existing.fromFundId ?? undefined,
-  });
+  const ownershipError = await validateMultiTransactionOwnership(bizId, data);
   if (ownershipError) throw new Error(ownershipError);
 
+  const totals = computeBalancedTotals(data.lines);
+
   const result = await db.transaction(async (tx) => {
-    await tx.update(vouchers).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(vouchers.id, voucherId));
+    // --- 1. توليد رقم السند ---
+    const seqYear = getSequenceYear(data.voucherDate);
+    let voucherNumber = data.voucherNumber || null;
+    let accountSequence: string | null = null;
+    let templateSequence: string | null = null;
 
-    const entryDate = existing.voucherDate
-      ? new Date(existing.voucherDate).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
-    const entryDesc = `اعتماد مسودة - ${existing.description || existing.voucherNumber || ''}`;
+    if (data.voucherType === "receipt" || data.voucherType === "payment") {
+      const gen = await generateVoucherNumberByTreasuryMulti(tx, bizId, data);
+      voucherNumber = voucherNumber ?? gen.voucherNumber;
+      accountSequence = gen.accountSequence;
 
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId,
-      entryNumber: `JE-${existing.voucherNumber}`,
-      entryDate,
-      description: entryDesc,
-      reference: existing.voucherNumber,
-      operationTypeId: existing.operationTypeId || null,
-      totalDebit: String(amount),
-      totalCredit: String(amount),
-      isBalanced: true,
-      createdBy: userId,
-    }).returning();
+      const tplPrefix = await resolveTemplatePrefix(
+        tx,
+        bizId,
+        data.operationTypeId || null,
+      );
+      if (tplPrefix && data.operationTypeId) {
+        const tCounter = `template_voucher_${data.voucherType}`;
+        const tSeq = await getNextSequence(
+          bizId,
+          tCounter,
+          data.operationTypeId,
+          seqYear,
+        );
+        templateSequence = `${tplPrefix}-${seqYear}-${tSeq}`;
+      }
+    } else {
+      if (!voucherNumber) {
+        const seqName =
+          data.voucherType === "transfer"
+            ? "voucher_transfer_seq"
+            : "voucher_receipt_seq";
+        const prefix = TYPE_PREFIXES[data.voucherType] || "VCH";
+        const seqResult = await tx.execute(
+          sql.raw(`SELECT nextval('${seqName}')`),
+        );
+        const seqRows = Array.isArray(seqResult)
+          ? seqResult
+          : (seqResult as any).rows || [];
+        const seqVal = Number.parseInt(
+          String((seqRows[0] as any)?.nextval || 1),
+          10,
+        );
+        voucherNumber = `${prefix}-${String(seqVal).padStart(5, "0")}`;
+      }
+    }
 
-    if (debitAccountId) {
+    // --- 2. إنشاء المستند المصدر (السند) ---
+    const [created] = await tx
+      .insert(vouchers)
+      .values({
+        businessId: bizId,
+        voucherNumber: voucherNumber!,
+        voucherType: data.voucherType,
+        status: "confirmed",
+        amount: String(totals.total),
+        currencyId: data.currencyId,
+        fromAccountId: data.fromAccountId || null,
+        toAccountId: data.toAccountId || null,
+        fromFundId: data.fromFundId || null,
+        toFundId: data.toFundId || null,
+        stationId: data.stationId || null,
+        employeeId: data.employeeId || null,
+        supplierId: data.supplierId || null,
+        operationTypeId: data.operationTypeId || null,
+        description: data.description || "",
+        reference: data.reference || null,
+        voucherDate: data.voucherDate || new Date(),
+        createdBy: userId,
+        accountSequence,
+        templateSequence,
+      })
+      .returning();
+
+    // --- 3. إنشاء القيد المحاسبي المتوازن ---
+    const entryDate = created.voucherDate
+      ? new Date(created.voucherDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
+    const entryDesc = data.operationTypeName
+      ? `${data.operationTypeName} - ${data.description || ""}`
+      : `سند ${data.voucherType} - ${data.description || ""}`;
+
+    const [entry] = await tx
+      .insert(journalEntries)
+      .values({
+        businessId: bizId,
+        entryNumber: `JE-${voucherNumber}`,
+        entryDate,
+        description: entryDesc,
+        reference: voucherNumber,
+        operationTypeId: data.operationTypeId || null,
+        totalDebit: String(totals.totalDebit),
+        totalCredit: String(totals.totalCredit),
+        isBalanced: true,
+        createdBy: userId,
+      })
+      .returning();
+
+    // --- 4. إدخال السطور + تحديث الأرصدة ---
+    for (let i = 0; i < data.lines.length; i++) {
+      const line = data.lines[i]!;
       await tx.insert(journalEntryLines).values({
         journalEntryId: entry.id,
-        accountId: debitAccountId,
-        lineType: 'debit',
-        amount: String(amount),
-        description: entryDesc,
-        sortOrder: 0,
+        accountId: line.accountId,
+        lineType: line.lineType,
+        amount: String(line.amount),
+        description: line.description ?? entryDesc,
+        sortOrder: i,
       });
+
+      const delta = line.lineType === "debit" ? line.amount : -line.amount;
       await tx.execute(sql`
         INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${debitAccountId}, ${currencyId}, ${amount})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
-      `);
-    }
-    if (creditAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id,
-        accountId: creditAccountId,
-        lineType: 'credit',
-        amount: String(amount),
-        description: entryDesc,
-        sortOrder: 1,
-      });
-      await tx.execute(sql`
-        INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${creditAccountId}, ${currencyId}, ${-amount})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
+        VALUES (${line.accountId}, ${data.currencyId}, ${delta})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET
+          balance = account_balances.balance + ${delta},
+          updated_at = NOW()
       `);
     }
 
-    if (existing.toFundId) {
+    // --- 5. تحديث أرصدة الصناديق إن وجدت ---
+    if (data.toFundId) {
       await tx.execute(sql`
         INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${existing.toFundId}, ${currencyId}, ${amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance + ${amount}, updated_at = NOW()
+        VALUES (${data.toFundId}, ${data.currencyId}, ${totals.total})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance + ${totals.total},
+          updated_at = NOW()
       `);
     }
-    if (existing.fromFundId) {
+    if (data.fromFundId) {
       await tx.execute(sql`
         INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${existing.fromFundId}, ${currencyId}, ${-amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance - ${amount}, updated_at = NOW()
+        VALUES (${data.fromFundId}, ${data.currencyId}, ${-totals.total})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance - ${totals.total},
+          updated_at = NOW()
       `);
     }
 
+    // --- 6. سجل التدقيق ---
     await tx.insert(auditLog).values({
       userId,
       businessId: bizId,
-      action: 'confirm_draft_voucher',
-      tableName: 'vouchers',
-      recordId: voucherId,
-      newData: { status: 'confirmed', journalEntryId: entry.id },
+      action: "create_voucher",
+      tableName: "vouchers",
+      recordId: created.id,
+      newData: {
+        voucherNumber,
+        voucherType: data.voucherType,
+        amount: String(totals.total),
+        operationTypeId: data.operationTypeId,
+        journalEntryId: entry.id,
+        linesCount: data.lines.length,
+      },
     });
 
-    const [updated] = await tx.select().from(vouchers).where(eq(vouchers.id, voucherId));
-    return { voucher: updated, journalEntry: entry };
+    return { voucher: created, journalEntry: entry };
   });
 
-  return result;
-}
-
-/**
- * يُستخدم من سير العمل: هل الانتقال إلى الحالة الجديدة يتطلب تنفيذ القيد والأرصدة؟
- */
-export function isConfirmingTransition(fromStatus: string, toStatus: string): boolean {
-  return fromStatus === 'draft' && CONFIRMED_STATUSES.includes(toStatus);
-}
-
-/**
- * تطبيق القيد والأرصدة لسند تمّ تغيير حالته إلى معتمد/اعتماد عبر سير العمل (executeTransition يحدّث الحالة أولاً).
- * إذا وُجد قيد مسبقاً لنفس السند (reference) لا يُنشأ ثانية (idempotent).
- */
-export async function applyAccountingForConfirmedVoucher(
-  bizId: number,
-  userId: number,
-  voucherId: number
-): Promise<{ applied: boolean; journalEntryId?: number }> {
-  const [existing] = await db.select().from(vouchers)
-    .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
-
-  if (!existing) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
-  if (!CONFIRMED_STATUSES.includes(existing.status)) {
-    return { applied: false };
-  }
-
-  const amount = parseFloat(String(existing.amount));
-  const currencyId = existing.currencyId || 1;
-  const debitAccountId = existing.toAccountId;
-  const creditAccountId = existing.fromAccountId;
-
-  const ownershipError = await validateTransactionOwnership(bizId, {
-    voucherType: existing.voucherType as TransactionData['voucherType'],
-    amount,
-    currencyId,
-    debitAccountId: debitAccountId!,
-    creditAccountId: creditAccountId ?? undefined,
-    toFundId: existing.toFundId ?? undefined,
-    fromFundId: existing.fromFundId ?? undefined,
-  });
-  if (ownershipError) throw new Error(ownershipError);
-
-  const existingEntry = await db.select({ id: journalEntries.id })
-    .from(journalEntries)
-    .where(and(
-      eq(journalEntries.businessId, bizId),
-      eq(journalEntries.reference, existing.voucherNumber || '')
-    ))
-    .limit(1);
-  if (existingEntry.length > 0) {
-    return { applied: false, journalEntryId: existingEntry[0].id };
-  }
-
-  const entryDate = existing.voucherDate
-    ? new Date(existing.voucherDate).toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0];
-  const entryDesc = `اعتماد - ${existing.description || existing.voucherNumber || ''}`;
-
-  const result = await db.transaction(async (tx) => {
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId,
-      entryNumber: `JE-${existing.voucherNumber}`,
-      entryDate,
-      description: entryDesc,
-      reference: existing.voucherNumber,
-      operationTypeId: existing.operationTypeId || null,
-      totalDebit: String(amount),
-      totalCredit: String(amount),
-      isBalanced: true,
-      createdBy: userId,
-    }).returning();
-
-    if (debitAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id,
-        accountId: debitAccountId,
-        lineType: 'debit',
-        amount: String(amount),
-        description: entryDesc,
-        sortOrder: 0,
-      });
-      await tx.execute(sql`
-        INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${debitAccountId}, ${currencyId}, ${amount})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
-      `);
-    }
-    if (creditAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id,
-        accountId: creditAccountId,
-        lineType: 'credit',
-        amount: String(amount),
-        description: entryDesc,
-        sortOrder: 1,
-      });
-      await tx.execute(sql`
-        INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${creditAccountId}, ${currencyId}, ${-amount})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
-      `);
-    }
-    if (existing.toFundId) {
-      await tx.execute(sql`
-        INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${existing.toFundId}, ${currencyId}, ${amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance + ${amount}, updated_at = NOW()
-      `);
-    }
-    if (existing.fromFundId) {
-      await tx.execute(sql`
-        INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${existing.fromFundId}, ${currencyId}, ${-amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET balance = fund_balances.balance - ${amount}, updated_at = NOW()
-      `);
-    }
-    await tx.insert(auditLog).values({
-      userId,
-      businessId: bizId,
-      action: 'apply_accounting_workflow_confirm',
-      tableName: 'vouchers',
-      recordId: voucherId,
-      newData: { journalEntryId: entry.id },
-    });
-    return { applied: true, journalEntryId: entry.id };
-  });
   return result;
 }
 
@@ -591,61 +896,110 @@ export async function applyAccountingForConfirmedVoucher(
 export async function cancelTransaction(
   bizId: number,
   userId: number,
-  voucherId: number
+  voucherId: number,
 ): Promise<{ success: boolean }> {
-
-  const [existing] = await db.select().from(vouchers)
+  const [existing] = await db
+    .select()
+    .from(vouchers)
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
-  if (!existing) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
-  if (existing.status === 'cancelled') throw new Error('السند ملغي مسبقاً');
+  if (!existing) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
+  if (existing.status === "cancelled") throw new Error("السند ملغي مسبقاً");
 
   const amount = parseFloat(String(existing.amount));
   const currencyId = existing.currencyId || 1;
 
   await db.transaction(async (tx) => {
-    await tx.update(vouchers).set({
-      status: 'cancelled',
-      updatedAt: new Date(),
-    }).where(eq(vouchers.id, voucherId));
+    await tx
+      .update(vouchers)
+      .set({
+        status: "cancelled",
+        updatedAt: new Date(),
+      })
+      .where(eq(vouchers.id, voucherId));
 
-    if (existing.toAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE account_id = ${existing.toAccountId} AND currency_id = ${currencyId}
-      `);
+    // نستخدم سطور القيد إن وجدت (تدعم السندات متعددة السطور)
+    const [entry] = await tx
+      .select({ id: journalEntries.id })
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.businessId, bizId),
+          eq(journalEntries.reference, existing.voucherNumber),
+        ),
+      )
+      .limit(1);
+
+    if (entry?.id) {
+      const lines = await tx
+        .select({
+          accountId: journalEntryLines.accountId,
+          lineType: journalEntryLines.lineType,
+          lineAmount: journalEntryLines.amount,
+        })
+        .from(journalEntryLines)
+        .where(eq(journalEntryLines.journalEntryId, entry.id));
+
+      for (const l of lines) {
+        const lineAmount = parseFloat(String(l.lineAmount));
+        const delta = l.lineType === "debit" ? -lineAmount : lineAmount;
+        await tx.execute(sql`
+          INSERT INTO account_balances (account_id, currency_id, balance)
+          VALUES (${l.accountId}, ${currencyId}, ${delta})
+          ON CONFLICT (account_id, currency_id) DO UPDATE SET
+            balance = account_balances.balance + ${delta},
+            updated_at = NOW()
+        `);
+      }
+    } else {
+      // fallback للسندات القديمة/غير المتوقعة
+      if (existing.toAccountId) {
+        await tx.execute(sql`
+          INSERT INTO account_balances (account_id, currency_id, balance)
+          VALUES (${existing.toAccountId}, ${currencyId}, ${-amount})
+          ON CONFLICT (account_id, currency_id) DO UPDATE SET
+            balance = account_balances.balance - ${amount}, updated_at = NOW()
+        `);
+      }
+      if (existing.fromAccountId) {
+        await tx.execute(sql`
+          INSERT INTO account_balances (account_id, currency_id, balance)
+          VALUES (${existing.fromAccountId}, ${currencyId}, ${amount})
+          ON CONFLICT (account_id, currency_id) DO UPDATE SET
+            balance = account_balances.balance + ${amount}, updated_at = NOW()
+        `);
+      }
     }
-    if (existing.fromAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE account_id = ${existing.fromAccountId} AND currency_id = ${currencyId}
-      `);
-    }
+
     if (existing.toFundId) {
       await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE fund_id = ${existing.toFundId} AND currency_id = ${currencyId}
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${existing.toFundId}, ${currencyId}, ${-amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance - ${amount}, updated_at = NOW()
       `);
     }
     if (existing.fromFundId) {
       await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE fund_id = ${existing.fromFundId} AND currency_id = ${currencyId}
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${existing.fromFundId}, ${currencyId}, ${amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance + ${amount}, updated_at = NOW()
       `);
     }
 
     await tx.insert(auditLog).values({
       userId,
       businessId: bizId,
-      action: 'cancel_voucher',
-      tableName: 'vouchers',
+      action: "cancel_voucher",
+      tableName: "vouchers",
       recordId: voucherId,
       oldData: {
         voucherNumber: existing.voucherNumber,
         amount: String(amount),
-        status: 'confirmed',
+        status: "confirmed",
       },
-      newData: { status: 'cancelled' },
+      newData: { status: "cancelled" },
     });
   });
 
@@ -661,125 +1015,159 @@ export async function reverseTransaction(
   bizId: number,
   userId: number,
   voucherId: number,
-  reason: string
+  reason: string,
 ): Promise<ReversalResult> {
-
-  const [original] = await db.select().from(vouchers)
+  const [original] = await db
+    .select()
+    .from(vouchers)
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
-  if (!original) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
-  if (original.status === 'cancelled') throw new Error('لا يمكن عكس سند ملغي');
-  if (original.reversalStatus === 'reversed') throw new Error('هذا السند معكوس مسبقاً');
+  if (!original) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
+  if (original.status === "cancelled") throw new Error("لا يمكن عكس سند ملغي");
+  if (original.reversalStatus === "reversed")
+    throw new Error("هذا السند معكوس مسبقاً");
 
   const amount = parseFloat(String(original.amount));
   const currencyId = original.currencyId || 1;
 
   const result = await db.transaction(async (tx) => {
-    // استخدام النظام الجديد
-    const year = new Date().getFullYear();
-    const revSeq = await getNextSequence(bizId, 'voucher_reversal', original.fromFundId || original.fromAccountId || 0, year);
-    const voucherNumber = `REV-${year}-${String(revSeq).padStart(6, '0')}`;
+    const [origEntry] = await tx
+      .select({ id: journalEntries.id })
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.businessId, bizId),
+          eq(journalEntries.reference, original.voucherNumber),
+        ),
+      )
+      .limit(1);
+    if (!origEntry?.id) throw new Error("القيد المحاسبي المرتبط غير موجود");
 
-    const [reversalVoucher] = await tx.insert(vouchers).values({
-      businessId: bizId,
-      voucherNumber,
-      voucherType: original.voucherType,
-      status: 'confirmed',
-      amount: String(amount),
-      currencyId,
-      fromAccountId: original.toAccountId,
-      toAccountId: original.fromAccountId,
-      fromFundId: original.toFundId,
-      toFundId: original.fromFundId,
-      stationId: original.stationId,
-      operationTypeId: original.operationTypeId,
-      description: `عكس: ${original.description || ''} - ${reason}`,
-      reference: original.voucherNumber,
-      voucherDate: new Date(),
-      createdBy: userId,
-      reversalStatus: 'reversal',
-      reversedVoucherId: original.id,
-    }).returning();
+    const origLines = await tx
+      .select({
+        accountId: journalEntryLines.accountId,
+        lineType: journalEntryLines.lineType,
+        lineAmount: journalEntryLines.amount,
+      })
+      .from(journalEntryLines)
+      .where(eq(journalEntryLines.journalEntryId, origEntry.id));
+    if (origLines.length < 2)
+      throw new Error("القيد المحاسبي غير مكتمل ولا يمكن عكسه");
 
-    await tx.update(vouchers).set({
-      reversalStatus: 'reversed',
-      reversedVoucherId: reversalVoucher.id,
-      reversalReason: reason,
-      reversedAt: new Date(),
-      reversedBy: userId,
-      updatedAt: new Date(),
-    }).where(eq(vouchers.id, voucherId));
+    const seqResult = await tx.execute(
+      sql.raw(`SELECT nextval('voucher_reversal_seq')`),
+    );
+    const seqRows = Array.isArray(seqResult)
+      ? seqResult
+      : (seqResult as any).rows || [];
+    const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
+    const voucherNumber = `REV-${String(seqVal).padStart(6, "0")}`;
 
-    const entryDate = new Date().toISOString().split('T')[0];
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId,
-      entryNumber: `JE-${voucherNumber}`,
-      entryDate,
-      description: `عكس قيد: ${original.description || ''} - ${reason}`,
-      reference: voucherNumber,
-      operationTypeId: original.operationTypeId,
-      totalDebit: String(amount),
-      totalCredit: String(amount),
-      isBalanced: true,
-      createdBy: userId,
-    }).returning();
+    const [reversalVoucher] = await tx
+      .insert(vouchers)
+      .values({
+        businessId: bizId,
+        voucherNumber,
+        voucherType: original.voucherType,
+        status: "confirmed",
+        amount: String(amount),
+        currencyId,
+        fromAccountId: original.toAccountId,
+        toAccountId: original.fromAccountId,
+        fromFundId: original.toFundId,
+        toFundId: original.fromFundId,
+        stationId: original.stationId,
+        operationTypeId: original.operationTypeId,
+        description: `عكس: ${original.description || ""} - ${reason}`,
+        reference: original.voucherNumber,
+        voucherDate: new Date(),
+        createdBy: userId,
+        reversalStatus: "reversal",
+        reversedVoucherId: original.id,
+      })
+      .returning();
 
-    if (original.toAccountId) {
+    await tx
+      .update(vouchers)
+      .set({
+        reversalStatus: "reversed",
+        reversedVoucherId: reversalVoucher.id,
+        reversalReason: reason,
+        reversedAt: new Date(),
+        reversedBy: userId,
+        updatedAt: new Date(),
+      })
+      .where(eq(vouchers.id, voucherId));
+
+    const entryDate = new Date().toISOString().split("T")[0];
+    const [entry] = await tx
+      .insert(journalEntries)
+      .values({
+        businessId: bizId,
+        entryNumber: `JE-${voucherNumber}`,
+        entryDate,
+        description: `عكس قيد: ${original.description || ""} - ${reason}`,
+        reference: voucherNumber,
+        operationTypeId: original.operationTypeId,
+        totalDebit: String(amount),
+        totalCredit: String(amount),
+        isBalanced: true,
+        createdBy: userId,
+      })
+      .returning();
+
+    // إدخال سطور عكسية: قلب نوع السطر لكل حساب
+    for (let i = 0; i < origLines.length; i++) {
+      const l = origLines[i]!;
+      const lineAmount = parseFloat(String(l.lineAmount));
+      const reversedType = l.lineType === "debit" ? "credit" : "debit";
       await tx.insert(journalEntryLines).values({
         journalEntryId: entry.id,
-        accountId: original.toAccountId,
-        lineType: 'credit',
-        amount: String(amount),
+        accountId: l.accountId,
+        lineType: reversedType,
+        amount: String(lineAmount),
         description: `عكس - ${reason}`,
-        sortOrder: 0,
+        sortOrder: i,
       });
-    }
-    if (original.fromAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id,
-        accountId: original.fromAccountId,
-        lineType: 'debit',
-        amount: String(amount),
-        description: `عكس - ${reason}`,
-        sortOrder: 1,
-      });
+
+      // تحديث الأرصدة: عكس أثر السطر الأصلي
+      const delta = l.lineType === "debit" ? -lineAmount : lineAmount;
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${l.accountId}, ${currencyId}, ${delta})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET
+          balance = account_balances.balance + ${delta},
+          updated_at = NOW()
+      `);
     }
 
-    if (original.toAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE account_id = ${original.toAccountId} AND currency_id = ${currencyId}
-      `);
-    }
-    if (original.fromAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE account_id = ${original.fromAccountId} AND currency_id = ${currencyId}
-      `);
-    }
     if (original.toFundId) {
       await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE fund_id = ${original.toFundId} AND currency_id = ${currencyId}
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${original.toFundId}, ${currencyId}, ${-amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance - ${amount}, updated_at = NOW()
       `);
     }
     if (original.fromFundId) {
       await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE fund_id = ${original.fromFundId} AND currency_id = ${currencyId}
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${original.fromFundId}, ${currencyId}, ${amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance + ${amount}, updated_at = NOW()
       `);
     }
 
     await tx.insert(auditLog).values({
       userId,
       businessId: bizId,
-      action: 'reverse_voucher',
-      tableName: 'vouchers',
+      action: "reverse_voucher",
+      tableName: "vouchers",
       recordId: original.id,
       oldData: {
         voucherNumber: original.voucherNumber,
         amount: String(amount),
-        status: 'original',
+        status: "original",
       },
       newData: {
         reversalVoucherId: reversalVoucher.id,
@@ -789,7 +1177,7 @@ export async function reverseTransaction(
     });
 
     return {
-      originalVoucher: { ...original, reversalStatus: 'reversed' },
+      originalVoucher: { ...original, reversalStatus: "reversed" },
       reversalVoucher,
       journalEntry: entry,
     };
@@ -802,20 +1190,21 @@ export async function reverseTransaction(
 
 /**
  * confirmDraftTransaction - اعتماد سند مسودة وتنفيذ القيود المحاسبية
- * 
+ *
  * يصحح الخلل الموجود في enhancements.ts حيث لم يكن يحدث أرصدة الصناديق
  */
 export async function confirmDraftTransaction(
   bizId: number,
   userId: number,
-  voucherId: number
+  voucherId: number,
 ): Promise<{ voucher: any; journalEntry: any }> {
-
-  const [existing] = await db.select().from(vouchers)
+  const [existing] = await db
+    .select()
+    .from(vouchers)
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
-  if (!existing) throw new Error('سند غير موجود أو لا ينتمي لهذا العمل');
-  if (existing.status !== 'draft') throw new Error('يمكن اعتماد المسودات فقط');
+  if (!existing) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
+  if (existing.status !== "draft") throw new Error("يمكن اعتماد المسودات فقط");
 
   const amount = parseFloat(String(existing.amount));
   const currencyId = existing.currencyId || 1;
@@ -823,35 +1212,42 @@ export async function confirmDraftTransaction(
   const creditAccountId = existing.fromAccountId;
 
   const result = await db.transaction(async (tx) => {
-    const [updated] = await tx.update(vouchers).set({
-      status: 'confirmed',
-      updatedAt: new Date(),
-    }).where(eq(vouchers.id, voucherId)).returning();
+    const [updated] = await tx
+      .update(vouchers)
+      .set({
+        status: "confirmed",
+        updatedAt: new Date(),
+      })
+      .where(eq(vouchers.id, voucherId))
+      .returning();
 
     const entryDate = existing.voucherDate
-      ? new Date(existing.voucherDate).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+      ? new Date(existing.voucherDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
 
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId,
-      entryNumber: `JE-${existing.voucherNumber}`,
-      entryDate,
-      description: existing.description || '',
-      reference: existing.voucherNumber,
-      operationTypeId: existing.operationTypeId || null,
-      totalDebit: String(amount),
-      totalCredit: String(amount),
-      isBalanced: true,
-      createdBy: userId,
-    }).returning();
+    const [entry] = await tx
+      .insert(journalEntries)
+      .values({
+        businessId: bizId,
+        entryNumber: `JE-${existing.voucherNumber}`,
+        entryDate,
+        description: existing.description || "",
+        reference: existing.voucherNumber,
+        operationTypeId: existing.operationTypeId || null,
+        totalDebit: String(amount),
+        totalCredit: String(amount),
+        isBalanced: true,
+        createdBy: userId,
+      })
+      .returning();
 
     if (debitAccountId) {
       await tx.insert(journalEntryLines).values({
         journalEntryId: entry.id,
         accountId: debitAccountId,
-        lineType: 'debit',
+        lineType: "debit",
         amount: String(amount),
-        description: existing.description || '',
+        description: existing.description || "",
         sortOrder: 0,
       });
       await tx.execute(sql`
@@ -866,9 +1262,9 @@ export async function confirmDraftTransaction(
       await tx.insert(journalEntryLines).values({
         journalEntryId: entry.id,
         accountId: creditAccountId,
-        lineType: 'credit',
+        lineType: "credit",
         amount: String(amount),
-        description: existing.description || '',
+        description: existing.description || "",
         sortOrder: 1,
       });
       await tx.execute(sql`
@@ -900,11 +1296,11 @@ export async function confirmDraftTransaction(
     await tx.insert(auditLog).values({
       userId,
       businessId: bizId,
-      action: 'confirm_draft_voucher',
-      tableName: 'vouchers',
+      action: "confirm_draft_voucher",
+      tableName: "vouchers",
       recordId: voucherId,
-      oldData: { status: 'draft' },
-      newData: { status: 'confirmed' },
+      oldData: { status: "draft" },
+      newData: { status: "confirmed" },
     });
 
     return { voucher: updated, journalEntry: entry };

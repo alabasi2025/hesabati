@@ -154,6 +154,7 @@ export class ApiService {
   // ===================== السندات =====================
   getVouchers(bizId: number, type?: string)      { return this.request<any[]>(`/businesses/${bizId}/vouchers${type ? '?type=' + type : ''}`); }
   createVoucher(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/vouchers`, { method: 'POST', body: JSON.stringify(d) }); }
+  createVoucherMulti(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/vouchers-multi`, { method: 'POST', body: JSON.stringify(d) }); }
   deleteVoucher(id: number)                      { return this.request<any>(`/vouchers/${id}`, { method: 'DELETE' }); }
 
   // ===================== التحصيل اليومي =====================

@@ -86,6 +86,7 @@ export class BreadcrumbsComponent implements OnDestroy {
     'employees': { label: 'الموظفين', icon: 'people' },
     'funds': { label: 'الصناديق', icon: 'savings' },
     'vouchers': { label: 'السندات', icon: 'receipt_long' },
+    'register-operation': { label: 'تسجيل عملية', icon: 'play_circle' },
     'journal': { label: 'قيود اليومية', icon: 'menu_book' },
     'operation-types': { label: 'أنواع العمليات', icon: 'category' },
     'collections': { label: 'التحصيل', icon: 'point_of_sale' },

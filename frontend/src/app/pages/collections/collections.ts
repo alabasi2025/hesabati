@@ -137,48 +137,35 @@ export class CollectionsComponent extends BasePageComponent {
     const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد التحصيل - ${this.selectedCollectionOT()?.name || ''}`,
-      message: `سيتم تنفيذ ${entries.length} عملية تحصيل بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      message: `سيتم إنشاء سند قبض واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
       type: 'info',
     });
     if (!confirmed) return;
 
     this.saving.set(true);
     this.error.set('');
-    const results: any[] = [];
-    const errors: string[] = [];
     try {
-      for (const entry of entries) {
-        try {
-          const result = await this.api.createVoucher(this.bizId, {
-            voucherType: 'receipt',
-            operationTypeId: this.selectedCollectionOT()?.id,
-            toAccountId: entry.accountId,
-            amount: Number.parseFloat(entry.amount),
-            currencyId: 1,
-            description: this.collectionDescription() || `تحصيل - ${entry.accountName}`,
-            voucherDate: this.collectionDate(),
-          });
-          results.push(result);
-        } catch (e: unknown) {
-          errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`);
-        }
-      }
-      if (results.length > 0 && errors.length === 0) {
-        this.success.set(`تم حفظ ${results.length} قيد تحصيل بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
-        setTimeout(() => this.success.set(''), 4000);
-      } else if (results.length > 0) {
-        this.success.set(`تم ${results.length} عملية، فشلت ${errors.length}`);
-        setTimeout(() => this.success.set(''), 4000);
-      } else {
-        this.showError(`فشلت جميع العمليات`);
-      }
+      const result = await this.api.createVoucherMulti(this.bizId, {
+        voucherType: 'receipt',
+        operationTypeId: this.selectedCollectionOT()?.id,
+        currencyId: 1,
+        description: this.collectionDescription() || `تحصيل - ${this.selectedCollectionOT()?.name || ''}`,
+        voucherDate: this.collectionDate(),
+        entries: entries.map(e => ({
+          accountId: e.accountId,
+          amount: Number.parseFloat(e.amount),
+          notes: e.notes || null,
+        })),
+      });
+      this.success.set(`تم إنشاء سند قبض متعدد بنجاح - إجمالي: ${total.toLocaleString('ar-SA')} (رقم: ${result.voucherNumber || '—'})`);
+      setTimeout(() => this.success.set(''), 5000);
       this.selectedCollectionOT.set(null);
       this.collectionEntries.set([]);
       this.collectionDescription.set('');
       this.activeOpsTab.set('history');
       await this.loadAll();
     } catch (e: unknown) {
-      this.showError('خطأ في الحفظ');
+      this.showError(e instanceof Error ? e.message : 'خطأ في الحفظ');
     }
     this.saving.set(false);
   }
@@ -213,49 +200,36 @@ export class CollectionsComponent extends BasePageComponent {
     const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد التوريد - ${this.selectedDeliveryOT()?.name || ''}`,
-      message: `سيتم تنفيذ ${entries.length} عملية توريد بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      message: `سيتم إنشاء سند صرف واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
       type: 'danger',
     });
     if (!confirmed) return;
 
     this.saving.set(true);
     this.error.set('');
-    const results: any[] = [];
-    const errors: string[] = [];
     try {
-      for (const entry of entries) {
-        try {
-          const result = await this.api.createVoucher(this.bizId, {
-            voucherType: 'payment',
-            operationTypeId: this.selectedDeliveryOT()?.id,
-            toAccountId: entry.accountId,
-            amount: Number.parseFloat(entry.amount),
-            currencyId: 1,
-            description: this.deliveryDescription() || `توريد - ${entry.accountName}`,
-            voucherDate: this.deliveryDate(),
-            reference: entry.reference,
-          });
-          results.push(result);
-        } catch (e: unknown) {
-          errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`);
-        }
-      }
-      if (results.length > 0 && errors.length === 0) {
-        this.success.set(`تم حفظ ${results.length} قيد توريد بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
-        setTimeout(() => this.success.set(''), 4000);
-      } else if (results.length > 0) {
-        this.success.set(`تم ${results.length} عملية، فشلت ${errors.length}`);
-        setTimeout(() => this.success.set(''), 4000);
-      } else {
-        this.showError(`فشلت جميع العمليات`);
-      }
+      const result = await this.api.createVoucherMulti(this.bizId, {
+        voucherType: 'payment',
+        operationTypeId: this.selectedDeliveryOT()?.id,
+        currencyId: 1,
+        description: this.deliveryDescription() || `توريد - ${this.selectedDeliveryOT()?.name || ''}`,
+        voucherDate: this.deliveryDate(),
+        entries: entries.map(e => ({
+          accountId: e.accountId,
+          amount: Number.parseFloat(e.amount),
+          reference: e.reference || null,
+          notes: e.notes || null,
+        })),
+      });
+      this.success.set(`تم إنشاء سند صرف متعدد بنجاح - إجمالي: ${total.toLocaleString('ar-SA')} (رقم: ${result.voucherNumber || '—'})`);
+      setTimeout(() => this.success.set(''), 5000);
       this.selectedDeliveryOT.set(null);
       this.deliveryEntries.set([]);
       this.deliveryDescription.set('');
       this.activeOpsTab.set('history');
       await this.loadAll();
     } catch (e: unknown) {
-      this.showError('خطأ في الحفظ');
+      this.showError(e instanceof Error ? e.message : 'خطأ في الحفظ');
     }
     this.saving.set(false);
   }

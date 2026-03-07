@@ -81,6 +81,32 @@ export const voucherSchema = z.object({
   voucherDate: z.string().optional(),
 });
 
+export const voucherMultiSchema = z.object({
+  voucherType: z.enum(['receipt', 'payment', 'transfer', 'journal']).optional(),
+  description: z.string().optional().nullable(),
+  reference: z.string().max(200).optional().nullable(),
+  fromAccountId: z.number().int().positive().optional().nullable(),
+  fromFundId: z.number().int().positive().optional().nullable(),
+  toFundId: z.number().int().positive().optional().nullable(),
+  currencyId: z.number().int().positive().optional(),
+  operationTypeId: z.number().int().positive({ message: 'معرّف نوع العملية (القالب) مطلوب' }),
+  voucherDate: z.string().optional(),
+  stationId: z.number().int().positive().optional().nullable(),
+  employeeId: z.number().int().positive().optional().nullable(),
+  supplierId: z.number().int().positive().optional().nullable(),
+  entries: z.array(z.object({
+    accountId: z.number().int().positive().optional(),
+    toAccountId: z.number().int().positive().optional(),
+    amount: z.union([z.string(), z.number()]).refine(val => {
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return !isNaN(num) && num > 0;
+    }, 'المبلغ يجب أن يكون رقماً موجباً'),
+    notes: z.string().optional().nullable(),
+    reference: z.string().max(200).optional().nullable(),
+  }).refine(v => (v.accountId ?? v.toAccountId) != null, { message: 'معرّف الحساب (accountId) مطلوب' }))
+    .min(1, 'أدخل سطراً واحداً على الأقل'),
+});
+
 export const employeeSchema = z.object({
   fullName: z.string().min(1, 'اسم الموظف مطلوب').max(200),
   jobTitle: z.string().max(200).optional().nullable(),
@@ -176,6 +202,8 @@ export const supplierSchema = z.object({
 export const warehouseSchema = z.object({
   name: z.string().min(1, 'اسم المخزن مطلوب').max(200),
   warehouseType: z.enum(['main', 'station']),
+  subType: z.string().max(100).optional().nullable(),
+  subTypeId: z.number().int().positive().optional().nullable(),
   stationId: z.number().int().positive().optional().nullable(),
   responsiblePerson: z.string().max(200).optional().nullable(),
   location: z.string().max(300).optional().nullable(),

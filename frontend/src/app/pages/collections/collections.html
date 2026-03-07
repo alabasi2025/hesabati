@@ -425,7 +425,7 @@
                           <span class="ft-type" [style.color]="getVoucherTypeColor(v.voucherType)">
                             {{ getVoucherTypeLabel(v.voucherType) }}
                           </span>
-                          <span class="ft-desc">{{ v.description || v.voucherNumber }}</span>
+                          <span class="ft-desc">{{ (v.description || 'بدون بيان') + (v.voucherNumber ? ' • ' + v.voucherNumber : '') }}</span>
                           <span class="ft-date">{{ formatDate(v.voucherDate || v.createdAt) }}</span>
                           <span class="ft-amount" [style.color]="getVoucherTypeColor(v.voucherType)">
                             {{ formatAmount(v.amount) }} ر.ي

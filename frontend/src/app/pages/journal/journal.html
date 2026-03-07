@@ -103,6 +103,33 @@
             <span>القيد البسيط: حساب دائن واحد يحوّل مبلغ لحساب مدين واحد (بدون صندوق أو بنك)</span>
           </div>
 
+          <div class="form-row">
+            <div class="form-group">
+              <label>تصنيف القيد *</label>
+              <select [(ngModel)]="simpleForm.categoryKey">
+                <option [ngValue]="''">-- اختر التصنيف --</option>
+                @for (c of journalCategories(); track c.id) {
+                  <option [ngValue]="c.categoryKey">
+                    {{ c.name }}
+                    @if (c.sortOrder) { (#{{ c.sortOrder }}) }
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>اسم القيد (القالب) *</label>
+              <select [(ngModel)]="simpleForm.operationTypeId">
+                <option [ngValue]="null">-- اختر القالب --</option>
+                @for (ot of journalOpTypes(); track ot.id) {
+                  <option [ngValue]="ot.id">
+                    {{ ot.name }}
+                    @if (ot.code) { ({{ ot.code }}) }
+                  </option>
+                }
+              </select>
+            </div>
+          </div>
+
           <div class="form-group">
             <label>الحساب الدائن (المصدر) *</label>
             <select [(ngModel)]="simpleForm.creditAccountId">
@@ -188,6 +215,33 @@
             } @else {
               <span>عدة حسابات دائنة تجمّع مبالغ في حساب مدين واحد. المجموع لازم يتساوى.</span>
             }
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>تصنيف القيد *</label>
+              <select [(ngModel)]="compoundForm.categoryKey">
+                <option [ngValue]="''">-- اختر التصنيف --</option>
+                @for (c of journalCategories(); track c.id) {
+                  <option [ngValue]="c.categoryKey">
+                    {{ c.name }}
+                    @if (c.sortOrder) { (#{{ c.sortOrder }}) }
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>اسم القيد (القالب) *</label>
+              <select [(ngModel)]="compoundForm.operationTypeId">
+                <option [ngValue]="null">-- اختر القالب --</option>
+                @for (ot of journalOpTypes(); track ot.id) {
+                  <option [ngValue]="ot.id">
+                    {{ ot.name }}
+                    @if (ot.code) { ({{ ot.code }}) }
+                  </option>
+                }
+              </select>
+            </div>
           </div>
 
           <!-- Main Account -->
@@ -313,6 +367,18 @@
             <h3><span class="material-icons-round">playlist_add</span> القيد المتعدد</h3>
             <p>دائن واحد بمبلغ 100,000 يوزعها على عدة مدينين: 10,000 + 15,000 + 25,000 + 50,000. أو العكس: عدة دائنين يجمّعون في مدين واحد.</p>
             <p><strong>المهم:</strong> المجموع لازم يتساوى - الدائن = المدين.</p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">tag</span> ترقيم القيد</h3>
+            <p>
+              رقم القيد يُولّد حسب <strong>تصنيف القيد + اسم القيد (القالب) + السنة + تسلسل يبدأ من 1</strong>.
+            </p>
+            <p dir="ltr" style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+              QYD-CategoryNo-TemplateCode-YYYY-Serial
+            </p>
+            <p>
+              <small>التسلسل يبدأ من <strong>1</strong> لكل (تصنيف + قالب) ولكل سنة (وكل عمل منفصل).</small>
+            </p>
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">filter_list</span> الفلترة التلقائية</h3>

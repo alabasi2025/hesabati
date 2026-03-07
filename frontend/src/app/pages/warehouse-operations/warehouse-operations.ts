@@ -41,6 +41,7 @@ export class WarehouseOperationsComponent extends BasePageComponent {
   operationTypes = signal<any[]>([]);
   loading = signal(true);
   saving = signal(false);
+  showHowItWorks = signal(false);
 
   // فلاتر
   filterType = signal<string>('all');

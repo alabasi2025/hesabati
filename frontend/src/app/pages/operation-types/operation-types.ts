@@ -133,7 +133,7 @@ export class OperationTypesComponent extends BasePageComponent {
     { value: 'cash', label: 'نقداً', icon: 'payments', desc: 'تحصيل أو صرف نقدي مباشر', accountType: 'fund' },
     { value: 'bank', label: 'بنك', icon: 'account_balance', desc: 'إيداع أو سحب بنكي', accountType: 'bank' },
     { value: 'exchange', label: 'صراف', icon: 'currency_exchange', desc: 'عبر صراف أو حوالة', accountType: 'exchange' },
-    { value: 'e_wallet', label: 'محفظة إلكترونية', icon: 'phone_android', desc: 'تحويل عبر محفظة إلكترونية', accountType: 'wallet' },
+    { value: 'e_wallet', label: 'محفظة إلكترونية', icon: 'phone_android', desc: 'تحويل عبر محفظة إلكترونية', accountType: 'e_wallet' },
   ];
 
   icons = [
@@ -615,7 +615,10 @@ export class OperationTypesComponent extends BasePageComponent {
       if (step === 6) return !!w.name.trim();
     } else {
       if (step === 3) return !!w.paymentMethod;
-      if (step === 4) return !!(w.sourceAccountId || w.sourceFundId);
+      if (step === 4) {
+        if (w.paymentMethod === 'cash') return !!w.sourceFundId;
+        return !!w.sourceAccountId;
+      }
       if (step === 5) return w.linkedAccounts.length > 0;
       if (step === 6) return true; // سير العمل اختياري
       if (step === 7) return !!w.name.trim();

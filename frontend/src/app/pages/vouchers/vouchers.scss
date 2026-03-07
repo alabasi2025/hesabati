@@ -59,6 +59,11 @@
     border: 1.5px solid var(--border-color, #e2e8f0);
     &:hover { background: var(--bg-surface, #f8fafc); transform: translateY(-1px); }
   }
+  &.btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #6366f1); color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+    &:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4); }
+  }
   &:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
 }
 
@@ -187,7 +192,7 @@
 
 .vr-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.vr-date, .vr-account {
+.vr-date, .vr-account, .vr-number {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 11px; font-weight: 600; color: var(--text-muted, #94a3b8);
   .material-icons-round { font-size: 12px; }

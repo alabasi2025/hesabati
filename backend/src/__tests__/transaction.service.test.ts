@@ -142,18 +142,20 @@ describe('Inventory COGS Calculation', () => {
 // ===================== اختبارات الترقيم التسلسلي =====================
 describe('Sequential Numbering', () => {
   it('يجب أن يولد رقم تسلسلي صحيح', () => {
-    const prefix = 'RCV';
+    const prefix = 'QBD';
+    const vaultKind = 'FND';
+    const categoryNo = 1;
+    const vaultNo = 1;
     const year = 2026;
-    const seq = 1;
-    const number = `${prefix}-${year}-${String(seq).padStart(6, '0')}`;
-    expect(number).toBe('RCV-2026-000001');
+    const seq = 1; // يبدأ من 1
+    const number = `${prefix}-${vaultKind}-${categoryNo}-${vaultNo}-${year}-${seq}`;
+    expect(number).toBe('QBD-FND-1-1-2026-1');
   });
 
   it('يجب أن يزيد الرقم التسلسلي', () => {
     const seq1 = 1;
     const seq2 = seq1 + 1;
     expect(seq2).toBe(2);
-    expect(String(seq2).padStart(6, '0')).toBe('000002');
   });
 
   it('يجب أن يتعامل مع أرقام كبيرة', () => {

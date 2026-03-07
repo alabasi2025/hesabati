@@ -1,16 +1,25 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { formatAmount as formatAmountShared, formatDate as formatDateShared, formatDateTime as formatDateTimeShared } from '../../shared/helpers';
+
+interface TreasuryVoucherNumberParts {
+  voucherPrefix: string;
+  treasuryKindCode: string;
+  categoryNo: number;
+  vaultNo: number;
+  year: number;
+  serial: number;
+}
 
 @Component({
   selector: 'app-vouchers',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './vouchers.html',
   styleUrl: './vouchers.scss',
 })
@@ -65,6 +74,7 @@ export class VouchersComponent extends BasePageComponent {
   showDetailsModal = signal(false);
   detailsVoucher = signal<any>(null);
   detailsLoading = signal(false);
+  detailsVoucherNumberParts = computed(() => this.parseTreasuryVoucherNumber(this.detailsVoucher()?.voucherNumber));
 
   // ===================== Account Balance Display =====================
   accountBalances = signal<Record<number, number>>({});
@@ -92,8 +102,8 @@ export class VouchersComponent extends BasePageComponent {
   // ===================== Template-linked accounts =====================
   linkedAccounts = computed(() => {
     const ot = this.selectedOpType();
-    if (!ot?.accounts) return [];
-    return ot.accounts;
+    if (!ot) return [];
+    return ot.linkedAccounts || ot.accounts || [];
   });
 
   // Source account from template
@@ -115,35 +125,70 @@ export class VouchersComponent extends BasePageComponent {
     return this.funds().find(f => f.id === fundId) || null;
   });
 
-  // Filtered accounts for "to" field based on template
-  filteredToAccounts = computed(() => {
+  treasuryAccounts = computed(() => {
+    return this.accounts().filter(a => {
+      const t = String((a as any).accountType ?? (a as any).account_type ?? '').toLowerCase();
+      return t === 'bank' || t === 'exchange' || t === 'e_wallet';
+    });
+  });
+
+  filteredFromAccounts = computed(() => {
+    const vType = this.voucherType();
     const linked = this.linkedAccounts();
+
+    // سند صرف: الطرف الأول = خزينة (بنك/صراف/محفظة)
+    if (vType === 'payment') return this.treasuryAccounts();
+
+    // سند قبض: الطرف الأول = الحساب المصروف منه (يمكن أن يحدده القالب عبر linkedAccounts)
     if (linked.length > 0) {
-      // إذا القالب يحدد حسابات مرتبطة، نعرضها فقط
       return linked.map((la: any) => {
-        const acc = this.accounts().find(a => a.id === (la.accountId || la.account_id));
-        return acc ? { ...acc, linkedName: la.accountName || la.account_name || acc.name } : null;
+        const id = la.accountId || la.account_id || la.id;
+        const name = la.label || la.accountName || la.account_name;
+        const acc = this.accounts().find(a => a.id === id);
+        return acc ? { ...acc, linkedName: name || acc.name } : null;
       }).filter(Boolean);
     }
-    // إذا لم يحدد القالب حسابات، نعرض كل الحسابات ما عدا المصدر
+
+    const toId = this.form().toAccountId;
+    return this.accounts().filter(a => a.id !== toId);
+  });
+
+  filteredToAccounts = computed(() => {
+    const vType = this.voucherType();
+    const linked = this.linkedAccounts();
+
+    // سند قبض: الطرف الثاني = خزينة (بنك/صراف/محفظة)
+    if (vType === 'receipt') {
+      const fromId = this.form().fromAccountId;
+      return this.treasuryAccounts().filter(a => a.id !== fromId);
+    }
+
+    // سند صرف: الطرف الثاني = الحساب المستلِم (قد يحدده القالب عبر linkedAccounts)
+    if (linked.length > 0) {
+      return linked.map((la: any) => {
+        const id = la.accountId || la.account_id || la.id;
+        const name = la.displayName || la.label || la.accountName || la.account_name;
+        const acc = this.accounts().find(a => a.id === id);
+        return acc ? { ...acc, linkedName: name || acc.name } : null;
+      }).filter(Boolean);
+    }
+
     const fromId = this.form().fromAccountId;
     return this.accounts().filter(a => a.id !== fromId);
   });
 
-  // Voucher operation types only (receipt/payment)
+  // Voucher operation types only (receipt/payment) — أي قالب نوعه قبض أو صرف يظهر
   receiptOpTypes = computed(() => {
     return this.operationTypes().filter(ot => {
-      const cat = ot.category || ot.operationCategory;
       const vt = ot.voucher_type || ot.voucherType;
-      return cat === 'voucher' && vt === 'receipt';
+      return vt === 'receipt' && ot.isActive !== false;
     });
   });
 
   paymentOpTypes = computed(() => {
     return this.operationTypes().filter(ot => {
-      const cat = ot.category || ot.operationCategory;
       const vt = ot.voucher_type || ot.voucherType;
-      return cat === 'voucher' && vt === 'payment';
+      return vt === 'payment' && ot.isActive !== false;
     });
   });
 
@@ -416,6 +461,22 @@ export class VouchersComponent extends BasePageComponent {
     if (!f.amount || Number.parseFloat(f.amount) <= 0) { this.error.set('أدخل المبلغ'); return; }
     if (!f.description) { this.error.set('أدخل البيان'); return; }
 
+    const vType = this.voucherType();
+    const isTreasuryAcc = (id: number | null) => {
+      if (!id) return false;
+      return this.treasuryAccounts().some(a => a.id === id);
+    };
+
+    if (vType === 'receipt') {
+      if (!f.fromAccountId) { this.error.set('اختر الحساب المصروف منه'); return; }
+      if (!f.toAccountId && !f.toFundId) { this.error.set('اختر الخزينة المستلِمة (حساب خزينة أو صندوق)'); return; }
+      if (f.toAccountId && !isTreasuryAcc(f.toAccountId)) { this.error.set('الخزينة المستلِمة يجب أن تكون بنك/صراف/محفظة'); return; }
+    } else {
+      if (!f.toAccountId) { this.error.set('اختر الحساب المستلِم'); return; }
+      if (!f.fromAccountId && !f.fromFundId) { this.error.set('اختر الخزينة المصروف منها (حساب خزينة أو صندوق)'); return; }
+      if (f.fromAccountId && !isTreasuryAcc(f.fromAccountId)) { this.error.set('الخزينة المصروف منها يجب أن تكون بنك/صراف/محفظة'); return; }
+    }
+
     this.saving.set(true);
     this.error.set('');
     try {
@@ -488,7 +549,8 @@ export class VouchersComponent extends BasePageComponent {
     this.showDetailsModal.set(true);
     try {
       const details = await this.api.getVoucherDetails(this.bizId, voucher.id);
-      this.detailsVoucher.set(details);
+      // API may return either the voucher itself OR a wrapper { voucher, ... }
+      this.detailsVoucher.set((details as any)?.voucher ?? details);
     } catch (e: unknown) {
       this.detailsVoucher.set(voucher);
     } finally {
@@ -618,6 +680,25 @@ export class VouchersComponent extends BasePageComponent {
   getTypeColor(t: string): string {
     const m: Record<string, string> = { receipt: '#22c55e', payment: '#ef4444', transfer: '#3b82f6' };
     return m[t] || '#64748b';
+  }
+
+  parseTreasuryVoucherNumber(voucherNumber: string | null | undefined): TreasuryVoucherNumberParts | null {
+    if (!voucherNumber) return null;
+    const parts = String(voucherNumber).split('-');
+    if (parts.length !== 6) return null;
+    const [voucherPrefix, treasuryKindCode, cat, vault, year, serial] = parts;
+    const categoryNo = Number.parseInt(cat, 10);
+    const vaultNo = Number.parseInt(vault, 10);
+    const y = Number.parseInt(year, 10);
+    const s = Number.parseInt(serial, 10);
+    if (!Number.isInteger(categoryNo) || !Number.isInteger(vaultNo) || !Number.isInteger(y) || !Number.isInteger(s)) return null;
+    if (categoryNo <= 0 || vaultNo <= 0 || y <= 0 || s <= 0) return null;
+    return { voucherPrefix, treasuryKindCode, categoryNo, vaultNo, year: y, serial: s };
+  }
+
+  getTreasuryKindLabel(kindCode: string): string {
+    const m: Record<string, string> = { FND: 'صندوق', BNK: 'بنك', EXC: 'صراف', WLT: 'محفظة' };
+    return m[kindCode] || kindCode;
   }
 
   formatAmount(amount: unknown): string {

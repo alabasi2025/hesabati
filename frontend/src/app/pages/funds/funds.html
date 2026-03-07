@@ -130,6 +130,12 @@
           </div>
           <div class="form-row">
             <div class="form-group">
+              <label>رقم الصندوق (اختياري)</label>
+              <input [(ngModel)]="fundForm.sequenceNumber" placeholder="مثال: 13" dir="ltr" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
               <label>المحطة</label>
               <select [(ngModel)]="fundForm.stationId">
                 <option [ngValue]="null">-- بدون محطة --</option>

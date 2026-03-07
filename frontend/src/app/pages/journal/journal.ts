@@ -27,6 +27,7 @@ export class JournalComponent extends BasePageComponent {
   entries = signal<any[]>([]);
   accounts = signal<any[]>([]);
   operationTypes = signal<any[]>([]);
+  journalCategories = signal<any[]>([]);
   loading = signal(true);
   saving = signal(false);
   showForm = signal(false);
@@ -39,6 +40,7 @@ export class JournalComponent extends BasePageComponent {
 
   // Simple form
   simpleForm = {
+    categoryKey: '' as string,
     debitAccountId: null as number | null,
     creditAccountId: null as number | null,
     amount: 0,
@@ -50,6 +52,7 @@ export class JournalComponent extends BasePageComponent {
 
   // Compound form
   compoundForm = {
+    categoryKey: '' as string,
     mainAccountId: null as number | null,
     totalAmount: 0,
     description: '',
@@ -72,14 +75,16 @@ export class JournalComponent extends BasePageComponent {
     this.loading.set(true);
     this.error.set('');
     try {
-      const [entries, accounts, opTypes] = await Promise.all([
+      const [entries, accounts, opTypes, cats] = await Promise.all([
         this.api.getJournalEntries(this.bizId),
         this.api.getAccounts(this.bizId),
         this.api.getOperationTypes(this.bizId),
+        this.api.getJournalEntryCategories(this.bizId),
       ]);
       this.entries.set(entries);
       this.accounts.set(accounts);
       this.operationTypes.set(opTypes);
+      this.journalCategories.set(cats);
     } catch (e: unknown) {
       this.error.set(e instanceof Error ? e.message : 'حدث خطأ في تحميل البيانات');
     }
@@ -123,6 +128,7 @@ export class JournalComponent extends BasePageComponent {
   openSimple() {
     this.journalType.set('simple');
     this.simpleForm = {
+      categoryKey: '',
       debitAccountId: null, creditAccountId: null, amount: 0,
       description: '', reference: '',
       date: new Date().toISOString().split('T')[0],
@@ -135,6 +141,7 @@ export class JournalComponent extends BasePageComponent {
   openCompound() {
     this.journalType.set('compound');
     this.compoundForm = {
+      categoryKey: '',
       mainAccountId: null, totalAmount: 0,
       description: '', reference: '',
       date: new Date().toISOString().split('T')[0],
@@ -147,6 +154,8 @@ export class JournalComponent extends BasePageComponent {
 
   async saveSimple() {
     if (!this.simpleForm.amount || this.simpleForm.amount <= 0) { this.error.set('أدخل المبلغ'); return; }
+    if (!this.simpleForm.categoryKey) { this.error.set('اختر تصنيف القيد'); return; }
+    if (!this.simpleForm.operationTypeId) { this.error.set('اختر اسم القيد (القالب)'); return; }
     if (!this.simpleForm.debitAccountId) { this.error.set('اختر الحساب المدين'); return; }
     if (!this.simpleForm.creditAccountId) { this.error.set('اختر الحساب الدائن'); return; }
     if (!this.simpleForm.description) { this.error.set('أدخل البيان'); return; }
@@ -155,6 +164,7 @@ export class JournalComponent extends BasePageComponent {
     this.error.set('');
     try {
       await this.api.createJournalEntry(this.bizId, {
+        categoryKey: this.simpleForm.categoryKey,
         description: this.simpleForm.description,
         date: this.simpleForm.date,
         reference: this.simpleForm.reference,
@@ -174,6 +184,8 @@ export class JournalComponent extends BasePageComponent {
 
   async saveCompound() {
     if (!this.compoundForm.totalAmount || this.compoundForm.totalAmount <= 0) { this.error.set('أدخل المبلغ الإجمالي'); return; }
+    if (!this.compoundForm.categoryKey) { this.error.set('اختر تصنيف القيد'); return; }
+    if (!this.compoundForm.operationTypeId) { this.error.set('اختر اسم القيد (القالب)'); return; }
     if (!this.compoundForm.mainAccountId) { this.error.set('اختر الحساب الرئيسي'); return; }
     if (!this.isBalanced()) { this.error.set('المجموع غير متساوي - تأكد من توزيع المبلغ بالكامل'); return; }
     if (!this.compoundForm.description) { this.error.set('أدخل البيان'); return; }
@@ -204,6 +216,7 @@ export class JournalComponent extends BasePageComponent {
     this.error.set('');
     try {
       await this.api.createJournalEntry(this.bizId, {
+        categoryKey: this.compoundForm.categoryKey,
         description: this.compoundForm.description,
         date: this.compoundForm.date,
         reference: this.compoundForm.reference,
