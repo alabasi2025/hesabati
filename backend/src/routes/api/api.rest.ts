@@ -32,7 +32,7 @@ import {
   employeeBillingAccountSchema,
 } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired, toErrorMessage } from '../../middleware/helpers.ts';
-import { getNextSequence, formatSequenceNumber, TYPE_PREFIXES, generateItemCode } from '../../middleware/sequencing.ts';
+import { getNextSequence, getNextCategorySequence, getNextItemInCategorySequence, generateWarehouseOpFullSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
 import { postTransaction, cancelTransaction, reverseTransaction } from '../../services/transaction.service.ts';
 import { getProfitAndLoss, getTrialBalance, getAccountStatement, getDailySummary, getAggregatedProfitAndLoss, getAggregatedSummary, getMonthlyRevenueExpenses } from '../../services/reporting.service.ts';
 import { getAvailableTransitions, executeTransition, getWorkflowHistory, setupDefaultWorkflow, getOperationTypeTransitions, addTransition, deleteTransition } from '../../services/workflow.service.ts';
@@ -577,12 +577,15 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), checkPermission('vo
   }
 
   // === تنفيذ العملية عبر محرك المعاملات المركزي ===
+  if (debitAccountId == null) {
+    return c.json({ error: 'الحساب المستهدف (مدين) مطلوب' }, 400);
+  }
   try {
     const result = await postTransaction(bizId, userId ?? 0, {
       voucherType: vType,
       amount,
       currencyId,
-      debitAccountId: debitAccountId!,
+      debitAccountId,
       creditAccountId,
       toFundId,
       fromFundId,
@@ -604,145 +607,6 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), checkPermission('vo
   }
 }));
 
-/* === الكود القديم المُستبدل بـ postTransaction ===
-let voucherNumber = voucherData.voucherNumber;
-    if (!voucherNumber) {
-      const seqName = vType === 'receipt' ? 'voucher_receipt_seq' : vType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
-      const prefix = TYPE_PREFIXES[vType] || 'VCH';
-      const seqResult = await tx.execute(sql.raw(`SELECT nextval('${seqName}')`));
-      const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
-      const seqVal = Number.parseInt(String((seqRows[0] as any)?.nextval || 1));
-      voucherNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
-    }
-
-    // 1.1 توليد الأرقام التسلسلية الذكية (حساب + قالب)
-    let accountSequence: string | null = null;
-    let templateSequence: string | null = null;
-    if (primaryAccountId) {
-      const seqs = await generateOperationSequences(bizId, primaryAccountId, templateId, 'voucher');
-      accountSequence = seqs.accountSequence ? String(seqs.accountSequence) : null;
-      templateSequence = seqs.templateSequence ? String(seqs.templateSequence) : null;
-    }
-
-    // 2. إنشاء السند
-    const [created] = await tx.insert(vouchers).values({
-      businessId: bizId,
-      voucherNumber,
-      voucherType: vType,
-      status: 'confirmed',
-      amount: String(amount),
-      currencyId,
-      fromAccountId: creditAccountId,
-      toAccountId: debitAccountId,
-      fromFundId: voucherData.fromFundId || opType?.source_fund_id || null,
-      toFundId: voucherData.toFundId || null,
-      stationId: voucherData.stationId || null,
-      employeeId: voucherData.employeeId || null,
-      supplierId: voucherData.supplierId || null,
-      operationTypeId: voucherData.operationTypeId || null,
-      description: voucherData.description || (opType?.name) || '',
-      reference: voucherData.reference || null,
-      voucherDate: voucherData.voucherDate || new Date(),
-      createdBy: userId,
-      accountSequence,
-      templateSequence,
-    }).returning();
-
-    // 3. إنشاء القيد المحاسبي المتوازن
-    const opTypeName = opType?.name || '';
-    const entryDate = created.voucherDate ? new Date(created.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-    const entryDesc = opTypeName ? `${opTypeName} - ${created.description || ''}` : `سند ${vType} - ${created.description || ''}`;
-
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId,
-      entryNumber: `JE-${voucherNumber}`,
-      entryDate,
-      description: entryDesc,
-      reference: voucherNumber,
-      operationTypeId: voucherData.operationTypeId || null,
-      totalDebit: String(amount),
-      totalCredit: String(amount),
-      isBalanced: true,
-      createdBy: userId,
-    }).returning();
-
-    // 4. إنشاء سطور القيد - الطرف المدين
-    await tx.insert(journalEntryLines).values({
-      journalEntryId: entry.id, accountId: debitAccountId,
-      lineType: 'debit', amount: String(amount),
-      description: entryDesc, sortOrder: 0,
-    });
-
-    // 5. إنشاء سطور القيد - الطرف الدائن
-    if (creditAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id, accountId: creditAccountId,
-        lineType: 'credit', amount: String(amount),
-        description: entryDesc, sortOrder: 1,
-      });
-    }
-
-    // 6. تحديث أرصدة الحسابات
-    // الحساب المدين: يزيد رصيده
-    await tx.execute(sql`
-      INSERT INTO account_balances (account_id, currency_id, balance)
-      VALUES (${debitAccountId}, ${currencyId}, ${amount})
-      ON CONFLICT (account_id, currency_id) DO UPDATE SET
-        balance = account_balances.balance + ${amount},
-        updated_at = NOW()
-    `);
-    // الحساب الدائن: ينقص رصيده
-    if (creditAccountId) {
-      await tx.execute(sql`
-        INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${creditAccountId}, ${currencyId}, ${-amount})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET
-          balance = account_balances.balance - ${amount},
-          updated_at = NOW()
-      `);
-    }
-
-    // 7. تحديث أرصدة الصناديق إن وجدت
-    const toFundId = voucherData.toFundId || null;
-    const fromFundId = voucherData.fromFundId || opType?.source_fund_id || null;
-    if (toFundId) {
-      await tx.execute(sql`
-        INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${toFundId}, ${currencyId}, ${amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-          balance = fund_balances.balance + ${amount},
-          updated_at = NOW()
-      `);
-    }
-    if (fromFundId) {
-      await tx.execute(sql`
-        INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${fromFundId}, ${currencyId}, ${-amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-          balance = fund_balances.balance - ${amount},
-          updated_at = NOW()
-      `);
-    }
-
-    // 8. سجل التدقيق
-    await tx.insert(auditLog).values({
-      userId,
-      businessId: bizId,
-      action: 'create_voucher',
-      tableName: 'vouchers',
-      recordId: created.id,
-      newData: {
-        voucherNumber, voucherType: vType, amount: String(amount),
-        debitAccountId, creditAccountId, operationTypeId: voucherData.operationTypeId,
-        journalEntryId: entry.id,
-      },
-    });
-
-    return { voucher: created, journalEntry: entry };
-  });
-  return c.json(result.voucher, 201);
-}));
-=== نهاية الكود القديم === */
 
 api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), checkPermission('vouchers', 'delete'), safeHandler('حذف سند', async (c) => {
   const bizId = getBizId(c);
@@ -970,6 +834,7 @@ api.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('إض
   const data = validation.data as any;
   
   // ترقيم تلقائي داخل التصنيف
+<<<<<<< HEAD
   let typeId: number | null = null;
   if (data.subTypeId) {
     typeId = Number(data.subTypeId);
@@ -978,6 +843,17 @@ api.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('إض
     const [t] = await db.select({ id: warehouseTypes.id }).from(warehouseTypes)
       .where(and(eq(warehouseTypes.businessId, bizId), eq(warehouseTypes.subTypeKey, subTypeKey))).limit(1);
     typeId = t?.id ?? null;
+=======
+  const subTypeRaw = data.subType ?? data.subTypeId;
+  if (subTypeRaw) {
+    const subTypeId = Number.parseInt(String(subTypeRaw));
+    if (!Number.isNaN(subTypeId)) {
+      data.subTypeId = subTypeId;
+      const { sequenceNumber, code } = await getNextItemInCategorySequence(bizId, 'warehouse', subTypeId);
+      data.sequenceNumber = sequenceNumber;
+      data.code = code;
+    }
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   }
 
   if (typeId && typeId > 0) {
@@ -1626,6 +1502,41 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermiss
   }
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
+  // ترقيم ذكي للقيد
+  const year = new Date().getFullYear();
+  let journalFullSeqNum: string | null = null;
+  let journalCategorySeq: string | null = null;
+  let journalTemplateSeq: string | null = null;
+  let entryNumber = entryData.reference || '';
+
+  // جلب معلومات القالب للترقيم
+  if (entryData.operationTypeId) {
+    const [opType] = await db.select().from(operationTypes).where(eq(operationTypes.id, entryData.operationTypeId));
+    if (opType) {
+      // جلب رقم التصنيف من journalEntryCategories إن وجد
+      let catSeqNum = 1;
+      const catName = opType.category || 'عام';
+      const [jeCat] = await db.select().from(journalEntryCategories)
+        .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, catName)));
+      if (jeCat?.sequenceNumber) catSeqNum = jeCat.sequenceNumber;
+
+      const jeSeqResult = await generateJournalEntryFullSequence(
+        bizId, catSeqNum, entryData.operationTypeId, year
+      );
+      journalFullSeqNum = jeSeqResult.fullSequenceNumber;
+      entryNumber = entryNumber || journalFullSeqNum;
+      journalCategorySeq = String(catSeqNum);
+      journalTemplateSeq = String(jeSeqResult.sequentialNumber);
+    }
+  }
+
+  // fallback إذا لم يتوفر ترقيم
+  if (!entryNumber) {
+    const fallbackSeq = await getNextSequence(bizId, 'journal_entry', 0, year);
+    entryNumber = `JE-${year}-${String(fallbackSeq).padStart(4, '0')}`;
+    journalFullSeqNum = entryNumber;
+  }
+
   const [entry] = await db.insert(journalEntries).values({
     businessId: bizId,
     entryNumber,
@@ -1640,6 +1551,9 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermiss
     totalCredit: String(totalCredit),
     isBalanced,
     createdBy: getUserId(c),
+    fullSequenceNumber: journalFullSeqNum,
+    categorySequence: journalCategorySeq,
+    templateSequence: journalTemplateSeq,
   }).returning();
   
   for (let i = 0; i < lines.length; i++) {
@@ -1759,6 +1673,7 @@ api.post('/businesses/:bizId/fund-types', bizAuthMiddleware(), safeHandler('إض
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
+<<<<<<< HEAD
   const data = validation.data as any;
   const subTypeKey = String(data.subTypeKey ?? '').trim();
   const existing = await db.select({ id: fundTypes.id }).from(fundTypes)
@@ -1785,6 +1700,10 @@ api.post('/businesses/:bizId/fund-types', bizAuthMiddleware(), safeHandler('إض
     sortOrder,
     businessId: bizId,
   }).returning();
+=======
+  const seqNum = await getNextCategorySequence(bizId, 'fund');
+  const [created] = await db.insert(fundTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   return c.json(created, 201);
 }));
 
@@ -1822,6 +1741,7 @@ api.post('/businesses/:bizId/bank-types', bizAuthMiddleware(), safeHandler('إض
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
+<<<<<<< HEAD
   const data = validation.data as any;
   const subTypeKey = String(data.subTypeKey ?? '').trim();
   const existing = await db.select({ id: bankTypes.id }).from(bankTypes)
@@ -1848,6 +1768,10 @@ api.post('/businesses/:bizId/bank-types', bizAuthMiddleware(), safeHandler('إض
     sortOrder,
     businessId: bizId,
   }).returning();
+=======
+  const seqNum = await getNextCategorySequence(bizId, 'bank');
+  const [created] = await db.insert(bankTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   return c.json(created, 201);
 }));
 
@@ -1885,6 +1809,7 @@ api.post('/businesses/:bizId/exchange-types', bizAuthMiddleware(), safeHandler('
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
+<<<<<<< HEAD
   const data = validation.data as any;
   const subTypeKey = String(data.subTypeKey ?? '').trim();
   const existing = await db.select({ id: exchangeTypes.id }).from(exchangeTypes)
@@ -1911,6 +1836,10 @@ api.post('/businesses/:bizId/exchange-types', bizAuthMiddleware(), safeHandler('
     sortOrder,
     businessId: bizId,
   }).returning();
+=======
+  const seqNum = await getNextCategorySequence(bizId, 'exchange');
+  const [created] = await db.insert(exchangeTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   return c.json(created, 201);
 }));
 
@@ -1948,6 +1877,7 @@ api.post('/businesses/:bizId/e-wallet-types', bizAuthMiddleware(), safeHandler('
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
+<<<<<<< HEAD
   const data = validation.data as any;
   const subTypeKey = String(data.subTypeKey ?? '').trim();
   const existing = await db.select({ id: eWalletTypes.id }).from(eWalletTypes)
@@ -1974,6 +1904,10 @@ api.post('/businesses/:bizId/e-wallet-types', bizAuthMiddleware(), safeHandler('
     sortOrder,
     businessId: bizId,
   }).returning();
+=======
+  const seqNum = await getNextCategorySequence(bizId, 'e_wallet');
+  const [created] = await db.insert(eWalletTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   return c.json(created, 201);
 }));
 
@@ -3467,106 +3401,7 @@ api.post('/businesses/:bizId/vouchers/:id/reverse', bizAuthMiddleware(), checkPe
   }
 }));
 
-/* === الكود القديم المُستبدل بـ reverseTransaction ===
-  const amount = Number.parseFloat(String(original.amount));
-  const currencyId = original.currencyId || 1;
 
-  const result = await db.transaction(async (tx) => {
-    // 1. توليد رقم سند العكس
-    const seqName = original.voucherType === 'receipt' ? 'voucher_receipt_seq' : original.voucherType === 'payment' ? 'voucher_payment_seq' : 'voucher_transfer_seq';
-    const prefix = original.voucherType === 'receipt' ? 'RCV' : original.voucherType === 'payment' ? 'PAY' : 'TRF';
-    const seqResult = await tx.execute(sql.raw(`SELECT nextval('${seqName}')`));
-    const seqRows = Array.isArray(seqResult) ? seqResult : (seqResult as any).rows || [];
-    const seqVal = Number.parseInt(String((seqRows[0] as any)?.nextval || 1));
-    const voucherNumber = `${prefix}-REV-${String(seqVal).padStart(6, '0')}`;
-
-    // 2. إنشاء سند العكس (عكس الاتجاهات)
-    const [reversalVoucher] = await tx.insert(vouchers).values({
-      businessId: bizId, voucherNumber, voucherType: original.voucherType,
-      status: 'confirmed', amount: String(amount), currencyId,
-      fromAccountId: original.toAccountId, toAccountId: original.fromAccountId,
-      fromFundId: original.toFundId, toFundId: original.fromFundId,
-      stationId: original.stationId, operationTypeId: original.operationTypeId,
-      description: `عكس: ${original.description || ''} - ${reason}`,
-      reference: original.voucherNumber,
-      voucherDate: new Date(), createdBy: userId,
-      reversalStatus: 'reversal', reversedVoucherId: original.id,
-    }).returning();
-
-    // 3. تحديث السند الأصلي
-    await tx.update(vouchers).set({
-      reversalStatus: 'reversed', reversedVoucherId: reversalVoucher.id,
-      reversalReason: reason, reversedAt: new Date(), reversedBy: userId,
-      updatedAt: new Date(),
-    }).where(eq(vouchers.id, id));
-
-    // 4. إنشاء قيد عكسي
-    const entryDate = new Date().toISOString().split('T')[0];
-    const [entry] = await tx.insert(journalEntries).values({
-      businessId: bizId, entryNumber: `JE-${voucherNumber}`,
-      entryDate, description: `عكس قيد: ${original.description || ''} - ${reason}`,
-      reference: voucherNumber, operationTypeId: original.operationTypeId,
-      totalDebit: String(amount), totalCredit: String(amount),
-      isBalanced: true, createdBy: userId,
-    }).returning();
-
-    // 5. سطور القيد العكسي (عكس الاتجاهات)
-    if (original.toAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id, accountId: original.toAccountId,
-        lineType: 'credit', amount: String(amount),
-        description: `عكس - ${reason}`, sortOrder: 0,
-      });
-    }
-    if (original.fromAccountId) {
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id, accountId: original.fromAccountId,
-        lineType: 'debit', amount: String(amount),
-        description: `عكس - ${reason}`, sortOrder: 1,
-      });
-    }
-
-    // 6. عكس أرصدة الحسابات
-    if (original.toAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE account_id = ${original.toAccountId} AND currency_id = ${currencyId}
-      `);
-    }
-    if (original.fromAccountId) {
-      await tx.execute(sql`
-        UPDATE account_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE account_id = ${original.fromAccountId} AND currency_id = ${currencyId}
-      `);
-    }
-
-    // 7. عكس أرصدة الصناديق
-    if (original.toFundId) {
-      await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance - ${amount}, updated_at = NOW()
-        WHERE fund_id = ${original.toFundId} AND currency_id = ${currencyId}
-      `);
-    }
-    if (original.fromFundId) {
-      await tx.execute(sql`
-        UPDATE fund_balances SET balance = balance + ${amount}, updated_at = NOW()
-        WHERE fund_id = ${original.fromFundId} AND currency_id = ${currencyId}
-      `);
-    }
-
-    // 8. سجل التدقيق
-    await tx.insert(auditLog).values({
-      userId, businessId: bizId, action: 'reverse_voucher',
-      tableName: 'vouchers', recordId: original.id,
-      oldData: { voucherNumber: original.voucherNumber, amount: String(amount), status: 'original' },
-      newData: { reversalVoucherId: reversalVoucher.id, reversalVoucherNumber: voucherNumber, reason },
-    });
-
-    return { originalVoucher: { ...original, reversalStatus: 'reversed' }, reversalVoucher, journalEntry: entry };
-  });
-  return c.json(result, 201);
-}));
-=== نهاية الكود القديم === */
 
 // ===================== التقارير المتقدمة =====================
 // تقرير الأرباح والخسائر
@@ -3905,6 +3740,7 @@ api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler(
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
+<<<<<<< HEAD
   const data = validation.data as any;
   const subTypeKey = String(data.subTypeKey ?? '').trim();
   const existing = await db.select({ id: warehouseTypes.id }).from(warehouseTypes)
@@ -3931,6 +3767,10 @@ api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler(
     sortOrder,
     businessId: bizId,
   }).returning();
+=======
+  const seqNum = await getNextCategorySequence(bizId, 'warehouse');
+  const [created] = await db.insert(warehouseTypes).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   return c.json(created, 201);
 }));
 
@@ -4119,6 +3959,7 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
   })();
   const mainWarehouseId = body.sourceWarehouseId || body.destinationWarehouseId;
 
+<<<<<<< HEAD
   const [mainWh] = await db.select({
     subType: warehouses.subType,
     sequenceNumber: warehouses.sequenceNumber,
@@ -4126,6 +3967,25 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
   if (!mainWh) return c.json({ error: 'المخزن المحدد غير موجود أو لا ينتمي لهذا العمل' }, 400);
   const warehouseNo = Number(mainWh.sequenceNumber ?? 0);
   if (!Number.isInteger(warehouseNo) || warehouseNo <= 0) return c.json({ error: 'رقم المخزن غير مضبوط (sequenceNumber)' }, 400);
+=======
+  // جلب معلومات المخزن للترقيم
+  const [mainWh] = await db.select().from(warehouses).where(eq(warehouses.id, mainWarehouseId));
+  let categorySeqNum = 1;
+  let warehouseSeqNum = mainWh?.sequenceNumber || 1;
+  if (mainWh?.subTypeId) {
+    const [whCategory] = await db.select({ sequenceNumber: warehouseTypes.sequenceNumber })
+      .from(warehouseTypes).where(eq(warehouseTypes.id, mainWh.subTypeId));
+    categorySeqNum = whCategory?.sequenceNumber || 1;
+  }
+
+  // توليد الرقم المنسق الكامل
+  const whSeqResult = await generateWarehouseOpFullSequence(
+    bizId, categorySeqNum, warehouseSeqNum,
+    body.operationType, mainWarehouseId, year
+  );
+  const operationNumber = whSeqResult.fullSequenceNumber;
+  const whSeq = whSeqResult.sequentialNumber;
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
 
   const whTypeKey = String(mainWh.subType ?? '').trim();
   if (!whTypeKey) return c.json({ error: 'تصنيف المخزن مطلوب (subType)' }, 400);
@@ -4147,10 +4007,13 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
     tmplSeq = tRaw;
   }
 
+<<<<<<< HEAD
   // رقم العملية: (نوع العملية + WHS + رقم التصنيف + رقم المخزن + السنة + التسلسل)
   const prefix = TYPE_PREFIXES[body.operationType] || 'WH';
   const operationNumber = `${prefix}-${TYPE_PREFIXES.warehouse || 'WHS'}-${categoryNo}-${warehouseNo}-${year}-${whSeq}`;
 
+=======
+>>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
   const [created] = await db.insert(warehouseOperations).values({
     businessId: bizId,
     operationType: body.operationType,
@@ -4169,6 +4032,7 @@ api.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPe
     totalItems,
     warehouseSequence: whSeq,
     templateSequence: tmplSeq,
+    fullSequenceNumber: operationNumber,
     createdBy: userId,
   }).returning();
 

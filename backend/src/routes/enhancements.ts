@@ -980,6 +980,7 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
     reference: body.reference || null,
     voucherDate,
     createdBy: userId,
+    fullSequenceNumber: voucherNumber,
   }).returning();
 
   return c.json(created, 201);

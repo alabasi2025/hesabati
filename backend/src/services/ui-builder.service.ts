@@ -258,9 +258,24 @@ export async function executeDataSource(bizId: number, dataSourceId: number, par
   }
 
   if (ds.sourceType === 'query' && ds.queryTemplate) {
-    // تنفيذ query مخصص (مع حماية bizId)
-    const safeQuery = ds.queryTemplate.replace(/\$\{bizId\}/g, String(bizId));
-    const result = await db.execute(sql.raw(safeQuery));
+    // تنفيذ query مخصص مع حماية من SQL Injection
+    // السماح فقط باستعلامات SELECT ورفض أي عمليات تعديل
+    const template = ds.queryTemplate.trim();
+    // تحقق أن الاستعلام يبدأ بـ SELECT فقط
+    if (!/^SELECT\b/i.test(template)) {
+      throw new Error('يُسمح فقط باستعلامات SELECT');
+    }
+    const forbidden = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|GRANT|REVOKE|COPY|LOAD|INTO\s+OUTFILE)\b/i;
+    if (forbidden.test(template)) {
+      throw new Error('الاستعلام يحتوي على عمليات غير مسموح بها');
+    }
+    // رفض التعليقات والفاصلة المنقوطة (منع تنفيذ استعلامات متعددة)
+    if (/--|;|\bUNION\b.*\bSELECT\b/i.test(template)) {
+      throw new Error('الاستعلام يحتوي على أنماط غير مسموح بها');
+    }
+    // ملاحظة: sql.raw مطلوب هنا لأن القالب مخزن كنص في قاعدة البيانات
+    // الحماية تتم عبر التحققات أعلاه + فلتر business_id الإلزامي
+    const result = await db.execute(sql`SELECT * FROM (${sql.raw(template)}) AS q WHERE q.business_id = ${bizId}`);
     const rows = normalizeDbResult(result);
     return { data: rows, total: rows.length };
   }

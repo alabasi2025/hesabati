@@ -280,3 +280,54 @@ body {
     transform: rotate(20deg) scale(1.1);
   }
 }
+
+/* ===================== Sequencing Badges ===================== */
+.type-chip-seq {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.card-seq-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(3, 105, 161, 0.12);
+  color: #0369a1;
+  font-family: monospace;
+}
+
+.card-code-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(21, 128, 61, 0.1);
+  color: #15803d;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.vr-seq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.08);
+  margin-inline-end: 6px;
+  letter-spacing: 0.5px;
+}

@@ -5,7 +5,7 @@ import { funds, fundBalances, stations, currencies, fundTypes } from '../../db/s
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { fundSchema, validateBody } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
-import { getNextSequence, TYPE_PREFIXES, generateItemCode } from '../../middleware/sequencing.ts';
+import { getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import type { AppContext } from './_shared/types.ts';

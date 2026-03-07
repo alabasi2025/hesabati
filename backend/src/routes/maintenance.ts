@@ -33,8 +33,8 @@ maintenanceRoutes.post('/cleanup-extra-tables', async (c) => {
         continue;
       }
       try {
-        // استخدام sql`` مع sql.identifier بدلاً من sql.raw لمنع SQL Injection
-        await db.execute(sql`DROP TABLE IF EXISTS ${sql.raw(`"${table}"`)} CASCADE`);
+        // استخدام sql.identifier لمنع SQL Injection
+        await db.execute(sql`DROP TABLE IF EXISTS ${sql.identifier(table)} CASCADE`);
         results.push({ table, status: 'deleted' });
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : JSON.stringify(error);

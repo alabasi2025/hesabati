@@ -24,6 +24,7 @@ import {
   accounts, funds, fundTypes, bankTypes, exchangeTypes, eWalletTypes, operationTypes, vouchers,
   journalEntries, journalEntryLines,
   auditLog,
+  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
 } from '../db/schema/index.ts';
 import { getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
 import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
@@ -438,6 +439,7 @@ export async function postTransaction(
       createdBy: userId,
       accountSequence,
       templateSequence,
+      fullSequenceNumber: null,
     }).returning();
 
     // --- 3. إنشاء القيد المحاسبي المتوازن ---

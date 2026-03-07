@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // ===================== ENUMS =====================
 
@@ -193,6 +193,7 @@ export const accounts = pgTable('accounts', {
   accountNumber: varchar('account_number', { length: 100 }),
   provider: varchar('provider', { length: 200 }),
   subType: varchar('sub_type', { length: 100 }),
+  subTypeId: integer('sub_type_id'), // معرف التصنيف الرقمي
   sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
   code: varchar('code', { length: 30 }), // الرمز المركب (مثل BNK-LOC-01)
   responsiblePerson: varchar('responsible_person', { length: 200 }),
@@ -236,7 +237,9 @@ export const accountBalances = pgTable('account_balances', {
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
   balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  accountCurrencyUnique: uniqueIndex('account_balances_account_currency_unique').on(table.accountId, table.currencyId),
+}));
 
 // ===================== EMPLOYEE BILLING ACCOUNTS (حسابات الموظفين في أنظمة الفوترة) =====================
 
@@ -292,6 +295,7 @@ export const funds = pgTable('funds', {
   name: varchar('name', { length: 200 }).notNull(),
   fundType: fundTypeEnum('fund_type').notNull(),
   subType: varchar('sub_type', { length: 100 }), // التصنيف الفرعي (يربط بجدول fundTypes)
+  subTypeId: integer('sub_type_id'), // معرف التصنيف الرقمي
   sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
   code: varchar('code', { length: 30 }), // الرمز المركب (مثل FND-COL-01)
   stationId: integer('station_id').references(() => stations.id),
@@ -311,7 +315,9 @@ export const fundBalances = pgTable('fund_balances', {
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
   balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  fundCurrencyUnique: uniqueIndex('fund_balances_fund_currency_unique').on(table.fundId, table.currencyId),
+}));
 
 // ===================== SUPPLIERS =====================
 
@@ -384,6 +390,7 @@ export const vouchers = pgTable('vouchers', {
   // حقول الترقيم الذكي
   accountSequence: varchar('account_sequence', { length: 50 }), // تسلسل الحساب (سنة-رمز-رقم)
   templateSequence: varchar('template_sequence', { length: 50 }), // تسلسل القالب (سنة-رمز-رقم)
+  fullSequenceNumber: varchar('full_sequence_number', { length: 100 }), // الرقم المنسق الكامل: تصنيف-خزينة-سنة-نوع-تسلسل
 
   createdBy: integer('created_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
@@ -503,6 +510,7 @@ export const warehouses = pgTable('warehouses', {
   name: varchar('name', { length: 200 }).notNull(),
   warehouseType: warehouseTypeEnum('warehouse_type').notNull(),
   subType: varchar('sub_type', { length: 100 }), // التصنيف الفرعي (يربط بجدول warehouseTypes)
+  subTypeId: integer('sub_type_id'), // معرف التصنيف الرقمي
   sequenceNumber: integer('sequence_number'), // الرقم التسلسلي داخل التصنيف
   code: varchar('code', { length: 30 }), // الرمز المركب (مثل WH-MAIN-01)
   stationId: integer('station_id').references(() => stations.id),
@@ -730,6 +738,7 @@ export const journalEntries = pgTable('journal_entries', {
   category: varchar('category', { length: 100 }), // تصنيف القيد (مستقل عن تصنيف القالب)
   categorySequence: varchar('category_sequence', { length: 50 }), // تسلسل التصنيف (سنة-رمز-رقم)
   templateSequence: varchar('template_sequence', { length: 50 }), // تسلسل القالب
+  fullSequenceNumber: varchar('full_sequence_number', { length: 100 }), // الرقم المنسق الكامل: تصنيف-قيد-سنة-تسلسل
   createdBy: integer('created_by').references(() => users.id),
   isBalanced: boolean('is_balanced').notNull().default(false),
   totalDebit: decimal('total_debit', { precision: 20, scale: 2 }).notNull().default('0'),
@@ -800,6 +809,7 @@ export const fundTypes = pgTable('fund_types', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
+  sequenceNumber: integer('sequence_number'), // رقم التصنيف داخل نوع الخزينة (صناديق)
   description: text('description'),
   icon: varchar('icon', { length: 100 }).default('savings'),
   color: varchar('color', { length: 50 }).default('#4CAF50'),
@@ -815,6 +825,7 @@ export const bankTypes = pgTable("bank_types", {
   businessId: integer("business_id").notNull().references(() => businesses.id),
   name: varchar("name", { length: 200 }).notNull(),
   subTypeKey: varchar("sub_type_key", { length: 100 }).notNull(),
+  sequenceNumber: integer("sequence_number"), // رقم التصنيف داخل نوع الخزينة (بنوك)
   description: text("description"),
   icon: varchar("icon", { length: 100 }).default("account_balance"),
   color: varchar("color", { length: 50 }).default("#4CAF50"),
@@ -830,6 +841,7 @@ export const exchangeTypes = pgTable("exchange_types", {
   businessId: integer("business_id").notNull().references(() => businesses.id),
   name: varchar("name", { length: 200 }).notNull(),
   subTypeKey: varchar("sub_type_key", { length: 100 }).notNull(),
+  sequenceNumber: integer("sequence_number"), // رقم التصنيف داخل نوع الخزينة (صرافين)
   description: text("description"),
   icon: varchar("icon", { length: 100 }).default("currency_exchange"),
   color: varchar("color", { length: 50 }).default("#4CAF50"),
@@ -845,6 +857,7 @@ export const eWalletTypes = pgTable("e_wallet_types", {
   businessId: integer("business_id").notNull().references(() => businesses.id),
   name: varchar("name", { length: 200 }).notNull(),
   subTypeKey: varchar("sub_type_key", { length: 100 }).notNull(),
+  sequenceNumber: integer("sequence_number"), // رقم التصنيف داخل نوع الخزينة (محافظ)
   description: text("description"),
   icon: varchar("icon", { length: 100 }).default("e_wallet"),
   color: varchar("color", { length: 50 }).default("#4CAF50"),
@@ -972,10 +985,11 @@ export const sequenceCounters = pgTable('sequence_counters', {
   entityId: integer('entity_id').notNull(), // معرف الحساب أو القالب أو التصنيف
   year: integer('year').notNull(), // السنة الميلادية
   lastNumber: integer('last_number').notNull().default(0), // آخر رقم تسلسلي
-  prefix: varchar('prefix', { length: 30 }), // البادئة (مثل FND01, RCV01)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueCounter: unique('sequence_counters_unique').on(table.businessId, table.counterType, table.entityId, table.year),
+}));
 
 // ===================== WAREHOUSE TYPES (أنواع/تصنيفات المخازن) =====================
 
@@ -984,6 +998,7 @@ export const warehouseTypes = pgTable('warehouse_types', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
+  sequenceNumber: integer('sequence_number'), // رقم التصنيف داخل نوع المخزن
   description: text('description'),
   icon: varchar('icon', { length: 100 }).default('warehouse'),
   color: varchar('color', { length: 50 }).default('#4CAF50'),
@@ -1000,6 +1015,7 @@ export const journalEntryCategories = pgTable('journal_entry_categories', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   categoryKey: varchar('category_key', { length: 100 }).notNull(),
+  sequenceNumber: integer('sequence_number'), // رقم تصنيف قيد اليومية
   description: text('description'),
   icon: varchar('icon', { length: 100 }).default('book'),
   color: varchar('color', { length: 50 }).default('#6366f1'),
@@ -1033,6 +1049,7 @@ export const warehouseOperations = pgTable('warehouse_operations', {
   // حقول الترقيم الذكي
   warehouseSequence: integer('warehouse_sequence'), // تسلسل المخزن
   templateSequence: integer('template_sequence'), // تسلسل القالب
+  fullSequenceNumber: varchar('full_sequence_number', { length: 100 }), // الرقم المنسق الكامل: تصنيف-مخزن-سنة-نوع-تسلسل
 
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
