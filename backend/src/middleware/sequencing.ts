@@ -120,15 +120,19 @@ export const TYPE_PREFIXES: Record<string, string> = {
   service: 'SRV',
   
   // أنواع السندات
-  receipt: 'RCV',
-  payment: 'PAY',
+  receipt: 'QBD',
+  payment: 'SRF',
   transfer: 'TRF',
-  journal: 'JRN',
+  journal: 'QYD',
   
   // أنواع العمليات المخزنية
   supply_invoice: 'SIN',
   supply_order: 'SOR',
   dispatch: 'DSP',
+  // أسماء الأنواع في الواجهة/API
+  transfer_out: 'WTR',
+  receive_transfer: 'WRC',
+  // أسماء قديمة/بديلة (للتوافق)
   warehouse_transfer: 'WTR',
   warehouse_receive: 'WRC',
 };
@@ -164,19 +168,20 @@ export async function generateOperationSequences(
   businessId: number,
   accountId: number,
   templateId: number | null,
-  operationType: 'voucher' | 'journal' | 'warehouse_op'
+  operationType: 'voucher' | 'journal' | 'warehouse_op',
+  year?: number
 ): Promise<{ accountSequence: number; templateSequence: number | null }> {
-  const year = new Date().getFullYear();
+  const opYear = year || new Date().getFullYear();
   
   // تسلسل الحساب
   const accountCounterType = `account_${operationType}`;
-  const accountSequence = await getNextSequence(businessId, accountCounterType, accountId, year);
+  const accountSequence = await getNextSequence(businessId, accountCounterType, accountId, opYear);
   
   // تسلسل القالب (إذا وُجد)
   let templateSequence: number | null = null;
   if (templateId) {
     const templateCounterType = `template_${operationType}`;
-    templateSequence = await getNextSequence(businessId, templateCounterType, templateId, year);
+    templateSequence = await getNextSequence(businessId, templateCounterType, templateId, opYear);
   }
   
   return { accountSequence, templateSequence };

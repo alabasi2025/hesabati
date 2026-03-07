@@ -59,6 +59,7 @@
           </div>
           <h3 class="card-name">{{ acc.name }}</h3>
           <span class="card-type-badge" [style.color]="getTypeInfo(acc.subType).color" [style.background]="getTypeInfo(acc.subType).color + '20'">{{ getTypeInfo(acc.subType).name }}</span>
+          @if (acc.code) { <div class="card-detail"><span class="material-icons-round">numbers</span> {{ acc.code }}</div> }
           @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
           @if (acc.provider) { <div class="card-detail"><span class="material-icons-round">business</span> {{ acc.provider }}</div> }
           @if (acc.responsiblePerson) { <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }

@@ -1,8 +1,7 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
@@ -27,7 +26,7 @@ export class FundsComponent extends BasePageComponent {
   // Fund form
   showFundForm = signal(false);
   editingFundId = signal<number | null>(null);
-  fundForm: any = { name: '', fundType: '', responsiblePerson: '', stationId: null, description: '', notes: '' };
+  fundForm: any = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, description: '', notes: '' };
 
   // Type form
   showTypeForm = signal(false);
@@ -96,6 +95,7 @@ export class FundsComponent extends BasePageComponent {
     this.fundForm = {
       name: '',
       fundType: subType || (this.fundTypes().length ? this.fundTypes()[0].subTypeKey : 'collection'),
+      sequenceNumber: '',
       responsiblePerson: '',
       stationId: null,
       description: '',
@@ -109,6 +109,7 @@ export class FundsComponent extends BasePageComponent {
     this.fundForm = {
       name: fund.name,
       fundType: fund.fundType || '',
+      sequenceNumber: fund.sequenceNumber ?? '',
       responsiblePerson: fund.responsiblePerson || '',
       stationId: fund.stationId || null,
       description: fund.description || '',
@@ -122,6 +123,16 @@ export class FundsComponent extends BasePageComponent {
     try {
       const data = { ...this.fundForm };
       if (data.stationId === '' || data.stationId === null) delete data.stationId;
+      if (data.sequenceNumber === '' || data.sequenceNumber === null || data.sequenceNumber === undefined) {
+        delete data.sequenceNumber;
+      } else {
+        const n = Number.parseInt(String(data.sequenceNumber), 10);
+        if (!Number.isInteger(n) || n <= 0) {
+          this.toast.error('رقم الصندوق غير صالح');
+          return;
+        }
+        data.sequenceNumber = n;
+      }
 
       if (this.editingFundId()) {
         await this.api.updateFund(this.bizId, this.editingFundId()!, data);
@@ -172,9 +183,7 @@ export class FundsComponent extends BasePageComponent {
     if (!target) return;
     try {
       if (target.type === 'fund') {
-        // TODO: Add deleteFund to API service when backend supports it
-        // For now, we'll use the account delete as fallback
-        await this.api.deleteAccount(target.id);
+        await this.api.deleteFund(this.bizId, target.id);
       } else {
         await this.api.deleteFundType(target.id);
       }

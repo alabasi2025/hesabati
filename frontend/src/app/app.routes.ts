@@ -28,6 +28,7 @@ export const routes: Routes = [
       { path: 'employees', loadComponent: () => import('./pages/employees/employees').then(m => m.EmployeesComponent) },
       { path: 'funds', loadComponent: () => import('./pages/funds/funds').then(m => m.FundsComponent) },
       { path: 'vouchers', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
+      { path: 'register-operation', loadComponent: () => import('./pages/register-operation/register-operation').then(m => m.RegisterOperationComponent) },
       { path: 'vouchers/receipt', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
       { path: 'vouchers/payment', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
       { path: 'journal', loadComponent: () => import('./pages/journal/journal').then(m => m.JournalComponent) },

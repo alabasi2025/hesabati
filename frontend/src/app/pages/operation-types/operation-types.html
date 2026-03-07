@@ -220,6 +220,17 @@
 
                   <!-- Info Row -->
                   <div class="ot-info-row">
+                    @if (ot.code) {
+                      <div class="ot-info-chip">
+                        <span class="material-icons-round">tag</span>
+                        {{ ot.code }}
+                      </div>
+                    } @else if (ot.sequenceNumber) {
+                      <div class="ot-info-chip">
+                        <span class="material-icons-round">tag</span>
+                        #{{ ot.sequenceNumber }}
+                      </div>
+                    }
                     @if (ot.paymentMethod) {
                       <div class="ot-info-chip">
                         <span class="material-icons-round">payments</span>

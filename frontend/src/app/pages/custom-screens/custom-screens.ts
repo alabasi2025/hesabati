@@ -710,10 +710,22 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
     const total = this.getFormTotal();
     const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'توريد' : 'عملية';
+    const vType: 'receipt' | 'payment' = (opType.voucherType === 'payment' ? 'payment' : 'receipt');
+    const useMulti = opType.hasMultiLines !== false;
+    // إلزامية تحديد الخزينة (المصدر) في القالب قبل التنفيذ
+    const pm = String(opType.paymentMethod || '').trim();
+    if (!pm) { this.toast.warning('حدد وسيلة الدفع والخزينة (المصدر) في القالب قبل التنفيذ'); return; }
+    if (pm === 'cash') {
+      if (!opType.sourceFundId) { this.toast.warning('حدد الخزينة (الصندوق) في القالب قبل التنفيذ'); return; }
+    } else {
+      if (!opType.sourceAccountId) { this.toast.warning('حدد الخزينة (حساب بنك/صراف/محفظة) في القالب قبل التنفيذ'); return; }
+    }
     const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد ${vTypeLabel} - ${opType.name}`,
-      message: `سيتم تنفيذ ${entries.length} عملية بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      message: useMulti
+        ? `سيتم إنشاء سند ${vTypeLabel} واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`
+        : `سيتم تنفيذ ${entries.length} سند بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
       type: opType.voucherType === 'payment' ? 'danger' : 'info',
     });
     if (!confirmed) return;
@@ -721,21 +733,57 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     this.saving.set(true);
     const results: any[] = []; const errors: string[] = [];
     try {
-      for (const entry of entries) {
-        try {
-          const result = await this.api.createVoucher(this.bizId, {
-            voucherType: opType.voucherType || 'receipt', operationTypeId: opType.id,
-            toAccountId: entry.accountId, amount: Number.parseFloat(entry.amount),
-            currencyId: this.csFormCurrencyId(),
-            description: this.csFormDescription() || `${opType.name} - ${entry.accountName}`,
-            voucherDate: this.csFormDate(),
-          });
-          results.push(result);
-        } catch (e: unknown) { errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`); }
+      if (useMulti) {
+        // سند واحد متعدد السطور - يعتمد على القالب لتحديد الطرف الأول (المصدر)
+        const result = await this.api.createVoucherMulti(this.bizId, {
+          voucherType: vType,
+          operationTypeId: opType.id,
+          currencyId: this.csFormCurrencyId(),
+          description: this.csFormDescription() || `${opType.name}`,
+          voucherDate: this.csFormDate(),
+          entries: entries.map(e => ({
+            accountId: e.accountId,
+            amount: Number.parseFloat(e.amount),
+            notes: e.notes || null,
+          })),
+        });
+        results.push(result);
+      } else {
+        // سندات منفصلة - كل سطر = سند مستقل
+        for (const entry of entries) {
+          try {
+            const payload: any = {
+              voucherType: vType,
+              operationTypeId: opType.id,
+              amount: Number.parseFloat(entry.amount),
+              currencyId: this.csFormCurrencyId(),
+              description: this.csFormDescription() || `${opType.name} - ${entry.accountName}`,
+              voucherDate: this.csFormDate(),
+            };
+
+            // منطق القالب:
+            // - سند قبض: الطرف الأول (المصدر) يستلم ← القالب يحدد toAccountId (sourceAccountId)
+            // - الطرف الثاني (المرتبط) يُقبض منه ← fromAccountId = حساب السطر
+            if (vType === 'receipt') {
+              payload.fromAccountId = entry.accountId;
+            } else {
+              // سند صرف: الطرف الأول (المصدر) يصرف ← القالب يحدد fromAccountId (sourceAccountId)
+              // الطرف الثاني يستلم ← toAccountId = حساب السطر
+              payload.toAccountId = entry.accountId;
+            }
+
+            const result = await this.api.createVoucher(this.bizId, payload);
+            results.push(result);
+          } catch (e: unknown) {
+            errors.push(`${entry.accountName}: ${e instanceof Error ? e.message : 'خطأ'}`);
+          }
+        }
       }
 
       if (results.length > 0 && errors.length === 0) {
-        this.toast.success(`تم تنفيذ ${results.length} عملية بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}`);
+        const countLabel = useMulti ? 'سند واحد' : `${results.length} سند`;
+        const vNo = (results[0] as any)?.voucherNumber ? ` (رقم: ${(results[0] as any).voucherNumber})` : '';
+        this.toast.success(`تم تنفيذ ${countLabel} بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}${vNo}`);
       } else if (results.length > 0) {
         this.toast.warning(`تم ${results.length} عملية بنجاح، فشلت ${errors.length}`);
       } else {

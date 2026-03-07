@@ -15,13 +15,9 @@
       <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
         <span class="material-icons-round">help_outline</span>
       </button>
-      <button class="btn-3d btn-receipt" (click)="openCreate('receipt')">
-        <span class="material-icons-round">call_received</span>
-        سند قبض
-      </button>
-      <button class="btn-3d btn-payment" (click)="openCreate('payment')">
-        <span class="material-icons-round">call_made</span>
-        سند صرف
+      <button class="btn-3d btn-primary" [routerLink]="['/biz', bizId, 'register-operation']">
+        <span class="material-icons-round">play_circle</span>
+        تسجيل عملية
       </button>
     </div>
   </div>
@@ -93,17 +89,11 @@
           <span class="material-icons-round">receipt_long</span>
         </div>
         <h3>لا توجد سندات</h3>
-        <p>أنشئ سند قبض أو صرف لتسجيل حركة مالية</p>
-        <div class="empty-actions">
-          <button class="btn-3d btn-receipt" (click)="openCreate('receipt')">
-            <span class="material-icons-round">call_received</span>
-            سند قبض
-          </button>
-          <button class="btn-3d btn-payment" (click)="openCreate('payment')">
-            <span class="material-icons-round">call_made</span>
-            سند صرف
-          </button>
-        </div>
+        <p>سجّل عملية من خلال قالب (تسجيل عملية)</p>
+        <a class="btn-3d btn-primary" [routerLink]="['/biz', bizId, 'register-operation']">
+          <span class="material-icons-round">play_circle</span>
+          تسجيل عملية
+        </a>
       </div>
     } @else {
       <div class="vouchers-list">
@@ -119,6 +109,10 @@
                 <span class="vr-date">
                   <span class="material-icons-round">calendar_today</span>
                   {{ formatDate(v.voucherDate || v.createdAt) }}
+                </span>
+                <span class="vr-number">
+                  <span class="material-icons-round">tag</span>
+                  {{ v.voucherNumber }}
                 </span>
                 @if (v.fromAccountId) {
                   <span class="vr-account">
@@ -191,15 +185,17 @@
           <div class="hiw-section">
             <h3><span class="material-icons-round">call_received</span> سند القبض</h3>
             <p>
-              يُستخدم عندما يستلم حساب مبلغاً من حساب آخر.
-              مثلاً: استلام تحصيل يومي من موظف.
+              يُستخدم عند <strong>استلام</strong> مبلغ إلى خزينة (صندوق/بنك/صراف/محفظة) من حساب آخر.
+              <br />
+              <small>السند القياسي يرحّل على <strong>حسابين فقط</strong>: مدين + دائن.</small>
             </p>
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">call_made</span> سند الصرف</h3>
             <p>
-              يُستخدم عندما يدفع حساب مبلغاً لحساب آخر.
-              مثلاً: إيداع في صراف أو تحويل لمحفظة.
+              يُستخدم عند <strong>صرف</strong> مبلغ من خزينة (صندوق/بنك/صراف/محفظة) إلى حساب آخر.
+              <br />
+              <small>السند القياسي يرحّل على <strong>حسابين فقط</strong>: مدين + دائن.</small>
             </p>
           </div>
           <div class="hiw-section">
@@ -207,6 +203,24 @@
             <p>
               لما تنشئ سنداً، تختار أولاً "نوع العملية" من القوالب المحفوظة.
               هذا يحدد الحسابات المتاحة تلقائياً.
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">tag</span> ترقيم السند</h3>
+            <p>
+              رقم السند يُولّد حسب <strong>نوع الخزينة + رقم التصنيف + رقم الخزينة + السنة + تسلسل يبدأ من 1</strong>.
+            </p>
+            <p dir="ltr" style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+              QBD/SRF-(FND/BNK/EXC/WLT)-CategoryNo-VaultNo-YYYY-Serial
+            </p>
+            <p>
+              <small>التسلسل يبدأ من <strong>1</strong> لكل خزينة ولكل سنة (وكل عمل منفصل).</small>
+            </p>
+          </div>
+          <div class="hiw-section">
+            <h3><span class="material-icons-round">inventory_2</span> المخازن</h3>
+            <p>
+              عمليات المخازن لها شاشة مستقلة ورقم عملية مستقل (ليست سندات قبض/صرف)، مثل: توريد، صرف، تحويل، استلام تحويل.
             </p>
           </div>
         </div>
@@ -239,7 +253,7 @@
             <div class="form-step">
               <div class="step-header">
                 <div class="step-num">١</div>
-                <span>اختر نوع العملية (اختياري)</span>
+                <span>اختر نوع العملية (القالب) <span class="required">*</span></span>
               </div>
               <div class="op-types-grid">
                 @for (ot of voucherOpTypes(); track ot.id) {
@@ -260,36 +274,54 @@
               <span>الحسابات</span>
             </div>
             <div class="form-row">
+              @if (voucherType() === 'receipt') {
+                <div class="form-group">
+                  <label class="form-label">صندوق الوارد (اختياري)</label>
+                  <select class="form-select" [value]="form().toFundId"
+                          (change)="setFormField('toFundId', +$any($event.target).value || null)">
+                    <option [value]="null">بدون صندوق...</option>
+                    @for (fnd of funds(); track fnd.id) {
+                      <option [value]="fnd.id">{{ fnd.name }}@if (fnd.code) { ({{ fnd.code }}) } @else if (fnd.sequenceNumber) { (#{{ fnd.sequenceNumber }}) }</option>
+                    }
+                  </select>
+                </div>
+              } @else {
+                <div class="form-group">
+                  <label class="form-label">صندوق الصادر (اختياري)</label>
+                  <select class="form-select" [value]="form().fromFundId"
+                          (change)="setFormField('fromFundId', +$any($event.target).value || null)">
+                    <option [value]="null">بدون صندوق...</option>
+                    @for (fnd of funds(); track fnd.id) {
+                      <option [value]="fnd.id">{{ fnd.name }}@if (fnd.code) { ({{ fnd.code }}) } @else if (fnd.sequenceNumber) { (#{{ fnd.sequenceNumber }}) }</option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label">
-                  {{ voucherType() === 'payment' ? 'الحساب المصروف منه' : 'الحساب المستلِم' }}
+                  الحساب المصروف منه
                   <span class="required">*</span>
                 </label>
                 <select class="form-select" [value]="form().fromAccountId"
                         (change)="setFormField('fromAccountId', +$any($event.target).value || null)">
                   <option [value]="null">اختر الحساب...</option>
-                  @for (acc of accounts(); track acc.id) {
-                    <option [value]="acc.id">{{ acc.name }}</option>
+                  @for (acc of filteredFromAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">
-                  {{ voucherType() === 'payment' ? 'الحساب المستلِم' : 'الحساب المصروف منه' }}
+                  الحساب المستلِم
+                  <span class="required">*</span>
                 </label>
                 <select class="form-select" [value]="form().toAccountId"
                         (change)="setFormField('toAccountId', +$any($event.target).value || null)">
                   <option [value]="null">اختر الحساب...</option>
-                  @if (linkedAccounts().length > 0) {
-                    @for (la of linkedAccounts(); track la.id) {
-                      <option [value]="la.accountId">{{ la.accountName }}</option>
-                    }
-                  } @else {
-                    @for (acc of accounts(); track acc.id) {
-                      @if (acc.id !== form().fromAccountId) {
-                        <option [value]="acc.id">{{ acc.name }}</option>
-                      }
-                    }
+                  @for (acc of filteredToAccounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
                   }
                 </select>
               </div>
@@ -408,6 +440,38 @@
                 <span class="detail-label">رقم السند</span>
                 <span class="detail-value">{{ detailsVoucher().voucherNumber || '-' }}</span>
               </div>
+              @if (detailsVoucherNumberParts()) {
+                <div class="detail-row">
+                  <span class="detail-label">الخزينة</span>
+                  <span class="detail-value">
+                    {{ getTreasuryKindLabel(detailsVoucherNumberParts()?.treasuryKindCode || '') }}
+                    • تصنيف {{ detailsVoucherNumberParts()?.categoryNo }}
+                    • رقم {{ detailsVoucherNumberParts()?.vaultNo }}
+                  </span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">السنة / التسلسل</span>
+                  <span class="detail-value">{{ detailsVoucherNumberParts()?.year }} / {{ detailsVoucherNumberParts()?.serial }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">الصيغة المختصرة</span>
+                  <span class="detail-value" dir="ltr">
+                    {{ detailsVoucherNumberParts()?.categoryNo }}-{{ detailsVoucherNumberParts()?.vaultNo }}-{{ detailsVoucherNumberParts()?.year }}-{{ detailsVoucherNumberParts()?.serial }}
+                  </span>
+                </div>
+              }
+              @if (detailsVoucher().accountSequence) {
+                <div class="detail-row">
+                  <span class="detail-label">تسلسل الحساب</span>
+                  <span class="detail-value">{{ detailsVoucher().accountSequence }}</span>
+                </div>
+              }
+              @if (detailsVoucher().templateSequence) {
+                <div class="detail-row">
+                  <span class="detail-label">تسلسل القالب</span>
+                  <span class="detail-value">{{ detailsVoucher().templateSequence }}</span>
+                </div>
+              }
               <div class="detail-row">
                 <span class="detail-label">النوع</span>
                 <span class="detail-value">

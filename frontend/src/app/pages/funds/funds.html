@@ -69,6 +69,11 @@
           </div>
           <h3 class="card-name">{{ acc.name }}</h3>
           <span class="card-type-badge" [style.color]="getTypeInfo(acc.fundType).color" [style.background]="getTypeInfo(acc.fundType).color + '20'">{{ getTypeInfo(acc.fundType).name }}</span>
+          @if (acc.code) {
+            <div class="card-detail"><span class="material-icons-round">numbers</span> {{ acc.code }}</div>
+          } @else if (acc.sequenceNumber) {
+            <div class="card-detail"><span class="material-icons-round">numbers</span> #{{ acc.sequenceNumber }}</div>
+          }
           @if (acc.stationName) {
             <div class="card-detail"><span class="material-icons-round">ev_station</span> {{ acc.stationName }}</div>
           }
@@ -115,6 +120,12 @@
                   <option [value]="t.subTypeKey">{{ t.name }}</option>
                 }
               </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>رقم الصندوق (اختياري)</label>
+              <input [(ngModel)]="fundForm.sequenceNumber" placeholder="مثال: 13" dir="ltr" />
             </div>
           </div>
           <div class="form-row">
