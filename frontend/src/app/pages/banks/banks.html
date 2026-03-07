@@ -60,13 +60,9 @@
           <h3 class="card-name">{{ acc.name }}</h3>
           <div class="card-badges">
           <span class="card-type-badge" [style.color]="getTypeInfo(acc.subType).color" [style.background]="getTypeInfo(acc.subType).color + '20'">{{ getTypeInfo(acc.subType).name }}</span>
-<<<<<<< HEAD
-          @if (acc.code) { <div class="card-detail"><span class="material-icons-round">numbers</span> {{ acc.code }}</div> }
-=======
             @if (acc.sequenceNumber) { <span class="card-seq-badge">#{{ acc.sequenceNumber }}</span> }
             @if (acc.code) { <span class="card-code-badge">{{ acc.code }}</span> }
           </div>
->>>>>>> e71af9f3700262d1ad5ea5131bf3dcca6f68994f
           @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
           @if (acc.provider) { <div class="card-detail"><span class="material-icons-round">business</span> {{ acc.provider }}</div> }
           @if (acc.responsiblePerson) { <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }
