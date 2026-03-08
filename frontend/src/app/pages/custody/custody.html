@@ -1,0 +1,222 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">account_balance_wallet</span> العهد</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إنشاء عهدة</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-card purple">
+      <span class="material-icons-round">account_balance_wallet</span>
+      <div><span class="num">{{ records().length }}</span><span class="lbl">إجمالي العهد</span></div>
+    </div>
+    <div class="summary-card green">
+      <span class="material-icons-round">check_circle</span>
+      <div><span class="num">{{ records().filter(r => r.status === 'active').length }}</span><span class="lbl">عهد نشطة</span></div>
+    </div>
+    <div class="summary-card blue">
+      <span class="material-icons-round">done_all</span>
+      <div><span class="num">{{ records().filter(r => r.status === 'settled').length }}</span><span class="lbl">مسوّاة</span></div>
+    </div>
+  </div>
+
+  <!-- تبويبات -->
+  <div class="tabs-bar">
+    <button class="tab-btn" [class.active]="activeTab() === 'permanent'" (click)="switchTab('permanent')">
+      <span class="material-icons-round">lock</span> دائمة
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'temporary'" (click)="switchTab('temporary')">
+      <span class="material-icons-round">schedule</span> مؤقتة
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!filteredRecords.length) {
+    <div class="empty-state">
+      <span class="material-icons-round">account_balance_wallet</span>
+      <p>لا توجد عهد {{ activeTab() === 'permanent' ? 'دائمة' : 'مؤقتة' }} بعد</p>
+      <p class="empty-hint">أنشئ عهدة جديدة لتتبع الأمانات والمبالغ المعهودة</p>
+    </div>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>رقم العهدة</th>
+          <th>اسم الطرف</th>
+          <th>نوع الطرف</th>
+          <th>نوع المحتوى</th>
+          <th>المبلغ</th>
+          <th>الحالة</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of filteredRecords; track c.id) {
+          <tr>
+            <td class="custody-num">{{ c.custodyNumber || c.id }}</td>
+            <td class="party-name">{{ c.partyName }}</td>
+            <td><span class="type-badge">{{ getPartyTypeLabel(c.partyType) }}</span></td>
+            <td><span class="content-badge">{{ getContentTypeLabel(c.contentType) }}</span></td>
+            <td class="amount-cell">{{ (c.amount || 0) | number }}</td>
+            <td><span class="status-badge" [class]="getStatusClass(c.status)">{{ getStatusLabel(c.status) }}</span></td>
+            <td>
+              <button class="action-btn" (click)="viewDetails(c)" title="عرض"><span class="material-icons-round">visibility</span></button>
+              <button class="action-btn edit" (click)="openEdit(c)" title="تعديل"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="remove(c)" title="حذف"><span class="material-icons-round">delete</span></button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <!-- تفاصيل العهدة والتسويات -->
+  @if (viewingRecord()) {
+    <div class="modal-overlay" (click)="viewingRecord.set(null)">
+      <div class="modal-card wide" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon purple"><span class="material-icons-round">account_balance_wallet</span></div>
+            <div>
+              <h2>تفاصيل العهدة</h2>
+              <p>{{ viewingRecord().partyName }} — {{ viewingRecord().custodyNumber || viewingRecord().id }}</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="viewingRecord.set(null)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">نوع العهدة</span><span class="detail-value">{{ viewingRecord().custodyType === 'permanent' ? 'دائمة' : 'مؤقتة' }}</span></div>
+            <div class="detail-item"><span class="detail-label">نوع المحتوى</span><span class="detail-value">{{ getContentTypeLabel(viewingRecord().contentType) }}</span></div>
+            <div class="detail-item"><span class="detail-label">نوع الطرف</span><span class="detail-value">{{ getPartyTypeLabel(viewingRecord().partyType) }}</span></div>
+            <div class="detail-item"><span class="detail-label">المبلغ</span><span class="detail-value amount">{{ (viewingRecord().amount || 0) | number }}</span></div>
+            <div class="detail-item"><span class="detail-label">الحالة</span><span class="status-badge" [class]="getStatusClass(viewingRecord().status)">{{ getStatusLabel(viewingRecord().status) }}</span></div>
+          </div>
+          @if (viewingRecord().description) {
+            <div class="notes-section">
+              <span class="detail-label">الوصف</span>
+              <p>{{ viewingRecord().description }}</p>
+            </div>
+          }
+
+          <!-- التسويات -->
+          <div class="settlements-section">
+            <div class="settlements-header">
+              <h3><span class="material-icons-round">receipt_long</span> التسويات</h3>
+              @if (viewingRecord().status === 'active' || viewingRecord().status === 'partially_settled') {
+                <button class="add-btn small" (click)="openSettle()"><span class="material-icons-round">add</span> إضافة تسوية</button>
+              }
+            </div>
+            @if (!settlements().length) {
+              <p class="no-settlements">لا توجد تسويات بعد</p>
+            } @else {
+              <table class="data-table settlements-table">
+                <thead><tr><th>المبلغ</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
+                <tbody>
+                  @for (s of settlements(); track s.id) {
+                    <tr>
+                      <td class="amount-cell">{{ (s.amount || 0) | number }}</td>
+                      <td>{{ (s.settledAt || s.createdAt || '').split('T')[0] }}</td>
+                      <td>{{ s.notes || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+
+          <!-- نموذج تسوية -->
+          @if (showSettleForm()) {
+            <div class="settle-form">
+              <h4>إضافة تسوية جديدة</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>مبلغ التسوية <span class="required">*</span></label>
+                  <input type="number" [(ngModel)]="settleForm.amount" placeholder="0" />
+                </div>
+                <div class="form-group">
+                  <label>تاريخ التسوية</label>
+                  <input type="date" [(ngModel)]="settleForm.settledAt" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>ملاحظات</label>
+                <textarea [(ngModel)]="settleForm.notes" rows="2" placeholder="ملاحظات..."></textarea>
+              </div>
+              <div class="settle-actions">
+                <button class="btn-save" (click)="submitSettle()">تأكيد التسوية</button>
+                <button class="btn-cancel" (click)="showSettleForm.set(false)">إلغاء</button>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" (click)="viewingRecord.set(null)">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- نموذج إضافة/تعديل -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon purple"><span class="material-icons-round">account_balance_wallet</span></div>
+            <div>
+              <h2>{{ editingId() ? 'تعديل العهدة' : 'إنشاء عهدة جديدة' }}</h2>
+              <p>إدارة العهد والأمانات المعهودة للأطراف</p>
+            </div>
+          </div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>نوع العهدة</label>
+              <select [(ngModel)]="form.custodyType">
+                <option value="permanent">دائمة</option>
+                <option value="temporary">مؤقتة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>نوع المحتوى</label>
+              <select [(ngModel)]="form.contentType">
+                @for (ct of contentTypes; track ct.key) {
+                  <option [value]="ct.key">{{ ct.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>اسم الطرف <span class="required">*</span></label>
+              <input [(ngModel)]="form.partyName" placeholder="مثال: أحمد محمد" />
+            </div>
+            <div class="form-group">
+              <label>نوع الطرف</label>
+              <select [(ngModel)]="form.partyType">
+                @for (pt of partyTypes; track pt.key) {
+                  <option [value]="pt.key">{{ pt.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>المبلغ</label>
+            <input type="number" [(ngModel)]="form.amount" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea [(ngModel)]="form.description" rows="3" placeholder="وصف العهدة..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء العهدة' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

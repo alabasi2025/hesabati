@@ -10,17 +10,36 @@
 
 تم أيضاً تضمين `src/**/*.html` و `src/**/*.scss` في `frontend/tsconfig.app.json` لربط القوالب والأنماط بمشروع Angular.
 
-## إضافات مُوصى بها
+## إضافات مُوصى بها (احترافية)
 
-عند فتح المشروع، Cursor/VS Code قد يقترح تثبيت الإضافات التالية. يُفضّل قبولها لتجربة أفضل:
+القائمة الكاملة في `.vscode/extensions.json`. عند فتح المشروع قد يطلب Cursor تثبيتها؛ أو: **Ctrl+Shift+X** → اكتب "Recommended" واختر **Install Workspace Recommended Extensions**.
 
 | الإضافة | الفائدة |
 |--------|---------|
-| **Angular Language Service** (`angular.ng-template`) | دعم Angular في المحرر |
-| **Live Preview** (`ms-vscode.live-server`) | فتح معاينة الصفحة **داخل المحرر** (متصفح مدمج) |
-| **ESLint** (`dbaeumer.vscode-eslint`) | فحص جودة الكود |
-| **Prettier** (`esbenp.prettier-vscode`) | تنسيق الكود تلقائياً |
-| **Tailwind CSS IntelliSense** (`bradlc.vscode-tailwindcss`) | استكمال وتلميحات لـ Tailwind |
+| **Angular Language Service** | دعم قوالب وروابط Angular |
+| **ESLint** | فحص جودة الكود |
+| **Prettier** | تنسيق الكود عند الحفظ |
+| **Tailwind CSS IntelliSense** | استكمال وتلميحات Tailwind |
+| **TypeScript** | دعم TypeScript |
+| **Playwright** | تشغيل اختبارات E2E |
+| **Error Lens** | عرض الأخطاء على السطر |
+| **Path Intellisense** | استكمال المسارات |
+| **Auto Rename/Close Tag** | إعادة تسمية وإغلاق وسوم HTML |
+| **REST Client** | تنفيذ طلبات API من الملفات |
+| **Database Client** | الاتصال بـ PostgreSQL وتصفح الجداول |
+| **GitLens** | تاريخ Git وسهولة المقارنة |
+| **Git Graph** | رسم بياني للفروع والـ commits |
+| **Todo Tree / Todo Highlight** | تمييز TODO و FIXME |
+| **Code Spell Checker (+ Arabic)** | تدقيق إملائي عربي وإنجليزي |
+| **EditorConfig** | توحيد الترميز والمسافات بين المحررين |
+| **Docker** | إدارة الحاويات والصور |
+| **Remote - Containers** | فتح المشروع داخل حاوية |
+| **Import Cost** | عرض حجم الـ imports |
+| **Better Comments** | تمييز التعليقات المهمة |
+| **Color Highlight** | عرض الألوان في الكود |
+| **HTML CSS Class Completion** | استكمال أسماء الـ classes |
+| **Material Icon Theme** | أيقونات للملفات |
+| **Code Runner** | تشغيل مقتطفات الكود سريعاً |
 
 ## فتح التطبيق داخل Cursor
 

@@ -1,5 +1,12 @@
 version: '3.8'
 
+# ===================== أمان الإنتاج =====================
+# في بيئة الإنتاج يجب تعيين المتغيرات التالية في ملف .env (لا تعتمد على القيم الافتراضية):
+#   DB_PASSWORD   — كلمة مرور قوية لـ PostgreSQL
+#   JWT_SECRET    — مفتاح عشوائي (مثلاً: openssl rand -hex 64)
+#   ALLOWED_ORIGINS — النطاقات المسموحة للواجهة (مفصولة بفاصلة)
+# انسخ .env.example إلى .env وعدّل القيم قبل التشغيل في الإنتاج.
+
 services:
   # ===================== قاعدة البيانات =====================
   postgres:
@@ -7,9 +14,10 @@ services:
     container_name: hesabati-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: hesabati
+      POSTGRES_DB: ${POSTGRES_DB:-hesabati}
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-StrongPassword123!}
+      # للتطوير المحلي فقط: قيمة افتراضية — في الإنتاج عيّن DB_PASSWORD في .env (انظر .env.example)
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_local_only}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -17,7 +25,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d hesabati"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,7 +43,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-StrongPassword123!}@postgres:5432/hesabati
+      # في الإنتاج عيّن DB_PASSWORD و JWT_SECRET في .env — لا تستخدم القيم الافتراضية
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-dev_local_only}@postgres:5432/${POSTGRES_DB:-hesabati}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION}
       PORT: 3000
       NODE_ENV: production

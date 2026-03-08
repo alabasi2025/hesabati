@@ -15,7 +15,15 @@ import operationTypesRoutes from './operation-types.routes.ts';
 import journalEntriesRoutes from './journal-entries.routes.ts';
 import billingConfigRoutes from './billing-config.routes.ts';
 import warehouseRoutes from './warehouse.routes.ts';
+import reportsRoutes from './reports.routes.ts';
 import restRoutes from './api.rest.ts';
+import purchaseInvoicesRoutes from './purchase-invoices.routes.ts';
+import operationCategoriesRoutes from './operation-categories.routes.ts';
+import supplierTypesRoutes from './supplier-types.routes.ts';
+import inventoryItemTypesRoutes from './inventory-item-types.routes.ts';
+import departmentsRoutes from './departments.routes.ts';
+import jobTitlesRoutes from './job-titles.routes.ts';
+import custodyRoutes from './custody.routes.ts';
 
 const api = new Hono();
 
@@ -35,6 +43,14 @@ api.route('/', operationTypesRoutes);
 api.route('/', journalEntriesRoutes);
 api.route('/', billingConfigRoutes);
 api.route('/', warehouseRoutes);
+api.route('/', reportsRoutes);
 api.route('/', restRoutes);
+api.route('/', purchaseInvoicesRoutes);
+api.route('/', operationCategoriesRoutes);
+api.route('/', supplierTypesRoutes);
+api.route('/', inventoryItemTypesRoutes);
+api.route('/', departmentsRoutes);
+api.route('/', jobTitlesRoutes);
+api.route('/', custodyRoutes);
 
 export default api;

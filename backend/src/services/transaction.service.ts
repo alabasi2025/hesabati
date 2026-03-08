@@ -436,6 +436,7 @@ async function generateVoucherNumberByTreasury(
     counterType,
     treasury.treasuryId,
     year,
+    tx,
   );
   const voucherSeq = seq; // يبدأ من 1
   const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
@@ -458,6 +459,7 @@ async function generateVoucherNumberByTreasuryMulti(
     counterType,
     treasury.treasuryId,
     year,
+    tx,
   );
   const voucherSeq = seq; // يبدأ من 1
   const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
@@ -535,28 +537,17 @@ export async function postTransaction(
           tCounter,
           data.operationTypeId,
           seqYear,
+          tx,
         );
         templateSequence = `${tplPrefix}-${seqYear}-${tSeq}`;
       }
     } else {
-      // fallback (legacy) للأنواع الأخرى
+      // fallback للأنواع الأخرى (transfer, journal) باستخدام محرك الترقيم
       if (!voucherNumber) {
-        const seqName =
-          data.voucherType === "transfer"
-            ? "voucher_transfer_seq"
-            : "voucher_receipt_seq";
         const prefix = TYPE_PREFIXES[data.voucherType] || "VCH";
-        const seqResult = await tx.execute(
-          sql.raw(`SELECT nextval('${seqName}')`),
-        );
-        const seqRows = Array.isArray(seqResult)
-          ? seqResult
-          : (seqResult as any).rows || [];
-        const seqVal = Number.parseInt(
-          String((seqRows[0] as any)?.nextval || 1),
-          10,
-        );
-        voucherNumber = `${prefix}-${String(seqVal).padStart(5, "0")}`;
+        const counterType = `voucher_${data.voucherType}_fallback`;
+        const seqVal = await getNextSequence(bizId, counterType, 0, seqYear, tx);
+        voucherNumber = `${prefix}-${seqYear}-${String(seqVal).padStart(5, "0")}`;
       }
     }
 
@@ -748,27 +739,17 @@ export async function postMultiTransaction(
           tCounter,
           data.operationTypeId,
           seqYear,
+          tx,
         );
         templateSequence = `${tplPrefix}-${seqYear}-${tSeq}`;
       }
     } else {
+      // fallback للأنواع الأخرى باستخدام محرك الترقيم
       if (!voucherNumber) {
-        const seqName =
-          data.voucherType === "transfer"
-            ? "voucher_transfer_seq"
-            : "voucher_receipt_seq";
         const prefix = TYPE_PREFIXES[data.voucherType] || "VCH";
-        const seqResult = await tx.execute(
-          sql.raw(`SELECT nextval('${seqName}')`),
-        );
-        const seqRows = Array.isArray(seqResult)
-          ? seqResult
-          : (seqResult as any).rows || [];
-        const seqVal = Number.parseInt(
-          String((seqRows[0] as any)?.nextval || 1),
-          10,
-        );
-        voucherNumber = `${prefix}-${String(seqVal).padStart(5, "0")}`;
+        const counterType = `voucher_${data.voucherType}_fallback`;
+        const seqVal = await getNextSequence(bizId, counterType, 0, seqYear, tx);
+        voucherNumber = `${prefix}-${seqYear}-${String(seqVal).padStart(5, "0")}`;
       }
     }
 
@@ -1054,14 +1035,9 @@ export async function reverseTransaction(
     if (origLines.length < 2)
       throw new Error("القيد المحاسبي غير مكتمل ولا يمكن عكسه");
 
-    const seqResult = await tx.execute(
-      sql.raw(`SELECT nextval('voucher_reversal_seq')`),
-    );
-    const seqRows = Array.isArray(seqResult)
-      ? seqResult
-      : (seqResult as any).rows || [];
-    const seqVal = parseInt(String((seqRows[0] as any)?.nextval || 1));
-    const voucherNumber = `REV-${String(seqVal).padStart(6, "0")}`;
+    const currentYear = new Date().getFullYear();
+    const seqVal = await getNextSequence(bizId, "voucher_reversal", 0, currentYear, tx);
+    const voucherNumber = `REV-${currentYear}-${String(seqVal).padStart(5, "0")}`;
 
     const [reversalVoucher] = await tx
       .insert(vouchers)

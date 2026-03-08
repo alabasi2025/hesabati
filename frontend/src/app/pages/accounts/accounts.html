@@ -114,7 +114,7 @@
   </div>
 
   <!-- ===== Sub-Filters Panel (ديناميكي حسب النوع المختار) ===== -->
-  @if (activeType() !== 'all' && (subFilterOptions().length > 0 || (typeHasStationFilter() && availableStations().length > 0))) {
+  @if (activeType() !== 'all' && ((subFilterOptions()?.length ?? 0) > 0 || (typeHasStationFilter() && (availableStations()?.length ?? 0) > 0))) {
     <div class="sub-filters-panel">
       <div class="sub-filters-header">
         <span class="material-icons-round">tune</span>
@@ -410,19 +410,59 @@
                    [value]="form().name" (input)="setFormField('name', $any($event.target).value)">
           </div>
 
+          <!-- النوع الرئيسي للحساب -->
           <div class="form-group">
-            <label class="form-label">نوع الحساب</label>
+            <label class="form-label">النوع الرئيسي <span class="required">*</span></label>
             <div class="type-selector">
-              @for (t of knownAccountTypes; track t.value) {
-                <button class="type-option" [class.selected]="form().accountType === t.value"
+              @for (t of mainAccountTypes; track t.key) {
+                <button class="type-option" [class.selected]="form().accountType === t.key"
                         [style.--opt-color]="t.color"
-                        (click)="setFormField('accountType', t.value)">
+                        (click)="onAccountTypeChange(t.key)"
+                        type="button">
                   <span class="material-icons-round">{{ t.icon }}</span>
                   {{ t.label }}
                 </button>
               }
             </div>
+            @if (getMainTypeInfo(form().accountType)?.description) {
+              <p class="form-hint">
+                <span class="material-icons-round">info</span>
+                {{ getMainTypeInfo(form().accountType)?.description }}
+              </p>
+            }
           </div>
+
+          <!-- التصنيف الفرعي (إذا كانت هناك تصنيفات متاحة) -->
+          @if (availableSubTypes().length > 0) {
+            <div class="form-group">
+              <label class="form-label">التصنيف الفرعي</label>
+              <div class="subtype-selector">
+                <button class="subtype-option" [class.selected]="!form().subTypeId"
+                        (click)="onSubTypeChange(null)" type="button">
+                  <span class="material-icons-round">label_off</span>
+                  بدون تصنيف
+                </button>
+                @for (st of availableSubTypes(); track st.id) {
+                  <button class="subtype-option" [class.selected]="form().subTypeId === st.id"
+                          [style.--opt-color]="st.color"
+                          (click)="onSubTypeChange(st.id)" type="button">
+                    <span class="material-icons-round">{{ st.icon || 'label' }}</span>
+                    {{ st.name }}
+                  </button>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="form-group">
+              <label class="form-label">التصنيف الفرعي</label>
+              <input class="form-input" type="text" placeholder="تصنيف إضافي (اختياري)"
+                     [value]="form().subType" (input)="setFormField('subType', $any($event.target).value)">
+              <p class="form-hint">
+                <span class="material-icons-round">info</span>
+                يمكنك إضافة تصنيفات فرعية من صفحة <a href="javascript:void(0)" style="color: var(--primary);">أنواع الحسابات</a>
+              </p>
+            </div>
+          }
 
           <div class="form-row">
             <div class="form-group">
@@ -442,11 +482,6 @@
               <label class="form-label">المسؤول</label>
               <input class="form-input" type="text" placeholder="اسم المسؤول عن الحساب"
                      [value]="form().responsiblePerson" (input)="setFormField('responsiblePerson', $any($event.target).value)">
-            </div>
-            <div class="form-group">
-              <label class="form-label">تصنيف فرعي</label>
-              <input class="form-input" type="text" placeholder="تصنيف إضافي (اختياري)"
-                     [value]="form().subType" (input)="setFormField('subType', $any($event.target).value)">
             </div>
           </div>
 

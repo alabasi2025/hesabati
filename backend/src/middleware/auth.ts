@@ -52,3 +52,12 @@ export function adminMiddleware() {
 export function generateToken(payload: JwtPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
+
+/** التحقق من الـ token واستخراج البيانات (للاستخدام خارج HTTP مثل WebSocket). */
+export function verifyToken(token: string): JwtPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  } catch {
+    return null;
+  }
+}

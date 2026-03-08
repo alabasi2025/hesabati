@@ -1,8 +1,11 @@
 import { and, eq } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { db } from '../../../db/index.ts';
-import { accounts, funds } from '../../../db/schema/index.ts';
+import { accounts } from '../../../db/schema/index.ts';
 import { userCanAccessBusiness } from '../../../middleware/bizAuth.ts';
+import { verifyAccountOwnership, verifyFundOwnership } from '../../../domain/ownership.ts';
+
+export { verifyAccountOwnership, verifyFundOwnership };
 
 /**
  * التحقق من ملكية السجل (ينتمي للعمل المحدد).
@@ -18,28 +21,6 @@ export async function verifyOwnership(
   const col = bizColumn as typeof accounts.businessId;
   const [record] = await db.select({ id: t.id }).from(t).where(and(eq(t.id, recordId), eq(col, bizId)));
   return !!record;
-}
-
-/**
- * التحقق من ملكية حساب
- */
-export async function verifyAccountOwnership(accountId: number, bizId: number): Promise<boolean> {
-  const [acc] = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)));
-  return !!acc;
-}
-
-/**
- * التحقق من ملكية صندوق
- */
-export async function verifyFundOwnership(fundId: number, bizId: number): Promise<boolean> {
-  const [f] = await db
-    .select({ id: funds.id })
-    .from(funds)
-    .where(and(eq(funds.id, fundId), eq(funds.businessId, bizId)));
-  return !!f;
 }
 
 /**

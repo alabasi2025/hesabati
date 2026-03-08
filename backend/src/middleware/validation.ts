@@ -2,6 +2,13 @@ import { Context, Next } from 'hono';
 import { z } from 'zod';
 
 /**
+ * سياسة التحقق: كل مسار يعدّل بيانات (POST/PUT/PATCH) يجب أن يمرّر body عبر
+ * validateBody(schema, body) قبل الاستخدام. الـ schemas المعرّفة أدناه تغطي
+ * معظم الكيانات؛ للمسارات الجديدة أضف schema هنا واستخدمه في الـ handler.
+ * انظر ARCHITECTURE.md — تحقق المدخلات.
+ */
+
+/**
  * XSS Sanitizer: تنظيف المدخلات النصية من أكواد HTML/JS الخبيثة
  */
 export function sanitizeString(input: string): string {
@@ -53,7 +60,7 @@ export function xssSanitizeMiddleware() {
 
 export const accountSchema = z.object({
   name: z.string().min(1, 'اسم الحساب مطلوب').max(200),
-  accountType: z.enum(['fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'intermediary', 'cash', 'custody', 'service', 'warehouse']),
+  accountType: z.enum(['fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'custody', 'warehouse', 'billing', 'budget', 'supplier', 'employee', 'partner', 'settlement', 'pending']),
   accountNumber: z.string().max(100).optional().nullable(),
   provider: z.string().max(200).optional().nullable(),
   subType: z.string().max(100).optional().nullable(),
@@ -297,6 +304,7 @@ export const pendingAccountSchema = z.object({
 
 export const billingSystemConfigSchema = z.object({
   name: z.string().min(1, 'اسم نظام الفوترة مطلوب').max(200),
+  systemKey: z.string().min(1).max(100).optional(),
   icon: z.string().max(50).optional(),
   color: z.string().max(20).optional(),
   stationMode: z.string().max(20).optional(),
@@ -310,7 +318,7 @@ export const billingSystemConfigSchema = z.object({
 export const employeeBillingAccountSchema = z.object({
   employeeId: z.number().int().positive('معرّف الموظف مطلوب'),
   stationId: z.number().int().positive('معرّف المحطة مطلوب'),
-  billingSystem: z.string().min(1, 'نظام الفوترة مطلوب'),
+  billingSystemId: z.number().int().positive('نظام الفوترة مطلوب'),
   collectionMethod: z.string().min(1, 'طريقة التحصيل مطلوبة'),
   label: z.string().min(1, 'التسمية مطلوبة').max(200),
   sortOrder: z.number().int().optional(),

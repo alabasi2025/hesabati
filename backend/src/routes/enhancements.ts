@@ -11,7 +11,7 @@ import {
   users, auditLog,
 } from '../db/schema/index.ts';
 import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
+import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
 import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
 import { checkPermission } from '../middleware/permissions.ts';
 import { getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
@@ -59,7 +59,7 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
   // جلب البيانات مع الحسابات وأنواع العمليات
   const rows = await db.execute(sql`
     SELECT v.*,
-      ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category as operation_category,
+      ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category_id as operation_category,
       fa.name as from_account_name, fa.account_type as from_account_type,
       ta.name as to_account_name, ta.account_type as to_account_type,
       c.code as currency_code, c.symbol as currency_symbol,
@@ -141,7 +141,7 @@ enhancements.post(
         const [created] = await db.insert(accounts).values({
           businessId: bizId,
           name: 'حساب الصناديق (آلي)',
-          accountType: 'cash',
+          accountType: 'fund',
           canCreateVoucher: false,
           canApproveVoucher: false,
           notes: 'system_cash_treasury',
@@ -227,7 +227,7 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
   if (existing.status === 'confirmed') return c.json({ error: 'لا يمكن تعديل سند معتمد. يمكنك عكسه فقط.' }, 400);
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تعديل سند ملغي' }, 400);
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (body.description !== undefined) updateData.description = body.description;
   if (body.reference !== undefined) updateData.reference = body.reference;
@@ -254,7 +254,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const newStatus = body.status;
   if (!['draft', 'confirmed', 'cancelled'].includes(newStatus)) {
     return c.json({ error: 'الحالة غير صالحة. القيم المسموحة: draft, confirmed, cancelled' }, 400);
@@ -427,7 +427,7 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
   const [original] = await db.select().from(operationTypes).where(and(eq(operationTypes.id, id), eq(operationTypes.businessId, bizId)));
   if (!original) return c.json({ error: 'نوع العملية غير موجود' }, 404);
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const newName = body.name || `${original.name} (نسخة)`;
 
   // إنشاء النسخة
@@ -437,7 +437,7 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
     description: original.description,
     icon: original.icon,
     color: original.color,
-    category: original.category,
+    categoryId: original.categoryId,
     voucherType: original.voucherType,
     paymentMethod: original.paymentMethod,
     sourceAccountId: original.sourceAccountId,
@@ -509,14 +509,14 @@ enhancements.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware()
 
   const result = await db.execute(sql`
     SELECT
-      ot.id, ot.name, ot.icon, ot.color, ot.category, ot.voucher_type, ot.is_active,
+      ot.id, ot.name, ot.icon, ot.color, ot.category_id, ot.voucher_type, ot.is_active,
       COUNT(v.id) as usage_count,
       COALESCE(SUM(CAST(v.amount AS NUMERIC)), 0) as total_amount,
       MAX(v.created_at) as last_used_at
     FROM operation_types ot
     LEFT JOIN vouchers v ON v.operation_type_id = ot.id AND v.status != 'cancelled'
     WHERE ot.business_id = ${bizId}
-    GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.category, ot.voucher_type, ot.is_active
+    GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.category_id, ot.voucher_type, ot.is_active
     ORDER BY usage_count DESC
   `);
   const rows = normalizeDbResult(result);
@@ -545,7 +545,7 @@ enhancements.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddlew
 // 10. نسخ إعدادات من مستخدم لآخر
 enhancements.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddleware(), safeHandler('نسخ إعدادات السايدبار', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const { fromUserId, toUserId } = body;
   if (!fromUserId || !toUserId) return c.json({ error: 'fromUserId و toUserId مطلوبان' }, 400);
   if (fromUserId === toUserId) return c.json({ error: 'لا يمكن النسخ لنفس المستخدم' }, 400);
@@ -631,7 +631,7 @@ enhancements.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), 
       je.id, je.entry_number, je.description, je.entry_date, je.reference,
       je.total_debit, je.total_credit, je.status, je.created_at,
       ot.name as operation_type_name, ot.icon as operation_type_icon,
-      ot.color as operation_type_color, ot.voucher_type, ot.category as operation_category,
+      ot.color as operation_type_color, ot.voucher_type, ot.category_id as operation_category,
       u.full_name as created_by_name
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -825,7 +825,7 @@ enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware()
 enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safeHandler('إنشاء سند كمسودة', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
 
   const amount = parseFloat(body.amount);
   if (isNaN(amount) || amount <= 0) return c.json({ error: 'المبلغ يجب أن يكون رقماً موجباً' }, 400);

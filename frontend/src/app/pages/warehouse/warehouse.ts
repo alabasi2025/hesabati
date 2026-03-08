@@ -62,7 +62,7 @@ export class WarehouseComponent extends BasePageComponent {
   filteredWarehouses() {
     const f = this.filterType();
     const sf = this.filterSubType();
-    let list = this.warehouses();
+    let list = this.warehouses().filter(w => w.warehouseType !== 'custody');
     if (f !== 'all') list = list.filter(w => w.warehouseType === f);
     if (sf !== 'all') list = list.filter(w => (w.subType || '') === sf);
     return list;

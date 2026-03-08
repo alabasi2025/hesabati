@@ -592,6 +592,9 @@ export class ApiService {
   getWarehouseInventory(bizId: number, warehouseId: number) {
     return this.request<any[]>(`/businesses/${bizId}/warehouses/${warehouseId}/inventory`);
   }
+  getInventoryItems(bizId: number) {
+    return this.request<any[]>(`/businesses/${bizId}/inventory-items`);
+  }
 
   // ===================== سير العمل (Workflow) =====================
   getVoucherTransitions(bizId: number, voucherId: number) {
@@ -695,6 +698,86 @@ export class ApiService {
   createStockMovement(bizId: number, data: any) {
     return this.request<any>(`/businesses/${bizId}/stock-movements`, { method: 'POST', body: JSON.stringify(data) });
   }
+
+  // ===================== أصناف العمليات =====================
+  getOperationCategories(bizId: number, includeTypes = false) {
+    const q = includeTypes ? '?includeTypes=true' : '';
+    return this.request<any[]>(`/businesses/${bizId}/operation-categories${q}`);
+  }
+  getOperationCategory(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/operation-categories/${id}`);
+  }
+  createOperationCategory(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/operation-categories`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  updateOperationCategory(bizId: number, id: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/operation-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+  deleteOperationCategory(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/operation-categories/${id}`, { method: 'DELETE' });
+  }
+
+  // ===================== فواتير المشتريات =====================
+  getPurchaseInvoices(bizId: number, status?: string) {
+    const q = status ? `?status=${status}` : '';
+    return this.request<any[]>(`/businesses/${bizId}/purchase-invoices${q}`);
+  }
+  getPurchaseInvoice(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}`);
+  }
+  createPurchaseInvoice(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/purchase-invoices`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  updatePurchaseInvoice(bizId: number, id: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+  confirmPurchaseInvoice(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}/confirm`, { method: 'POST' });
+  }
+  receivePurchaseInvoice(bizId: number, id: number, receivedItems: any[]) {
+    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}/receive`, { method: 'POST', body: JSON.stringify({ receivedItems }) });
+  }
+  deletePurchaseInvoice(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}`, { method: 'DELETE' });
+  }
+
+  // ===================== أنواع الموردين =====================
+  getSupplierTypes(bizId: number)                { return this.request<any[]>(`/businesses/${bizId}/supplier-types`); }
+  createSupplierType(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/supplier-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateSupplierType(id: number, d: any)         { return this.request<any>(`/supplier-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteSupplierType(id: number)                 { return this.request<any>(`/supplier-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== الأقسام =====================
+  getDepartments(bizId: number)                  { return this.request<any[]>(`/businesses/${bizId}/departments`); }
+  createDepartment(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/departments`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateDepartment(id: number, d: any)           { return this.request<any>(`/departments/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteDepartment(id: number)                   { return this.request<any>(`/departments/${id}`, { method: 'DELETE' }); }
+
+  // ===================== المسميات الوظيفية =====================
+  getJobTitles(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/job-titles`); }
+  createJobTitle(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/job-titles`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateJobTitle(id: number, d: any)             { return this.request<any>(`/job-titles/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteJobTitle(id: number)                     { return this.request<any>(`/job-titles/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع الأصناف =====================
+  getInventoryItemTypes(bizId: number)               { return this.request<any[]>(`/businesses/${bizId}/inventory-item-types`); }
+  createInventoryItemType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/inventory-item-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateInventoryItemType(id: number, d: any)        { return this.request<any>(`/inventory-item-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteInventoryItemType(id: number)                { return this.request<any>(`/inventory-item-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== المطابقات =====================
+  getReconciliations(bizId: number)                          { return this.request<any[]>(`/businesses/${bizId}/reconciliations`); }
+  getReconciliation(bizId: number, id: number)               { return this.request<any>(`/businesses/${bizId}/reconciliations/${id}`); }
+  createReconciliation(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/reconciliations`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateReconciliation(bizId: number, id: number, d: any)    { return this.request<any>(`/businesses/${bizId}/reconciliations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+
+  // ===================== العهد =====================
+  getCustodyRecords(bizId: number)                           { return this.request<any[]>(`/businesses/${bizId}/custody`); }
+  getCustodyRecord(bizId: number, id: number)                { return this.request<any>(`/businesses/${bizId}/custody/${id}`); }
+  createCustodyRecord(bizId: number, d: any)                 { return this.request<any>(`/businesses/${bizId}/custody`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateCustodyRecord(bizId: number, id: number, d: any)     { return this.request<any>(`/businesses/${bizId}/custody/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteCustodyRecord(bizId: number, id: number)             { return this.request<any>(`/businesses/${bizId}/custody/${id}`, { method: 'DELETE' }); }
+  addCustodySettlement(bizId: number, custodyId: number, d: any) { return this.request<any>(`/businesses/${bizId}/custody/${custodyId}/settle`, { method: 'POST', body: JSON.stringify(d) }); }
 
   // ===================== فحص الاتصال =====================
   async checkDbHealth(): Promise<{ status: string; message: string; latency?: string }> {

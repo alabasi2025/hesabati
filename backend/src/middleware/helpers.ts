@@ -75,6 +75,22 @@ export function normalizeBody(body: any, depth: number = 0): any {
 }
 
 /**
+ * قراءة body الطلب مع استخدام النسخة المُنظَّفة من XSS إن وُجدت.
+ * يُستدعى في الـ handlers التي تقع تحت xssSanitizeMiddleware (/api/*).
+ * عندما يكون الطلب POST/PUT/PATCH فإن الـ middleware يضع sanitizedBody؛
+ * استخدامه هنا يضمن أن المنطق يعمل على بيانات مُنظَّفة من أحرف HTML/JS الخبيثة.
+ */
+export async function getBody(c: any): Promise<any> {
+  const sanitized = c.get('sanitizedBody');
+  if (sanitized !== undefined) return normalizeBody(sanitized);
+  try {
+    return normalizeBody(await c.req.json());
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * تغليف handler بـ try-catch مع رسالة خطأ عربية
  * يمنع خطأ 500 غير المتوقع ويعطي رسالة واضحة
  */

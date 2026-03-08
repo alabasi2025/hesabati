@@ -44,7 +44,7 @@ async function inspect() {
   console.log('═══════════════════════════════════════════════════════════');
   console.log('المعرف (id):', ot.id);
   console.log('العمل (businessId):', ot.businessId);
-  console.log('التصنيف (category):', ot.category);
+  console.log('التصنيف (categoryId):', ot.categoryId);
   console.log('الرمز (code):', ot.code);
   console.log('رقم تسلسلي (sequenceNumber):', ot.sequenceNumber);
   console.log('نوع السند (voucherType):', ot.voucherType);

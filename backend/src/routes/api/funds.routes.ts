@@ -23,6 +23,7 @@ import {
 } from "../../middleware/sequencing.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
+import { requireResourceOwnership } from "./_shared/ownership.ts";
 import type { AppContext } from "./_shared/types.ts";
 
 const fundsRoutes = new Hono();
@@ -239,6 +240,9 @@ fundsRoutes.put(
   safeHandler("تعديل صندوق (legacy)", async (c: AppContext) => {
     const id = parseId(c.req.param("id"));
     if (!id) return c.json({ error: "معرّف الصندوق غير صالح" }, 400);
+    const [existing] = await db.select().from(funds).where(eq(funds.id, id));
+    const err = await requireResourceOwnership(c, existing ?? null);
+    if (err) return err;
     const body = normalizeBody(await c.req.json());
     const [updated] = await db
       .update(funds)

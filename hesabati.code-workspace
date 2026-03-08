@@ -15,6 +15,10 @@
     ],
     "split-or-die.ignorePatterns": ["**/drizzle/**", "**/0000_faithful_groot.sql"],
     "dblinter.exclude": ["**/drizzle/**", "**/backend/drizzle/**"],
-    "dblinter.analysisExclude": ["**/drizzle/**", "**/backend/drizzle/**"]
+    "dblinter.analysisExclude": [
+      "**/drizzle/**",
+      "**/backend/drizzle/**"
+    ],
+    "powershell.cwd": "Frontend (Angular)"
   }
 }

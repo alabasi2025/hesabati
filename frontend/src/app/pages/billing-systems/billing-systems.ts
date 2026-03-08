@@ -27,15 +27,7 @@ export class BillingSystemsComponent extends BasePageComponent {
   stations = signal<any[]>([]);          // المحطات
   employees = signal<any[]>([]);         // الموظفين
 
-  // ===== خريطة أسماء الأنظمة =====
-  systemNameMap: Record<string, string> = {
-    'moghrabi_v1': 'المغربي نسخة 1 (الدهمية)',
-    'moghrabi_v2': 'المغربي نسخة 2 (الصبالية وجمال)',
-    'moghrabi_v3': 'المغربي نسخة 3 (غليل)',
-    'support_fund': 'صندوق الدعم',
-    'support_fund_west': 'صندوق الدعم',
-    'prepaid': 'الدفع المسبق',
-  };
+  // أسماء الأنظمة تُجلب ديناميكياً من billingSystemsConfig
 
   methodNameMap: Record<string, string> = {
     'cash_mobile': 'تحصيل نقدي بالجوال',
@@ -57,7 +49,7 @@ export class BillingSystemsComponent extends BasePageComponent {
   accountForm = signal<any>({
     employeeId: '',
     stationId: '',
-    billingSystem: '',
+    billingSystemId: '',
     collectionMethod: '',
     label: '',
     notes: '',
@@ -86,7 +78,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     const station = this.activeStation();
     const q = this.searchQuery().toLowerCase();
     return this.billingAccounts().filter(a => {
-      const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
+      const sysDisplayName = a.billingSystemName || '';
       const matchSys = sys === 'all' || sysDisplayName === sys;
       const matchStation = station === 'all' || a.stationName === station;
       const matchQ = !q || (a.label || '').toLowerCase().includes(q) ||
@@ -103,8 +95,7 @@ export class BillingSystemsComponent extends BasePageComponent {
 
     for (const sys of systems) {
       const sysAccounts = filtered.filter(a => {
-        const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
-        return sysDisplayName === sys.name;
+        return (a.billingSystemName || '') === sys.name;
       });
       if (sysAccounts.length === 0) continue;
 
@@ -131,10 +122,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     const systems = this.billingSystems();
     const bySys = systems.map(s => ({
       ...s,
-      count: all.filter(a => {
-        const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
-        return sysDisplayName === s.name;
-      }).length,
+      count: all.filter(a => (a.billingSystemName || '') === s.name).length,
     }));
     const employees = new Set(all.map((a: any) => a.employeeName).filter(Boolean)).size;
     return { total: all.length, employees, bySys };
@@ -154,15 +142,10 @@ export class BillingSystemsComponent extends BasePageComponent {
     '#14b8a6', '#f97316', '#ec4899', '#06b6d4', '#84cc16',
   ];
 
-  // ===== أنظمة الفوترة المتاحة (enums) =====
-  availableBillingSystems = [
-    { value: 'moghrabi_v1', label: 'المغربي (نسخة 1 - الدهمية)' },
-    { value: 'moghrabi_v2', label: 'المغربي (نسخة 2 - الصبالية وجمال)' },
-    { value: 'moghrabi_v3', label: 'المغربي (نسخة 3 - غليل)' },
-    { value: 'support_fund', label: 'صندوق الدعم' },
-    { value: 'support_fund_west', label: 'صندوق الدعم - الساحل الغربي' },
-    { value: 'prepaid', label: 'الدفع المسبق' },
-  ];
+  // أنظمة الفوترة المتاحة تُجلب ديناميكياً من billingSystems()
+  get availableBillingSystems() {
+    return this.billingSystems().map(s => ({ value: s.id, label: s.name }));
+  }
 
   availableCollectionMethods = [
     { value: 'cash_mobile', label: 'تحصيل نقدي بالجوال' },
@@ -203,7 +186,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     this.accountForm.set({
       employeeId: '',
       stationId: this.stations()[0]?.id || '',
-      billingSystem: this.availableBillingSystems[0]?.value || '',
+      billingSystemId: this.billingSystems()[0]?.id || '',
       collectionMethod: 'cash_mobile',
       label: '',
       notes: '',
@@ -216,7 +199,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     this.accountForm.set({
       employeeId: acc.employeeId || '',
       stationId: acc.stationId || '',
-      billingSystem: acc.billingSystem || '',
+      billingSystemId: acc.billingSystemId || '',
       collectionMethod: acc.collectionMethod || '',
       label: acc.label || '',
       notes: acc.notes || '',
@@ -227,11 +210,10 @@ export class BillingSystemsComponent extends BasePageComponent {
   updateAccountLabel() {
     const f = this.accountForm();
     const emp = this.employees().find((e: any) => e.id == f.employeeId);
-    const sys = this.availableBillingSystems.find(s => s.value === f.billingSystem);
+    const sys = this.billingSystems().find((s: any) => s.id == f.billingSystemId);
     const method = this.availableCollectionMethods.find(m => m.value === f.collectionMethod);
     if (emp && sys && method) {
-      const sysShort = this.systemNameMap[f.billingSystem] || sys.label;
-      const label = `${emp.fullName} - ${sysShort} - ${method.label}`;
+      const label = `${emp.fullName} - ${sys.name} - ${method.label}`;
       this.accountForm.update(form => ({ ...form, label }));
     }
   }
@@ -240,10 +222,9 @@ export class BillingSystemsComponent extends BasePageComponent {
     const f = this.accountForm();
     if (!f.employeeId) { this.error.set('الموظف مطلوب'); return; }
     if (!f.stationId) { this.error.set('المحطة مطلوبة'); return; }
-    if (!f.billingSystem) { this.error.set('نظام الفوترة مطلوب'); return; }
+    if (!f.billingSystemId) { this.error.set('نظام الفوترة مطلوب'); return; }
     if (!f.collectionMethod) { this.error.set('طريقة التحصيل مطلوبة'); return; }
 
-    // إنشاء label تلقائي إذا فارغ
     if (!f.label.trim()) {
       this.updateAccountLabel();
     }
@@ -251,7 +232,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     const accountData: any = {
       employeeId: Number.parseInt(f.employeeId, 10),
       stationId: Number.parseInt(f.stationId, 10),
-      billingSystem: f.billingSystem,
+      billingSystemId: Number.parseInt(String(f.billingSystemId), 10),
       collectionMethod: f.collectionMethod,
       label: this.accountForm().label || f.label,
       notes: f.notes || '',
@@ -427,7 +408,7 @@ export class BillingSystemsComponent extends BasePageComponent {
   setFormField(form: 'account' | 'type', field: string, value: any) {
     if (form === 'account') {
       this.accountForm.update(f => ({ ...f, [field]: value }));
-      if (['employeeId', 'billingSystem', 'collectionMethod'].includes(field)) {
+      if (['employeeId', 'billingSystemId', 'collectionMethod'].includes(field)) {
         this.updateAccountLabel();
       }
     } else {
@@ -444,8 +425,9 @@ export class BillingSystemsComponent extends BasePageComponent {
       { name, color: '#64748b', icon: 'receipt' };
   }
 
-  getSystemDisplayName(billingSystem: string): string {
-    return this.systemNameMap[billingSystem] || billingSystem;
+  getSystemDisplayName(billingSystemId: number | string): string {
+    const sys = this.billingSystems().find((s: any) => s.id == billingSystemId);
+    return sys?.name || String(billingSystemId);
   }
 
   getMethodDisplayName(method: string): string {
@@ -453,10 +435,7 @@ export class BillingSystemsComponent extends BasePageComponent {
   }
 
   getSysCount(sysName: string): number {
-    return this.billingAccounts().filter((a: any) => {
-      const sysDisplayName = this.systemNameMap[a.billingSystem] || a.billingSystem;
-      return sysDisplayName === sysName;
-    }).length;
+    return this.billingAccounts().filter((a: any) => (a.billingSystemName || '') === sysName).length;
   }
 
   trackById(_: number, item: any) { return item.id; }

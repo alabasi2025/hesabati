@@ -18,6 +18,7 @@ export class StationsComponent extends BasePageComponent {
   private readonly toast = inject(ToastService);
 
   stations = signal<any[]>([]);
+  billingSystems = signal<any[]>([]);
   loading = signal(true);
   saving = signal(false);
 
@@ -46,8 +47,12 @@ export class StationsComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const data = await this.api.getStations(this.bizId);
+      const [data, systems] = await Promise.all([
+        this.api.getStations(this.bizId),
+        this.api.getBillingSystemsConfig(this.bizId).catch(() => []),
+      ]);
       this.stations.set(data);
+      this.billingSystems.set(systems);
     } catch (e: unknown) {
       console.error(e);
       this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل المحطات');
@@ -148,12 +153,9 @@ export class StationsComponent extends BasePageComponent {
     }
   }
 
-  getBillingLabel(sys: string): string {
-    const map: Record<string, string> = {
-      'moghrabi_v1': 'المغربي v1', 'moghrabi_v2': 'المغربي v2', 'moghrabi_v3': 'المغربي v3',
-      'support_fund': 'صندوق الدعم', 'support_fund_west': 'صندوق الدعم (غرب)', 'prepaid': 'مسبق الدفع',
-    };
-    return map[sys] || sys;
+  getBillingLabel(sysKey: string): string {
+    const sys = this.billingSystems().find((s: any) => s.systemKey === sysKey);
+    return sys?.name || sysKey;
   }
 
   setFormField(field: string, value: any) {

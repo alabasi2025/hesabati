@@ -5,7 +5,7 @@ import postgres from 'postgres';
 import * as schema from './schema/index.ts';
 import bcrypt from 'bcryptjs';
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hesabati';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:774424555@localhost:5432/hesabati';
 const client = postgres(connectionString);
 const db = drizzle(client, { schema });
 
@@ -106,52 +106,52 @@ async function seed() {
   // ===================== الحسابات والمحافظ =====================
   await db.insert(schema.accounts).values([
     // محافظ إلكترونية - المحطات
-    { businessId: b1.id, name: 'جوالي 1 - شخصي', accountType: 'e_wallet', accountNumber: '774424555', provider: 'جوالي', subType: 'شخصي', receivesFromStations: true },
-    { businessId: b1.id, name: 'جوالي 2 - شخصي', accountType: 'e_wallet', accountNumber: '771506017', provider: 'جوالي', subType: 'شخصي' },
-    { businessId: b1.id, name: 'جوالي 3 - وكيل', accountType: 'e_wallet', accountNumber: '774424555', provider: 'جوالي', subType: 'وكيل' },
-    { businessId: b1.id, name: 'جيب', accountType: 'e_wallet', accountNumber: '774424555', provider: 'جيب', receivesFromStations: true },
-    { businessId: b1.id, name: 'ون كاش', accountType: 'e_wallet', accountNumber: '774424555', provider: 'ون كاش', receivesFromStations: true },
+    { businessId: b1.id, name: 'جوالي 1 - شخصي', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', subType: 'شخصي', receivesFromStations: true },
+    { businessId: b1.id, name: 'جوالي 2 - شخصي', accountType: 'e_wallet' as const, accountNumber: '771506017', provider: 'جوالي', subType: 'شخصي' },
+    { businessId: b1.id, name: 'جوالي 3 - وكيل', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', subType: 'وكيل' },
+    { businessId: b1.id, name: 'جيب', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جيب', receivesFromStations: true },
+    { businessId: b1.id, name: 'ون كاش', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'ون كاش', receivesFromStations: true },
     // بنوك
-    { businessId: b1.id, name: 'كريمي الحديدة - جاري', accountType: 'bank', provider: 'الكريمي', subType: 'جاري', receivesFromStations: true },
-    { businessId: b1.id, name: 'كريمي الحديدة - توفير', accountType: 'bank', provider: 'الكريمي', subType: 'توفير' },
-    { businessId: b1.id, name: 'كريمي صنعاء - جاري', accountType: 'bank', provider: 'الكريمي', subType: 'جاري' },
-    { businessId: b1.id, name: 'كريمي صنعاء - توفير', accountType: 'bank', provider: 'الكريمي', subType: 'توفير' },
-    // خدمة حاسب
-    { businessId: b1.id, name: 'حاسب - رئيسي', accountType: 'service', provider: 'خدمة حاسب', subType: 'رئيسي', supportedCurrencies: ['YER'], receivesFromStations: true },
-    { businessId: b1.id, name: 'حاسب - نقطة 1', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 2', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 3', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 4', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 5', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 6', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 7', accountType: 'service', provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'كريمي الحديدة - جاري', accountType: 'bank' as const, provider: 'الكريمي', subType: 'جاري', receivesFromStations: true },
+    { businessId: b1.id, name: 'كريمي الحديدة - توفير', accountType: 'bank' as const, provider: 'الكريمي', subType: 'توفير' },
+    { businessId: b1.id, name: 'كريمي صنعاء - جاري', accountType: 'bank' as const, provider: 'الكريمي', subType: 'جاري' },
+    { businessId: b1.id, name: 'كريمي صنعاء - توفير', accountType: 'bank' as const, provider: 'الكريمي', subType: 'توفير' },
+    // خدمة حاسب (محفظة إلكترونية)
+    { businessId: b1.id, name: 'حاسب - رئيسي', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'رئيسي', supportedCurrencies: ['YER'], receivesFromStations: true },
+    { businessId: b1.id, name: 'حاسب - نقطة 1', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 2', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 3', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 4', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 5', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 6', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 7', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
     // الصرافين
-    { businessId: b1.id, name: 'الحوشبي - باسم المحطات', accountType: 'exchange', provider: 'الحوشبي', receivesFromStations: true },
-    { businessId: b1.id, name: 'الحوشبي - باسم المالك', accountType: 'exchange', provider: 'الحوشبي' },
-    { businessId: b1.id, name: 'النجم', accountType: 'exchange', provider: 'النجم', receivesFromStations: true },
-    { businessId: b1.id, name: 'ابن عامر', accountType: 'exchange', provider: 'ابن عامر', isActive: false },
-    { businessId: b1.id, name: 'النهمي - المحطات', accountType: 'exchange', provider: 'النهمي', isActive: false },
-    { businessId: b1.id, name: 'النهمي - محمد المراني', accountType: 'exchange', provider: 'النهمي', isActive: false },
-    { businessId: b1.id, name: 'النهمي - الرئيسي', accountType: 'exchange', provider: 'النهمي', isActive: false },
-    // نقد وخزائن
-    { businessId: b1.id, name: 'خزنة المالك الشخصية', accountType: 'cash', subType: 'خزنة' },
-    { businessId: b1.id, name: 'النقد الشخصي (كاش)', accountType: 'cash', subType: 'كاش' },
+    { businessId: b1.id, name: 'الحوشبي - باسم المحطات', accountType: 'exchange' as const, provider: 'الحوشبي', receivesFromStations: true },
+    { businessId: b1.id, name: 'الحوشبي - باسم المالك', accountType: 'exchange' as const, provider: 'الحوشبي' },
+    { businessId: b1.id, name: 'النجم', accountType: 'exchange' as const, provider: 'النجم', receivesFromStations: true },
+    { businessId: b1.id, name: 'ابن عامر', accountType: 'exchange' as const, provider: 'ابن عامر', isActive: false },
+    { businessId: b1.id, name: 'النهمي - المحطات', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
+    { businessId: b1.id, name: 'النهمي - محمد المراني', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
+    { businessId: b1.id, name: 'النهمي - الرئيسي', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
+    // نقد وخزائن (تحت نوع fund)
+    { businessId: b1.id, name: 'خزنة المالك الشخصية', accountType: 'fund' as const, subType: 'خزنة' },
+    { businessId: b1.id, name: 'النقد الشخصي (كاش)', accountType: 'fund' as const, subType: 'كاش' },
     // عهد
-    { businessId: b1.id, name: 'عهدة أكرم العباسي', accountType: 'custody' },
-    { businessId: b1.id, name: 'عهدة كمال العباسي', accountType: 'custody' },
+    { businessId: b1.id, name: 'عهدة أكرم العباسي', accountType: 'custody' as const },
+    { businessId: b1.id, name: 'عهدة كمال العباسي', accountType: 'custody' as const },
     // مخازن
-    { businessId: b1.id, name: 'حساب المخزن الرئيسي', accountType: 'warehouse', subType: 'رئيسي', responsiblePerson: 'علي الصعدي' },
-    { businessId: b1.id, name: 'حساب مخزن الدهمية', accountType: 'warehouse', subType: 'محطة' },
-    { businessId: b1.id, name: 'حساب مخزن الصبالية وجمال', accountType: 'warehouse', subType: 'محطة' },
-    { businessId: b1.id, name: 'حساب مخزن غليل', accountType: 'warehouse', subType: 'محطة' },
+    { businessId: b1.id, name: 'حساب المخزن الرئيسي', accountType: 'warehouse' as const, subType: 'رئيسي', responsiblePerson: 'علي الصعدي' },
+    { businessId: b1.id, name: 'حساب مخزن الدهمية', accountType: 'warehouse' as const, subType: 'محطة' },
+    { businessId: b1.id, name: 'حساب مخزن الصبالية وجمال', accountType: 'warehouse' as const, subType: 'محطة' },
+    { businessId: b1.id, name: 'حساب مخزن غليل', accountType: 'warehouse' as const, subType: 'محطة' },
     // معبر
-    { businessId: b2.id, name: 'جوالي - معبر', accountType: 'e_wallet', provider: 'جوالي', receivesFromStations: true },
-    { businessId: b2.id, name: 'ون كاش - معبر', accountType: 'e_wallet', provider: 'ون كاش', receivesFromStations: true },
-    { businessId: b2.id, name: 'خزنة معبر', accountType: 'cash' },
+    { businessId: b2.id, name: 'جوالي - معبر', accountType: 'e_wallet' as const, provider: 'جوالي', receivesFromStations: true },
+    { businessId: b2.id, name: 'ون كاش - معبر', accountType: 'e_wallet' as const, provider: 'ون كاش', receivesFromStations: true },
+    { businessId: b2.id, name: 'خزنة معبر', accountType: 'fund' as const },
     // شخصي
-    { businessId: b3.id, name: 'حساب شخصي - جوالي', accountType: 'e_wallet', provider: 'جوالي' },
-    { businessId: b3.id, name: 'حساب شخصي - كريمي', accountType: 'bank', provider: 'بنك الكريمي' },
-    { businessId: b3.id, name: 'خزنة شخصية', accountType: 'cash' },
+    { businessId: b3.id, name: 'حساب شخصي - جوالي', accountType: 'e_wallet' as const, provider: 'جوالي' },
+    { businessId: b3.id, name: 'حساب شخصي - كريمي', accountType: 'bank' as const, provider: 'بنك الكريمي' },
+    { businessId: b3.id, name: 'خزنة شخصية', accountType: 'fund' as const },
   ]);
   console.log('✅ الحسابات');
 
@@ -218,37 +218,6 @@ async function seed() {
   ]);
   console.log('✅ أصناف المخزون');
 
-  // ===================== تصنيفات السندات =====================
-  await db.insert(schema.voucherCategories).values([
-    // سندات قبض
-    { businessId: b1.id, name: 'تحصيل نظام المغربي', type: 'receipt', icon: 'receipt', color: '#10b981' },
-    { businessId: b1.id, name: 'تحصيل صندوق الدعم', type: 'receipt', icon: 'support', color: '#3b82f6' },
-    { businessId: b1.id, name: 'تحصيل الدفع المسبق', type: 'receipt', icon: 'credit_card', color: '#8b5cf6' },
-    { businessId: b1.id, name: 'رسوم اشتراك وتأمين', type: 'receipt', icon: 'person_add', color: '#f59e0b' },
-    { businessId: b1.id, name: 'إيرادات فورجي وسنترال', type: 'receipt', icon: 'cell_tower', color: '#06b6d4' },
-    { businessId: b1.id, name: 'إيرادات مواقع الاتصالات', type: 'receipt', icon: 'signal_cellular', color: '#84cc16' },
-    { businessId: b1.id, name: 'مبلغ الدعم الشهري', type: 'receipt', icon: 'savings', color: '#14b8a6' },
-    // سندات صرف
-    { businessId: b1.id, name: 'شراء ديزل', type: 'payment', icon: 'local_gas_station', color: '#ef4444' },
-    { businessId: b1.id, name: 'رواتب', type: 'payment', icon: 'payments', color: '#f97316' },
-    { businessId: b1.id, name: 'إيجارات', type: 'payment', icon: 'home', color: '#a855f7' },
-    { businessId: b1.id, name: 'عائد وزارة الكهرباء', type: 'payment', icon: 'account_balance', color: '#6366f1' },
-    { businessId: b1.id, name: 'نت واتصالات', type: 'payment', icon: 'wifi', color: '#0ea5e9' },
-    { businessId: b1.id, name: 'ماء', type: 'payment', icon: 'water_drop', color: '#22d3ee' },
-    { businessId: b1.id, name: 'بترول ومواصلات', type: 'payment', icon: 'directions_car', color: '#f43f5e' },
-    { businessId: b1.id, name: 'زيت مولدات', type: 'payment', icon: 'oil_barrel', color: '#d946ef' },
-    { businessId: b1.id, name: 'صيانة شبكة ومواد كهربائية', type: 'payment', icon: 'electrical_services', color: '#eab308' },
-    { businessId: b1.id, name: 'بطاريات مولدات', type: 'payment', icon: 'battery_charging_full', color: '#22c55e' },
-    { businessId: b1.id, name: 'صيانة مولدات', type: 'payment', icon: 'build', color: '#fb923c' },
-    { businessId: b1.id, name: 'سلف موظفين', type: 'payment', icon: 'request_quote', color: '#f472b6' },
-    { businessId: b1.id, name: 'عهدة مشتريات', type: 'payment', icon: 'shopping_cart', color: '#c084fc' },
-    { businessId: b1.id, name: 'مصروفات شخصية', type: 'payment', icon: 'person', color: '#6b7280' },
-    // تحويلات
-    { businessId: b1.id, name: 'تحويل بين حسابات', type: 'transfer', icon: 'sync_alt', color: '#7c3aed' },
-    { businessId: b1.id, name: 'توريد للصراف', type: 'transfer', icon: 'upload', color: '#0891b2' },
-  ]);
-  console.log('✅ تصنيفات السندات');
-
   // ===================== الحسابات المعلقة =====================
   await db.insert(schema.pendingAccounts).values([
     { businessId: b1.id, personOrEntity: 'علي الصعدي - حساب 2023', description: 'صندوق مخلوط فيه عجز - يحتاج تصفية كاملة', status: 'pending' },
@@ -258,14 +227,16 @@ async function seed() {
   console.log('✅ الحسابات المعلقة');
 
   // ===================== أنظمة الفوترة (5 أنظمة) =====================
-  await db.insert(schema.billingSystemsConfig).values([
-    { businessId: b1.id, name: 'المغربي نسخة 1 (الدهمية)', icon: 'receipt', color: '#10b981', stationMode: 'per_station', sortOrder: 1 },
-    { businessId: b1.id, name: 'المغربي نسخة 2 (الصبالية وجمال)', icon: 'receipt', color: '#059669', stationMode: 'per_station', sortOrder: 2 },
-    { businessId: b1.id, name: 'المغربي نسخة 3 (غليل)', icon: 'receipt', color: '#047857', stationMode: 'per_station', sortOrder: 3 },
-    { businessId: b1.id, name: 'صندوق الدعم', icon: 'support', color: '#3b82f6', stationMode: 'per_station', sortOrder: 4 },
-    { businessId: b1.id, name: 'الدفع المسبق', icon: 'credit_card', color: '#8b5cf6', stationMode: 'multi_station', sortOrder: 5 },
-  ]);
-  console.log('✅ أنظمة الفوترة (5 أنظمة: 3 مغربي + صندوق الدعم + الدفع المسبق)');
+  const billingConfigs = await db.insert(schema.billingSystemsConfig).values([
+    { businessId: b1.id, name: 'المغربي نسخة 1 (الدهمية)', systemKey: 'moghrabi_v1', icon: 'receipt', color: '#10b981', stationMode: 'per_station', sortOrder: 1 },
+    { businessId: b1.id, name: 'المغربي نسخة 2 (الصبالية وجمال)', systemKey: 'moghrabi_v2', icon: 'receipt', color: '#059669', stationMode: 'per_station', sortOrder: 2 },
+    { businessId: b1.id, name: 'المغربي نسخة 3 (غليل)', systemKey: 'moghrabi_v3', icon: 'receipt', color: '#047857', stationMode: 'per_station', sortOrder: 3 },
+    { businessId: b1.id, name: 'صندوق الدعم', systemKey: 'support_fund', icon: 'support', color: '#3b82f6', stationMode: 'per_station', sortOrder: 4 },
+    { businessId: b1.id, name: 'صندوق الدعم - الساحل الغربي', systemKey: 'support_fund_west', icon: 'support', color: '#2563eb', stationMode: 'per_station', sortOrder: 5 },
+    { businessId: b1.id, name: 'الدفع المسبق', systemKey: 'prepaid', icon: 'credit_card', color: '#8b5cf6', stationMode: 'multi_station', sortOrder: 6 },
+  ]).returning();
+  console.log('✅ أنظمة الفوترة (6 أنظمة: 3 مغربي + 2 صندوق الدعم + الدفع المسبق)');
+  const billingConfigMap = Object.fromEntries(billingConfigs.map(bc => [bc.systemKey, bc.id]));
 
   // ===================== أنواع حسابات الفوترة =====================
   await db.insert(schema.billingAccountTypes).values([
@@ -292,9 +263,11 @@ async function seed() {
     const stationEmps = allEmps.filter(e => e.stationId === station.id);
     for (const emp of stationEmps) {
       for (const sys of systems) {
+        const sysId = billingConfigMap[sys];
+        if (!sysId) continue;
         await db.insert(schema.employeeBillingAccounts).values({
           employeeId: emp.id, stationId: station.id,
-          billingSystem: sys as any, collectionMethod: 'cash_mobile',
+          billingSystemId: sysId, collectionMethod: 'cash_mobile',
           label: `${BILLING_SYSTEM_LABELS[sys] || sys} - ${emp.fullName}`,
         });
       }

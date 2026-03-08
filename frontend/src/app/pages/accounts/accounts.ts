@@ -5,7 +5,7 @@ import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { ACCOUNT_TYPE_META, FUND_TYPE_LABELS, getAccTypeMeta } from '../../shared/constants/account-types';
+import { ACCOUNT_TYPE_META, getAccTypeMeta } from '../../shared/constants/account-types';
 import { ThreeNetworkComponent, NetworkNode, NetworkLink } from '../../components/three-network/three-network';
 
 function getTypeMeta(type: string) {
@@ -21,6 +21,25 @@ interface AccountGroup {
   count: number;
   collapsed: boolean;
 }
+
+interface MainAccountType {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  description: string;
+}
+
+interface SubType {
+  id: number;
+  name: string;
+  subTypeKey: string;
+  description: string;
+  icon: string;
+  color: string;
+  sequenceNumber: number;
+}
+
 
 @Component({
   selector: 'app-accounts',
@@ -61,11 +80,31 @@ export class AccountsComponent extends BasePageComponent {
 
   form = signal<any>({
     name: '', accountType: 'fund', accountNumber: '', provider: '',
-    subType: '', responsiblePerson: '', notes: '', isActive: true,
+    subType: '', subTypeId: null, responsiblePerson: '', notes: '', isActive: true,
   });
 
   // قائمة ثابتة لأنواع الحسابات المعروفة - تُستخدم في نموذج الإضافة فقط
   knownAccountTypes = Object.entries(ACCOUNT_TYPE_META).map(([value, meta]) => ({ value, ...meta }));
+
+  // ===== أنواع الحسابات الرئيسية والفرعية =====
+  mainAccountTypes: MainAccountType[] = [
+    { key: 'fund', label: 'صندوق', icon: 'savings', color: '#4CAF50', description: 'صناديق التحصيل والتوريد، السلف، العهدات' },
+    { key: 'bank', label: 'بنك', icon: 'account_balance', color: '#2196F3', description: 'حسابات البنوك (توفير، جاري)' },
+    { key: 'exchange', label: 'صراف', icon: 'currency_exchange', color: '#FF9800', description: 'حسابات الصرافين' },
+    { key: 'e_wallet', label: 'محفظة إلكترونية', icon: 'account_balance_wallet', color: '#9C27B0', description: 'جوالي، جيب، ون كاش' },
+    { key: 'warehouse', label: 'مخزن', icon: 'warehouse', color: '#795548', description: 'المخازن الرئيسية والفرعية' },
+    { key: 'billing', label: 'فوترة', icon: 'receipt', color: '#E91E63', description: 'أنظمة الفوترة' },
+    { key: 'service', label: 'خدمة', icon: 'miscellaneous_services', color: '#00BCD4', description: 'حسابات الخدمات' },
+    { key: 'custody', label: 'عهدة', icon: 'lock', color: '#607D8B', description: 'العهدات الشخصية' },
+    { key: 'cash', label: 'نقد', icon: 'payments', color: '#8BC34A', description: 'النقد الشخصي' },
+  ];
+
+  // التصنيفات الفرعية للنوع المختار في النموذج
+  availableSubTypes = computed<SubType[]>(() => {
+    const type = this.form().accountType;
+    const categories = this.dbTypeCategories();
+    return categories[type] || [];
+  });
 
   // ===== فلاتر ديناميكية: تُحسب من البيانات الفعلية =====
   dynamicFilters = computed(() => {
@@ -109,24 +148,38 @@ export class AccountsComponent extends BasePageComponent {
 
     const filters: { key: string; label: string; icon: string; values: { value: string; count: number; icon?: string; color?: string; displayName?: string }[] }[] = [];
 
-    // === فلتر التصنيف الفرعي (subType) ===
-    if (type === 'fund') {
-      // الصناديق: فلتر حسب نوع الصندوق (تحصيل وتوريد، سلف، عهدة، خزنة...)
-      const fundTypeMap = new Map<string, number>();
+    // === فلتر التصنيف الفرعي (subType) - يستخدم البيانات من قاعدة البيانات ===
+    const dbCatsForType = dbCats[type] || [];
+    if (dbCatsForType.length > 0) {
+      // استخدام التصنيفات من قاعدة البيانات
+      const subTypeMap = new Map<string, number>();
       for (const a of typeAccounts) {
-        const ft = a.subType || '__none__';
-        fundTypeMap.set(ft, (fundTypeMap.get(ft) || 0) + 1);
+        const st = a.subType || '__none__';
+        subTypeMap.set(st, (subTypeMap.get(st) || 0) + 1);
       }
-      const values = [...fundTypeMap.entries()].map(([value, count]) => ({
-        value,
-        count,
-        displayName: value === '__none__' ? 'بدون تصنيف' : (FUND_TYPE_LABELS[value] || value),
-        icon: value === '__none__' ? 'label_off' : 'savings',
-      }));
+      
+      const values = [...subTypeMap.entries()].map(([value, count]) => {
+        const dbCat = dbCatsForType.find((c: any) => c.subTypeKey === value);
+        return {
+          value,
+          count,
+          displayName: value === '__none__' ? 'بدون تصنيف' : (dbCat?.name || value),
+          icon: value === '__none__' ? 'label_off' : (dbCat?.icon || 'category'),
+          color: dbCat?.color,
+        };
+      });
+      
       if (values.length > 1 || (values.length === 1 && values[0].value !== '__none__')) {
-        filters.push({ key: 'subType', label: 'نوع الصندوق', icon: 'category', values });
+        const filterLabel = type === 'fund' ? 'نوع الصندوق' :
+                           type === 'bank' ? 'نوع الحساب' :
+                           type === 'e_wallet' ? 'نوع المحفظة' :
+                           type === 'exchange' ? 'نوع الصراف' :
+                           type === 'warehouse' ? 'نوع المخزن' : 'التصنيف';
+        filters.push({ key: 'subType', label: filterLabel, icon: 'category', values });
       }
-    } else if (type === 'billing') {
+    }
+    
+    if (type === 'billing') {
       // الفوترة: فلتر حسب النظام (المغربي، صندوق الدعم، الدفع المسبق)
       const systemMap = new Map<string, number>();
       for (const a of typeAccounts) {
@@ -141,60 +194,23 @@ export class AccountsComponent extends BasePageComponent {
       if (values.length > 1) {
         filters.push({ key: 'provider', label: 'النظام', icon: 'receipt', values });
       }
-    } else if (type === 'bank') {
-      // البنوك: فلتر حسب نوع البنك (توفير، جاري...)
-      const subTypes = this.extractUniqueValues(typeAccounts, 'subType');
-      if (subTypes.length > 1) {
-        filters.push({ key: 'subType', label: 'نوع الحساب', icon: 'category', values: subTypes });
-      }
-      // فلتر حسب البنك (الكريمي، الأهلي...)
-      const providers = this.extractUniqueValues(typeAccounts, 'provider');
-      if (providers.length > 1) {
-        filters.push({ key: 'provider', label: 'البنك', icon: 'account_balance', values: providers });
-      }
-    } else if (type === 'exchange') {
-      // الصرافين: فلتر حسب الصراف
-      const providers = this.extractUniqueValues(typeAccounts, 'provider');
-      if (providers.length > 1) {
-        filters.push({ key: 'provider', label: 'الصراف', icon: 'currency_exchange', values: providers });
-      }
-    } else if (type === 'e_wallet') {
-      // المحافظ: فلتر حسب نوع المحفظة (شخصي، وكيل...)
-      const subTypes = this.extractUniqueValues(typeAccounts, 'subType');
-      if (subTypes.length > 1) {
-        filters.push({ key: 'subType', label: 'نوع المحفظة', icon: 'category', values: subTypes });
-      }
-      // فلتر حسب المحفظة (جوالي، جيب...)
-      const providers = this.extractUniqueValues(typeAccounts, 'provider');
-      if (providers.length > 1) {
-        filters.push({ key: 'provider', label: 'المحفظة', icon: 'account_balance_wallet', values: providers });
-      }
-    } else {
-      // أنواع أخرى: fallback
-      const dbCatsForType = dbCats[type] || [];
-      if (dbCatsForType.length > 0) {
-        const catValues = dbCatsForType.map((cat: any) => {
-          const count = typeAccounts.filter(a => a.subType === cat.subTypeKey).length;
-          return { value: cat.subTypeKey, count, icon: cat.icon, color: cat.color, displayName: cat.name };
-        });
-        filters.push({ key: 'subType', label: 'التصنيف', icon: 'category', values: catValues });
-      } else {
-        const subTypes = this.extractUniqueValues(typeAccounts, 'subType');
-        if (subTypes.length > 1) {
-          filters.push({ key: 'subType', label: 'التصنيف', icon: 'label', values: subTypes });
-        }
-        const providers = this.extractUniqueValues(typeAccounts, 'provider');
-        if (providers.length > 1) {
-          filters.push({ key: 'provider', label: 'الجهة', icon: 'business', values: providers });
-        }
-      }
-    }
-
-    // === فلتر الموظف (للفوترة فقط) ===
-    if (type === 'billing') {
+      
+      // فلتر الموظف (للفوترة فقط)
       const persons = this.extractUniqueValues(typeAccounts, 'responsiblePerson');
       if (persons.length > 1) {
         filters.push({ key: 'responsiblePerson', label: 'الموظف', icon: 'person', values: persons });
+      }
+    } else {
+      // فلتر الجهة/المزود (provider) - للأنواع غير الفوترة
+      const providerLabel = type === 'bank' ? 'البنك' :
+                           type === 'exchange' ? 'الصراف' :
+                           type === 'e_wallet' ? 'المحفظة' : 'الجهة';
+      const providerIcon = type === 'bank' ? 'account_balance' :
+                          type === 'exchange' ? 'currency_exchange' :
+                          type === 'e_wallet' ? 'account_balance_wallet' : 'business';
+      const providers = this.extractUniqueValues(typeAccounts, 'provider');
+      if (providers.length > 1) {
+        filters.push({ key: 'provider', label: providerLabel, icon: providerIcon, values: providers });
       }
     }
 
@@ -280,11 +296,16 @@ export class AccountsComponent extends BasePageComponent {
     // في وضع نوع محدد: نجمع حسب الحقل الأنسب لكل نوع
     const groupField = this.getBestGroupField(type, accs);
     const groupMap = new Map<string, any[]>();
+    const dbCats = this.dbTypeCategories()[type] || [];
+    
     for (const a of accs) {
       let groupVal = a[groupField] || 'بدون تصنيف';
-      // ترجمة أنواع الصناديق
-      if (groupField === 'subType' && type === 'fund' && FUND_TYPE_LABELS[groupVal]) {
-        groupVal = FUND_TYPE_LABELS[groupVal];
+      // ترجمة التصنيفات من قاعدة البيانات
+      if (groupField === 'subType') {
+        const dbCat = dbCats.find((c: any) => c.subTypeKey === groupVal);
+        if (dbCat) {
+          groupVal = dbCat.name;
+        }
       }
       if (!groupMap.has(groupVal)) groupMap.set(groupVal, []);
       groupMap.get(groupVal)!.push(a);
@@ -329,12 +350,13 @@ export class AccountsComponent extends BasePageComponent {
     }
     this.loading.set(true);
     try {
-      const [allData, fundTypesData, bankTypesData, exchangeTypesData, walletTypesData] = await Promise.all([
+      const [allData, fundTypesData, bankTypesData, exchangeTypesData, walletTypesData, warehouseTypesData] = await Promise.all([
         this.api.getAllAccounts(this.bizId),
         this.api.getFundTypes(this.bizId).catch(() => []),
         this.api.getBankTypes(this.bizId).catch(() => []),
         this.api.getExchangeTypes(this.bizId).catch(() => []),
         this.api.getEWalletTypes(this.bizId).catch(() => []),
+        this.api.getWarehouseTypes?.(this.bizId).catch(() => []) || Promise.resolve([]),
       ]);
       this.accounts.set(allData.accounts);
       this.allStations.set(allData.stations || []);
@@ -343,6 +365,7 @@ export class AccountsComponent extends BasePageComponent {
         bank: bankTypesData,
         exchange: exchangeTypesData,
         e_wallet: walletTypesData,
+        warehouse: warehouseTypesData,
       });
       this.buildNetworkData();
     } catch (e: unknown) {
@@ -573,6 +596,32 @@ export class AccountsComponent extends BasePageComponent {
 
   setFormField(field: string, value: any) {
     this.form.update(f => ({ ...f, [field]: value }));
+  }
+
+  // عند تغيير النوع الرئيسي، نمسح التصنيف الفرعي
+  onAccountTypeChange(type: string) {
+    this.form.update(f => ({
+      ...f,
+      accountType: type,
+      subType: '',
+      subTypeId: null,
+    }));
+  }
+
+  // عند اختيار تصنيف فرعي
+  onSubTypeChange(subTypeId: number | null) {
+    const subTypes = this.availableSubTypes();
+    const selected = subTypes.find(s => s.id === subTypeId);
+    this.form.update(f => ({
+      ...f,
+      subTypeId: subTypeId,
+      subType: selected?.subTypeKey || '',
+    }));
+  }
+
+  // الحصول على معلومات النوع الرئيسي
+  getMainTypeInfo(key: string): MainAccountType | undefined {
+    return this.mainAccountTypes.find(t => t.key === key);
   }
 
   getTypeInfo(type: string) {
