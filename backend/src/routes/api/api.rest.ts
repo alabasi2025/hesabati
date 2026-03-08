@@ -5,11 +5,11 @@ import { eq, desc, sql, and, inArray, count } from 'drizzle-orm';
 import {
   businessPartners, stations, employees, accounts, accountBalances,
   accountAllowedLinks, employeeBillingAccounts,
-  funds, fundBalances, vouchers, voucherCategories, currencies, suppliers,
+  funds, fundBalances, vouchers, voucherLines, currencies, suppliers,
   warehouses, pendingAccounts, reconciliations, attachments, inventoryItems,
-  dailyCollections, collectionDetails, deliveryRecords,
   operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines,
+  operationCategories,
   billingSystemsConfig, billingAccountTypes,
   sidebarSections, sidebarItems, userSidebarConfig,
   users, businesses,
@@ -54,7 +54,9 @@ api.get('/businesses/:bizId/employee-billing-accounts', bizAuthMiddleware(), saf
     id: employeeBillingAccounts.id,
     employeeId: employeeBillingAccounts.employeeId,
     stationId: employeeBillingAccounts.stationId,
-    billingSystem: employeeBillingAccounts.billingSystem,
+    billingSystemId: employeeBillingAccounts.billingSystemId,
+    billingSystemName: billingSystemsConfig.name,
+    billingSystemKey: billingSystemsConfig.systemKey,
     collectionMethod: employeeBillingAccounts.collectionMethod,
     label: employeeBillingAccounts.label,
     sortOrder: employeeBillingAccounts.sortOrder,
@@ -65,6 +67,7 @@ api.get('/businesses/:bizId/employee-billing-accounts', bizAuthMiddleware(), saf
   }).from(employeeBillingAccounts)
     .leftJoin(employees, eq(employeeBillingAccounts.employeeId, employees.id))
     .leftJoin(stations, eq(employeeBillingAccounts.stationId, stations.id))
+    .leftJoin(billingSystemsConfig, eq(employeeBillingAccounts.billingSystemId, billingSystemsConfig.id))
     .where(eq(employees.businessId, bizId))
     .orderBy(employeeBillingAccounts.stationId, employeeBillingAccounts.employeeId, employeeBillingAccounts.sortOrder);
   
@@ -199,34 +202,31 @@ api.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandler('جلب 
   // 3. جلب حسابات الفوترة
   const billingRows = await db.select({
     id: employeeBillingAccounts.id, employeeId: employeeBillingAccounts.employeeId,
-    stationId: employeeBillingAccounts.stationId, billingSystem: employeeBillingAccounts.billingSystem,
+    stationId: employeeBillingAccounts.stationId, billingSystemId: employeeBillingAccounts.billingSystemId,
+    billingSystemName: billingSystemsConfig.name, billingSystemKey: billingSystemsConfig.systemKey,
     collectionMethod: employeeBillingAccounts.collectionMethod, label: employeeBillingAccounts.label,
     sortOrder: employeeBillingAccounts.sortOrder, isActive: employeeBillingAccounts.isActive,
     notes: employeeBillingAccounts.notes, employeeName: employees.fullName, stationName: stations.name,
   }).from(employeeBillingAccounts)
     .leftJoin(employees, eq(employeeBillingAccounts.employeeId, employees.id))
     .leftJoin(stations, eq(employeeBillingAccounts.stationId, stations.id))
+    .leftJoin(billingSystemsConfig, eq(employeeBillingAccounts.billingSystemId, billingSystemsConfig.id))
     .where(eq(employees.businessId, bizId))
     .orderBy(employeeBillingAccounts.stationId, employeeBillingAccounts.employeeId);
 
-  const BILLING_SYSTEM_NAMES: Record<string, string> = {
-    'moghrabi_v1': 'المغربي نسخة 1 (الدهمية)', 'moghrabi_v2': 'المغربي نسخة 2 (الصبالية وجمال)',
-    'moghrabi_v3': 'المغربي نسخة 3 (غليل)', 'support_fund': 'صندوق الدعم',
-    'support_fund_west': 'صندوق الدعم - الساحل الغربي', 'prepaid': 'الدفع المسبق',
-  };
   const COLLECTION_METHOD_NAMES: Record<string, string> = {
     'cash_mobile': 'تحصيل نقدي بالجوال', 'manual_assign': 'تحصيل إسناد يدوي',
     'electronic': 'سداد إلكتروني', 'haseb_deposit': 'إيداع حاسب',
   };
   const billingAsAccounts = billingRows.map(b => {
-    const sysName = BILLING_SYSTEM_NAMES[b.billingSystem || ''] || b.billingSystem || '';
+    const sysName = b.billingSystemName || '';
     const methodName = COLLECTION_METHOD_NAMES[b.collectionMethod || ''] || b.collectionMethod || '';
     return {
       id: b.id, name: b.label || `${sysName} - ${b.employeeName}`, accountType: 'billing',
       subType: sysName, subTypeLabel: sysName, provider: sysName,
       responsiblePerson: b.employeeName || '', accountNumber: '', isActive: b.isActive,
       notes: b.notes, stationId: b.stationId, stationName: b.stationName,
-      collectionMethod: methodName, billingSystemKey: b.billingSystem || '',
+      collectionMethod: methodName, billingSystemKey: b.billingSystemKey || '',
       createdAt: null, balances: [], allowedLinks: [], _source: 'billing' as const,
     };
   });
@@ -537,6 +537,141 @@ api.post('/businesses/:bizId/vouchers', bizAuthMiddleware(), checkPermission('vo
   }
 }));
 
+// ===================== سند متعدد الأسطر =====================
+api.post('/businesses/:bizId/vouchers/multi-line', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إنشاء سند متعدد الأسطر', async (c) => {
+  const bizId = getBizId(c);
+  const userId = getUserId(c);
+  const body = await getBody(c);
+
+  const { lines, ...voucherData } = body;
+
+  if (!Array.isArray(lines) || lines.length < 1) {
+    return c.json({ error: 'يجب تحديد سطر واحد على الأقل' }, 400);
+  }
+
+  if (!voucherData.fromAccountId) {
+    return c.json({ error: 'الحساب المصدر (fromAccountId) مطلوب' }, 400);
+  }
+
+  const currencyId = voucherData.currencyId || 1;
+  const sourceAccountId = voucherData.fromAccountId;
+
+  if (!(await verifyAccountOwnership(sourceAccountId, bizId))) {
+    return c.json({ error: 'الحساب المصدر لا ينتمي لهذا العمل' }, 403);
+  }
+
+  let totalAmount = 0;
+  for (const line of lines) {
+    const amt = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;
+    if (isNaN(amt) || amt <= 0) {
+      return c.json({ error: 'جميع المبالغ يجب أن تكون أرقاماً موجبة' }, 400);
+    }
+    totalAmount += amt;
+    if (!(await verifyAccountOwnership(line.accountId, bizId))) {
+      return c.json({ error: `الحساب ${line.accountId} لا ينتمي لهذا العمل` }, 403);
+    }
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const voucherType = voucherData.voucherType || 'payment';
+    const seqYear = new Date().getFullYear();
+    const counterType = `voucher_${voucherType}`;
+    const seqNum = await getNextSequence(bizId, counterType, 0, seqYear, tx);
+    
+    const prefix = voucherType === 'receipt' ? 'RCV' : voucherType === 'payment' ? 'PAY' : voucherType === 'transfer' ? 'TRF' : 'VCH';
+    const voucherNumber = voucherData.voucherNumber || `${prefix}-${seqYear}-${String(seqNum).padStart(5, '0')}`;
+
+    const [createdVoucher] = await tx.insert(vouchers).values({
+      businessId: bizId,
+      voucherType: voucherType as any,
+      voucherNumber,
+      amount: String(totalAmount),
+      currencyId,
+      fromAccountId: sourceAccountId,
+      toAccountId: lines[0].accountId,
+      description: voucherData.description || 'سند متعدد الأسطر',
+      reference: voucherData.reference || null,
+      voucherDate: voucherData.voucherDate ? new Date(voucherData.voucherDate) : new Date(),
+      status: 'confirmed',
+      hasMultipleLines: true,
+      createdBy: userId,
+    }).returning();
+
+    const linesToInsert = lines.map((line: any, idx: number) => ({
+      voucherId: createdVoucher.id,
+      accountId: line.accountId,
+      amount: String(line.amount),
+      description: line.description || null,
+      currencyId: line.currencyId || currencyId,
+      exchangeRate: line.exchangeRate ? String(line.exchangeRate) : null,
+      sortOrder: idx,
+    }));
+
+    await tx.insert(voucherLines).values(linesToInsert);
+
+    for (const line of lines) {
+      const amt = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${sourceAccountId}, ${currencyId}, ${-amt})
+        ON CONFLICT (account_id, currency_id)
+        DO UPDATE SET balance = account_balances.balance - ${amt}, updated_at = NOW()
+      `);
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${line.accountId}, ${currencyId}, ${amt})
+        ON CONFLICT (account_id, currency_id)
+        DO UPDATE SET balance = account_balances.balance + ${amt}, updated_at = NOW()
+      `);
+    }
+
+    await tx.insert(auditLog).values({
+      businessId: bizId,
+      userId: userId ?? 0,
+      action: 'create_multi_line_voucher',
+      tableName: 'vouchers',
+      recordId: createdVoucher.id,
+      newData: { ...createdVoucher, lines: linesToInsert },
+    });
+
+    return createdVoucher;
+  });
+
+  try { wsService.notifyNewVoucher(bizId, result); } catch { /* optional */ }
+  return c.json(result, 201);
+}));
+
+// جلب تفاصيل سند متعدد الأسطر
+api.get('/businesses/:bizId/vouchers/:id/lines', bizAuthMiddleware(), safeHandler('جلب أسطر السند', async (c) => {
+  const bizId = getBizId(c);
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+
+  const [voucher] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
+  if (!voucher) return c.json({ error: 'السند غير موجود' }, 404);
+
+  if (!voucher.hasMultipleLines) {
+    return c.json({ lines: [], message: 'هذا السند ليس متعدد الأسطر' });
+  }
+
+  const lines = await db
+    .select({
+      id: voucherLines.id,
+      accountId: voucherLines.accountId,
+      accountName: accounts.name,
+      amount: voucherLines.amount,
+      description: voucherLines.description,
+      currencyId: voucherLines.currencyId,
+      exchangeRate: voucherLines.exchangeRate,
+      sortOrder: voucherLines.sortOrder,
+    })
+    .from(voucherLines)
+    .leftJoin(accounts, eq(voucherLines.accountId, accounts.id))
+    .where(eq(voucherLines.voucherId, id))
+    .orderBy(voucherLines.sortOrder);
+
+  return c.json({ voucher, lines });
+}));
 
 api.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), checkPermission('vouchers', 'delete'), safeHandler('حذف سند', async (c) => {
   const bizId = getBizId(c);
@@ -567,110 +702,6 @@ api.delete('/vouchers/:id', safeHandler('حذف سند (legacy)', async (c) => {
     const message = toErrorMessage(err);
     return c.json({ error: message }, 400);
   }
-}));
-
-// ===================== التحصيل اليومي =====================
-api.get('/businesses/:bizId/collections', bizAuthMiddleware(), safeHandler('جلب التحصيلات', async (c) => {
-  const bizId = getBizId(c);
-  const stationId = c.req.query('stationId');
-  const dateStr = c.req.query('date');
-  
-  const conditions = [eq(dailyCollections.businessId, bizId)];
-  if (stationId) conditions.push(eq(dailyCollections.stationId, Number.parseInt(stationId)));
-  if (dateStr) conditions.push(eq(dailyCollections.collectionDate, dateStr));
-  
-  const rows = await db.select({
-    id: dailyCollections.id, stationId: dailyCollections.stationId,
-    collectionDate: dailyCollections.collectionDate, totalAmount: dailyCollections.totalAmount,
-    isFullyDelivered: dailyCollections.isFullyDelivered, notes: dailyCollections.notes,
-    createdAt: dailyCollections.createdAt, stationName: stations.name,
-  }).from(dailyCollections)
-    .leftJoin(stations, eq(dailyCollections.stationId, stations.id))
-    .where(and(...conditions))
-    .orderBy(desc(dailyCollections.collectionDate));
-  return c.json(rows);
-}));
-
-api.get('/collections/:id', safeHandler('جلب تفاصيل تحصيل', async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف التحصيل غير صالح' }, 400);
-  const [collection] = await db.select().from(dailyCollections).where(eq(dailyCollections.id, id));
-  const err = await requireResourceOwnership(c, collection ?? null);
-  if (err) return err;
-  const details = await db.select({
-    id: collectionDetails.id, employeeId: collectionDetails.employeeId,
-    billingAccountId: collectionDetails.billingAccountId, amount: collectionDetails.amount,
-    notes: collectionDetails.notes, employeeName: employees.fullName,
-    billingLabel: employeeBillingAccounts.label, billingSystem: employeeBillingAccounts.billingSystem,
-    collectionMethod: employeeBillingAccounts.collectionMethod,
-  }).from(collectionDetails)
-    .leftJoin(employees, eq(collectionDetails.employeeId, employees.id))
-    .leftJoin(employeeBillingAccounts, eq(collectionDetails.billingAccountId, employeeBillingAccounts.id))
-    .where(eq(collectionDetails.collectionId, id));
-  
-  const deliveries = await db.select({
-    id: deliveryRecords.id, employeeId: deliveryRecords.employeeId,
-    toAccountId: deliveryRecords.toAccountId, amount: deliveryRecords.amount,
-    deliveryDate: deliveryRecords.deliveryDate, reference: deliveryRecords.reference,
-    notes: deliveryRecords.notes, employeeName: employees.fullName, accountName: accounts.name,
-  }).from(deliveryRecords)
-    .leftJoin(employees, eq(deliveryRecords.employeeId, employees.id))
-    .leftJoin(accounts, eq(deliveryRecords.toAccountId, accounts.id))
-    .where(eq(deliveryRecords.collectionId, id));
-  
-  return c.json({ ...collection!, details, deliveries });
-}));
-
-api.post('/businesses/:bizId/collections', bizAuthMiddleware(), safeHandler('إضافة تحصيل', async (c) => {
-  const bizId = getBizId(c);
-  const body = await getBody(c);
-  const { details, ...collectionData } = body;
-  
-  if (!collectionData.stationId) return c.json({ error: 'معرّف المحطة مطلوب' }, 400);
-  if (!collectionData.collectionDate) return c.json({ error: 'تاريخ التحصيل مطلوب' }, 400);
-  
-  let total = 0;
-  if (details) for (const d of details) total += Number.parseFloat(d.amount || '0');
-  
-  const [created] = await db.insert(dailyCollections).values({
-    ...collectionData, businessId: bizId, totalAmount: String(total),
-  }).returning();
-  
-  if (details && details.length > 0) {
-    for (const d of details) {
-      if (Number.parseFloat(d.amount || '0') > 0) {
-        await db.insert(collectionDetails).values({
-          collectionId: created.id, employeeId: d.employeeId,
-          billingAccountId: d.billingAccountId, amount: d.amount, notes: d.notes,
-        });
-      }
-    }
-  }
-  return c.json(created, 201);
-}));
-
-// ===================== التوريد =====================
-api.post('/collections/:id/deliveries', safeHandler('إضافة توريد', async (c) => {
-  const collectionId = parseId(c.req.param('id'));
-  if (!collectionId) return c.json({ error: 'معرّف التحصيل غير صالح' }, 400);
-  const [collection] = await db.select().from(dailyCollections).where(eq(dailyCollections.id, collectionId));
-  const err = await requireResourceOwnership(c, collection ?? null);
-  if (err) return err;
-  const body = await getBody(c);
-  if (!body.amount) return c.json({ error: 'المبلغ مطلوب' }, 400);
-  const [created] = await db.insert(deliveryRecords).values({ ...body, collectionId }).returning();
-  const [col] = await db.select().from(dailyCollections).where(eq(dailyCollections.id, collectionId));
-  if (col) {
-    const allDeliveries = await db.select().from(deliveryRecords).where(eq(deliveryRecords.collectionId, collectionId));
-    const totalDelivered = allDeliveries.reduce((sum, d) => sum + Number.parseFloat(d.amount), 0);
-    const totalCollected = Number.parseFloat(col.totalAmount);
-    
-    if (totalDelivered >= totalCollected) {
-      await db.update(dailyCollections).set({ isFullyDelivered: true, updatedAt: new Date() }).where(eq(dailyCollections.id, collectionId));
-    }
-  }
-  
-  return c.json(created, 201);
 }));
 
 // ===================== الشركاء =====================
@@ -882,13 +913,6 @@ api.delete('/settlements/:id', safeHandler('حذف تصفية', async (c) => {
   if (err) return err;
   await db.delete(reconciliations).where(eq(reconciliations.id, id));
   return c.json({ success: true });
-}));
-
-// ===================== تصنيفات السندات =====================
-api.get('/businesses/:bizId/voucher-categories', bizAuthMiddleware(), safeHandler('جلب تصنيفات السندات', async (c) => {
-  const bizId = getBizId(c);
-  const rows = await db.select().from(voucherCategories).where(eq(voucherCategories.businessId, bizId)).orderBy(voucherCategories.type, voucherCategories.name);
-  return c.json(rows);
 }));
 
 // ===================== تصنيفات المصروفات (الوحدة 13) =====================
@@ -1108,12 +1132,6 @@ api.get('/funds', safeHandler('جلب الصناديق (legacy)', async (c) => {
   return c.json(rows);
 }));
 
-// ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/voucher-categories بدلاً من هذا المسار - يسرب بيانات جميع الأعمال
-api.get('/voucher-categories', safeHandler('جلب تصنيفات السندات (legacy)', async (c) => {
-  const rows = await db.select().from(voucherCategories).orderBy(voucherCategories.type, voucherCategories.name);
-  return c.json(rows);
-}));
-
 // ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/suppliers بدلاً من هذا المسار - يسرب بيانات جميع الأعمال
 api.get('/suppliers', safeHandler('جلب الموردين (legacy)', async (c) => {
   const rows = await db.select().from(suppliers).orderBy(suppliers.id);
@@ -1124,10 +1142,11 @@ api.get('/suppliers', safeHandler('جلب الموردين (legacy)', async (c) 
 // ===================== أنواع العمليات (القوالب) =====================
 api.get('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler('جلب أنواع العمليات', async (c) => {
   const bizId = getBizId(c);
-  const category = c.req.query('category');
+  const categoryParam = c.req.query('category');
+  const categoryId = categoryParam ? Number.parseInt(categoryParam, 10) : null;
   const screen = c.req.query('screen');
   const conditions = [eq(operationTypes.businessId, bizId)];
-  if (category) conditions.push(eq(operationTypes.category, category));
+  if (categoryId != null && !Number.isNaN(categoryId)) conditions.push(eq(operationTypes.categoryId, categoryId));
   if (screen) conditions.push(sql`${screen} = ANY(${operationTypes.screens})`);
   
   const rows = await db.select().from(operationTypes)
@@ -1186,11 +1205,11 @@ api.post('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler(
   if (typeof data.screens === 'string') data.screens = [data.screens];
   const { linkedAccounts: laList, ...otData } = data;
   // === ترقيم تلقائي للقالب داخل تصنيفه ===
-  const category = otData.category || 'عام';
+  const catId = otData.categoryId ?? null;
   const [seqResult] = await db.select({ cnt: count() }).from(operationTypes)
-    .where(and(eq(operationTypes.businessId, bizId), eq(operationTypes.category, category)));
+    .where(and(eq(operationTypes.businessId, bizId), ...(catId != null ? [eq(operationTypes.categoryId, catId)] : [])));
   const seqNum = (seqResult?.cnt || 0) + 1;
-  const categoryPrefix = category.substring(0, 3).toUpperCase();
+  const categoryPrefix = catId != null ? String(catId).padStart(3, '0') : 'GEN';
   const autoCode = `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
   const [created] = await db.insert(operationTypes).values({ ...otData, businessId: bizId, sequenceNumber: seqNum, code: otData.code || autoCode }).returning();
   // حفظ الحسابات المرتبطة إن وُجدت
@@ -1345,11 +1364,15 @@ api.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermiss
   if (entryData.operationTypeId) {
     const [opType] = await db.select().from(operationTypes).where(eq(operationTypes.id, entryData.operationTypeId));
     if (opType) {
-      // جلب رقم التصنيف من journalEntryCategories إن وجد
-      let catSeqNum = 1;
-      const catName = opType.category || 'عام';
+      // جلب مفتاح التصنيف من operation_categories
+      let catKey = 'general';
+      if (opType.categoryId) {
+        const [opCat] = await db.select({ categoryKey: operationCategories.categoryKey }).from(operationCategories).where(eq(operationCategories.id, opType.categoryId));
+        if (opCat?.categoryKey) catKey = opCat.categoryKey;
+      }
       const [jeCat] = await db.select().from(journalEntryCategories)
-        .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, catName)));
+        .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, catKey)));
+      let catSeqNum = 1;
       if (jeCat?.sequenceNumber) catSeqNum = jeCat.sequenceNumber;
 
       const jeSeqResult = await generateJournalEntryFullSequence(
@@ -1427,7 +1450,11 @@ api.post('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), safeH
   const body = await getBody(c);
   const validation = validateBody(billingSystemConfigSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(billingSystemsConfig).values({ ...validation.data, businessId: bizId }).returning();
+  const data = { ...validation.data, businessId: bizId } as Record<string, unknown>;
+  if (!data.systemKey || String(data.systemKey).trim() === '') {
+    data.systemKey = (data.name as string).replace(/\s+/g, '_').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 100) || `system_${Date.now()}`;
+  }
+  const [created] = await db.insert(billingSystemsConfig).values(data as any).returning();
   return c.json(created, 201);
 }));
 

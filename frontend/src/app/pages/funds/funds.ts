@@ -71,18 +71,20 @@ export class FundsComponent extends BasePageComponent {
   }
 
   getFilterTabs() {
-    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.fundsData().length },
-      ...this.fundTypes().map(t => ({
+    const nonCustody = this.fundsData().filter(f => f.fundType !== 'custody');
+    return [{ value: 'all', label: 'الكل', icon: 'apps', count: nonCustody.length },
+      ...this.fundTypes().filter(t => t.subTypeKey !== 'custody').map(t => ({
         value: t.subTypeKey, label: t.name, icon: t.icon,
-        count: this.fundsData().filter(f => f.fundType === t.subTypeKey).length,
+        count: nonCustody.filter(f => f.fundType === t.subTypeKey).length,
       }))
     ];
   }
 
   filteredAccounts() {
     const f = this.activeFilter();
-    if (f === 'all') return this.fundsData();
-    return this.fundsData().filter(fund => fund.fundType === f);
+    const data = this.fundsData().filter(fund => fund.fundType !== 'custody');
+    if (f === 'all') return data;
+    return data.filter(fund => fund.fundType === f);
   }
 
   getTypeInfo(fundType: string) {

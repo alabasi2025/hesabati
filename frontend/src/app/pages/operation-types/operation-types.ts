@@ -29,6 +29,7 @@ export class OperationTypesComponent extends BasePageComponent {
   operationTypes = signal<any[]>([]);
   accounts = signal<any[]>([]);
   funds = signal<any[]>([]);
+  categories = signal<any[]>([]);
 
   // ===================== UI State =====================
   showHowItWorks = signal(false);
@@ -58,6 +59,7 @@ export class OperationTypesComponent extends BasePageComponent {
     description: '',
     icon: 'receipt_long',
     color: '#3b82f6',
+    categoryId: null as number | null,
     category: '',
     voucherType: '',
     paymentMethod: '',
@@ -70,7 +72,6 @@ export class OperationTypesComponent extends BasePageComponent {
     hasMultiLines: true,
     isActive: true,
     sortOrder: 0,
-    // سير العمل
     workflowEnabled: false,
     workflowStates: ['draft', 'confirmed'] as string[],
     workflowInitialState: 'draft',
@@ -86,34 +87,26 @@ export class OperationTypesComponent extends BasePageComponent {
 
   // ===================== Computed: التصنيفات =====================
   dynamicCategories = computed(() => {
-    const cats = new Set<string>();
-    this.operationTypes().forEach(ot => {
-      if (ot.category) cats.add(ot.category);
-    });
-    return Array.from(cats).sort();
+    return this.categories().map(c => c.id);
   });
 
-  // بيانات التصنيفات مع عدد القوالب والأيقونة واللون
   categoryDetails = computed(() => {
-    const cats = this.dynamicCategories();
-    return cats.map(cat => {
-      const templates = this.operationTypes().filter(ot => ot.category === cat);
-      const firstOT = templates[0];
+    return this.categories().map(cat => {
+      const templates = this.operationTypes().filter(ot => ot.categoryId === cat.id);
       return {
-        name: cat,
+        id: cat.id,
+        name: cat.name,
         count: templates.length,
-        icon: this.getCategoryIcon(cat),
-        color: firstOT?.color || '#3b82f6',
+        icon: cat.icon || 'label',
+        color: cat.color || '#3b82f6',
       };
     });
   });
 
-  // فلتر الفئات في تبويب القوالب
   categoryFilters = computed(() => {
-    const cats = this.dynamicCategories();
     const filters = [{ value: 'all', label: 'الكل', icon: 'apps' }];
-    for (const cat of cats) {
-      filters.push({ value: cat, label: cat, icon: this.getCategoryIcon(cat) });
+    for (const cat of this.categories()) {
+      filters.push({ value: String(cat.id), label: cat.name, icon: cat.icon || 'label' });
     }
     return filters;
   });
@@ -162,21 +155,22 @@ export class OperationTypesComponent extends BasePageComponent {
 
   accountTypeLabels: Record<string, string> = {
     billing: 'فوترة', fund: 'صندوق', bank: 'بنك', exchange: 'صراف',
-    wallet: 'محفظة', cash: 'نقد', service: 'خدمة', custody: 'عهدة',
-    accounting: 'محاسبي', intermediary: 'وسيط', e_wallet: 'محفظة إلكترونية',
-    client: 'عميل', supplier: 'مورد', expense: 'مصاريف', revenue: 'إيرادات',
-    loan: 'قرض', partner: 'شريك', employee: 'موظف', warehouse: 'مخزن', other: 'أخرى',
+    wallet: 'محفظة', custody: 'عهدة',
+    accounting: 'محاسبي', e_wallet: 'محفظة إلكترونية',
+    supplier: 'مورد', partner: 'شريك', employee: 'موظف',
+    warehouse: 'مخزن', budget: 'ميزانية', settlement: 'تسوية',
+    pending: 'معلق', other: 'أخرى',
   };
 
-  // أيقونات أنواع الحسابات
   accountTypeIcons: Record<string, string> = {
-    bank: 'account_balance', cash: 'payments', exchange: 'currency_exchange',
-    e_wallet: 'phone_android', wallet: 'wallet', service: 'build',
+    bank: 'account_balance', exchange: 'currency_exchange',
+    e_wallet: 'phone_android', wallet: 'wallet',
     custody: 'lock', fund: 'savings', billing: 'receipt',
-    client: 'person', supplier: 'local_shipping', expense: 'trending_down',
-    revenue: 'trending_up', loan: 'credit_card', partner: 'handshake',
-    employee: 'badge', accounting: 'book', intermediary: 'swap_horiz',
-    warehouse: 'warehouse', other: 'more_horiz',
+    supplier: 'local_shipping', partner: 'handshake',
+    employee: 'badge', accounting: 'book',
+    warehouse: 'warehouse', budget: 'account_balance_wallet',
+    settlement: 'balance', pending: 'hourglass_empty',
+    other: 'more_horiz',
   };
 
   // ===================== Computed: حسابات المصدر (الطرف الأول) =====================
@@ -239,22 +233,23 @@ export class OperationTypesComponent extends BasePageComponent {
     const cat = this.activeCategory();
     const q = this.searchQuery().toLowerCase().trim();
     let all = this.operationTypes();
-    if (cat !== 'all') all = all.filter(ot => ot.category === cat);
-    if (q) all = all.filter(ot => (ot.name || '').toLowerCase().includes(q) || (ot.description || '').toLowerCase().includes(q) || (ot.category || '').toLowerCase().includes(q));
+    if (cat !== 'all') all = all.filter(ot => String(ot.categoryId) === cat);
+    if (q) all = all.filter(ot => (ot.name || '').toLowerCase().includes(q) || (ot.description || '').toLowerCase().includes(q));
     return all;
   });
 
   groupedByCategory = computed(() => {
     const all = this.filteredTypes();
-    const groups: { category: string; items: any[] }[] = [];
-    const catMap = new Map<string, any[]>();
+    const groups: { category: string; categoryId: number; items: any[] }[] = [];
+    const catMap = new Map<number, any[]>();
     for (const ot of all) {
-      const cat = ot.category || 'عام';
-      if (!catMap.has(cat)) catMap.set(cat, []);
-      catMap.get(cat)!.push(ot);
+      const catId = ot.categoryId || 0;
+      if (!catMap.has(catId)) catMap.set(catId, []);
+      catMap.get(catId)!.push(ot);
     }
-    for (const [cat, items] of catMap) {
-      groups.push({ category: cat, items });
+    for (const [catId, items] of catMap) {
+      const cat = this.categories().find(c => c.id === catId);
+      groups.push({ category: cat?.name || 'عام', categoryId: catId, items });
     }
     return groups;
   });
@@ -303,16 +298,18 @@ export class OperationTypesComponent extends BasePageComponent {
   async loadAll() {
     this.loading.set(true);
     try {
-      const [ots, allAccs, fnds, whs] = await Promise.all([
+      const [ots, allAccs, fnds, whs, cats] = await Promise.all([
         this.api.getOperationTypes(this.bizId),
         this.api.getAllAccounts(this.bizId),
         this.api.getFunds(this.bizId),
         this.api.getWarehouses(this.bizId),
+        this.api.getOperationCategories(this.bizId),
       ]);
       this.operationTypes.set(ots);
       this.accounts.set(allAccs.accounts);
       this.funds.set(fnds);
       this.warehouses.set(whs);
+      this.categories.set(cats);
     } catch (e: unknown) {
       this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
@@ -368,36 +365,24 @@ export class OperationTypesComponent extends BasePageComponent {
   async saveCategory() {
     const name = this.newCategoryName().trim();
     if (!name) { this.showError('اسم التصنيف مطلوب'); return; }
-
     this.saving.set(true);
     try {
       if (this.editingCategoryOld()) {
-        const oldName = this.editingCategoryOld()!;
-        if (oldName !== name) {
-          const otsToUpdate = this.operationTypes().filter(ot => ot.category === oldName);
-          for (const ot of otsToUpdate) {
-            await this.api.updateOperationType(ot.id, { category: name });
-          }
-          this.showSuccess(`تم تعديل التصنيف من "${oldName}" إلى "${name}"`);
+        const cat = this.categories().find(c => c.name === this.editingCategoryOld());
+        if (cat) {
+          await this.api.updateOperationCategory(this.bizId, cat.id, { name });
         }
       } else {
-        await this.api.createOperationType(this.bizId, {
-          name: `قالب ${name} الافتراضي`,
-          description: `قالب افتراضي لتصنيف ${name}`,
+        const categoryKey = name.toLowerCase().replace(/\s+/g, '_').replace(/[^\w\u0621-\u064A]/g, '');
+        await this.api.createOperationCategory(this.bizId, {
+          name,
+          categoryKey,
+          icon: this.newCategoryIcon(),
           color: this.newCategoryColor(),
-          category: name,
-          voucherType: 'receipt',
-          paymentMethod: 'cash',
-          screens: [name],
-          requiresAttachment: false,
-          hasMultiLines: true,
-          isActive: false,
-          sortOrder: 999,
-          linkedAccounts: [],
         });
-        this.showSuccess(`تم إنشاء التصنيف "${name}" بنجاح`);
       }
       this.closeCategoryForm();
+      this.showSuccess(this.editingCategoryOld() ? 'تم تعديل التصنيف' : 'تم إنشاء التصنيف');
       await this.loadAll();
     } catch (e: unknown) {
       this.showError(e instanceof Error ? e.message : 'خطأ في حفظ التصنيف');
@@ -405,24 +390,16 @@ export class OperationTypesComponent extends BasePageComponent {
     this.saving.set(false);
   }
 
-  async deleteCategory(cat: string) {
-    const count = this.countByCategory(cat);
-    const msg = count > 0
-      ? `هل تريد حذف التصنيف "${cat}" وجميع القوالب (${count}) المرتبطة به؟`
-      : `هل تريد حذف التصنيف "${cat}"؟`;
-    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: msg, type: 'danger' });
+  async deleteCategory(cat: any) {
+    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `حذف التصنيف "${cat.name}"?`, type: 'danger' });
     if (!confirmed) return;
-
     this.saving.set(true);
     try {
-      const otsToDelete = this.operationTypes().filter(ot => ot.category === cat);
-      for (const ot of otsToDelete) {
-        await this.api.deleteOperationType(ot.id);
-      }
-      this.showSuccess(`تم حذف التصنيف "${cat}" بنجاح`);
+      await this.api.deleteOperationCategory(this.bizId, cat.id);
+      this.showSuccess('تم حذف التصنيف');
       await this.loadAll();
     } catch (e: unknown) {
-      this.showError(e instanceof Error ? e.message : 'خطأ في حذف التصنيف');
+      this.showError(e instanceof Error ? e.message : 'خطأ في الحذف');
     }
     this.saving.set(false);
   }
@@ -436,6 +413,7 @@ export class OperationTypesComponent extends BasePageComponent {
     this.editingId.set(null);
     this.wiz.set({
       name: '', description: '', icon: 'receipt_long', color: '#3b82f6',
+      categoryId: null,
       category: '',
       voucherType: '', paymentMethod: '',
       sourceAccountId: null,
@@ -464,7 +442,8 @@ export class OperationTypesComponent extends BasePageComponent {
       description: ot.description || '',
       icon: ot.icon || 'receipt_long',
       color: ot.color || '#3b82f6',
-      category: ot.category || '',
+      categoryId: ot.categoryId || null,
+      category: '',
       voucherType: ot.voucherType || '',
       paymentMethod: ot.paymentMethod || '',
       sourceAccountId: ot.sourceAccountId || null,
@@ -490,8 +469,9 @@ export class OperationTypesComponent extends BasePageComponent {
     this.wiz.update(w => ({ ...w, [field]: value }));
   }
 
-  selectCategory(cat: string) {
-    this.setWizField('category', cat);
+  selectCategory(catId: number) {
+    this.setWizField('categoryId', catId);
+    this.setWizField('category', '');
   }
 
   selectVoucherType(vt: string) {
@@ -601,7 +581,7 @@ export class OperationTypesComponent extends BasePageComponent {
     const w = this.wiz();
     const step = this.wizardStep();
 
-    if (step === 1) return !!w.category.trim();
+    if (step === 1) return !!w.categoryId;
     if (step === 2) return !!w.voucherType;
 
     if (w.voucherType === 'journal') {
@@ -714,7 +694,7 @@ export class OperationTypesComponent extends BasePageComponent {
   async saveWizard() {
     const w = this.wiz();
     if (!w.name.trim()) { this.showError('اسم القالب مطلوب'); return; }
-    if (!w.category.trim()) { this.showError('نوع القالب مطلوب'); return; }
+    if (!w.categoryId) { this.showError('نوع القالب مطلوب'); return; }
 
     this.saving.set(true);
     try {
@@ -723,13 +703,13 @@ export class OperationTypesComponent extends BasePageComponent {
         description: w.description,
         icon: w.icon,
         color: w.color,
-        category: w.category,
+        categoryId: w.categoryId,
         voucherType: w.voucherType,
         paymentMethod: w.paymentMethod || null,
         sourceAccountId: w.sourceAccountId || null,
         sourceFundId: w.sourceFundId || null,
         sourceWarehouseId: w.sourceWarehouseId || null,
-        screens: w.screens.length > 0 ? w.screens : [w.category],
+        screens: w.screens.length > 0 ? w.screens : [],
         requiresAttachment: w.requiresAttachment,
         hasMultiLines: w.hasMultiLines,
         isActive: w.isActive,

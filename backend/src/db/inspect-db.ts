@@ -22,7 +22,7 @@ async function inspect() {
       id: schema.operationTypes.id,
       businessId: schema.operationTypes.businessId,
       name: schema.operationTypes.name,
-      category: schema.operationTypes.category,
+      categoryId: schema.operationTypes.categoryId,
       voucherType: schema.operationTypes.voucherType,
       code: schema.operationTypes.code,
       isActive: schema.operationTypes.isActive,
@@ -34,7 +34,7 @@ async function inspect() {
   } else {
     console.table(operationTypes);
     console.log('قوالب العمليات (نص خام للتشفير):');
-    operationTypes.forEach((ot) => console.log(JSON.stringify({ id: ot.id, name: ot.name, category: ot.category, code: ot.code })));
+    operationTypes.forEach((ot) => console.log(JSON.stringify({ id: ot.id, name: ot.name, categoryId: ot.categoryId, code: ot.code })));
   }
 
   console.log('\n=== الحسابات المرتبطة بالقالب (operation_type_accounts) ===');
@@ -53,12 +53,12 @@ async function inspect() {
     console.table(ota);
   }
 
-  console.log('\n=== تصنيفات السندات (voucher_categories) — عينة ===');
-  const vc = await db
-    .select({ id: schema.voucherCategories.id, businessId: schema.voucherCategories.businessId, name: schema.voucherCategories.name, type: schema.voucherCategories.type })
-    .from(schema.voucherCategories)
+  console.log('\n=== تصنيفات العمليات (operation_categories) — عينة ===');
+  const opCats = await db
+    .select({ id: schema.operationCategories.id, businessId: schema.operationCategories.businessId, name: schema.operationCategories.name, categoryKey: schema.operationCategories.categoryKey })
+    .from(schema.operationCategories)
     .limit(10);
-  console.table(vc);
+  console.table(opCats);
 
   console.log('\n=== ما تبقى من عمليات (عدّ فقط) ===');
   const allVouchers = await db.select({ id: schema.vouchers.id }).from(schema.vouchers);

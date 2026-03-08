@@ -60,6 +60,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     title: '3. الحسابات والأرصدة',
     items: [
       { icon: 'account_balance_wallet', label: 'الحسابات', path: 'accounts', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'category', label: 'أنواع الحسابات', path: 'account-types', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'savings', label: 'الصناديق', path: 'funds', showFor: ['stations', 'single_station'] },
       { icon: 'account_balance', label: 'البنوك', path: 'banks', showFor: ['stations', 'single_station'] },
       { icon: 'currency_exchange', label: 'الصرافين', path: 'exchangers', showFor: ['stations', 'single_station'] },
@@ -77,6 +78,11 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
   {
     title: '5. القوالب والترقيم',
     items: [
+      { icon: 'folder_special', label: 'أصناف العمليات', path: 'operation-categories', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'local_shipping', label: 'أنواع الموردين', path: 'supplier-types', showFor: ['stations', 'single_station'] },
+      { icon: 'inventory_2', label: 'أنواع الأصناف', path: 'inventory-item-types', showFor: ['stations', 'single_station'] },
+      { icon: 'groups', label: 'الأقسام', path: 'departments', showFor: ['stations', 'single_station'] },
+      { icon: 'badge', label: 'المسميات الوظيفية', path: 'job-titles', showFor: ['stations', 'single_station'] },
       { icon: 'category', label: 'أنواع العمليات', path: 'operation-types', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
@@ -88,47 +94,54 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     ],
   },
   {
-    title: '7. الموردين',
+    title: '7. الموردين والمشتريات',
     items: [
       { icon: 'local_shipping', label: 'الموردين', path: 'suppliers', showFor: ['stations', 'single_station'] },
+      { icon: 'receipt_long', label: 'فواتير المشتريات', path: 'purchase-invoices', showFor: ['stations', 'single_station'] },
     ],
   },
   {
-    title: '8. التحصيل والفوترة',
+    title: '8. المطابقات والعهد',
     items: [
-      { icon: 'receipt_long', label: 'التحصيل والتوريد', path: 'collections', showFor: ['stations'] },
+      { icon: 'fact_check', label: 'المطابقات', path: 'reconciliations', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'lock', label: 'العهد', path: 'custody', showFor: ['stations', 'single_station'] },
+    ],
+  },
+  {
+    title: '9. الفوترة',
+    items: [
       { icon: 'receipt', label: 'أنظمة الفوترة', path: 'billing-systems', showFor: ['stations'] },
     ],
   },
   {
-    title: '9. التقارير',
+    title: '10. التقارير',
     items: [
       { icon: 'assessment', label: 'التقارير', path: 'reports', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'analytics', label: 'التقارير المتقدمة', path: 'reports-advanced', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
   {
-    title: '10. بناء الواجهات',
+    title: '11. بناء الواجهات',
     items: [
       { icon: 'space_dashboard', label: 'الشاشات المخصصة', path: 'custom-screens', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'dashboard_customize', label: 'بناء الواجهات', path: 'ui-builder', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
   {
-    title: '11. العملات وأسعار الصرف',
+    title: '12. العملات وأسعار الصرف',
     items: [
       { icon: 'currency_exchange', label: 'أسعار الصرف', path: 'exchange-rates', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
   {
-    title: '12. المعلقات والتصفيات',
+    title: '13. المعلقات والتصفيات',
     items: [
       { icon: 'balance', label: 'التصفيات', path: 'settlements', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'warning', label: 'حسابات معلقة', path: 'pending', showFor: ['stations'], badge: 3, badgeColor: 'red' },
     ],
   },
   {
-    title: '13. الرواتب والميزانية',
+    title: '14. الرواتب والميزانية',
     items: [
       { icon: 'category', label: 'تصنيفات المصروفات', path: 'expense-categories', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'account_balance_wallet', label: 'ميزانية المصروفات', path: 'expense-budget', showFor: ['stations', 'single_station', 'personal'] },

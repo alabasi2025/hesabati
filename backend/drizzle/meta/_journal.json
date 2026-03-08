@@ -22,6 +22,20 @@
       "when": 1772417520641,
       "tag": "0002_lush_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772924660423,
+      "tag": "0003_system_enhancements",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772928233395,
+      "tag": "0004_billing_dynamic_and_custody_filter",
+      "breakpoints": true
     }
   ]
 }

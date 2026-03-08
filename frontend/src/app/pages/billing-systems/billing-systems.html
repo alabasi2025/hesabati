@@ -369,8 +369,8 @@
 
           <div class="form-group">
             <label class="form-label">نظام الفوترة <span class="required">*</span></label>
-            <select class="form-input" [value]="accountForm().billingSystem"
-                    (change)="setFormField('account', 'billingSystem', $any($event.target).value)">
+            <select class="form-input" [value]="accountForm().billingSystemId"
+                    (change)="setFormField('account', 'billingSystemId', $any($event.target).value)">
               <option value="">-- اختر النظام --</option>
               @for (s of availableBillingSystems; track s.value) {
                 <option [value]="s.value">{{ s.label }}</option>

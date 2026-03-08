@@ -59,7 +59,7 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
   // جلب البيانات مع الحسابات وأنواع العمليات
   const rows = await db.execute(sql`
     SELECT v.*,
-      ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category as operation_category,
+      ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category_id as operation_category,
       fa.name as from_account_name, fa.account_type as from_account_type,
       ta.name as to_account_name, ta.account_type as to_account_type,
       c.code as currency_code, c.symbol as currency_symbol,
@@ -141,7 +141,7 @@ enhancements.post(
         const [created] = await db.insert(accounts).values({
           businessId: bizId,
           name: 'حساب الصناديق (آلي)',
-          accountType: 'cash',
+          accountType: 'fund',
           canCreateVoucher: false,
           canApproveVoucher: false,
           notes: 'system_cash_treasury',
@@ -437,7 +437,7 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
     description: original.description,
     icon: original.icon,
     color: original.color,
-    category: original.category,
+    categoryId: original.categoryId,
     voucherType: original.voucherType,
     paymentMethod: original.paymentMethod,
     sourceAccountId: original.sourceAccountId,
@@ -509,14 +509,14 @@ enhancements.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware()
 
   const result = await db.execute(sql`
     SELECT
-      ot.id, ot.name, ot.icon, ot.color, ot.category, ot.voucher_type, ot.is_active,
+      ot.id, ot.name, ot.icon, ot.color, ot.category_id, ot.voucher_type, ot.is_active,
       COUNT(v.id) as usage_count,
       COALESCE(SUM(CAST(v.amount AS NUMERIC)), 0) as total_amount,
       MAX(v.created_at) as last_used_at
     FROM operation_types ot
     LEFT JOIN vouchers v ON v.operation_type_id = ot.id AND v.status != 'cancelled'
     WHERE ot.business_id = ${bizId}
-    GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.category, ot.voucher_type, ot.is_active
+    GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.category_id, ot.voucher_type, ot.is_active
     ORDER BY usage_count DESC
   `);
   const rows = normalizeDbResult(result);
@@ -631,7 +631,7 @@ enhancements.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), 
       je.id, je.entry_number, je.description, je.entry_date, je.reference,
       je.total_debit, je.total_credit, je.status, je.created_at,
       ot.name as operation_type_name, ot.icon as operation_type_icon,
-      ot.color as operation_type_color, ot.voucher_type, ot.category as operation_category,
+      ot.color as operation_type_color, ot.voucher_type, ot.category_id as operation_category,
       u.full_name as created_by_name
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id

@@ -1,21 +1,34 @@
-# Security Policy
+# سياسة الأمان — حساباتي (Hesabati)
 
-## Supported Versions
+## الإصدارات المدعومة
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+يتم توفير تحديثات أمان للإصدارات التالية:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| الإصدار | مدعوم |
+| ------- | ----- |
+| 1.x     | ✅ نعم |
+| < 1.0   | ❌ لا  |
 
-## Reporting a Vulnerability
+- **Backend:** الإصدار الحالي `1.0.0` (من `backend/package.json`).
+- **Frontend:** الإصدار الحالي `0.0.0` (من `frontend/package.json`).
 
-Use this section to tell people how to report a vulnerability.
+---
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+## الإبلاغ عن ثغرة أمان
+
+إذا اكتشفت ثغرة أمانية في المشروع:
+
+1. **لا تفتح Issue عامًا** يحتوي على تفاصيل الاستغلال.
+2. **أرسل تقريرًا خاصًا** إلى المسؤولين عن المستودع (مثلاً عبر جهة اتصال المؤسسة أو البريد المذكور في المستودع).
+3. **ضمّن إن أمكن:** خطوات إعادة الإنتاج، التأثير المحتمل، واقتراح إصلاح إن وجد.
+4. **ماذا تتوقع:** تأكيد استلام التقرير خلال مدة معقولة، وتحديث عند معالجة الثغرة أو رفض التقرير مع سبب إن أمكن.
+
+نحن نأخذ الأمان على محمل الجد وسنرد على التقارير المسؤولة بشكل مناسب.
+
+---
+
+## إعداد الإنتاج
+
+- **لا تستخدم** كلمة مرور قاعدة البيانات أو مفتاح JWT الافتراضي في بيئة الإنتاج.
+- عيّن `DB_PASSWORD` و `JWT_SECRET` (وإن أمكن `ALLOWED_ORIGINS`) عبر متغيرات البيئة أو ملف `.env` غير المرفق بالمستودع.
+- راجع `.env.example` في الجذر و `backend/.env.example` و `.env.docker` لقائمة المتغيرات المطلوبة.

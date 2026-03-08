@@ -60,7 +60,8 @@ authRoutes.post('/register', async (c) => {
     const username = body?.username;
     const password = body?.password;
     const fullName = body?.fullName;
-    const role = body?.role;
+    // ⚠️ أمان: لا نسمح للمستخدم بتعيين دوره - دائماً viewer
+    // لتغيير الدور، يجب أن يقوم مسؤول بذلك من لوحة التحكم
 
     if (!username || !password || !fullName) {
       return c.json({ error: 'اسم المستخدم وكلمة المرور والاسم الكامل مطلوبان' }, 400);
@@ -76,7 +77,7 @@ authRoutes.post('/register', async (c) => {
       username,
       password: hashedPassword,
       fullName,
-      role: role || 'viewer',
+      role: 'viewer', // دائماً viewer - لا يمكن للمستخدم تعيين دوره
     }).returning();
 
     return c.json({

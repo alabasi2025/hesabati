@@ -1,0 +1,235 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d purple">
+        <span class="material-icons-round">category</span>
+      </div>
+      <div>
+        <h1 class="page-title">أنواع الحسابات</h1>
+        <p class="page-subtitle">إدارة الأنواع الرئيسية والتصنيفات الفرعية</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-3d btn-ghost" (click)="expandAll()">
+        <span class="material-icons-round">unfold_more</span>
+        فتح الكل
+      </button>
+      <button class="btn-3d btn-ghost" (click)="collapseAll()">
+        <span class="material-icons-round">unfold_less</span>
+        طي الكل
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Error ===== -->
+  @if (error()) {
+    <div class="alert-error" (click)="error.set('')">
+      <span class="material-icons-round">error_outline</span>
+      {{ error() }}
+      <span class="material-icons-round close-x">close</span>
+    </div>
+  }
+
+  <!-- ===== Loading ===== -->
+  @if (loading()) {
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>جاري التحميل...</p>
+    </div>
+  }
+
+  <!-- ===== Stats Bar ===== -->
+  @if (!loading()) {
+    <div class="stats-bar">
+      <div class="stat-card" style="--card-color: #6366f1">
+        <div class="stat-icon purple"><span class="material-icons-round">category</span></div>
+        <div>
+          <div class="stat-num">{{ stats().mainTypes }}</div>
+          <div class="stat-label">أنواع رئيسية</div>
+        </div>
+      </div>
+      <div class="stat-card" style="--card-color: #10b981">
+        <div class="stat-icon green"><span class="material-icons-round">label</span></div>
+        <div>
+          <div class="stat-num">{{ stats().subTypes }}</div>
+          <div class="stat-label">تصنيفات فرعية</div>
+        </div>
+      </div>
+      <div class="stat-card" style="--card-color: #3b82f6">
+        <div class="stat-icon blue"><span class="material-icons-round">check_circle</span></div>
+        <div>
+          <div class="stat-num">{{ stats().activeSubTypes }}</div>
+          <div class="stat-label">تصنيف نشط</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Main Types List ===== -->
+  @if (!loading()) {
+    <div class="types-container">
+      @for (mainType of mainAccountTypes(); track mainType.key) {
+        <div class="main-type-card" [style.--type-color]="mainType.color">
+          <div class="type-header" (click)="toggleExpand(mainType.key)">
+            <div class="type-header-right">
+              <div class="type-icon" [style.background]="'linear-gradient(135deg, ' + mainType.color + ', ' + mainType.color + 'cc)'">
+                <span class="material-icons-round">{{ mainType.icon }}</span>
+              </div>
+              <div class="type-info">
+                <h3 class="type-title">{{ mainType.label }}</h3>
+                <p class="type-desc">{{ mainType.description }}</p>
+              </div>
+            </div>
+            <div class="type-header-left">
+              <span class="subtype-count" [style.background]="mainType.color + '20'" [style.color]="mainType.color">
+                {{ mainType.subTypes.length }} تصنيف
+              </span>
+              @if (mainType.isSystem) {
+                <span class="system-badge">نظامي</span>
+              }
+              <button class="expand-btn">
+                <span class="material-icons-round">
+                  {{ isExpanded(mainType.key) ? 'expand_less' : 'expand_more' }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          @if (isExpanded(mainType.key)) {
+            <div class="type-body">
+              <!-- Sub Types Grid -->
+              @if (mainType.subTypes.length > 0) {
+                <div class="subtypes-grid">
+                  @for (subType of mainType.subTypes; track subType.id) {
+                    <div class="subtype-card" [class.inactive]="!subType.isActive">
+                      <div class="subtype-icon" [style.background]="'linear-gradient(135deg, ' + (subType.color || mainType.color) + ', ' + (subType.color || mainType.color) + 'aa)'">
+                        <span class="material-icons-round">{{ subType.icon || mainType.icon }}</span>
+                      </div>
+                      <div class="subtype-info">
+                        <h4 class="subtype-name">{{ subType.name }}</h4>
+                        <span class="subtype-key">{{ subType.subTypeKey }}</span>
+                        @if (subType.description) {
+                          <p class="subtype-desc">{{ subType.description }}</p>
+                        }
+                      </div>
+                      <div class="subtype-actions">
+                        <button class="icon-btn edit-btn" (click)="openEditSubType(mainType.key, subType); $event.stopPropagation()" title="تعديل">
+                          <span class="material-icons-round">edit</span>
+                        </button>
+                        <button class="icon-btn delete-btn" (click)="deleteSubType(mainType.key, subType); $event.stopPropagation()" title="حذف">
+                          <span class="material-icons-round">delete</span>
+                        </button>
+                      </div>
+                      @if (subType.sequenceNumber) {
+                        <span class="seq-badge">#{{ subType.sequenceNumber }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="empty-subtypes">
+                  <span class="material-icons-round">label_off</span>
+                  <p>لا توجد تصنيفات فرعية</p>
+                </div>
+              }
+
+              <!-- Add SubType Button -->
+              <button class="add-subtype-btn" (click)="openAddSubType(mainType.key)">
+                <span class="material-icons-round">add</span>
+                إضافة تصنيف فرعي
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ===== SubType Form Modal ===== -->
+  @if (showSubTypeForm()) {
+    <div class="modal-overlay" (click)="showSubTypeForm.set(false)">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon" [style.background]="'linear-gradient(135deg, ' + subTypeForm().color + ', ' + subTypeForm().color + 'cc)'">
+            <span class="material-icons-round">{{ subTypeForm().icon }}</span>
+          </div>
+          <h2>{{ editingSubType() ? 'تعديل التصنيف' : 'تصنيف فرعي جديد' }}</h2>
+          <span class="modal-subtitle">{{ getMainTypeLabel(activeMainType()) }}</span>
+          <button class="modal-close" (click)="showSubTypeForm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+
+          <div class="form-group">
+            <label class="form-label">اسم التصنيف <span class="required">*</span></label>
+            <input class="form-input" type="text" placeholder="مثال: توفير، جاري، تحصيل..."
+                   [value]="subTypeForm().name" (input)="onNameChange($any($event.target).value)">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">مفتاح التصنيف <span class="required">*</span></label>
+            <input class="form-input ltr-input" type="text" placeholder="مثال: savings, current, collection"
+                   [value]="subTypeForm().subTypeKey" (input)="setFormField('subTypeKey', $any($event.target).value)">
+            <p class="form-hint">مفتاح فريد يُستخدم في النظام (بالإنجليزية)</p>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">رقم التسلسل</label>
+              <input class="form-input" type="number" min="0" placeholder="0"
+                     [value]="subTypeForm().sequenceNumber" (input)="setFormField('sequenceNumber', +$any($event.target).value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">اللون</label>
+              <div class="color-picker">
+                @for (color of colorOptions; track color) {
+                  <button class="color-option" 
+                          [style.background]="color"
+                          [class.selected]="subTypeForm().color === color"
+                          (click)="setFormField('color', color)">
+                    @if (subTypeForm().color === color) {
+                      <span class="material-icons-round">check</span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">الأيقونة</label>
+            <div class="icon-picker">
+              @for (icon of iconOptions; track icon) {
+                <button class="icon-option" 
+                        [class.selected]="subTypeForm().icon === icon"
+                        [style.color]="subTypeForm().icon === icon ? subTypeForm().color : '#64748b'"
+                        (click)="setFormField('icon', icon)">
+                  <span class="material-icons-round">{{ icon }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">وصف (اختياري)</label>
+            <textarea class="form-input" rows="2" placeholder="وصف مختصر للتصنيف..."
+                      [value]="subTypeForm().description"
+                      (input)="setFormField('description', $any($event.target).value)"></textarea>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="showSubTypeForm.set(false)">إلغاء</button>
+          <button class="btn-3d btn-primary" (click)="saveSubType()">
+            <span class="material-icons-round">save</span>
+            {{ editingSubType() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
