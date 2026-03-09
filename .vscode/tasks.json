@@ -5,6 +5,44 @@
       "label": "Open Simple Browser: حساباتي",
       "command": "${input:openSimpleBrowser}",
       "problemMatcher": []
+    },
+    {
+      "label": "Open Simple Browser: فواتير المشتريات",
+      "command": "${input:openSimpleBrowserPurchases}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: pnpm run dev",
+      "type": "shell",
+      "command": "pnpm run dev",
+      "options": { "cwd": "${workspaceFolder}/backend", "env": {} },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Backend: db:push",
+      "type": "shell",
+      "command": "pnpm run db:push",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Backend: db:seed",
+      "type": "shell",
+      "command": "pnpm run db:seed",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Backend: db:generate",
+      "type": "shell",
+      "command": "pnpm run db:generate",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
     }
   ],
   "inputs": [
@@ -13,6 +51,12 @@
       "type": "command",
       "command": "simpleBrowser.show",
       "args": ["http://localhost:4200"]
+    },
+    {
+      "id": "openSimpleBrowserPurchases",
+      "type": "command",
+      "command": "simpleBrowser.show",
+      "args": ["http://localhost:4200/biz/1/purchase-invoices"]
     }
   ]
 }

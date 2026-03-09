@@ -9,10 +9,8 @@ CREATE INDEX IF NOT EXISTS idx_vouchers_business_id ON vouchers(business_id);
 CREATE INDEX IF NOT EXISTS idx_suppliers_business_id ON suppliers(business_id);
 CREATE INDEX IF NOT EXISTS idx_pending_accounts_business_id ON pending_accounts(business_id);
 CREATE INDEX IF NOT EXISTS idx_warehouses_business_id ON warehouses(business_id);
-CREATE INDEX IF NOT EXISTS idx_daily_collections_business_id ON daily_collections(business_id);
 CREATE INDEX IF NOT EXISTS idx_operation_types_business_id ON operation_types(business_id);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_business_id ON journal_entries(business_id);
-CREATE INDEX IF NOT EXISTS idx_voucher_categories_business_id ON voucher_categories(business_id);
 CREATE INDEX IF NOT EXISTS idx_business_partners_business_id ON business_partners(business_id);
 
 -- فهارس على الحقول المستخدمة في JOIN
@@ -26,8 +24,6 @@ CREATE INDEX IF NOT EXISTS idx_account_allowed_links_from ON account_allowed_lin
 CREATE INDEX IF NOT EXISTS idx_account_allowed_links_to ON account_allowed_links(to_account_id);
 CREATE INDEX IF NOT EXISTS idx_operation_type_accounts_ot_id ON operation_type_accounts(operation_type_id);
 CREATE INDEX IF NOT EXISTS idx_journal_entry_lines_entry_id ON journal_entry_lines(journal_entry_id);
-CREATE INDEX IF NOT EXISTS idx_collection_details_collection_id ON collection_details(collection_id);
-CREATE INDEX IF NOT EXISTS idx_delivery_records_collection_id ON delivery_records(collection_id);
 
 -- فهارس على الحقول المستخدمة في الفلترة
 CREATE INDEX IF NOT EXISTS idx_vouchers_type ON vouchers(voucher_type);
@@ -36,7 +32,6 @@ CREATE INDEX IF NOT EXISTS idx_vouchers_status ON vouchers(status);
 CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE INDEX IF NOT EXISTS idx_funds_type ON funds(fund_type);
-CREATE INDEX IF NOT EXISTS idx_daily_collections_station_date ON daily_collections(station_id, collection_date);
 
 -- فهارس مركبة للاستعلامات الشائعة
 CREATE INDEX IF NOT EXISTS idx_vouchers_biz_type ON vouchers(business_id, voucher_type);

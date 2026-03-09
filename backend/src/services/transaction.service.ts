@@ -1284,3 +1284,17 @@ export async function confirmDraftTransaction(
 
   return result;
 }
+
+/** يُستخدم من workflow: هل الانتقال من مسودة إلى معتمد؟ */
+export function isConfirmingTransition(fromStatus: string, toStatus: string): boolean {
+  return fromStatus === "draft" && toStatus === "confirmed";
+}
+
+/** يُستخدم من workflow: تنفيذ القيد المحاسبي بعد اعتماد السند عبر سير العمل */
+export async function applyAccountingForConfirmedVoucher(
+  bizId: number,
+  userId: number,
+  voucherId: number,
+): Promise<{ voucher: any; journalEntry: any }> {
+  return confirmDraftTransaction(bizId, userId, voucherId);
+}

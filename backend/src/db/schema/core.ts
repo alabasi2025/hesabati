@@ -711,7 +711,8 @@ export const operationTypes = pgTable('operation_types', {
   screens: text('screens').default('{}'),
   requiresAttachment: boolean('requires_attachment').notNull().default(false),
   hasMultiLines: boolean('has_multi_lines').notNull().default(false),
-  workflowConfig: jsonb('workflow_config').$type<{ enabled: boolean; initialStatus: string; statuses: string[] }>(),
+  workflowConfig: jsonb('workflow_config').$type<{ enabled: boolean; initialStatus: string; statuses: string[] }>(), // إعدادات سير العمل
+  autoJournal: boolean('auto_journal').notNull().default(false), // إنشاء قيد محاسبي تلقائي من العمليات المخزنية عند true
   sortOrder: integer('sort_order').default(0),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
@@ -1033,6 +1034,25 @@ export const warehouseTypes = pgTable('warehouse_types', {
 }, (table) => ({
   keyUnique: unique('warehouse_types_biz_key_unique').on(table.businessId, table.subTypeKey),
   seqUnique: unique('warehouse_types_biz_seq_unique').on(table.businessId, table.sequenceNumber),
+}));
+
+// ===================== ACCOUNTING TYPES (تصنيفات "أخرى") =====================
+export const accountingTypes = pgTable('accounting_types', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
+  sequenceNumber: integer('sequence_number'),
+  description: text('description'),
+  icon: varchar('icon', { length: 100 }).default('book'),
+  color: varchar('color', { length: 50 }).default('#14b8a6'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  keyUnique: unique('accounting_types_biz_key_unique').on(table.businessId, table.subTypeKey),
+  seqUnique: unique('accounting_types_biz_seq_unique').on(table.businessId, table.sequenceNumber),
 }));
 
 // ===================== JOURNAL ENTRY CATEGORIES (تصنيفات قيود اليومية - مستقلة) =====================

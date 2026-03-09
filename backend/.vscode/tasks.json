@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pnpm run dev",
+      "type": "shell",
+      "command": "pnpm run dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "pnpm run db:push",
+      "type": "shell",
+      "command": "pnpm run db:push",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "pnpm run db:seed",
+      "type": "shell",
+      "command": "pnpm run db:seed",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "pnpm run db:generate",
+      "type": "shell",
+      "command": "pnpm run db:generate",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    }
+  ]
+}

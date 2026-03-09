@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { formatDate as formatDateShared } from '../../shared/helpers';
 
 interface OperationItem {
   itemName: string;
   itemCode: string;
+  itemTypeId: number | null;
   quantity: number;
   unitCost: number;
   unit: string;
@@ -38,6 +38,7 @@ export class WarehouseOperationsComponent extends BasePageComponent {
   operations = signal<any[]>([]);
   warehouses = signal<any[]>([]);
   suppliers = signal<any[]>([]);
+  itemTypes = signal<any[]>([]);
   operationTypes = signal<any[]>([]);
   loading = signal(true);
   saving = signal(false);
@@ -72,15 +73,17 @@ export class WarehouseOperationsComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [ops, whs, supps, ots] = await Promise.allSettled([
+      const [ops, whs, supps, itemTypesRes, ots] = await Promise.allSettled([
         this.api.getWarehouseOperations(this.bizId),
         this.api.getWarehouses(this.bizId),
         this.api.getSuppliers(this.bizId),
+        this.api.getInventoryItemTypes(this.bizId).catch(() => []),
         this.api.getOperationTypes(this.bizId),
       ]);
       this.operations.set(ops.status === 'fulfilled' ? ops.value : []);
       this.warehouses.set(whs.status === 'fulfilled' ? whs.value : []);
       this.suppliers.set(supps.status === 'fulfilled' ? supps.value : []);
+      this.itemTypes.set(itemTypesRes.status === 'fulfilled' ? itemTypesRes.value : []);
       this.operationTypes.set(ots.status === 'fulfilled' ? ots.value : []);
     } catch (e) { console.error(e); }
     this.loading.set(false);
@@ -103,7 +106,7 @@ export class WarehouseOperationsComponent extends BasePageComponent {
 
   // ===== نموذج العملية =====
   newItem(): OperationItem {
-    return { itemName: '', itemCode: '', quantity: 1, unitCost: 0, unit: '', notes: '' };
+    return { itemName: '', itemCode: '', itemTypeId: null, quantity: 1, unitCost: 0, unit: '', notes: '' };
   }
 
   openAdd(type?: string) {

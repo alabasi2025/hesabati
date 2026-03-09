@@ -1,24 +1,46 @@
 /**
  * مسارات أنواع العمليات (قوالب العمليات)
+ * ترقيم القوالب الجديدة يمر عبر محرك الترقيم (getNextItemInCategorySequence).
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { eq, and, inArray, count, sql } from 'drizzle-orm';
-import { operationTypes, operationTypeAccounts, accounts } from '../../db/schema/index.ts';
+import { eq, and, inArray, sql } from 'drizzle-orm';
+import { operationTypes, operationTypeAccounts, accounts, operationCategories } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { operationTypeSchema, validateBody } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const operationTypesRoutes = new Hono();
+
+/** الحصول على معرّف تصنيف العمليات (إنشاء السجل إن لم يكن موجوداً) لاستخدامه في محرك الترقيم */
+async function getOrCreateOperationCategoryId(bizId: number, categoryKey: string): Promise<number> {
+  const key = categoryKey.trim() || 'عام';
+  const [existing] = await db
+    .select({ id: operationCategories.id })
+    .from(operationCategories)
+    .where(and(eq(operationCategories.businessId, bizId), eq(operationCategories.categoryKey, key)))
+    .limit(1);
+  if (existing) return existing.id;
+  const [inserted] = await db
+    .insert(operationCategories)
+    .values({ businessId: bizId, categoryKey: key, name: key })
+    .returning({ id: operationCategories.id });
+  if (!inserted) throw new Error('فشل إنشاء تصنيف العمليات');
+  return inserted.id;
+}
 
 operationTypesRoutes.get('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler('جلب أنواع العمليات', async (c) => {
   const bizId = getBizId(c);
   const category = c.req.query('category');
   const screen = c.req.query('screen');
   const conditions = [eq(operationTypes.businessId, bizId)];
-  if (category) conditions.push(eq(operationTypes.category, category));
+  if (category) {
+    const [cat] = await db.select({ id: operationCategories.id }).from(operationCategories).where(and(eq(operationCategories.businessId, bizId), eq(operationCategories.categoryKey, category))).limit(1);
+    if (cat) conditions.push(eq(operationTypes.categoryId, cat.id));
+  }
   if (screen) conditions.push(sql`${screen} = ANY(${operationTypes.screens})`);
 
   const rows = await db.select().from(operationTypes)
@@ -82,33 +104,40 @@ operationTypesRoutes.post('/businesses/:bizId/operation-types', bizAuthMiddlewar
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const data = validation.data as Record<string, unknown> & { screens?: unknown; linkedAccounts?: unknown[]; category?: string; code?: string };
   if (typeof data.screens === 'string') data.screens = [data.screens];
-  const { linkedAccounts: laList, ...otData } = data;
-  const category = typeof otData.category === 'string' ? otData.category : 'عام';
-  const [seqResult] = await db.select({ cnt: count() }).from(operationTypes)
-    .where(and(eq(operationTypes.businessId, bizId), eq(operationTypes.category, category)));
-  const seqNum = (seqResult?.cnt ?? 0) + 1;
+  const { linkedAccounts: laList, screens: _screensOt, ...otData } = data;
+  const category = typeof otData.category === 'string' ? otData.category.trim() || 'عام' : 'عام';
+
+  // ترقيم عبر محرك الترقيم: معرّف التصنيف ثم العداد item_in_operation_category
+  const categoryId = await getOrCreateOperationCategoryId(bizId, category);
+  const { sequenceNumber: seqNum } = await getNextItemInCategorySequence(bizId, 'operation', categoryId);
   const categoryPrefix = category.substring(0, 3).toUpperCase();
-  const autoCode = `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
+  const autoCode = typeof otData.code === 'string' ? otData.code : `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
+  const name = String(otData.name ?? '');
+
   const [created] = await db.insert(operationTypes).values({
     ...otData,
+    name,
     businessId: bizId,
     sequenceNumber: seqNum,
-    code: typeof otData.code === 'string' ? otData.code : autoCode,
-  }).returning();
+    code: autoCode,
+    screens: typeof _screensOt === 'string' ? _screensOt : Array.isArray(_screensOt) ? String(_screensOt) : undefined,
+  } as typeof operationTypes.$inferInsert).returning();
   if (Array.isArray(laList) && laList.length > 0 && created) {
-    await db.insert(operationTypeAccounts).values(
-      laList.map((la: unknown, i: number) => {
+    const rows = laList
+      .map((la: unknown, i: number) => {
         const accId = typeof la === 'number' ? la : (la as { accountId?: number; id?: number }).accountId ?? (la as { id?: number }).id;
-        const obj = typeof la === 'object' && la !== null ? la as Record<string, unknown> : {};
+        const obj = typeof la === 'object' && la !== null ? (la as Record<string, unknown>) : {};
+        if (accId == null) return null;
         return {
           operationTypeId: created.id,
-          accountId: accId,
-          label: obj.label ?? null,
-          permission: obj.permission ?? 'both',
-          sortOrder: obj.sortOrder ?? i,
+          accountId: accId as number,
+          label: (obj.label as string | null) ?? null,
+          permission: (obj.permission as string) ?? 'both',
+          sortOrder: typeof obj.sortOrder === 'number' ? obj.sortOrder : i,
         };
       })
-    );
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (rows.length > 0) await db.insert(operationTypeAccounts).values(rows);
   }
   return c.json(created, 201);
 }));
@@ -122,7 +151,13 @@ operationTypesRoutes.put('/operation-types/:id', safeHandler('تعديل نوع 
   const body = normalizeBody(await c.req.json()) as Record<string, unknown> & { screens?: unknown; linkedAccounts?: { accountId: number; label?: string; permission?: string; sortOrder?: number }[] };
   if (typeof body.screens === 'string') body.screens = [body.screens];
   const { linkedAccounts: laList, ...otData } = body;
-  const [updated] = await db.update(operationTypes).set({ ...otData, updatedAt: new Date() }).where(eq(operationTypes.id, id)).returning();
+  const { screens: _screens, ...restOt } = otData;
+  const screensVal = Array.isArray(_screens) ? String(_screens) : typeof _screens === 'string' ? _screens : undefined;
+  const [updated] = await db.update(operationTypes).set({
+    ...restOt,
+    updatedAt: new Date(),
+    ...(screensVal !== undefined ? { screens: screensVal } : {}),
+  }).where(eq(operationTypes.id, id)).returning();
   if (!updated) return c.json({ error: 'نوع العملية غير موجود' }, 404);
   if (Array.isArray(laList)) {
     await db.delete(operationTypeAccounts).where(eq(operationTypeAccounts.operationTypeId, id));
@@ -131,9 +166,9 @@ operationTypesRoutes.put('/operation-types/:id', safeHandler('تعديل نوع 
         laList.map((la, i) => ({
           operationTypeId: id,
           accountId: la.accountId,
-          label: la.label ?? null,
-          permission: la.permission ?? 'both',
-          sortOrder: la.sortOrder ?? i,
+          label: (la.label as string | null) ?? null,
+          permission: (la.permission as string) ?? 'both',
+          sortOrder: (la.sortOrder as number) ?? i,
         }))
       );
     }

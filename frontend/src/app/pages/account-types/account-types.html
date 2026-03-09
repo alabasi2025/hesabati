@@ -136,10 +136,17 @@
               }
 
               <!-- Add SubType Button -->
-              <button class="add-subtype-btn" (click)="openAddSubType(mainType.key)">
-                <span class="material-icons-round">add</span>
-                إضافة تصنيف فرعي
-              </button>
+              @if (supportsSubTypeManagement(mainType.key)) {
+                <button class="add-subtype-btn" (click)="openAddSubType(mainType.key)">
+                  <span class="material-icons-round">add</span>
+                  إضافة تصنيف فرعي
+                </button>
+              } @else {
+                <div class="empty-subtypes">
+                  <span class="material-icons-round">info</span>
+                  <p>هذا النوع لا يدعم إدارة التصنيفات الفرعية من هذه الشاشة حالياً</p>
+                </div>
+              }
             </div>
           }
         </div>

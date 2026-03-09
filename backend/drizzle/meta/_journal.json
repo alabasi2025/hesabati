@@ -36,6 +36,13 @@
       "when": 1772928233395,
       "tag": "0004_billing_dynamic_and_custody_filter",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773021991988,
+      "tag": "0005_phase5_schema_alignment",
+      "breakpoints": true
     }
   ]
 }

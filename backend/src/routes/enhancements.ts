@@ -125,12 +125,12 @@ enhancements.post(
     const vType = (opType.voucherType as any) || data.voucherType || 'receipt';
 
     let treasuryAccountId = data.fromAccountId ?? opType.sourceAccountId ?? null;
-    // دعم القوالب النقدية: لو المصدر صندوق بدون حساب خزينة، استخدم حساب نقدي نظامي
+    // دعم القوالب النقدية: لو المصدر صندوق بدون حساب خزينة، استخدم حساب صندوق نظامي
     if (!treasuryAccountId && opType.paymentMethod === 'cash' && opType.sourceFundId) {
       const accRows = await db.execute(sql`
         SELECT id FROM accounts
         WHERE business_id = ${bizId}
-          AND account_type = 'cash'
+          AND account_type = 'fund'
           AND notes = 'system_cash_treasury'
         LIMIT 1
       `);
@@ -927,13 +927,11 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
       return c.json({ error: 'الخزينة المصروف منها مطلوبة (fromFundId أو fromAccountId)' }, 400);
     }
   } else {
-    // fallback legacy للأنواع الأخرى
-    const seqName = vType === 'transfer' ? 'voucher_transfer_seq' : 'voucher_receipt_seq';
+    // fallback للأنواع الأخرى (transfer/journal) بترقيم معزول لكل businessId
     const prefix = TYPE_PREFIXES[vType] || 'VCH';
-    const seqResult = await db.execute(sql.raw(`SELECT nextval('${seqName}')`));
-    const seqRow = getFirstRow<{ nextval: string }>(seqResult);
-    const seqVal = parseInt(String(seqRow?.nextval ?? 1), 10);
-    const voucherNumber = `${prefix}-${String(seqVal).padStart(5, '0')}`;
+    const counterType = `voucher_${vType}_fallback`;
+    const seqVal = await getNextSequence(bizId, counterType, 0, year);
+    const voucherNumber = `${prefix}-${year}-${String(seqVal).padStart(5, '0')}`;
     const [created] = await db.insert(vouchers).values({
       businessId: bizId,
       voucherNumber,

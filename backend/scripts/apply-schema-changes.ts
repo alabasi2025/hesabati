@@ -137,9 +137,17 @@ async function main() {
 
   // 2. إضافة الأعمدة الجديدة
   const columnsToAdd = [
+    { table: 'business_partners', column: 'sequence_number', sql: 'ALTER TABLE "business_partners" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
+    { table: 'business_partners', column: 'code', sql: 'ALTER TABLE "business_partners" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
+    { table: 'business_partners', column: 'account_id', sql: 'ALTER TABLE "business_partners" ADD COLUMN IF NOT EXISTS "account_id" integer' },
+    { table: 'stations', column: 'sequence_number', sql: 'ALTER TABLE "stations" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
     { table: 'accounts', column: 'sub_type_id', sql: 'ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "sub_type_id" integer' },
     { table: 'accounts', column: 'sequence_number', sql: 'ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
+    { table: 'accounts', column: 'linked_employee_id', sql: 'ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "linked_employee_id" integer REFERENCES "employees"("id")' },
     { table: 'accounts', column: 'code', sql: 'ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
+    { table: 'employee_billing_accounts', column: 'billing_system_id', sql: 'ALTER TABLE "employee_billing_accounts" ADD COLUMN IF NOT EXISTS "billing_system_id" integer' },
+    { table: 'billing_systems_config', column: 'system_key', sql: 'ALTER TABLE "billing_systems_config" ADD COLUMN IF NOT EXISTS "system_key" varchar(100)' },
+    { table: 'billing_periods', column: 'billing_system_id', sql: 'ALTER TABLE "billing_periods" ADD COLUMN IF NOT EXISTS "billing_system_id" integer' },
     { table: 'funds', column: 'sub_type', sql: 'ALTER TABLE "funds" ADD COLUMN IF NOT EXISTS "sub_type" varchar(100)' },
     { table: 'funds', column: 'sub_type_id', sql: 'ALTER TABLE "funds" ADD COLUMN IF NOT EXISTS "sub_type_id" integer' },
     { table: 'funds', column: 'sequence_number', sql: 'ALTER TABLE "funds" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
@@ -149,11 +157,25 @@ async function main() {
     { table: 'warehouses', column: 'sequence_number', sql: 'ALTER TABLE "warehouses" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
     { table: 'warehouses', column: 'code', sql: 'ALTER TABLE "warehouses" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
     { table: 'operation_types', column: 'category_id', sql: 'ALTER TABLE "operation_types" ADD COLUMN IF NOT EXISTS "category_id" integer REFERENCES "operation_categories"("id")' },
+    { table: 'operation_categories', column: 'name', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "name" varchar(200)' },
+    { table: 'operation_categories', column: 'sequence_number', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
+    { table: 'operation_categories', column: 'code', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
+    { table: 'operation_categories', column: 'description', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "description" text' },
+    { table: 'operation_categories', column: 'icon', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "icon" varchar(50) DEFAULT \'category\'' },
+    { table: 'operation_categories', column: 'color', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "color" varchar(20) DEFAULT \'#6366f1\'' },
+    { table: 'operation_categories', column: 'sort_order', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "sort_order" integer DEFAULT 0' },
+    { table: 'operation_categories', column: 'is_active', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "is_active" boolean DEFAULT true NOT NULL' },
+    { table: 'operation_categories', column: 'updated_at', sql: 'ALTER TABLE "operation_categories" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now() NOT NULL' },
     { table: 'operation_types', column: 'sequence_number', sql: 'ALTER TABLE "operation_types" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
     { table: 'operation_types', column: 'code', sql: 'ALTER TABLE "operation_types" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
     { table: 'vouchers', column: 'has_multiple_lines', sql: 'ALTER TABLE "vouchers" ADD COLUMN IF NOT EXISTS "has_multiple_lines" boolean DEFAULT false NOT NULL' },
     { table: 'warehouse_operations', column: 'purchase_invoice_id', sql: 'ALTER TABLE "warehouse_operations" ADD COLUMN IF NOT EXISTS "purchase_invoice_id" integer REFERENCES "purchase_invoices"("id")' },
     { table: 'warehouse_operations', column: 'account_id', sql: 'ALTER TABLE "warehouse_operations" ADD COLUMN IF NOT EXISTS "account_id" integer REFERENCES "accounts"("id")' },
+    // Note: old databases may not have supplier_types table yet, so keep this nullable without FK.
+    { table: 'suppliers', column: 'supplier_type_id', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "supplier_type_id" integer' },
+    { table: 'suppliers', column: 'sequence_number', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
+    { table: 'suppliers', column: 'code', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
+    { table: 'suppliers', column: 'account_id', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "account_id" integer' },
   ];
 
   console.log("\n📝 إضافة الأعمدة الجديدة...");
@@ -168,6 +190,21 @@ async function main() {
       }
     } else {
       console.log(`   ⏭️  ${col.table}.${col.column} موجود`);
+    }
+  }
+
+  // 2.5 تنظيف أعمدة legacy بعد الانتقال إلى الحقول الجديدة
+  const columnsToDrop = [
+    { table: 'employee_billing_accounts', column: 'billing_system' },
+    { table: 'billing_periods', column: 'billing_system' },
+  ];
+  console.log("\n🧹 حذف أعمدة legacy...");
+  for (const col of columnsToDrop) {
+    try {
+      await db.execute(sql.raw(`ALTER TABLE "${col.table}" DROP COLUMN IF EXISTS "${col.column}"`));
+      console.log(`   ✅ حذف (إن وجد) ${col.table}.${col.column}`);
+    } catch (e: any) {
+      console.log(`   ⚠️ خطأ في حذف ${col.table}.${col.column}: ${e.message}`);
     }
   }
 

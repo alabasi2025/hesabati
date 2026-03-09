@@ -69,7 +69,7 @@ export const accountSchema = z.object({
   supportedCurrencies: z.array(z.string()).optional(),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
-  subTypeId: z.number().int().positive().optional().nullable(),
+  subTypeId: z.number().int().positive('التصنيف مطلوب'),
 });
 
 export const voucherSchema = z.object({
@@ -116,6 +116,8 @@ export const voucherMultiSchema = z.object({
 
 export const employeeSchema = z.object({
   fullName: z.string().min(1, 'اسم الموظف مطلوب').max(200),
+  departmentId: z.number().int().positive('تصنيف الموظف مطلوب'),
+  jobTitleId: z.number().int().positive().optional().nullable(),
   jobTitle: z.string().max(200).optional().nullable(),
   stationId: z.number().int().positive().optional().nullable(),
   department: z.string().max(100).optional().nullable(),
@@ -198,6 +200,7 @@ export const stationSchema = z.object({
 
 export const supplierSchema = z.object({
   name: z.string().min(1, 'اسم المورد مطلوب').max(200),
+  supplierTypeId: z.number().int().positive('تصنيف المورد مطلوب'),
   category: z.string().max(100).optional().nullable(),
   phone: z.string().max(20).optional().nullable(),
   address: z.string().max(300).optional().nullable(),
@@ -272,7 +275,7 @@ export const partnerSchema = z.object({
   fullName: z.string().min(1, 'اسم الشريك مطلوب').max(200),
   sharePercentage: z.union([z.string(), z.number()]).optional().nullable(),
   phone: z.string().max(20).optional().nullable(),
-  role: z.string().max(100).optional().nullable(),
+  role: z.string().min(1, 'تصنيف الشريك (الدور) مطلوب').max(100),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
@@ -308,8 +311,10 @@ export const billingSystemConfigSchema = z.object({
   icon: z.string().max(50).optional(),
   color: z.string().max(20).optional(),
   stationMode: z.string().max(20).optional(),
+  stationScope: z.string().max(20).optional(),
   stationIds: z.array(z.number()).optional(),
   supportedMethodIds: z.array(z.number()).optional(),
+  supportedTypes: z.array(z.string()).optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
   notes: z.string().optional().nullable(),

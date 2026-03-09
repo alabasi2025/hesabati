@@ -78,7 +78,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     const station = this.activeStation();
     const q = this.searchQuery().toLowerCase();
     return this.billingAccounts().filter(a => {
-      const sysDisplayName = a.billingSystemName || '';
+      const sysDisplayName = a.billingSystemName || this.getSystemDisplayName(a.billingSystemId);
       const matchSys = sys === 'all' || sysDisplayName === sys;
       const matchStation = station === 'all' || a.stationName === station;
       const matchQ = !q || (a.label || '').toLowerCase().includes(q) ||
@@ -95,7 +95,8 @@ export class BillingSystemsComponent extends BasePageComponent {
 
     for (const sys of systems) {
       const sysAccounts = filtered.filter(a => {
-        return (a.billingSystemName || '') === sys.name;
+        const displayName = a.billingSystemName || this.getSystemDisplayName(a.billingSystemId);
+        return displayName === sys.name;
       });
       if (sysAccounts.length === 0) continue;
 
@@ -122,7 +123,7 @@ export class BillingSystemsComponent extends BasePageComponent {
     const systems = this.billingSystems();
     const bySys = systems.map(s => ({
       ...s,
-      count: all.filter(a => (a.billingSystemName || '') === s.name).length,
+      count: all.filter(a => (a.billingSystemName || this.getSystemDisplayName(a.billingSystemId)) === s.name).length,
     }));
     const employees = new Set(all.map((a: any) => a.employeeName).filter(Boolean)).size;
     return { total: all.length, employees, bySys };
@@ -435,7 +436,9 @@ export class BillingSystemsComponent extends BasePageComponent {
   }
 
   getSysCount(sysName: string): number {
-    return this.billingAccounts().filter((a: any) => (a.billingSystemName || '') === sysName).length;
+    return this.billingAccounts()
+      .filter((a: any) => (a.billingSystemName || this.getSystemDisplayName(a.billingSystemId)) === sysName)
+      .length;
   }
 
   trackById(_: number, item: any) { return item.id; }

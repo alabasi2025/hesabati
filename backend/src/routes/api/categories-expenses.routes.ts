@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { eq, desc } from 'drizzle-orm';
 import {
-  voucherCategories,
+  operationCategories,
   expenseCategories,
   expenseBudget,
   salaryRecords,
@@ -18,10 +18,24 @@ import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const categoriesExpensesRoutes = new Hono();
 
-// ===================== تصنيفات السندات =====================
-categoriesExpensesRoutes.get('/businesses/:bizId/voucher-categories', bizAuthMiddleware(), safeHandler('جلب تصنيفات السندات', async (c) => {
+// ===================== تصنيفات السندات (من operation_categories) =====================
+categoriesExpensesRoutes.get('/businesses/:bizId/voucher-categories', bizAuthMiddleware(), safeHandler('جلب تصنيفات السندات (من قوالب العمليات)', async (c) => {
   const bizId = getBizId(c);
-  const rows = await db.select().from(voucherCategories).where(eq(voucherCategories.businessId, bizId)).orderBy(voucherCategories.type, voucherCategories.name);
+  const rows = await db
+    .select({
+      id: operationCategories.id,
+      name: operationCategories.name,
+      type: operationCategories.categoryKey,
+      icon: operationCategories.icon,
+      color: operationCategories.color,
+      sortOrder: operationCategories.sortOrder,
+      isActive: operationCategories.isActive,
+      createdAt: operationCategories.createdAt,
+      updatedAt: operationCategories.updatedAt,
+    })
+    .from(operationCategories)
+    .where(eq(operationCategories.businessId, bizId))
+    .orderBy(operationCategories.sortOrder, operationCategories.name);
   return c.json(rows);
 }));
 
@@ -78,14 +92,14 @@ categoriesExpensesRoutes.post('/businesses/:bizId/expense-budget', bizAuthMiddle
   const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
   const [created] = await db.insert(expenseBudget).values({
     businessId: bizId,
-    name: body.name,
-    stationId: body.stationId || null,
+    name: String(body.name ?? ''),
+    stationId: (body.stationId as number | null) ?? null,
     amount: String(body.amount ?? 0),
-    currencyId: body.currencyId ?? 1,
-    expenseType: body.expenseType || 'variable',
-    month: body.month ?? null,
-    year: body.year ?? null,
-    notes: body.notes ?? null,
+    currencyId: Number(body.currencyId ?? 1),
+    expenseType: (body.expenseType as 'fixed' | 'variable' | 'annual') ?? 'variable',
+    month: (body.month as number | null) ?? null,
+    year: (body.year as number | null) ?? null,
+    notes: (body.notes as string | null) ?? null,
   }).returning();
   return c.json(created, 201);
 }));
@@ -98,14 +112,14 @@ categoriesExpensesRoutes.put('/expense-budget/:id', safeHandler('تعديل بن
   if (err) return err;
   const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
   const [updated] = await db.update(expenseBudget).set({
-    name: body.name,
-    stationId: body.stationId ?? null,
+    name: body.name as string,
+    stationId: (body.stationId as number | null) ?? null,
     amount: body.amount == null ? undefined : String(body.amount),
-    currencyId: body.currencyId,
-    expenseType: body.expenseType,
-    month: body.month ?? null,
-    year: body.year ?? null,
-    notes: body.notes ?? null,
+    currencyId: body.currencyId as number,
+    expenseType: body.expenseType as 'fixed' | 'variable' | 'annual',
+    month: (body.month as number | null) ?? null,
+    year: (body.year as number | null) ?? null,
+    notes: (body.notes as string | null) ?? null,
   }).where(eq(expenseBudget.id, id)).returning();
   if (updated) return c.json(updated);
   return c.json({ error: 'بند غير موجود' }, 404);
@@ -162,17 +176,17 @@ categoriesExpensesRoutes.post('/businesses/:bizId/salaries', bizAuthMiddleware()
   const netSalary = baseSalary - advance - deductions;
   const [created] = await db.insert(salaryRecords).values({
     businessId: bizId,
-    employeeId: body.employeeId,
-    month: body.month,
-    year: body.year,
+    employeeId: Number(body.employeeId),
+    month: Number(body.month),
+    year: Number(body.year),
     baseSalary: String(baseSalary),
     advance: String(advance),
     deductions: String(deductions),
     netSalary: String(netSalary),
-    currencyId: body.currencyId ?? 1,
-    isPaid: body.isPaid ?? false,
-    attendanceDays: body.attendanceDays ?? null,
-    notes: body.notes ?? null,
+    currencyId: Number(body.currencyId ?? 1),
+    isPaid: Boolean(body.isPaid ?? false),
+    attendanceDays: (body.attendanceDays as number | null) ?? null,
+    notes: (body.notes as string | null) ?? null,
   }).returning();
   return c.json(created, 201);
 }));
@@ -193,10 +207,10 @@ categoriesExpensesRoutes.put('/salaries/:id', safeHandler('تعديل سجل ر�
     advance: String(advance),
     deductions: String(deductions),
     netSalary: String(netSalary),
-    isPaid: body.isPaid ?? undefined,
-    paidDate: body.paidDate ?? undefined,
-    attendanceDays: body.attendanceDays ?? undefined,
-    notes: body.notes ?? undefined,
+    isPaid: Boolean(body.isPaid),
+    paidDate: (body.paidDate as string | null) ?? undefined,
+    attendanceDays: (body.attendanceDays as number | null) ?? undefined,
+    notes: (body.notes as string | null) ?? undefined,
   }).where(eq(salaryRecords.id, id)).returning();
   if (!updated) return c.json({ error: 'سجل غير موجود' }, 404);
   return c.json(updated);
@@ -212,10 +226,11 @@ categoriesExpensesRoutes.delete('/salaries/:id', safeHandler('حذف سجل را
   return c.json({ success: true });
 }));
 
-// ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/voucher-categories
+// ⚠️ DEPRECATED: مسار قديم بدون bizId
 categoriesExpensesRoutes.get('/voucher-categories', safeHandler('جلب تصنيفات السندات (legacy)', async (c) => {
-  const rows = await db.select().from(voucherCategories).orderBy(voucherCategories.type, voucherCategories.name);
-  return c.json(rows);
+  return c.json({
+    error: 'هذا المسار قديم. استخدم /businesses/:bizId/voucher-categories',
+  }, 410);
 }));
 
 export default categoriesExpensesRoutes;

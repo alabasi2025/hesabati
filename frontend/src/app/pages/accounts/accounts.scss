@@ -274,6 +274,119 @@
   &:hover { background: rgba(59,130,246,0.08); color: #3b82f6; border-color: rgba(59,130,246,0.3); }
 }
 
+/* ===================== View Mode (Grouped / Tree) ===================== */
+.view-mode-bar {
+  margin-bottom: 14px;
+}
+
+.view-mode-toggle {
+  display: inline-flex;
+  border-radius: 12px;
+  padding: 4px;
+  background: var(--bg-surface, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  gap: 2px;
+}
+
+.view-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  transition: all 0.2s;
+  .material-icons-round { font-size: 18px; }
+  &:hover { color: #3b82f6; background: rgba(59,130,246,0.06); }
+  &.active {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: white;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+  }
+}
+
+/* ===================== Tree View ===================== */
+.tree-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--bg-surface, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.tree-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 1px;
+}
+
+.tree-expand-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-surface, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  transition: all 0.2s;
+  .material-icons-round { font-size: 18px; }
+  &:hover { background: rgba(59,130,246,0.12); color: #3b82f6; }
+}
+
+.tree-expand-placeholder {
+  flex-shrink: 0;
+  width: 28px;
+  display: inline-block;
+}
+
+.tree-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-other-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.tree-other-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #1e293b);
+  margin: 0 0 12px;
+  .material-icons-round { font-size: 20px; color: #6366f1; }
+}
+
+.acc-numbering {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #64748b);
+}
+
 /* ===================== Account Group ===================== */
 .account-group {
   margin-bottom: 16px;

@@ -12,6 +12,37 @@ function getTypeMeta(type: string) {
   return getAccTypeMeta(type);
 }
 
+/** ترتيب عرض أنواع الحسابات ثابت في كل الصفحة (شجرة، مجمّع، إحصائيات) */
+const ACCOUNT_TYPE_DISPLAY_ORDER = [
+  'billing',
+  'fund',
+  'bank',
+  'exchange',
+  'e_wallet',
+  'warehouse',
+  'custody',
+  'supplier',
+  'employee',
+  'partner',
+  'budget',
+  'settlement',
+  'pending',
+  'accounting',
+] as const;
+
+function accountTypeSortIndex(type: string): number {
+  const i = ACCOUNT_TYPE_DISPLAY_ORDER.indexOf(type as any);
+  return i >= 0 ? i : ACCOUNT_TYPE_DISPLAY_ORDER.length;
+}
+
+/** ترتيب عنصر حساب: رقم تسلسلي ثم رمز ثم اسم */
+function accountItemSortKey(a: any): string {
+  const seq = a.sequenceNumber != null && a.sequenceNumber !== '' ? String(a.sequenceNumber).padStart(8, '0') : '99999999';
+  const code = (a.code != null && a.code !== '') ? a.code : '';
+  const name = (a.name != null && a.name !== '') ? a.name : '';
+  return `${seq}_${code}_${name}`;
+}
+
 interface AccountGroup {
   key: string;
   label: string;
@@ -40,6 +71,11 @@ interface SubType {
   sequenceNumber: number;
 }
 
+/** عقدة شجرية لحساب (من جدول accounts فقط) */
+export interface AccountTreeNode {
+  item: any;
+  children: AccountTreeNode[];
+}
 
 @Component({
   selector: 'app-accounts',
@@ -78,9 +114,14 @@ export class AccountsComponent extends BasePageComponent {
   // حالة طي/فتح المجموعات
   collapsedGroups = signal<Set<string>>(new Set());
 
+  // عرض القائمة: مجمّع حسب النوع | شجري (حسب parent)
+  viewMode = signal<'grouped' | 'tree'>('grouped');
+  // طي/فتح العقد في العرض الشجري (معرّف الحساب)
+  expandedTreeIds = signal<Set<number>>(new Set());
+
   form = signal<any>({
     name: '', accountType: 'fund', accountNumber: '', provider: '',
-    subType: '', subTypeId: null, responsiblePerson: '', notes: '', isActive: true,
+    subType: '', subTypeId: null, subTypeTouched: false, responsiblePerson: '', notes: '', isActive: true,
   });
 
   // قائمة ثابتة لأنواع الحسابات المعروفة - تُستخدم في نموذج الإضافة فقط
@@ -94,33 +135,49 @@ export class AccountsComponent extends BasePageComponent {
     { key: 'e_wallet', label: 'محفظة إلكترونية', icon: 'account_balance_wallet', color: '#9C27B0', description: 'جوالي، جيب، ون كاش' },
     { key: 'warehouse', label: 'مخزن', icon: 'warehouse', color: '#795548', description: 'المخازن الرئيسية والفرعية' },
     { key: 'billing', label: 'فوترة', icon: 'receipt', color: '#E91E63', description: 'أنظمة الفوترة' },
-    { key: 'service', label: 'خدمة', icon: 'miscellaneous_services', color: '#00BCD4', description: 'حسابات الخدمات' },
     { key: 'custody', label: 'عهدة', icon: 'lock', color: '#607D8B', description: 'العهدات الشخصية' },
-    { key: 'cash', label: 'نقد', icon: 'payments', color: '#8BC34A', description: 'النقد الشخصي' },
+    { key: 'supplier', label: 'مورد', icon: 'local_shipping', color: '#f97316', description: 'حسابات الموردين' },
+    { key: 'employee', label: 'موظف', icon: 'person', color: '#06b6d4', description: 'حسابات الموظفين' },
+    { key: 'partner', label: 'شريك', icon: 'handshake', color: '#d946ef', description: 'حسابات الشركاء' },
+    { key: 'budget', label: 'ميزانية', icon: 'account_balance_wallet', color: '#84cc16', description: 'حسابات الميزانية والمصروفات' },
+    { key: 'settlement', label: 'تصفية', icon: 'balance', color: '#0891b2', description: 'حسابات التسويات والتصفية' },
+    { key: 'pending', label: 'معلقة', icon: 'pending_actions', color: '#ef4444', description: 'حسابات العمليات المعلقة' },
+    { key: 'accounting', label: 'أخرى', icon: 'book', color: '#14b8a6', description: 'حسابات مرنة يحددها المستخدم' },
   ];
 
   // التصنيفات الفرعية للنوع المختار في النموذج
   availableSubTypes = computed<SubType[]>(() => {
     const type = this.form().accountType;
     const categories = this.dbTypeCategories();
-    return categories[type] || [];
+    const raw = categories[type] || [];
+    return raw.filter((s: SubType) => {
+      const key = String(s?.subTypeKey || '').trim().toLowerCase();
+      // إخفاء أي خيار يمثل "بدون تصنيف"
+      if (!Number.isInteger(s?.id) || Number(s.id) <= 0) return false;
+      if (!key) return false;
+      if (key === 'default' || key === '__none__' || key === 'none' || key === 'without_subtype') return false;
+      return true;
+    });
+  });
+
+  hasValidSubTypeSelection = computed(() => {
+    const selectedSubTypeId = Number(this.form().subTypeId);
+    return Number.isInteger(selectedSubTypeId) && selectedSubTypeId > 0;
   });
 
   // ===== فلاتر ديناميكية: تُحسب من البيانات الفعلية =====
   dynamicFilters = computed(() => {
     const all = this.accounts();
-    const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
-    // ترتيب: فوترة أولاً، ثم صندوق، ثم بنك، ثم صراف، ثم محفظة، ثم الباقي
-    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
-    const sorted = [...typesInDB].sort((a, b) => {
-      const ia = priority.indexOf(a);
-      const ib = priority.indexOf(b);
-      if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
-      return getTypeMeta(a).label.localeCompare(getTypeMeta(b).label, 'ar');
-    });
-    return sorted.map(type => ({ value: type, ...getTypeMeta(type) }));
+    const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))] as string[];
+
+    // اعرض دائمًا الأنواع الرئيسية المعتمدة بالخطة حتى لو لا توجد بيانات منها حاليًا.
+    const plannedTypes = [...ACCOUNT_TYPE_DISPLAY_ORDER] as string[];
+    const unknownTypes = typesInDB
+      .filter((t) => !plannedTypes.includes(t))
+      .sort((a, b) => accountTypeSortIndex(a) - accountTypeSortIndex(b));
+
+    const allTypes = [...plannedTypes, ...unknownTypes];
+    return allTypes.map(type => ({ value: type, ...getTypeMeta(type) }));
   });
 
   // ===== هل النوع المختار يدعم فلتر المحطة =====
@@ -256,6 +313,72 @@ export class AccountsComponent extends BasePageComponent {
     });
   });
 
+  // ===== الشجرة للحسابات (من جدول accounts فقط) — مرتبة: نوع ثم تسلسل/رمز/اسم =====
+  accountsTree = computed<AccountTreeNode[]>(() => {
+    const accs = this.filteredAccounts().filter((a: any) => a._source === 'accounts');
+    if (accs.length === 0) return [];
+    const byId = new Map<number, any>();
+    for (const a of accs) {
+      const id = Number(a.id);
+      if (!Number.isNaN(id)) byId.set(id, a);
+    }
+    const buildChildren = (parentId: number | null): AccountTreeNode[] => {
+      const list = accs
+        .filter((a: any) => {
+          const pid = a.parentAccountId != null ? Number(a.parentAccountId) : null;
+          return pid === parentId;
+        })
+        .map((a: any) => ({
+          item: a,
+          children: buildChildren(Number(a.id)),
+        }));
+      list.sort((na, nb) => accountItemSortKey(na.item).localeCompare(accountItemSortKey(nb.item), 'ar'));
+      return list;
+    };
+    // جذور: بدون parent أو parent غير موجود في القائمة، مرتبة: نوع ثم تسلسل/رمز/اسم
+    const roots = accs.filter((a: any) => {
+      const pid = a.parentAccountId != null ? Number(a.parentAccountId) : null;
+      return pid == null || !byId.has(pid);
+    });
+    roots.sort((a, b) => {
+      const ti = accountTypeSortIndex(a.accountType) - accountTypeSortIndex(b.accountType);
+      if (ti !== 0) return ti;
+      return accountItemSortKey(a).localeCompare(accountItemSortKey(b), 'ar');
+    });
+    return roots.map((a: any) => ({
+      item: a,
+      children: buildChildren(Number(a.id)),
+    }));
+  });
+
+  // عند العرض الشجري: حسابات غير من جدول accounts (صناديق، فوترة) — مرتبة: نوع ثم اسم
+  nonTreeAccounts = computed(() => {
+    const list = this.filteredAccounts().filter((a: any) => a._source !== 'accounts');
+    list.sort((a, b) => {
+      const ti = accountTypeSortIndex(a.accountType) - accountTypeSortIndex(b.accountType);
+      if (ti !== 0) return ti;
+      return (a.name || '').localeCompare(b.name || '', 'ar');
+    });
+    return list;
+  });
+
+  /** تسطيح الشجرة إلى قائمة (عقدة + عمق) مع احترام طي/فتح العقد */
+  treeList = computed<{ node: AccountTreeNode; depth: number }[]>(() => {
+    const tree = this.accountsTree();
+    const expanded = this.expandedTreeIds();
+    const out: { node: AccountTreeNode; depth: number }[] = [];
+    const walk = (nodes: AccountTreeNode[], depth: number) => {
+      for (const n of nodes) {
+        out.push({ node: n, depth });
+        if (n.children.length > 0 && expanded.has(Number(n.item.id))) {
+          walk(n.children, depth + 1);
+        }
+      }
+    };
+    walk(tree, 0);
+    return out;
+  });
+
   // ===== التجميع حسب التصنيف الفرعي =====
   groupedAccounts = computed<AccountGroup[]>(() => {
     const type = this.activeType();
@@ -270,24 +393,18 @@ export class AccountsComponent extends BasePageComponent {
         if (!typeMap.has(t)) typeMap.set(t, []);
         typeMap.get(t)!.push(a);
       }
-      const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet'];
-      const sortedKeys = [...typeMap.keys()].sort((a, b) => {
-        const ia = priority.indexOf(a);
-        const ib = priority.indexOf(b);
-        if (ia >= 0 && ib >= 0) return ia - ib;
-        if (ia >= 0) return -1;
-        if (ib >= 0) return 1;
-        return getTypeMeta(a).label.localeCompare(getTypeMeta(b).label, 'ar');
-      });
+      const sortedKeys = [...typeMap.keys()].sort((a, b) => accountTypeSortIndex(a) - accountTypeSortIndex(b));
       return sortedKeys.map(key => {
         const meta = getTypeMeta(key);
+        const items = [...(typeMap.get(key)!)];
+        items.sort((a: any, b: any) => accountItemSortKey(a).localeCompare(accountItemSortKey(b), 'ar'));
         return {
           key,
           label: meta.label,
           icon: meta.icon,
           color: meta.color,
-          accounts: typeMap.get(key)!,
-          count: typeMap.get(key)!.length,
+          accounts: items,
+          count: items.length,
           collapsed: collapsed.has(key),
         };
       });
@@ -314,13 +431,14 @@ export class AccountsComponent extends BasePageComponent {
     const meta = getTypeMeta(type);
     const sortedEntries = [...groupMap.entries()].sort((a, b) => b[1].length - a[1].length);
     return sortedEntries.map(([groupLabel, items]) => {
+      const sortedItems = [...items].sort((a: any, b: any) => accountItemSortKey(a).localeCompare(accountItemSortKey(b), 'ar'));
       return {
         key: `${type}_${groupLabel}`,
         label: groupLabel,
         icon: meta.icon,
         color: meta.color,
-        accounts: [...items].sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ar')),
-        count: items.length,
+        accounts: sortedItems,
+        count: sortedItems.length,
         collapsed: collapsed.has(`${type}_${groupLabel}`),
       };
     });
@@ -350,13 +468,14 @@ export class AccountsComponent extends BasePageComponent {
     }
     this.loading.set(true);
     try {
-      const [allData, fundTypesData, bankTypesData, exchangeTypesData, walletTypesData, warehouseTypesData] = await Promise.all([
+      const [allData, fundTypesData, bankTypesData, exchangeTypesData, walletTypesData, warehouseTypesData, accountingTypesData] = await Promise.all([
         this.api.getAllAccounts(this.bizId),
         this.api.getFundTypes(this.bizId).catch(() => []),
         this.api.getBankTypes(this.bizId).catch(() => []),
         this.api.getExchangeTypes(this.bizId).catch(() => []),
         this.api.getEWalletTypes(this.bizId).catch(() => []),
-        this.api.getWarehouseTypes?.(this.bizId).catch(() => []) || Promise.resolve([]),
+        this.api.getWarehouseTypes(this.bizId).catch(() => []),
+        this.api.getAccountingTypes(this.bizId).catch(() => []),
       ]);
       this.accounts.set(allData.accounts);
       this.allStations.set(allData.stations || []);
@@ -366,6 +485,7 @@ export class AccountsComponent extends BasePageComponent {
         exchange: exchangeTypesData,
         e_wallet: walletTypesData,
         warehouse: warehouseTypesData,
+        accounting: accountingTypesData,
       });
       this.buildNetworkData();
     } catch (e: unknown) {
@@ -475,6 +595,31 @@ export class AccountsComponent extends BasePageComponent {
     this.collapsedGroups.set(new Set());
   }
 
+  toggleTreeExpand(id: number) {
+    this.expandedTreeIds.update(set => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  expandAllTree() {
+    const collectIds = (nodes: AccountTreeNode[]): number[] => {
+      let ids: number[] = [];
+      for (const n of nodes) {
+        if (n.children.length > 0) ids.push(Number(n.item.id));
+        ids = ids.concat(collectIds(n.children));
+      }
+      return ids;
+    };
+    this.expandedTreeIds.set(new Set(collectIds(this.accountsTree())));
+  }
+
+  collapseAllTree() {
+    this.expandedTreeIds.set(new Set());
+  }
+
   // ===== تحديد حقل التجميع الأنسب لكل نوع حساب =====
   private getBestGroupField(type: string, accs: any[]): string {
     const typeToField: Record<string, string> = {
@@ -483,9 +628,13 @@ export class AccountsComponent extends BasePageComponent {
       exchange: 'provider',
       bank: 'provider',
       e_wallet: 'provider',
-      service: 'provider',
-      cash: 'subType',
       custody: 'subType',
+      supplier: 'subType',
+      employee: 'subType',
+      partner: 'subType',
+      budget: 'subType',
+      settlement: 'subType',
+      pending: 'subType',
       accounting: 'subType',
     };
 
@@ -521,7 +670,7 @@ export class AccountsComponent extends BasePageComponent {
     this.form.set({
       name: '', accountType: this.activeType() === 'all' ? 'fund' : this.activeType(),
       accountNumber: '', provider: '', subType: '', responsiblePerson: '',
-      notes: '', isActive: true,
+      subTypeId: null, subTypeTouched: false, notes: '', isActive: true,
     });
     this.showForm.set(true);
   }
@@ -532,6 +681,8 @@ export class AccountsComponent extends BasePageComponent {
       name: acc.name, accountType: acc.accountType,
       accountNumber: acc.accountNumber || '', provider: acc.provider || '',
       subType: acc.subType || '', responsiblePerson: acc.responsiblePerson || '',
+      subTypeId: acc.subTypeId ?? null,
+      subTypeTouched: true,
       notes: acc.notes || '', isActive: acc.isActive ?? true,
       _source: acc._source || 'accounts',
     });
@@ -541,6 +692,20 @@ export class AccountsComponent extends BasePageComponent {
   async saveForm() {
     const f = this.form();
     if (!f.name.trim()) { this.error.set('اسم الحساب مطلوب'); return; }
+    if (!f.subTypeTouched) {
+      this.error.set('اختيار التصنيف الفرعي إلزامي قبل حفظ الحساب');
+      return;
+    }
+    const selectedSubTypeId = Number(f.subTypeId);
+    const hasSubTypesForType = this.availableSubTypes().length > 0;
+    if (!Number.isInteger(selectedSubTypeId) || selectedSubTypeId <= 0) {
+      this.error.set(
+        hasSubTypesForType
+          ? 'اختيار التصنيف الفرعي إلزامي قبل حفظ الحساب'
+          : `لا يمكن حفظ الحساب من نوع "${getTypeMeta(f.accountType).label}" بدون تصنيف. أضف تصنيفًا أولاً من صفحة أنواع الحسابات.`,
+      );
+      return;
+    }
     try {
       const source = f._source || 'accounts';
       if (source === 'funds') {
@@ -562,7 +727,7 @@ export class AccountsComponent extends BasePageComponent {
         const accountData = {
           name: f.name, accountType: f.accountType,
           accountNumber: f.accountNumber, provider: f.provider,
-          subType: f.subType, responsiblePerson: f.responsiblePerson,
+          subType: f.subType, subTypeId: selectedSubTypeId, responsiblePerson: f.responsiblePerson,
           notes: f.notes, isActive: f.isActive,
         };
         if (this.editingId()) {
@@ -605,6 +770,7 @@ export class AccountsComponent extends BasePageComponent {
       accountType: type,
       subType: '',
       subTypeId: null,
+      subTypeTouched: false,
     }));
   }
 
@@ -612,10 +778,20 @@ export class AccountsComponent extends BasePageComponent {
   onSubTypeChange(subTypeId: number | null) {
     const subTypes = this.availableSubTypes();
     const selected = subTypes.find(s => s.id === subTypeId);
+    if (!selected) {
+      this.form.update(f => ({
+        ...f,
+        subTypeId: null,
+        subType: '',
+        subTypeTouched: false,
+      }));
+      return;
+    }
     this.form.update(f => ({
       ...f,
       subTypeId: subTypeId,
-      subType: selected?.subTypeKey || '',
+      subType: selected.subTypeKey || '',
+      subTypeTouched: true,
     }));
   }
 

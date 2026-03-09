@@ -236,8 +236,9 @@ export class ReportsComponent extends BasePageComponent {
   getAccountTypeLabel(t: string): string {
     const map: Record<string, string> = {
       fund: 'صندوق', bank: 'بنك', e_wallet: 'محفظة', exchange: 'صراف',
-      accounting: 'محاسبي', intermediary: 'وسيط', cash: 'نقدي', custody: 'عهدة',
-      service: 'خدمات', billing: 'فوترة', warehouse: 'مخزن',
+      accounting: 'أخرى', custody: 'عهدة', billing: 'فوترة', warehouse: 'مخزن',
+      supplier: 'مورد', employee: 'موظف', partner: 'شريك',
+      budget: 'ميزانية', settlement: 'تصفية', pending: 'معلقة',
     };
     return map[t] || t;
   }

@@ -1,8 +1,12 @@
-import 'dotenv/config';
-import { serve } from '@hono/node-server';
-import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { config } from 'dotenv';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+config({ path: path.join(__dirname, '..', '.env') });
+
+import { serve } from '@hono/node-server';
+import { readFileSync, existsSync } from 'node:fs';
 import { wsService } from './services/websocket.service.ts';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -53,7 +57,11 @@ app.use('/api/auth/register', registerRateLimitMiddleware());
 app.use('/api/*', rateLimitMiddleware({ windowMs: 60000, maxRequests: 1000 }));
 
 // ===================== XSS Sanitization =====================
-app.use('/api/*', xssSanitizeMiddleware());
+// استثناء /api/auth لأن تسجيل الدخول والتسجيل يقرآن الـ body مباشرة (استهلاك مزدوج يسبب فشل)
+app.use('/api/*', async (c, next) => {
+  if (c.req.path.startsWith('/api/auth')) return await next();
+  return xssSanitizeMiddleware()(c, next);
+});
 
 // ===================== Security Headers =====================
 app.use('*', async (c, next) => {
@@ -117,7 +125,6 @@ app.get('/health/db', async (c) => {
 });
 
 // ===================== تقديم الواجهة الأمامية (من backend/public) =====================
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.ico': 'image/x-icon', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 app.get('*', async (c) => {

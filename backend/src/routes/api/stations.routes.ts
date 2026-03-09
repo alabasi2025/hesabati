@@ -3,7 +3,8 @@ import { db } from '../../db/index.ts';
 import { eq, and } from 'drizzle-orm';
 import { stations, employees, funds } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, getBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, getBody, parseId } from '../../middleware/helpers.ts';
+import { getNextStationSequence } from '../../middleware/sequencing.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import type { AppContext } from './_shared/types.ts';
 
@@ -31,7 +32,14 @@ stationsRoutes.post('/businesses/:bizId/stations', bizAuthMiddleware(), safeHand
   const body = await getBody(c);
   if (!body.name) return c.json({ error: 'اسم المحطة مطلوب' }, 400);
   if (!body.code) return c.json({ error: 'كود المحطة مطلوب' }, 400);
-  const [created] = await db.insert(stations).values({ ...body, businessId: bizId }).returning();
+  const sequenceNumber =
+    typeof body.sequenceNumber === 'number'
+      ? body.sequenceNumber
+      : await getNextStationSequence(bizId);
+  const [created] = await db
+    .insert(stations)
+    .values({ ...body, businessId: bizId, sequenceNumber })
+    .returning();
   return c.json(created, 201);
 }));
 

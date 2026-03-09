@@ -256,6 +256,7 @@
                     <th>#</th>
                     <th>اسم الصنف</th>
                     <th>الرمز</th>
+                    <th>النوع</th>
                     <th>الكمية</th>
                     <th>الوحدة</th>
                     <th>سعر الوحدة</th>
@@ -270,6 +271,14 @@
                       <td class="row-num">{{ i + 1 }}</td>
                       <td><input [(ngModel)]="item.itemName" placeholder="اسم الصنف" class="table-input" /></td>
                       <td><input [(ngModel)]="item.itemCode" placeholder="الرمز" class="table-input code-input" dir="ltr" /></td>
+                      <td>
+                        <select [(ngModel)]="item.itemTypeId" class="table-input">
+                          <option [ngValue]="null">بدون نوع</option>
+                          @for (t of itemTypes(); track t.id) {
+                            <option [ngValue]="t.id">{{ t.name }}</option>
+                          }
+                        </select>
+                      </td>
                       <td><input type="number" [(ngModel)]="item.quantity" min="0" class="table-input num-input" /></td>
                       <td><input [(ngModel)]="item.unit" placeholder="وحدة" class="table-input unit-input" /></td>
                       <td><input type="number" [(ngModel)]="item.unitCost" min="0" class="table-input num-input" /></td>
@@ -287,7 +296,7 @@
                 </tbody>
                 <tfoot>
                   <tr class="totals-row">
-                    <td colspan="3" class="totals-label">الإجمالي</td>
+                    <td colspan="4" class="totals-label">الإجمالي</td>
                     <td class="totals-value">{{ getTotalQuantity() }}</td>
                     <td></td>
                     <td></td>

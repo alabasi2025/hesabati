@@ -24,6 +24,8 @@ import inventoryItemTypesRoutes from './inventory-item-types.routes.ts';
 import departmentsRoutes from './departments.routes.ts';
 import jobTitlesRoutes from './job-titles.routes.ts';
 import custodyRoutes from './custody.routes.ts';
+import accountingTypesRoutes from './accounting-types.routes.ts';
+import reconciliationsRoutes from './reconciliations.routes.ts';
 
 const api = new Hono();
 
@@ -52,5 +54,7 @@ api.route('/', inventoryItemTypesRoutes);
 api.route('/', departmentsRoutes);
 api.route('/', jobTitlesRoutes);
 api.route('/', custodyRoutes);
+api.route('/', accountingTypesRoutes);
+api.route('/', reconciliationsRoutes);
 
 export default api;

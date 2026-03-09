@@ -93,10 +93,13 @@ export const TYPE_PREFIXES: Record<string, string> = {
   exchange: "EXC",
   warehouse: "WHS",
   accounting: "ACC",
-  intermediary: "INT",
-  cash: "CSH",
+  budget: "BDG",
+  supplier: "SUP",
+  employee: "EMP",
+  partner: "PRT",
+  settlement: "STL",
+  pending: "PNG",
   custody: "CUS",
-  service: "SRV",
   receipt: "RCV",
   payment: "PAY",
   transfer: "TRF",
@@ -533,4 +536,138 @@ export async function getNextPurchaseInvoiceSequence(
   const fullSequenceNumber = `PI-${currentYear}-${String(sequentialNumber).padStart(5, "0")}`;
 
   return { fullSequenceNumber, sequentialNumber };
+}
+
+// ===================== دوال الترقيم الموحّدة للكيانات =====================
+
+export async function getNextAccountSequence(
+  businessId: number,
+  accountType: string,
+  subTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, `account_in_${accountType}`, subTypeId || 0, 0, tx);
+}
+
+export async function getNextFundSequence(
+  businessId: number,
+  fundTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "item_in_fund_type", fundTypeId, 0, tx);
+}
+
+export async function getNextWarehouseSequence(
+  businessId: number,
+  warehouseTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "item_in_warehouse_type", warehouseTypeId, 0, tx);
+}
+
+export async function getNextBankSequence(
+  businessId: number,
+  bankTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "item_in_bank_type", bankTypeId, 0, tx);
+}
+
+export async function getNextExchangeSequence(
+  businessId: number,
+  exchangeTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "item_in_exchange_type", exchangeTypeId, 0, tx);
+}
+
+export async function getNextEWalletSequence(
+  businessId: number,
+  eWalletTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "item_in_ewallet_type", eWalletTypeId, 0, tx);
+}
+
+export async function getNextSupplierSequence(
+  businessId: number,
+  supplierTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "supplier_in_type", supplierTypeId, 0, tx);
+}
+
+export async function getNextInventoryItemSequence(
+  businessId: number,
+  itemTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "inventory_item_in_type", itemTypeId, 0, tx);
+}
+
+export async function getNextEmployeeSequence(
+  businessId: number,
+  departmentId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "employee_in_department", departmentId, 0, tx);
+}
+
+export async function getNextStationSequence(
+  businessId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "station", 0, 0, tx);
+}
+
+export async function getNextBusinessPartnerSequence(
+  businessId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "business_partner", 0, 0, tx);
+}
+
+export async function getNextExpenseCategorySequence(
+  businessId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "expense_category", 0, 0, tx);
+}
+
+export async function getNextCustodySequence(
+  businessId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "custody", 0, 0, tx);
+}
+
+export async function getNextReconciliationSequence(
+  businessId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "reconciliation", 0, 0, tx);
+}
+
+export async function getNextExpenseBudgetSequence(
+  businessId: number,
+  year?: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "expense_budget", 0, year || new Date().getFullYear(), tx);
+}
+
+export async function getNextSubTypeSequence(
+  businessId: number,
+  mainType:
+    | "fund"
+    | "bank"
+    | "exchange"
+    | "e_wallet"
+    | "warehouse"
+    | "supplier"
+    | "item"
+    | "operation",
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, `category_${mainType}`, 0, 0, tx);
 }

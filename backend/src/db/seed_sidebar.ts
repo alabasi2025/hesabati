@@ -39,7 +39,7 @@ async function seedSidebar() {
     const [sec5] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '5. القوالب والترقيم', icon: 'category', sortOrder: 5 }).returning();
     const [sec6] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '6. المخزون والمخازن', icon: 'warehouse', sortOrder: 6 }).returning();
     const [sec7] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '7. الموردين', icon: 'local_shipping', sortOrder: 7 }).returning();
-    const [sec8] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '8. التحصيل والفوترة', icon: 'receipt', sortOrder: 8 }).returning();
+    const [sec8] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '8. المطابقات والعهد', icon: 'fact_check', sortOrder: 8 }).returning();
     const [sec9] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '9. التقارير', icon: 'assessment', sortOrder: 9 }).returning();
     const [sec10] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '10. بناء الواجهات', icon: 'space_dashboard', sortOrder: 10 }).returning();
     const [sec11] = await db.insert(schema.sidebarSections).values({ businessId: biz.id, name: '11. العملات وأسعار الصرف', icon: 'currency_exchange', sortOrder: 11 }).returning();
@@ -81,13 +81,14 @@ async function seedSidebar() {
     // --- الوحدة 3 ---
     const accountItems: any[] = [
       { sectionId: sec3.id, screenKey: 'accounts', label: 'الحسابات', icon: 'account_balance_wallet', route: '/biz/{bizId}/accounts', sortOrder: 1 },
+      { sectionId: sec3.id, screenKey: 'account_types', label: 'أنواع الحسابات', icon: 'category', route: '/biz/{bizId}/account-types', sortOrder: 2 },
     ];
     if (bizType === 'stations' || bizType === 'single_station') {
       accountItems.push(
-        { sectionId: sec3.id, screenKey: 'funds', label: 'الصناديق', icon: 'savings', route: '/biz/{bizId}/funds', sortOrder: 2 },
-        { sectionId: sec3.id, screenKey: 'banks', label: 'البنوك', icon: 'account_balance', route: '/biz/{bizId}/banks', sortOrder: 3 },
-        { sectionId: sec3.id, screenKey: 'exchangers', label: 'الصرافين', icon: 'currency_exchange', route: '/biz/{bizId}/exchangers', sortOrder: 4 },
-        { sectionId: sec3.id, screenKey: 'wallets', label: 'المحافظ الإلكترونية', icon: 'wallet', route: '/biz/{bizId}/wallets', sortOrder: 5 },
+        { sectionId: sec3.id, screenKey: 'funds', label: 'الصناديق', icon: 'savings', route: '/biz/{bizId}/funds', sortOrder: 3 },
+        { sectionId: sec3.id, screenKey: 'banks', label: 'البنوك', icon: 'account_balance', route: '/biz/{bizId}/banks', sortOrder: 4 },
+        { sectionId: sec3.id, screenKey: 'exchangers', label: 'الصرافين', icon: 'currency_exchange', route: '/biz/{bizId}/exchangers', sortOrder: 5 },
+        { sectionId: sec3.id, screenKey: 'wallets', label: 'المحافظ الإلكترونية', icon: 'wallet', route: '/biz/{bizId}/wallets', sortOrder: 6 },
       );
     }
     await db.insert(schema.sidebarItems).values(accountItems);
@@ -101,7 +102,12 @@ async function seedSidebar() {
 
     // --- الوحدة 5 ---
     await db.insert(schema.sidebarItems).values([
-      { sectionId: sec5.id, screenKey: 'operation_types', label: 'أنواع العمليات', icon: 'category', route: '/biz/{bizId}/operation-types', sortOrder: 1 },
+      { sectionId: sec5.id, screenKey: 'operation_categories', label: 'تصنيفات العمليات', icon: 'folder_special', route: '/biz/{bizId}/operation-categories', sortOrder: 1 },
+      { sectionId: sec5.id, screenKey: 'supplier_types', label: 'أنواع الموردين', icon: 'local_shipping', route: '/biz/{bizId}/supplier-types', sortOrder: 2 },
+      { sectionId: sec5.id, screenKey: 'inventory_item_types', label: 'أنواع الأصناف', icon: 'inventory_2', route: '/biz/{bizId}/inventory-item-types', sortOrder: 3 },
+      { sectionId: sec5.id, screenKey: 'departments', label: 'الأقسام', icon: 'groups', route: '/biz/{bizId}/departments', sortOrder: 4 },
+      { sectionId: sec5.id, screenKey: 'job_titles', label: 'المسميات الوظيفية', icon: 'badge', route: '/biz/{bizId}/job-titles', sortOrder: 5 },
+      { sectionId: sec5.id, screenKey: 'operation_types', label: 'أنواع العمليات', icon: 'category', route: '/biz/{bizId}/operation-types', sortOrder: 6 },
     ]);
 
     // --- الوحدة 6 ---
@@ -116,12 +122,15 @@ async function seedSidebar() {
     ]);
 
     // --- الوحدة 8 ---
-    if (bizType === 'stations') {
-      await db.insert(schema.sidebarItems).values([
-        { sectionId: sec8.id, screenKey: 'collections', label: 'التحصيل والتوريد', icon: 'receipt_long', route: '/biz/{bizId}/collections', sortOrder: 1 },
-        { sectionId: sec8.id, screenKey: 'billing_systems', label: 'أنظمة الفوترة', icon: 'receipt', route: '/biz/{bizId}/billing-systems', sortOrder: 2 },
-      ]);
+    const reconciliationAndCustodyItems: any[] = [
+      { sectionId: sec8.id, screenKey: 'reconciliations', label: 'المطابقات', icon: 'fact_check', route: '/biz/{bizId}/reconciliations', sortOrder: 1 },
+    ];
+    if (bizType === 'stations' || bizType === 'single_station') {
+      reconciliationAndCustodyItems.push(
+        { sectionId: sec8.id, screenKey: 'custody', label: 'العهد', icon: 'lock', route: '/biz/{bizId}/custody', sortOrder: 2 },
+      );
     }
+    await db.insert(schema.sidebarItems).values(reconciliationAndCustodyItems);
 
     // --- الوحدة 9 ---
     await db.insert(schema.sidebarItems).values([

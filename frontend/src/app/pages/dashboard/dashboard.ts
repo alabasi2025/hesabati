@@ -121,9 +121,15 @@ export class DashboardComponent extends BasePageComponent {
   getAccountTypeLabel(type: string): string {
     const map: Record<string, string> = {
       e_wallet: 'محفظة إلكترونية', bank: 'بنك', exchange: 'صراف',
-      service: 'خدمة', cash: 'نقد/خزنة', custody: 'عهدة',
+      custody: 'عهدة',
       warehouse: 'مخزن', fund: 'صندوق', billing: 'فوترة',
-      accounting: 'محاسبي', intermediary: 'وسيط',
+      accounting: 'أخرى',
+      budget: 'ميزانية',
+      supplier: 'مورد',
+      employee: 'موظف',
+      partner: 'شريك',
+      settlement: 'تسوية',
+      pending: 'معلّق',
     };
     return map[type] || type;
   }

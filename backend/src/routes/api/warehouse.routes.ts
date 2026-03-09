@@ -28,7 +28,15 @@ const warehouseRoutes = new Hono();
 // ===================== المخازن (CRUD) =====================
 warehouseRoutes.get('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('جلب المخازن', async (c) => {
   const bizId = getBizId(c);
-  const rows = await db.select().from(warehouses).where(eq(warehouses.businessId, bizId)).orderBy(warehouses.id);
+  const includeCustody = c.req.query('includeCustody') === 'true';
+  // نستخدم مقارنة نصية لتفادي خطأ قواعد بيانات قديمة لا تحتوي قيمة enum (custody) بعد.
+  const whereCondition = includeCustody
+    ? eq(warehouses.businessId, bizId)
+    : and(
+      eq(warehouses.businessId, bizId),
+      sql`${warehouses.warehouseType}::text <> 'custody'`,
+    );
+  const rows = await db.select().from(warehouses).where(whereCondition).orderBy(warehouses.id);
   return c.json(rows);
 }));
 
@@ -37,7 +45,7 @@ warehouseRoutes.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeH
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(warehouseSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const data = validation.data as Record<string, unknown> & { subType?: unknown; subTypeId?: number; sequenceNumber?: number; code?: string };
+  const data = validation.data as Record<string, unknown> & { name?: string; warehouseType?: string; subType?: unknown; subTypeId?: number; sequenceNumber?: number; code?: string };
   const subTypeRaw = data.subType ?? data.subTypeId;
   if (subTypeRaw != null && typeof subTypeRaw !== 'object') {
     const subTypeId = typeof subTypeRaw === 'number' ? subTypeRaw : Number.parseInt(String(subTypeRaw), 10);
@@ -48,7 +56,10 @@ warehouseRoutes.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeH
       data.code = code;
     }
   }
-  const [created] = await db.insert(warehouses).values({ ...data, businessId: bizId }).returning();
+  const name = (data.name ?? '') as string;
+  const warehouseType = (['main', 'station', 'sub'].includes(String(data.warehouseType ?? '')) ? data.warehouseType : 'main') as 'main' | 'station' | 'sub';
+  const subType = typeof data.subType === 'string' ? data.subType : null;
+  const [created] = await db.insert(warehouses).values({ ...data, businessId: bizId, name, warehouseType, subType }).returning();
   return c.json(created, 201);
 }));
 
@@ -241,12 +252,19 @@ warehouseRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthMiddlewar
       ));
     if (existingItems.length > 0) {
       inventoryItemId = existingItems[0].id;
+      if (typeof item.itemTypeId === 'number' && existingItems[0].itemTypeId !== item.itemTypeId) {
+        await db
+          .update(inventoryItems)
+          .set({ itemTypeId: item.itemTypeId })
+          .where(eq(inventoryItems.id, inventoryItemId));
+      }
     } else {
       const autoCode = itemCode || `${itemName.substring(0, 3).toUpperCase()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
       const [newItem] = await db.insert(inventoryItems).values({
         businessId: bizId,
         name: itemName,
         code: autoCode,
+        itemTypeId: typeof item.itemTypeId === 'number' ? item.itemTypeId : null,
         unit: item.unit || null,
       }).returning();
       inventoryItemId = newItem.id;

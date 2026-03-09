@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
@@ -155,7 +154,7 @@ export class StationsComponent extends BasePageComponent {
 
   getBillingLabel(sysKey: string): string {
     const sys = this.billingSystems().find((s: any) => s.systemKey === sysKey);
-    return sys?.name || sysKey;
+    return sys?.name ?? sysKey;
   }
 
   setFormField(field: string, value: any) {

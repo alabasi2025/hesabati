@@ -47,6 +47,7 @@ export class AccountTypesComponent extends BasePageComponent {
   exchangeTypes = signal<SubType[]>([]);
   eWalletTypes = signal<SubType[]>([]);
   warehouseTypes = signal<SubType[]>([]);
+  accountingTypes = signal<SubType[]>([]);
 
   // UI State
   expandedTypes = signal<Set<string>>(new Set(['fund', 'bank', 'exchange', 'e_wallet']));
@@ -211,7 +212,7 @@ export class AccountTypesComponent extends BasePageComponent {
         color: '#14b8a6',
         description: 'حسابات إضافية مرنة يضيفها المستخدم حسب حاجته',
         isSystem: false,
-        subTypes: [],
+        subTypes: this.accountingTypes(),
       },
     ];
     return types;
@@ -232,21 +233,27 @@ export class AccountTypesComponent extends BasePageComponent {
     void this.loadData();
   }
 
+  supportsSubTypeManagement(mainTypeKey: string): boolean {
+    return ['fund', 'bank', 'exchange', 'e_wallet', 'warehouse', 'accounting'].includes(mainTypeKey);
+  }
+
   async loadData() {
     this.loading.set(true);
     try {
-      const [fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, warehouseTypesData] = await Promise.all([
+      const [fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, warehouseTypesData, accountingTypesData] = await Promise.all([
         this.api.getFundTypes(this.bizId).catch(() => []),
         this.api.getBankTypes(this.bizId).catch(() => []),
         this.api.getExchangeTypes(this.bizId).catch(() => []),
         this.api.getEWalletTypes(this.bizId).catch(() => []),
-        this.api.getWarehouseTypes?.(this.bizId).catch(() => []) || Promise.resolve([]),
+        this.api.getWarehouseTypes(this.bizId).catch(() => []),
+        this.api.getAccountingTypes(this.bizId).catch(() => []),
       ]);
       this.fundTypes.set(fundTypesData);
       this.bankTypes.set(bankTypesData);
       this.exchangeTypes.set(exchangeTypesData);
       this.eWalletTypes.set(eWalletTypesData);
       this.warehouseTypes.set(warehouseTypesData);
+      this.accountingTypes.set(accountingTypesData);
     } catch (e: unknown) {
       this.error.set(e instanceof Error ? e.message : 'خطأ في تحميل البيانات');
     } finally {
@@ -278,6 +285,10 @@ export class AccountTypesComponent extends BasePageComponent {
 
   // ===== إدارة التصنيفات الفرعية =====
   openAddSubType(mainTypeKey: string) {
+    if (!this.supportsSubTypeManagement(mainTypeKey)) {
+      this.toast.error('هذا النوع لا يدعم التصنيفات الفرعية من هذه الشاشة حالياً');
+      return;
+    }
     this.activeMainType.set(mainTypeKey);
     this.editingSubType.set(null);
     const mainType = this.mainAccountTypes().find(t => t.key === mainTypeKey);
@@ -310,6 +321,10 @@ export class AccountTypesComponent extends BasePageComponent {
   async saveSubType() {
     const form = this.subTypeForm();
     const mainType = this.activeMainType();
+    if (!this.supportsSubTypeManagement(mainType)) {
+      this.toast.error('لا يمكن حفظ التصنيف لهذا النوع حالياً');
+      return;
+    }
     
     if (!form.name.trim()) {
       this.toast.error('اسم التصنيف مطلوب');
@@ -347,6 +362,12 @@ export class AccountTypesComponent extends BasePageComponent {
       } else if (mainType === 'warehouse' && this.api.createWarehouseType) {
         if (editing && this.api.updateWarehouseType) await this.api.updateWarehouseType(editing.id, data);
         else await this.api.createWarehouseType(this.bizId, data);
+      } else if (mainType === 'accounting' && this.api.createAccountingType) {
+        if (editing && this.api.updateAccountingType) await this.api.updateAccountingType(this.bizId, editing.id, data);
+        else await this.api.createAccountingType(this.bizId, data);
+      } else {
+        this.toast.error('لا توجد آلية حفظ معرفة لهذا النوع');
+        return;
       }
 
       this.showSubTypeForm.set(false);
@@ -376,6 +397,8 @@ export class AccountTypesComponent extends BasePageComponent {
         await this.api.deleteEWalletType(subType.id);
       } else if (mainTypeKey === 'warehouse' && this.api.deleteWarehouseType) {
         await this.api.deleteWarehouseType(subType.id);
+      } else if (mainTypeKey === 'accounting' && this.api.deleteAccountingType) {
+        await this.api.deleteAccountingType(this.bizId, subType.id);
       }
 
       this.toast.success('تم الحذف بنجاح');

@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:baseline": "tsx scripts/baseline-drizzle-migrations.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
     "db:check": "tsx src/db/check-schema-match.ts",

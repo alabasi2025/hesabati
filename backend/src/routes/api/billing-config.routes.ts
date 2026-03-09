@@ -13,13 +13,33 @@ import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const billingConfigRoutes = new Hono();
 
+function toSystemKey(name: string): string {
+  const compact = name.trim().toLowerCase().split(/\s+/).join('_');
+  return compact.split('').filter((ch) => /[a-z0-9_]/.test(ch)).join('');
+}
+
 // ===================== إعدادات أنظمة الفوترة =====================
 billingConfigRoutes.get('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), safeHandler('جلب إعدادات أنظمة الفوترة', async (c) => {
   const bizId = getBizId(c);
   const rows = await db.select().from(billingSystemsConfig)
     .where(eq(billingSystemsConfig.businessId, bizId))
     .orderBy(billingSystemsConfig.sortOrder);
-  return c.json(rows);
+  const types = await db.select({
+    id: billingAccountTypes.id,
+    name: billingAccountTypes.name,
+  }).from(billingAccountTypes).where(eq(billingAccountTypes.businessId, bizId));
+  const typeNameById = new Map(types.map((t) => [t.id, t.name]));
+  return c.json(rows.map((row) => ({
+    ...row,
+    // ضمان التوافق مع البيانات القديمة التي قد تحتوي systemKey = null
+    systemKey: (typeof row.systemKey === 'string' && row.systemKey.trim().length > 0)
+      ? row.systemKey
+      : toSystemKey(`${row.name || 'billing'}_${row.id}`),
+    stationScope: row.stationMode,
+    supportedTypes: (row.supportedMethodIds || [])
+      .map((id) => typeNameById.get(id))
+      .filter((name): name is string => Boolean(name)),
+  })));
 }));
 
 billingConfigRoutes.post('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), safeHandler('إضافة إعداد نظام فوترة', async (c) => {
@@ -27,7 +47,44 @@ billingConfigRoutes.post('/businesses/:bizId/billing-systems-config', bizAuthMid
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(billingSystemConfigSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(billingSystemsConfig).values({ ...validation.data, businessId: bizId }).returning();
+  const data = validation.data as Record<string, unknown> & {
+    stationScope?: string;
+    stationMode?: string;
+    supportedTypes?: string[];
+    supportedMethodIds?: number[];
+    name: string;
+    systemKey?: string;
+  };
+  const types = await db.select({
+    id: billingAccountTypes.id,
+    name: billingAccountTypes.name,
+  }).from(billingAccountTypes).where(eq(billingAccountTypes.businessId, bizId));
+  const typeIdByName = new Map(types.map((t) => [t.name, t.id]));
+  let supportedMethodIds: number[] = [];
+  if (Array.isArray(data.supportedMethodIds)) {
+    supportedMethodIds = data.supportedMethodIds;
+  } else if (Array.isArray(data.supportedTypes)) {
+    supportedMethodIds = data.supportedTypes
+      .map((name) => typeIdByName.get(name))
+      .filter((id): id is number => typeof id === 'number');
+  }
+  const stationMode = data.stationMode || data.stationScope || 'per_station';
+  const systemKey = (typeof data.systemKey === 'string' && data.systemKey.trim().length > 0)
+    ? data.systemKey
+    : toSystemKey(data.name || 'default');
+  const [created] = await db.insert(billingSystemsConfig).values({
+    businessId: bizId,
+    name: data.name,
+    systemKey,
+    icon: data.icon as string | undefined,
+    color: data.color as string | undefined,
+    stationMode,
+    stationIds: Array.isArray(data.stationIds) ? data.stationIds : [],
+    supportedMethodIds,
+    sortOrder: data.sortOrder as number | undefined,
+    isActive: data.isActive as boolean | undefined,
+    notes: data.notes as string | null | undefined,
+  }).returning();
   return c.json(created, 201);
 }));
 
@@ -38,7 +95,30 @@ billingConfigRoutes.put('/billing-systems-config/:id', safeHandler('تعديل �
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
   const body = normalizeBody(await c.req.json());
-  const [updated] = await db.update(billingSystemsConfig).set({ ...body, updatedAt: new Date() }).where(eq(billingSystemsConfig.id, id)).returning();
+  const bizId = rec?.businessId;
+  const types = await db.select({
+    id: billingAccountTypes.id,
+    name: billingAccountTypes.name,
+  }).from(billingAccountTypes).where(eq(billingAccountTypes.businessId, bizId));
+  const typeIdByName = new Map(types.map((t) => [t.name, t.id]));
+  const patch = body as Record<string, unknown> & {
+    stationScope?: string;
+    stationMode?: string;
+    supportedTypes?: string[];
+    supportedMethodIds?: number[];
+  };
+  const updateData: Record<string, unknown> = { ...patch, updatedAt: new Date() };
+  if (typeof patch.stationScope === 'string' && !patch.stationMode) {
+    updateData.stationMode = patch.stationScope;
+  }
+  if (!Array.isArray(patch.supportedMethodIds) && Array.isArray(patch.supportedTypes)) {
+    updateData.supportedMethodIds = patch.supportedTypes
+      .map((name) => typeIdByName.get(name))
+      .filter((typeId): typeId is number => typeof typeId === 'number');
+  }
+  delete updateData.stationScope;
+  delete updateData.supportedTypes;
+  const [updated] = await db.update(billingSystemsConfig).set(updateData as any).where(eq(billingSystemsConfig.id, id)).returning();
   if (!updated) return c.json({ error: 'إعداد غير موجود' }, 404);
   return c.json(updated);
 }));
@@ -64,7 +144,7 @@ billingConfigRoutes.post('/businesses/:bizId/billing-account-types', bizAuthMidd
   const bizId = getBizId(c);
   const body = normalizeBody(await c.req.json()) as { name?: string; [k: string]: unknown };
   if (!body.name) return c.json({ error: 'اسم النوع مطلوب' }, 400);
-  const [created] = await db.insert(billingAccountTypes).values({ ...body, businessId: bizId }).returning();
+  const [created] = await db.insert(billingAccountTypes).values({ businessId: bizId, name: body.name, ...body }).returning();
   return c.json(created, 201);
 }));
 

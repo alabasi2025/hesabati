@@ -853,6 +853,18 @@
   line-height: 1.7;
 }
 
+.step-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  margin: -8px 0 16px;
+  line-height: 1.5;
+
+  .material-icons-round { font-size: 16px; opacity: 0.8; }
+}
+
 /* ===== Step 1: Type Cards ===== */
 .type-cards {
   display: flex;

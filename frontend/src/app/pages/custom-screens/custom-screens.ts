@@ -201,7 +201,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   accDynamicFilters = computed(() => {
     const all = this.allAccounts();
     const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
-    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet', 'cash', 'custody', 'service'];
+    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet', 'warehouse', 'custody', 'supplier', 'employee', 'partner', 'budget', 'settlement', 'pending', 'accounting'];
     const sorted = typesInDB.sort((a: string, b: string) => {
       const ia = priority.indexOf(a); const ib = priority.indexOf(b);
       if (ia >= 0 && ib >= 0) return ia - ib;

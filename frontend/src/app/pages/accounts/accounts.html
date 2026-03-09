@@ -114,7 +114,7 @@
   </div>
 
   <!-- ===== Sub-Filters Panel (ديناميكي حسب النوع المختار) ===== -->
-  @if (activeType() !== 'all' && ((subFilterOptions()?.length ?? 0) > 0 || (typeHasStationFilter() && (availableStations()?.length ?? 0) > 0))) {
+  @if (activeType() !== 'all' && (subFilterOptions().length > 0 || (typeHasStationFilter() && availableStations().length > 0))) {
     <div class="sub-filters-panel">
       <div class="sub-filters-header">
         <span class="material-icons-round">tune</span>
@@ -207,6 +207,21 @@
         }
       </div>
     } @else {
+      <!-- View mode: Grouped vs Tree -->
+      <div class="view-mode-bar">
+        <div class="view-mode-toggle">
+          <button class="view-mode-btn" [class.active]="viewMode() === 'grouped'" (click)="viewMode.set('grouped')">
+            <span class="material-icons-round">folder_open</span>
+            حسب النوع
+          </button>
+          <button class="view-mode-btn" [class.active]="viewMode() === 'tree'" (click)="viewMode.set('tree')">
+            <span class="material-icons-round">account_tree</span>
+            عرض شجري
+          </button>
+        </div>
+      </div>
+
+      @if (viewMode() === 'grouped') {
       <!-- Group Controls -->
       @if (groupedAccounts().length > 1) {
         <div class="group-controls">
@@ -299,6 +314,18 @@
                           {{ acc.accountNumber }}
                         </div>
                       }
+                      @if (acc.code != null && acc.code !== '') {
+                        <div class="acc-detail acc-numbering">
+                          <span class="material-icons-round">pin</span>
+                          الرمز: {{ acc.code }}
+                        </div>
+                      }
+                      @if (acc.sequenceNumber != null && acc.sequenceNumber !== '') {
+                        <div class="acc-detail acc-numbering">
+                          <span class="material-icons-round">format_list_numbered</span>
+                          تسلسل: {{ acc.sequenceNumber }}
+                        </div>
+                      }
                       @if (acc.balances && acc.balances.length > 0) {
                         @for (bal of acc.balances; track bal.currencyId) {
                           <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
@@ -328,6 +355,196 @@
             </div>
           }
         </div>
+      }
+      } @else {
+      <!-- Tree View -->
+      @if (accountsTree().length > 0 || nonTreeAccounts().length > 0) {
+        @if (accountsTree().length > 0) {
+          <div class="tree-controls">
+            <span class="group-summary">
+              <span class="material-icons-round">account_tree</span>
+              عرض شجري · {{ treeList().length }} عقدة
+            </span>
+            <div class="group-actions">
+              <button class="group-action-btn" (click)="expandAllTree()" title="فتح كل المستويات">
+                <span class="material-icons-round">unfold_more</span>
+              </button>
+              <button class="group-action-btn" (click)="collapseAllTree()" title="طي الكل">
+                <span class="material-icons-round">unfold_less</span>
+              </button>
+            </div>
+          </div>
+          <div class="accounts-grid tree-grid">
+            @for (row of treeList(); track row.node.item.id) {
+              <div class="tree-row" [style.padding-inline-start.rem]="row.depth * 1.5">
+                @if (row.node.children.length > 0) {
+                  <button type="button" class="tree-expand-btn" (click)="toggleTreeExpand(row.node.item.id)">
+                    <span class="material-icons-round">
+                      {{ expandedTreeIds().has(row.node.item.id) ? 'expand_more' : 'chevron_right' }}
+                    </span>
+                  </button>
+                } @else {
+                  <span class="tree-expand-placeholder"></span>
+                }
+                <div class="account-card-3d tree-card" [class.inactive]="!row.node.item.isActive"
+                     [style.--card-color]="getTypeInfo(row.node.item.accountType).color">
+                  <div class="card-glow"></div>
+                  <div class="acc-card-top">
+                    <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(row.node.item.accountType).color + ', ' + getTypeInfo(row.node.item.accountType).color + 'cc)'">
+                      <span class="material-icons-round">{{ getTypeInfo(row.node.item.accountType).icon }}</span>
+                    </div>
+                    <div class="acc-type-badge" [style.color]="getTypeInfo(row.node.item.accountType).color"
+                         [style.background]="getTypeInfo(row.node.item.accountType).color + '18'">
+                      {{ row.node.item.subTypeLabel || row.node.item.subType || row.node.item.provider || getTypeInfo(row.node.item.accountType).label }}
+                    </div>
+                    <div class="acc-actions-top">
+                      @if (row.node.item._source !== 'billing') {
+                        <button class="icon-btn edit-btn" (click)="openEdit(row.node.item); $event.stopPropagation()">
+                          <span class="material-icons-round">edit</span>
+                        </button>
+                        <button class="icon-btn delete-btn" (click)="deleteAccount(row.node.item); $event.stopPropagation()">
+                          <span class="material-icons-round">delete</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                  <div class="acc-card-body">
+                    <h3 class="acc-name">{{ row.node.item.name }}</h3>
+                    @if (row.node.item.provider && row.node.item.accountType !== 'billing') {
+                      <div class="acc-detail">
+                        <span class="material-icons-round">business</span>
+                        {{ row.node.item.provider }}
+                      </div>
+                    }
+                    @if (row.node.item.responsiblePerson) {
+                      <div class="acc-detail">
+                        <span class="material-icons-round">person</span>
+                        {{ row.node.item.responsiblePerson }}
+                      </div>
+                    }
+                    @if (row.node.item.accountNumber) {
+                      <div class="acc-detail">
+                        <span class="material-icons-round">tag</span>
+                        {{ row.node.item.accountNumber }}
+                      </div>
+                    }
+                    @if (row.node.item.code != null && row.node.item.code !== '') {
+                      <div class="acc-detail acc-numbering">
+                        <span class="material-icons-round">pin</span>
+                        الرمز: {{ row.node.item.code }}
+                      </div>
+                    }
+                    @if (row.node.item.sequenceNumber != null && row.node.item.sequenceNumber !== '') {
+                      <div class="acc-detail acc-numbering">
+                        <span class="material-icons-round">format_list_numbered</span>
+                        تسلسل: {{ row.node.item.sequenceNumber }}
+                      </div>
+                    }
+                    @if (row.node.item.balances && row.node.item.balances.length > 0) {
+                      @for (bal of row.node.item.balances; track bal.currencyId) {
+                        <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
+                          <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
+                          {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
+                        </div>
+                      }
+                    }
+                  </div>
+                  <div class="acc-card-footer">
+                    @if (!row.node.item.isActive) {
+                      <span class="inactive-badge">
+                        <span class="material-icons-round">pause_circle</span>
+                        موقوف
+                      </span>
+                    } @else {
+                      <span class="active-badge">
+                        <span class="material-icons-round">check_circle</span>
+                        نشط
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+        @if (nonTreeAccounts().length > 0) {
+          <div class="tree-other-section">
+            <h4 class="tree-other-title">
+              <span class="material-icons-round">account_balance_wallet</span>
+              صناديق وحسابات فوترة ({{ nonTreeAccounts().length }})
+            </h4>
+            <div class="accounts-grid">
+              @for (acc of nonTreeAccounts(); track acc._key || acc.id) {
+                <div class="account-card-3d" [class.inactive]="!acc.isActive"
+                     [style.--card-color]="getTypeInfo(acc.accountType).color">
+                  <div class="card-glow"></div>
+                  <div class="acc-card-top">
+                    <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.accountType).color + ', ' + getTypeInfo(acc.accountType).color + 'cc)'">
+                      <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
+                    </div>
+                    <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
+                         [style.background]="getTypeInfo(acc.accountType).color + '18'">
+                      {{ acc.subTypeLabel || acc.subType || acc.provider || getTypeInfo(acc.accountType).label }}
+                    </div>
+                    <div class="acc-actions-top">
+                      @if (acc._source !== 'billing') {
+                        <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
+                          <span class="material-icons-round">edit</span>
+                        </button>
+                        <button class="icon-btn delete-btn" (click)="deleteAccount(acc); $event.stopPropagation()">
+                          <span class="material-icons-round">delete</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                  <div class="acc-card-body">
+                    <h3 class="acc-name">{{ acc.name }}</h3>
+                    @if (acc.provider && acc.accountType !== 'billing') {
+                      <div class="acc-detail">
+                        <span class="material-icons-round">business</span>
+                        {{ acc.provider }}
+                      </div>
+                    }
+                    @if (acc.accountNumber) {
+                      <div class="acc-detail">
+                        <span class="material-icons-round">tag</span>
+                        {{ acc.accountNumber }}
+                      </div>
+                    }
+                    @if (acc.code != null && acc.code !== '') {
+                      <div class="acc-detail acc-numbering">
+                        <span class="material-icons-round">pin</span>
+                        الرمز: {{ acc.code }}
+                      </div>
+                    }
+                    @if (acc.sequenceNumber != null && acc.sequenceNumber !== '') {
+                      <div class="acc-detail acc-numbering">
+                        <span class="material-icons-round">format_list_numbered</span>
+                        تسلسل: {{ acc.sequenceNumber }}
+                      </div>
+                    }
+                    @if (acc.balances && acc.balances.length > 0) {
+                      @for (bal of acc.balances; track bal.currencyId) {
+                        <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
+                          <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
+                          {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
+                        </div>
+                      }
+                    }
+                  </div>
+                  <div class="acc-card-footer">
+                    @if (!acc.isActive) {
+                      <span class="inactive-badge"><span class="material-icons-round">pause_circle</span> موقوف</span>
+                    } @else {
+                      <span class="active-badge"><span class="material-icons-round">check_circle</span> نشط</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
       }
     }
   }
@@ -435,13 +652,8 @@
           <!-- التصنيف الفرعي (إذا كانت هناك تصنيفات متاحة) -->
           @if (availableSubTypes().length > 0) {
             <div class="form-group">
-              <label class="form-label">التصنيف الفرعي</label>
+              <label class="form-label">التصنيف الفرعي <span class="required">*</span></label>
               <div class="subtype-selector">
-                <button class="subtype-option" [class.selected]="!form().subTypeId"
-                        (click)="onSubTypeChange(null)" type="button">
-                  <span class="material-icons-round">label_off</span>
-                  بدون تصنيف
-                </button>
                 @for (st of availableSubTypes(); track st.id) {
                   <button class="subtype-option" [class.selected]="form().subTypeId === st.id"
                           [style.--opt-color]="st.color"
@@ -454,12 +666,10 @@
             </div>
           } @else {
             <div class="form-group">
-              <label class="form-label">التصنيف الفرعي</label>
-              <input class="form-input" type="text" placeholder="تصنيف إضافي (اختياري)"
-                     [value]="form().subType" (input)="setFormField('subType', $any($event.target).value)">
+              <label class="form-label">التصنيف الفرعي <span class="required">*</span></label>
               <p class="form-hint">
                 <span class="material-icons-round">info</span>
-                يمكنك إضافة تصنيفات فرعية من صفحة <a href="javascript:void(0)" style="color: var(--primary);">أنواع الحسابات</a>
+                لا يمكن حفظ الحساب بدون تصنيف. أضف تصنيفًا فرعيًا لهذا النوع من صفحة أنواع الحسابات ثم ارجع للإضافة.
               </p>
             </div>
           }
@@ -505,7 +715,9 @@
         </div>
         <div class="modal-footer">
           <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="saveForm()">
+          <button class="btn-3d btn-primary"
+                  [disabled]="!form().name?.trim() || !form().subTypeTouched || !hasValidSubTypeSelection()"
+                  (click)="saveForm()">
             <span class="material-icons-round">save</span>
             {{ editingId() ? 'حفظ التعديلات' : 'إضافة الحساب' }}
           </button>

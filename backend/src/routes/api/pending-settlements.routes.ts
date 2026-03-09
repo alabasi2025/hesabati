@@ -25,7 +25,12 @@ pendingSettlementsRoutes.post('/businesses/:bizId/pending-accounts', bizAuthMidd
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(pendingAccountSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const [created] = await db.insert(pendingAccounts).values({ ...validation.data, businessId: bizId }).returning();
+  const d = validation.data as Record<string, unknown> & { estimatedAmount?: string | number | null };
+  const [created] = await db.insert(pendingAccounts).values({
+    ...validation.data,
+    businessId: bizId,
+    estimatedAmount: d.estimatedAmount != null ? String(d.estimatedAmount) : null,
+  }).returning();
   return c.json(created, 201);
 }));
 
@@ -66,10 +71,14 @@ pendingSettlementsRoutes.post('/businesses/:bizId/settlements', bizAuthMiddlewar
   const data = validation.data as Record<string, unknown> & {
     reconciliationType?: string; type?: string; expectedAmount?: unknown; actualAmount?: unknown;
   };
+  const allowedTypes = ['accountant', 'manager', 'exchange', 'custody', 'supplier'] as const;
+  const reconType = (data.reconciliationType ?? data.type ?? 'accountant') as string;
+  const title = String(data.title ?? '');
   const [created] = await db.insert(reconciliations).values({
     ...data,
     businessId: bizId,
-    reconciliationType: data.reconciliationType ?? data.type ?? 'general',
+    title,
+    reconciliationType: allowedTypes.includes(reconType as typeof allowedTypes[number]) ? reconType as typeof allowedTypes[number] : 'accountant',
     expectedAmount: data.expectedAmount != null ? String(data.expectedAmount) : null,
     actualAmount: data.actualAmount != null ? String(data.actualAmount) : null,
   }).returning();

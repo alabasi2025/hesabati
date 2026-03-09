@@ -203,7 +203,7 @@ export class ApiService {
   updateSettlement(id: number, d: any)           { return this.request<any>(`/settlements/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteSettlement(id: number)                   { return this.request<any>(`/settlements/${id}`, { method: 'DELETE' }); }
 
-  // ===================== تصنيفات السندات =====================
+  // ===================== تصنيفات السندات (مشتقة من operation_categories) =====================
   getVoucherCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/voucher-categories`); }
 
   // ===================== أنواع العمليات (القوالب) =====================
@@ -536,6 +536,12 @@ export class ApiService {
   createWarehouseType(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/warehouse-types`, { method: 'POST', body: JSON.stringify(d) }); }
   updateWarehouseType(id: number, d: any)         { return this.request<any>(`/warehouse-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteWarehouseType(id: number)                 { return this.request<any>(`/warehouse-types/${id}`, { method: 'DELETE' }); }
+
+  // ===================== تصنيفات "أخرى" =====================
+  getAccountingTypes(bizId: number)               { return this.request<any[]>(`/businesses/${bizId}/accounting-types`); }
+  createAccountingType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/accounting-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateAccountingType(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteAccountingType(bizId: number, id: number) { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'DELETE' }); }
 
   // ===================== تصنيفات قيود اليومية =====================
   getJournalEntryCategories(bizId: number)        { return this.request<any[]>(`/businesses/${bizId}/journal-entry-categories`); }

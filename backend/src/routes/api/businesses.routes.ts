@@ -57,7 +57,19 @@ businessesRoutes.get('/businesses', safeHandler('جلب قائمة الأعما�
     };
   }
 
-  const allPartnersDetailed = await db.select().from(businessPartners);
+  let allPartnersDetailed: Array<{
+    businessId: number;
+    [key: string]: unknown;
+  }> = [];
+  try {
+    allPartnersDetailed = await db.select().from(businessPartners);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Backward-compatibility: some old DBs miss business_partners.sequence_number.
+    if (!message.includes('column "sequence_number" does not exist')) {
+      throw error;
+    }
+  }
   const partnerDetailMap: Record<number, typeof allPartnersDetailed> = {};
   for (const p of allPartnersDetailed) {
     if (!partnerDetailMap[p.businessId]) partnerDetailMap[p.businessId] = [];

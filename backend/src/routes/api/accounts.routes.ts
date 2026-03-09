@@ -14,11 +14,12 @@ import {
   stations,
   employees,
   employeeBillingAccounts,
+  billingSystemsConfig,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { accountSchema, validateBody } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired } from '../../middleware/helpers.ts';
-import { getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { TYPE_PREFIXES, generateItemCode, getNextAccountSequence } from '../../middleware/sequencing.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
@@ -65,7 +66,13 @@ accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandl
     linkMap[l.fromAccountId].push(l);
   }
 
-  const enrichedAccounts = accountRows.map(a => ({ ...a, balances: balanceMap[a.id] || [], allowedLinks: linkMap[a.id] || [], _source: 'accounts' as const }));
+  const enrichedAccounts = accountRows.map(a => ({
+    ...a,
+    balances: balanceMap[a.id] || [],
+    allowedLinks: linkMap[a.id] || [],
+    _source: 'accounts' as const,
+    _key: `accounts_${a.id}` as const,
+  }));
 
   if (!includeAll) {
     return c.json(enrichedAccounts);
@@ -134,6 +141,7 @@ accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandl
     balances: fBalanceMap[f.id] || [],
     allowedLinks: [],
     _source: 'funds' as const,
+    _key: `funds_${f.id}` as const,
   }));
 
   // 3. جلب حسابات الفوترة
@@ -141,7 +149,9 @@ accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandl
     id: employeeBillingAccounts.id,
     employeeId: employeeBillingAccounts.employeeId,
     stationId: employeeBillingAccounts.stationId,
-    billingSystem: employeeBillingAccounts.billingSystem,
+    billingSystemId: employeeBillingAccounts.billingSystemId,
+    billingSystemKey: billingSystemsConfig.systemKey,
+    billingSystemName: billingSystemsConfig.name,
     collectionMethod: employeeBillingAccounts.collectionMethod,
     label: employeeBillingAccounts.label,
     sortOrder: employeeBillingAccounts.sortOrder,
@@ -152,17 +162,10 @@ accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandl
   }).from(employeeBillingAccounts)
     .leftJoin(employees, eq(employeeBillingAccounts.employeeId, employees.id))
     .leftJoin(stations, eq(employeeBillingAccounts.stationId, stations.id))
+    .leftJoin(billingSystemsConfig, eq(employeeBillingAccounts.billingSystemId, billingSystemsConfig.id))
     .where(eq(employees.businessId, bizId))
     .orderBy(employeeBillingAccounts.stationId, employeeBillingAccounts.employeeId);
 
-  const BILLING_SYSTEM_NAMES: Record<string, string> = {
-    moghrabi_v1: 'المغربي نسخة 1 (الدهمية)',
-    moghrabi_v2: 'المغربي نسخة 2 (الصبالية وجمال)',
-    moghrabi_v3: 'المغربي نسخة 3 (غليل)',
-    support_fund: 'صندوق الدعم',
-    support_fund_west: 'صندوق الدعم - الساحل الغربي',
-    prepaid: 'الدفع المسبق',
-  };
   const COLLECTION_METHOD_NAMES: Record<string, string> = {
     cash_mobile: 'تحصيل نقدي بالجوال',
     manual_assign: 'تحصيل إسناد يدوي',
@@ -170,7 +173,8 @@ accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandl
     haseb_deposit: 'إيداع حاسب',
   };
   const billingAsAccounts = billingRows.map(b => {
-    const sysName = BILLING_SYSTEM_NAMES[b.billingSystem || ''] || b.billingSystem || '';
+    const sysKey = b.billingSystemKey || '';
+    const sysName = b.billingSystemName || sysKey || '';
     const methodName = COLLECTION_METHOD_NAMES[b.collectionMethod || ''] || b.collectionMethod || '';
     return {
       id: b.id,
@@ -186,11 +190,12 @@ accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandl
       stationId: b.stationId,
       stationName: b.stationName,
       collectionMethod: methodName,
-      billingSystemKey: b.billingSystem || '',
+      billingSystemKey: sysKey,
       createdAt: null,
       balances: [],
       allowedLinks: [],
       _source: 'billing' as const,
+      _key: `billing_${b.id}` as const,
     };
   });
 
@@ -213,19 +218,16 @@ accountsRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), checkPer
   const { ...accountData } = validation.data as Record<string, unknown>;
   const allowedLinks = (body as { allowedLinks?: { toAccountId: number; linkType: string }[] }).allowedLinks;
 
-  if (accountData.subTypeId) {
-    const treasuryTypeMap: Record<string, 'bank' | 'exchange' | 'e_wallet'> = {
-      bank: 'bank',
-      e_wallet: 'e_wallet',
-      exchange: 'exchange',
-    };
-    const treasuryType = treasuryTypeMap[accountData.accountType as string] || 'bank';
-    const { sequenceNumber, code } = await getNextItemInCategorySequence(bizId, treasuryType, accountData.subTypeId as number);
-    accountData.sequenceNumber = sequenceNumber;
-    accountData.code = code;
+  const subTypeId = Number(accountData.subTypeId);
+  if (!Number.isInteger(subTypeId) || subTypeId <= 0) {
+    return c.json({ error: 'التصنيف مطلوب ولا يمكن الحفظ بدون تصنيف' }, 400);
   }
+  const accountType = typeof accountData.accountType === 'string' ? accountData.accountType : '';
+  const sequenceNumber = await getNextAccountSequence(bizId, accountType, subTypeId);
+  accountData.sequenceNumber = sequenceNumber;
+  accountData.code = generateItemCode(TYPE_PREFIXES[accountType] || 'ACC', sequenceNumber);
 
-  const [created] = await db.insert(accounts).values({ ...accountData, businessId: bizId }).returning();
+  const [created] = await db.insert(accounts).values({ ...accountData, businessId: bizId } as typeof accounts.$inferInsert).returning();
 
   if (allowedLinks && allowedLinks.length > 0 && created) {
     for (const link of allowedLinks) {
@@ -247,6 +249,10 @@ accountsRoutes.put('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), safeH
   if (!existing) return c.json({ error: 'حساب غير موجود أو لا ينتمي لهذا العمل' }, 404);
   const body = normalizeBody(await c.req.json()) as { allowedLinks?: { toAccountId: number; linkType: string }[]; [k: string]: unknown };
   const { allowedLinks, ...accountData } = body;
+  const nextSubTypeId = accountData.subTypeId === undefined ? Number(existing.subTypeId) : Number(accountData.subTypeId);
+  if (!Number.isInteger(nextSubTypeId) || nextSubTypeId <= 0) {
+    return c.json({ error: 'التصنيف مطلوب ولا يمكن الحفظ بدون تصنيف' }, 400);
+  }
   const [updated] = await db.update(accounts).set({ ...accountData, updatedAt: new Date() }).where(eq(accounts.id, id)).returning();
 
   if (allowedLinks !== undefined) {
@@ -281,6 +287,10 @@ accountsRoutes.put('/accounts/:id', safeHandler('تعديل حساب (legacy)', 
   if (err) return err;
   const body = normalizeBody(await c.req.json()) as { allowedLinks?: { toAccountId: number; linkType: string }[]; [k: string]: unknown };
   const { allowedLinks, ...accountData } = body;
+  const nextSubTypeId = accountData.subTypeId === undefined ? Number(account.subTypeId) : Number(accountData.subTypeId);
+  if (!Number.isInteger(nextSubTypeId) || nextSubTypeId <= 0) {
+    return c.json({ error: 'التصنيف مطلوب ولا يمكن الحفظ بدون تصنيف' }, 400);
+  }
   const [updated] = await db.update(accounts).set({ ...accountData, updatedAt: new Date() }).where(eq(accounts.id, id)).returning();
   if (!updated) return c.json({ error: 'حساب غير موجود' }, 404);
   if (allowedLinks !== undefined) {
@@ -348,7 +358,11 @@ accountsRoutes.post('/account-links', safeHandler('إضافة رابط حساب'
   const [account] = await db.select().from(accounts).where(eq(accounts.id, body.fromAccountId!));
   const err = await requireResourceOwnership(c, account ?? null);
   if (err) return err;
-  const [created] = await db.insert(accountAllowedLinks).values(body).returning();
+  const [created] = await db.insert(accountAllowedLinks).values({
+    fromAccountId: body.fromAccountId!,
+    toAccountId: body.toAccountId!,
+    linkType: body.linkType!,
+  }).returning();
   return c.json(created, 201);
 }));
 

@@ -35,39 +35,71 @@ export class AuthService {
     }
   }
 
-  async login(username: string, password: string): Promise<LoginResponse> {
-    const response = await fetch(`${this.API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
+  private async parseJsonOrThrow<T>(response: Response, fallbackError: string): Promise<T> {
+    const text = await response.text();
+    if (!text?.trim()) {
+      throw new Error(response.ok ? 'استجابة فارغة من الخادم' : fallbackError);
+    }
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new Error(fallbackError);
+    }
+  }
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'فشل تسجيل الدخول');
+  async login(username: string, password: string): Promise<LoginResponse> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+    } catch (e) {
+      throw new Error('تعذر الاتصال بالخادم - تأكد من تشغيل الخادم الخلفي (المنفذ 3000)');
     }
 
-    const data: LoginResponse = await response.json();
-    this.token.set(data.token);
-    this.currentUser.set(data.user);
-    localStorage.setItem('hesabati_token', data.token);
-    localStorage.setItem('hesabati_user', JSON.stringify(data.user));
-    return data;
+    const data = await this.parseJsonOrThrow<LoginResponse | { error?: string }>(
+      response,
+      'حدث خطأ في تسجيل الدخول'
+    );
+
+    if (!response.ok) {
+      const err = data as { error?: string };
+      throw new Error(err?.error || 'فشل تسجيل الدخول');
+    }
+
+    const loginData = data as LoginResponse;
+    this.token.set(loginData.token);
+    this.currentUser.set(loginData.user);
+    localStorage.setItem('hesabati_token', loginData.token);
+    localStorage.setItem('hesabati_user', JSON.stringify(loginData.user));
+    return loginData;
   }
 
   async register(username: string, password: string, fullName: string, role?: string): Promise<{ user: User }> {
-    const response = await fetch(`${this.API_URL}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, fullName, role: role || 'viewer' }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'فشل إنشاء الحساب');
+    let response: Response;
+    try {
+      response = await fetch(`${this.API_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, fullName, role: role || 'viewer' }),
+      });
+    } catch (e) {
+      throw new Error('تعذر الاتصال بالخادم - تأكد من تشغيل الخادم الخلفي (المنفذ 3000)');
     }
 
-    return response.json();
+    const data = await this.parseJsonOrThrow<{ user: User } | { error?: string }>(
+      response,
+      'حدث خطأ في التسجيل'
+    );
+
+    if (!response.ok) {
+      const err = data as { error?: string };
+      throw new Error(err?.error || 'فشل إنشاء الحساب');
+    }
+
+    return data as { user: User };
   }
 
   logout() {

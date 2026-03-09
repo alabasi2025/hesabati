@@ -156,7 +156,7 @@ export class OperationTypesComponent extends BasePageComponent {
   accountTypeLabels: Record<string, string> = {
     billing: 'فوترة', fund: 'صندوق', bank: 'بنك', exchange: 'صراف',
     wallet: 'محفظة', custody: 'عهدة',
-    accounting: 'محاسبي', e_wallet: 'محفظة إلكترونية',
+    accounting: 'أخرى', e_wallet: 'محفظة إلكترونية',
     supplier: 'مورد', partner: 'شريك', employee: 'موظف',
     warehouse: 'مخزن', budget: 'ميزانية', settlement: 'تسوية',
     pending: 'معلق', other: 'أخرى',
@@ -220,13 +220,18 @@ export class OperationTypesComponent extends BasePageComponent {
   });
 
   filteredAccountsByType = computed(() => {
+    // المصدر: accounts و funds و billing (حسابات فوترة) لكل منها مساحة id مستقلة - لا نزيل تكراراً بال id فقط
+    const all = this.availableAccounts().filter((a: any) => a != null && a.id != null);
     const selType = this.selectedAccountType();
-    if (!selType) return this.availableAccounts();
-    return this.availableAccounts().filter(a => a.accountType === selType);
+    if (!selType) return all;
+    return all.filter((a: any) => a.accountType === selType);
   });
 
   linkedAccountIds = computed(() => {
-    return new Set(this.wiz().linkedAccounts.map((la: any) => la.accountId));
+    const ids = this.wiz().linkedAccounts
+      .map((la: any) => la.accountId != null ? Number(la.accountId) : null)
+      .filter((id: number | null): id is number => id != null && !Number.isNaN(id));
+    return new Set(ids);
   });
 
   filteredTypes = computed(() => {
@@ -431,12 +436,21 @@ export class OperationTypesComponent extends BasePageComponent {
 
   openEditWizard(ot: any) {
     this.editingId.set(ot.id);
-    const linked = (ot.linkedAccounts || []).map((la: any) => ({
-      accountId: la.accountId || la.id,
-      accountName: la.label || la.accountName || '',
-      accountType: la.accountType || '',
-      permission: la.permission || 'both',
-    }));
+    // لا نستخدم la.id لأنه معرّف صف الربط (operation_type_accounts.id) وليس معرّف الحساب
+    const linked = (ot.linkedAccounts || []).map((la: any) => {
+      const accountId = la.accountId ?? la.account_id;
+      if (accountId == null) return null;
+      const id = Number(accountId);
+      if (Number.isNaN(id)) return null;
+      return {
+        accountId: id,
+        accountName: la.label ?? la.accountName ?? '',
+        accountType: la.accountType ?? '',
+        permission: la.permission || 'both',
+      };
+    });
+    type LinkedAccountItem = { accountId: number; accountName: string; accountType: string; permission: string };
+    const linkedFiltered = linked.filter((x: LinkedAccountItem | null): x is LinkedAccountItem => x != null);
     this.wiz.set({
       name: ot.name || '',
       description: ot.description || '',
@@ -449,7 +463,7 @@ export class OperationTypesComponent extends BasePageComponent {
       sourceAccountId: ot.sourceAccountId || null,
       sourceFundId: ot.sourceFundId || null,
       sourceWarehouseId: ot.sourceWarehouseId || null,
-      linkedAccounts: linked,
+      linkedAccounts: linkedFiltered,
       screens: ot.screens ? (typeof ot.screens === 'string' ? (() => { try { return JSON.parse(ot.screens); } catch { return []; } })() : ot.screens) : [],
       requiresAttachment: ot.requiresAttachment || false,
       hasMultiLines: ot.hasMultiLines || false,
@@ -528,31 +542,41 @@ export class OperationTypesComponent extends BasePageComponent {
   }
 
   toggleLinkedAccount(acc: any) {
+    if (!acc || acc.id == null) return;
+    const accountId = Number(acc.id);
+    if (Number.isNaN(accountId)) return;
     this.wiz.update(w => {
-      const existing = w.linkedAccounts.find((la: any) => la.accountId === acc.id);
+      const existing = w.linkedAccounts.find((la: any) => Number(la.accountId) === accountId);
       if (existing) {
-        return { ...w, linkedAccounts: w.linkedAccounts.filter((la: any) => la.accountId !== acc.id) };
-      } else {
-        return {
-          ...w,
-          linkedAccounts: [...w.linkedAccounts, {
-            accountId: acc.id,
-            accountName: acc.name,
-            accountType: acc.accountType,
-            permission: 'receive_only',
-          }]
-        };
+        return { ...w, linkedAccounts: w.linkedAccounts.filter((la: any) => Number(la.accountId) !== accountId) };
       }
+      return {
+        ...w,
+        linkedAccounts: [...w.linkedAccounts, {
+          accountId,
+          accountName: acc.name ?? '',
+          accountType: acc.accountType ?? '',
+          permission: 'receive_only',
+        }]
+      };
     });
   }
 
-  selectAllAccounts() {
+  async selectAllAccounts() {
     const opts = this.filteredAccountsByType();
     const currentIds = this.linkedAccountIds();
-    const newAccounts = opts.filter(a => !currentIds.has(a.id)).map(a => ({
-      accountId: a.id,
-      accountName: a.name,
-      accountType: a.accountType,
+    const toAdd = opts.filter(a => a && a.id != null && !currentIds.has(Number(a.id)));
+    if (toAdd.length === 0) return;
+    const confirmed = await this.toast.confirm({
+      title: 'تحديد الكل',
+      message: `سيتم إضافة كل الحسابات المعروضة (${toAdd.length} حساب) إلى القالب. متابعة؟`,
+      type: 'info',
+    });
+    if (!confirmed) return;
+    const newAccounts = toAdd.map(a => ({
+      accountId: Number(a.id),
+      accountName: a.name ?? '',
+      accountType: a.accountType ?? '',
       permission: 'receive_only',
     }));
     this.wiz.update(w => ({
@@ -714,12 +738,14 @@ export class OperationTypesComponent extends BasePageComponent {
         hasMultiLines: w.hasMultiLines,
         isActive: w.isActive,
         sortOrder: w.sortOrder,
-        linkedAccounts: w.linkedAccounts.map((la: any) => ({
-          accountId: la.accountId,
-          label: la.accountName,
-          permission: la.permission,
-          sortOrder: 0,
-        })),
+        linkedAccounts: w.linkedAccounts
+          .filter((la: any) => la.accountId != null && !Number.isNaN(Number(la.accountId)))
+          .map((la: any) => ({
+            accountId: Number(la.accountId),
+            label: la.accountName ?? '',
+            permission: la.permission ?? 'both',
+            sortOrder: 0,
+          })),
         workflowConfig: w.workflowEnabled ? {
           enabled: true,
           states: w.workflowStates,

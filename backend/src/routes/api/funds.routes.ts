@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { db } from "../../db/index.ts";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, ne, sql } from "drizzle-orm";
 import {
   funds,
   fundBalances,
@@ -16,7 +16,6 @@ import {
   parseId,
 } from "../../middleware/helpers.ts";
 import {
-  getNextItemInCategorySequence,
   getNextSequence,
   generateItemCode,
   TYPE_PREFIXES,
@@ -59,6 +58,10 @@ fundsRoutes.get(
   bizAuthMiddleware(),
   safeHandler("جلب الصناديق", async (c: AppContext) => {
     const bizId = getBizId(c);
+    const includeCustody = c.req.query("includeCustody") === "true";
+    const whereCondition = includeCustody
+      ? eq(funds.businessId, bizId)
+      : and(eq(funds.businessId, bizId), ne(funds.fundType, "custody"));
     const rows = await db
       .select({
         id: funds.id,
@@ -76,7 +79,7 @@ fundsRoutes.get(
       })
       .from(funds)
       .leftJoin(stations, eq(funds.stationId, stations.id))
-      .where(eq(funds.businessId, bizId))
+      .where(whereCondition)
       .orderBy(funds.fundType, funds.name);
 
     const fundIds = rows.map((f) => f.id);

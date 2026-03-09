@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
 @Component({
@@ -19,12 +18,14 @@ export class EmployeesComponent extends BasePageComponent {
 
   employees = signal<any[]>([]);
   stations = signal<any[]>([]);
+  departments = signal<any[]>([]);
+  jobTitles = signal<any[]>([]);
   loading = signal(true);
   showForm = signal(false);
   editingId = signal<number | null>(null);
   filterStation = signal<string>('all');
 
-  form: any = { fullName: '', jobTitle: '', stationId: null, department: '', salary: 0, salaryCurrency: 'YER', phone: '', status: 'active', notes: '' };
+  form: any = { fullName: '', departmentId: null, jobTitleId: null, jobTitle: '', stationId: null, department: '', salary: 0, salaryCurrency: 'YER', phone: '', status: 'active', notes: '' };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -33,8 +34,14 @@ export class EmployeesComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [emps, sts] = await Promise.all([this.api.getEmployees(this.bizId), this.api.getStations(this.bizId)]);
+      const [emps, sts, deps, titles] = await Promise.all([
+        this.api.getEmployees(this.bizId),
+        this.api.getStations(this.bizId),
+        this.api.getDepartments(this.bizId).catch(() => []),
+        this.api.getJobTitles(this.bizId).catch(() => []),
+      ]);
       this.employees.set(emps); this.stations.set(sts);
+      this.departments.set(deps); this.jobTitles.set(titles);
     } catch (e: unknown) {
       console.error(e);
       this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل بيانات الموظفين');
@@ -51,18 +58,35 @@ export class EmployeesComponent extends BasePageComponent {
   totalSalaries() { return this.filteredEmployees().reduce((s, e) => s + Number(e.salary || 0), 0); }
 
   openAdd() {
-    this.form = { fullName: '', jobTitle: '', stationId: null, department: '', salary: 0, salaryCurrency: 'YER', phone: '', status: 'active', notes: '' };
+    this.form = { fullName: '', departmentId: null, jobTitleId: null, jobTitle: '', stationId: null, department: '', salary: 0, salaryCurrency: 'YER', phone: '', status: 'active', notes: '' };
     this.editingId.set(null); this.showForm.set(true);
   }
 
   openEdit(emp: any) {
-    this.form = { fullName: emp.fullName, jobTitle: emp.jobTitle || '', stationId: emp.stationId, department: emp.department || '', salary: Number(emp.salary), salaryCurrency: emp.salaryCurrency || 'YER', phone: emp.phone || '', status: emp.status, notes: emp.notes || '' };
+    this.form = {
+      fullName: emp.fullName,
+      departmentId: emp.departmentId ?? null,
+      jobTitleId: emp.jobTitleId ?? null,
+      jobTitle: emp.jobTitle || '',
+      stationId: emp.stationId,
+      department: emp.department || '',
+      salary: Number(emp.salary),
+      salaryCurrency: emp.salaryCurrency || 'YER',
+      phone: emp.phone || '',
+      status: emp.status,
+      notes: emp.notes || '',
+    };
     this.editingId.set(emp.id); this.showForm.set(true);
   }
 
   async save() {
     try {
-      const data = { ...this.form, salary: String(this.form.salary) };
+      const data = {
+        ...this.form,
+        department: this.getDepartmentName(this.form.departmentId) || this.form.department || null,
+        jobTitle: this.getJobTitleName(this.form.jobTitleId) || this.form.jobTitle || null,
+        salary: String(this.form.salary),
+      };
       if (this.editingId()) await this.api.updateEmployee(this.editingId()!, data);
       else await this.api.createEmployee(this.bizId, data);
       this.showForm.set(false);
@@ -90,4 +114,14 @@ export class EmployeesComponent extends BasePageComponent {
 
   getStatusLabel(s: string) { return s === 'active' ? 'نشط' : s === 'suspended' ? 'موقوف' : 'غير نشط'; }
   getStatusClass(s: string) { return s === 'active' ? 'active' : 'inactive'; }
+
+  getDepartmentName(id: number | null | undefined): string {
+    if (!id) return '';
+    return this.departments().find((d: any) => d.id === id)?.name || '';
+  }
+
+  getJobTitleName(id: number | null | undefined): string {
+    if (!id) return '';
+    return this.jobTitles().find((j: any) => j.id === id)?.name || '';
+  }
 }

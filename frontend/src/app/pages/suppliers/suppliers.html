@@ -32,7 +32,7 @@
     <div class="empty-state"><span class="material-icons-round">inventory_2</span><p>لا يوجد موردين</p></div>
   } @else {
     <table class="data-table">
-      <thead><tr><th>#</th><th>المورد</th><th>التصنيف</th><th>جهة الاتصال</th><th>الهاتف</th><th>العنوان</th><th>إجراءات</th></tr></thead>
+      <thead><tr><th>#</th><th>المورد</th><th>الكود</th><th>التسلسل</th><th>التصنيف</th><th>جهة الاتصال</th><th>الهاتف</th><th>العنوان</th><th>إجراءات</th></tr></thead>
       <tbody>
         @for (s of filteredSuppliers(); track s.id; let i = $index) {
           <tr>
@@ -43,7 +43,9 @@
                 <div><span class="supplier-name">{{ s.name }}</span></div>
               </div>
             </td>
-            <td>@if (s.category) { <span class="category-badge">{{ s.category }}</span> } @else { <span class="text-muted">-</span> }</td>
+            <td>{{ s.code || '-' }}</td>
+            <td>{{ s.sequenceNumber || '-' }}</td>
+            <td>@if (getSupplierTypeName(s.supplierTypeId) || s.category) { <span class="category-badge">{{ getSupplierTypeName(s.supplierTypeId) || s.category }}</span> } @else { <span class="text-muted">-</span> }</td>
             <td>{{ s.contactPerson || '-' }}</td>
             <td class="phone-cell">{{ s.phone || '-' }}</td>
             <td>{{ s.address || '-' }}</td>
@@ -66,15 +68,21 @@
         </div>
         <div class="modal-body">
           <div class="form-row">
-            <div class="form-group"><label>اسم المورد</label><input [(ngModel)]="form.name" placeholder="اسم المورد" /></div>
-            <div class="form-group"><label>التصنيف</label><input [(ngModel)]="form.category" placeholder="مثال: وقود، زيوت" /></div>
+            <div class="form-group"><label>اسم المورد</label><input [(ngModel)]="form.name" title="اسم المورد" placeholder="اسم المورد" /></div>
+            <div class="form-group">
+              <label>نوع المورد</label>
+              <select [(ngModel)]="form.supplierTypeId" title="نوع المورد">
+                <option [ngValue]="null">بدون نوع</option>
+                @for (t of supplierTypes(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+              </select>
+            </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>جهة الاتصال</label><input [(ngModel)]="form.contactPerson" placeholder="اسم الشخص المسؤول" /></div>
-            <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="رقم الهاتف" /></div>
+            <div class="form-group"><label>جهة الاتصال</label><input [(ngModel)]="form.contactPerson" title="جهة الاتصال" placeholder="اسم الشخص المسؤول" /></div>
+            <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" title="الهاتف" placeholder="رقم الهاتف" /></div>
           </div>
-          <div class="form-group"><label>العنوان</label><input [(ngModel)]="form.address" placeholder="العنوان" /></div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
+          <div class="form-group"><label>العنوان</label><input [(ngModel)]="form.address" title="العنوان" placeholder="العنوان" /></div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" title="ملاحظات" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
         </div>
         <div class="modal-footer">
           <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة المورد' }}</button>

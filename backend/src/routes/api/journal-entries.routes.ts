@@ -9,6 +9,7 @@ import {
   journalEntryLines,
   accounts,
   operationTypes,
+  operationCategories,
   journalEntryCategories,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
@@ -88,7 +89,11 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
     const [opType] = await db.select().from(operationTypes).where(eq(operationTypes.id, entryData.operationTypeId));
     if (opType) {
       let catSeqNum = 1;
-      const catName = opType.category || 'عام';
+      let catName = 'عام';
+      if (opType.categoryId) {
+        const [opCat] = await db.select({ categoryKey: operationCategories.categoryKey }).from(operationCategories).where(eq(operationCategories.id, opType.categoryId)).limit(1);
+        if (opCat?.categoryKey) catName = opCat.categoryKey;
+      }
       const [jeCat] = await db.select().from(journalEntryCategories)
         .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, catName)));
       if (jeCat?.sequenceNumber) catSeqNum = jeCat.sequenceNumber;
@@ -133,9 +138,9 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
     await db.insert(journalEntryLines).values({
       journalEntryId: entry.id,
       accountId: line.accountId,
-      lineType: lineType,
+      lineType: (lineType as 'debit' | 'credit') ?? 'debit',
       amount: String(line.amount),
-      description: line.description || '',
+      description: (line.description as string) ?? '',
       sortOrder: i,
     });
   }

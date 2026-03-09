@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "nodes": [
+    {
+      "id": "register-operation-page",
+      "workflowId": "frontend/register-operation",
+      "title": "تسجيل عملية",
+      "description": "صفحة تسجيل عملية: اختيار نوع الجهة (خزينة/بنك/صرف/محفظة/مخزن)، ثم الخزينة، نوع السند (قبض/صرف)، قالب العملية، وتنفيذ الإدخالات. يدعم الخزائن والمخازن.",
+      "nodeType": "feature",
+      "fileName": "register-operation",
+      "position": { "x": 100, "y": 100 },
+      "dependencies": [],
+      "testLayers": ["ui", "api"]
+    }
+  ],
+  "edges": []
+}

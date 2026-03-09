@@ -49,10 +49,22 @@ authRoutes.post('/login', async (c) => {
       },
     });
   } catch (error: unknown) {
-    console.error('Login error:', error);
-    return c.json({ error: 'حدث خطأ في تسجيل الدخول' }, 500);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Login error:', msg, error);
+    return c.json({
+      error: process.env.NODE_ENV === 'development' ? `حدث خطأ في تسجيل الدخول: ${msg}` : 'حدث خطأ في تسجيل الدخول',
+    }, 500);
   }
 });
+
+/** التحقق من قوة كلمة المرور: 8 أحرف على الأقل، حرف واحد ورقم واحد على الأقل */
+function isPasswordStrong(pwd: string): { valid: boolean; error?: string } {
+  if (!pwd || typeof pwd !== 'string') return { valid: false, error: 'كلمة المرور مطلوبة' };
+  if (pwd.length < 8) return { valid: false, error: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' };
+  if (!/[a-zA-Z]/.test(pwd)) return { valid: false, error: 'كلمة المرور يجب أن تحتوي على حرف واحد على الأقل' };
+  if (!/\d/.test(pwd)) return { valid: false, error: 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل' };
+  return { valid: true };
+}
 
 authRoutes.post('/register', async (c) => {
   try {
@@ -65,6 +77,15 @@ authRoutes.post('/register', async (c) => {
 
     if (!username || !password || !fullName) {
       return c.json({ error: 'اسم المستخدم وكلمة المرور والاسم الكامل مطلوبان' }, 400);
+    }
+
+    if (!username || typeof username !== 'string' || username.trim().length === 0) {
+      return c.json({ error: 'اسم المستخدم مطلوب' }, 400);
+    }
+
+    const pwdCheck = isPasswordStrong(password);
+    if (!pwdCheck.valid) {
+      return c.json({ error: pwdCheck.error }, 400);
     }
 
     const existing = await db.select().from(users).where(eq(users.username, username)).limit(1);
