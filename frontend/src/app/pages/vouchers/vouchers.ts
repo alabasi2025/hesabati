@@ -84,6 +84,8 @@ export class VouchersComponent extends BasePageComponent {
 
   // Form state
   voucherType = signal<'receipt' | 'payment'>('payment');
+  isMultiMode = signal(false);
+  multiEntries = signal<any[]>([]);
   selectedOpType = signal<any>(null);
   form = signal<any>({
     operationTypeId: null,
@@ -351,6 +353,8 @@ export class VouchersComponent extends BasePageComponent {
   // ===================== Create / Edit =====================
   openCreate(type: 'receipt' | 'payment') {
     this.voucherType.set(type);
+    this.isMultiMode.set(false);
+    this.multiEntries.set([{ accountId: null, amount: '', notes: '', reference: '' }]);
     this.selectedOpType.set(null);
     this.isEditing.set(false);
     this.editingVoucher.set(null);
@@ -393,7 +397,35 @@ export class VouchersComponent extends BasePageComponent {
       currencyId: voucher.currencyId || 1,
       status: voucher.status || 'draft',
     });
+    this.isMultiMode.set(false);
+    this.multiEntries.set([{ accountId: null, amount: '', notes: '', reference: '' }]);
     this.showForm.set(true);
+  }
+
+  addMultiEntry() {
+    this.multiEntries.update((rows) => [...rows, { accountId: null, amount: '', notes: '', reference: '' }]);
+  }
+
+  removeMultiEntry(index: number) {
+    this.multiEntries.update((rows) => rows.filter((_, i) => i !== index));
+    if (this.multiEntries().length === 0) {
+      this.multiEntries.set([{ accountId: null, amount: '', notes: '', reference: '' }]);
+    }
+  }
+
+  updateMultiEntry(index: number, field: string, value: any) {
+    this.multiEntries.update((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
+
+  getMultiEntryAccounts() {
+    return this.voucherType() === 'receipt' ? this.filteredFromAccounts() : this.filteredToAccounts();
+  }
+
+  getMultiTotalAmount(): number {
+    return this.multiEntries().reduce((sum, row) => {
+      const n = Number.parseFloat(String(row.amount || 0));
+      return Number.isFinite(n) ? sum + n : sum;
+    }, 0);
   }
 
   // ===================== Template Selection - Auto-fill =====================
@@ -458,8 +490,8 @@ export class VouchersComponent extends BasePageComponent {
   async saveVoucher() {
     const f = this.form();
     if (!f.operationTypeId) { this.error.set('يجب اختيار نوع العملية (القالب) أولاً'); return; }
-    if (!f.amount || Number.parseFloat(f.amount) <= 0) { this.error.set('أدخل المبلغ'); return; }
     if (!f.description) { this.error.set('أدخل البيان'); return; }
+    if (!this.isMultiMode() && (!f.amount || Number.parseFloat(f.amount) <= 0)) { this.error.set('أدخل المبلغ'); return; }
 
     const vType = this.voucherType();
     const isTreasuryAcc = (id: number | null) => {
@@ -468,13 +500,13 @@ export class VouchersComponent extends BasePageComponent {
     };
 
     if (vType === 'receipt') {
-      if (!f.fromAccountId) { this.error.set('اختر الحساب المصروف منه'); return; }
       if (!f.toAccountId && !f.toFundId) { this.error.set('اختر الخزينة المستلِمة (حساب خزينة أو صندوق)'); return; }
       if (f.toAccountId && !isTreasuryAcc(f.toAccountId)) { this.error.set('الخزينة المستلِمة يجب أن تكون بنك/صراف/محفظة'); return; }
+      if (!this.isMultiMode() && !f.fromAccountId) { this.error.set('اختر الحساب المصروف منه'); return; }
     } else {
-      if (!f.toAccountId) { this.error.set('اختر الحساب المستلِم'); return; }
       if (!f.fromAccountId && !f.fromFundId) { this.error.set('اختر الخزينة المصروف منها (حساب خزينة أو صندوق)'); return; }
       if (f.fromAccountId && !isTreasuryAcc(f.fromAccountId)) { this.error.set('الخزينة المصروف منها يجب أن تكون بنك/صراف/محفظة'); return; }
+      if (!this.isMultiMode() && !f.toAccountId) { this.error.set('اختر الحساب المستلِم'); return; }
     }
 
     this.saving.set(true);
@@ -490,6 +522,40 @@ export class VouchersComponent extends BasePageComponent {
       if (this.isEditing() && this.editingVoucher()) {
         await this.api.updateVoucher(this.bizId, this.editingVoucher().id, payload);
         this.toast.success('تم تعديل السند بنجاح');
+      } else if (this.isMultiMode()) {
+        const entries = this.multiEntries()
+          .map((row) => ({
+            accountId: row.accountId ? Number(row.accountId) : null,
+            amount: Number.parseFloat(String(row.amount || 0)),
+            notes: row.notes || null,
+            reference: row.reference || null,
+          }))
+          .filter((row) => Number.isInteger(row.accountId) && (row.accountId as number) > 0 && Number.isFinite(row.amount) && row.amount > 0);
+
+        if (entries.length === 0) {
+          this.error.set('أدخل بنداً واحداً على الأقل في السند المتعدد');
+          return;
+        }
+
+        const treasuryAccountId = vType === 'receipt' ? f.toAccountId : f.fromAccountId;
+        if (!treasuryAccountId) {
+          this.error.set('اختر حساب الخزينة أولاً');
+          return;
+        }
+
+        await this.api.createVoucherMulti(this.bizId, {
+          voucherType: vType,
+          operationTypeId: f.operationTypeId,
+          fromAccountId: treasuryAccountId,
+          fromFundId: vType === 'payment' ? f.fromFundId || null : null,
+          toFundId: vType === 'receipt' ? f.toFundId || null : null,
+          description: f.description,
+          reference: f.reference || null,
+          voucherDate: f.voucherDate,
+          currencyId: f.currencyId || 1,
+          entries,
+        });
+        this.toast.success('تم إنشاء السند المتعدد بنجاح');
       } else if (f.status === 'draft') {
         await this.api.createVoucherDraft(this.bizId, payload);
         this.toast.success('تم حفظ السند كمسودة');

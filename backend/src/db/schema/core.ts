@@ -307,7 +307,8 @@ export const funds = pgTable('funds', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
-  fundType: fundTypeEnum('fund_type').notNull(),
+  // ديناميكي: يعتمد على fund_types.sub_type_key وليس enum ثابت.
+  fundType: varchar('fund_type', { length: 100 }).notNull(),
   subType: varchar('sub_type', { length: 100 }),
   subTypeId: integer('sub_type_id'),
   sequenceNumber: integer('sequence_number'),
@@ -1036,7 +1037,7 @@ export const warehouseTypes = pgTable('warehouse_types', {
   seqUnique: unique('warehouse_types_biz_seq_unique').on(table.businessId, table.sequenceNumber),
 }));
 
-// ===================== ACCOUNTING TYPES (تصنيفات "أخرى") =====================
+// ===================== ACCOUNTING TYPES (أنواع رئيسية مرنة) =====================
 export const accountingTypes = pgTable('accounting_types', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
@@ -1053,6 +1054,26 @@ export const accountingTypes = pgTable('accounting_types', {
 }, (table) => ({
   keyUnique: unique('accounting_types_biz_key_unique').on(table.businessId, table.subTypeKey),
   seqUnique: unique('accounting_types_biz_seq_unique').on(table.businessId, table.sequenceNumber),
+}));
+
+// ===================== ACCOUNTING SUB TYPES (تصنيفات فرعية للأنواع المرنة) =====================
+export const accountingSubTypes = pgTable('accounting_sub_types', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  mainTypeId: integer('main_type_id').notNull().references(() => accountingTypes.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
+  sequenceNumber: integer('sequence_number'),
+  description: text('description'),
+  icon: varchar('icon', { length: 100 }).default('label'),
+  color: varchar('color', { length: 50 }).default('#14b8a6'),
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  keyUnique: unique('accounting_sub_types_biz_key_unique').on(table.businessId, table.subTypeKey),
+  seqUnique: unique('accounting_sub_types_biz_main_seq_unique').on(table.businessId, table.mainTypeId, table.sequenceNumber),
 }));
 
 // ===================== JOURNAL ENTRY CATEGORIES (تصنيفات قيود اليومية - مستقلة) =====================

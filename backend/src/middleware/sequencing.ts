@@ -111,6 +111,39 @@ export const TYPE_PREFIXES: Record<string, string> = {
   receive_transfer: "WRC",
 };
 
+/**
+ * رقم النوع الرئيسي ضمن تسلسل الحسابات (ثابت ومعتمد للنظام المالي)
+ * هذا خاص بهيكل الحسابات فقط، ولا يغيّر تسلسل السندات/العمليات.
+ */
+export const MAIN_ACCOUNT_TYPE_SEQUENCE: Record<string, number> = {
+  fund: 1,
+  bank: 2,
+  e_wallet: 3,
+  exchange: 4,
+};
+
+export function getMainAccountTypeSequence(accountType: string): number {
+  return MAIN_ACCOUNT_TYPE_SEQUENCE[accountType] ?? 0;
+}
+
+/**
+ * يولد كودًا هرميًا للحسابات/الخزائن:
+ * business-mainType-category-item
+ * مثال: 1-2-3-5
+ */
+export function buildAccountHierarchyCode(
+  businessId: number,
+  accountType: string,
+  categorySequence: number,
+  itemSequence: number,
+): string {
+  const mainSeq = getMainAccountTypeSequence(accountType);
+  if (businessId <= 0 || mainSeq <= 0 || categorySequence <= 0 || itemSequence <= 0) {
+    return "";
+  }
+  return `${businessId}-${mainSeq}-${categorySequence}-${itemSequence}`;
+}
+
 // ===================== الدوال الأساسية =====================
 
 /**

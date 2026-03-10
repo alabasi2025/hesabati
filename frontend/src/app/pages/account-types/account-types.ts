@@ -6,17 +6,23 @@ import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
 interface MainAccountType {
+  mainSequence: number;
   key: string;
   label: string;
   icon: string;
   color: string;
   description: string;
   isSystem: boolean;
+  isActive?: boolean;
   subTypes: SubType[];
+  sourceTypeId?: number;
+  sourceTable?: 'accounting_main_types';
 }
 
 interface SubType {
   id: number;
+  mainTypeId?: number;
+  mainTypeName?: string;
   name: string;
   subTypeKey: string;
   description: string;
@@ -47,11 +53,14 @@ export class AccountTypesComponent extends BasePageComponent {
   exchangeTypes = signal<SubType[]>([]);
   eWalletTypes = signal<SubType[]>([]);
   warehouseTypes = signal<SubType[]>([]);
-  accountingTypes = signal<SubType[]>([]);
+  accountingMainTypes = signal<any[]>([]);
+  accountingSubTypes = signal<SubType[]>([]);
 
   // UI State
   expandedTypes = signal<Set<string>>(new Set(['fund', 'bank', 'exchange', 'e_wallet']));
   showSubTypeForm = signal(false);
+  formMode = signal<'sub' | 'main'>('sub');
+  editingMainTypeId = signal<number | null>(null);
   editingSubType = signal<SubType | null>(null);
   activeMainType = signal<string>('');
 
@@ -82,7 +91,7 @@ export class AccountTypesComponent extends BasePageComponent {
 
   // الأنواع الرئيسية للحسابات (حسب الخطة النهائية)
   mainAccountTypes = computed<MainAccountType[]>(() => {
-    const types: MainAccountType[] = [
+    const baseTypes: Omit<MainAccountType, 'mainSequence'>[] = [
       // === مصادر الأموال ===
       {
         key: 'fund',
@@ -204,18 +213,25 @@ export class AccountTypesComponent extends BasePageComponent {
         isSystem: true,
         subTypes: [],
       },
-      // === عام ===
-      {
-        key: 'accounting',
-        label: 'أخرى',
-        icon: 'book',
-        color: '#14b8a6',
-        description: 'حسابات إضافية مرنة يضيفها المستخدم حسب حاجته',
-        isSystem: false,
-        subTypes: this.accountingTypes(),
-      },
     ];
-    return types;
+
+    const customMainTypes: Omit<MainAccountType, 'mainSequence'>[] = this.accountingMainTypes().map((t) => ({
+      key: `accounting_main_${t.id}`,
+      label: t.name,
+      icon: t.icon || 'book',
+      color: t.color || '#14b8a6',
+      description: t.description || 'نوع رئيسي مضاف من المستخدم',
+      isSystem: false,
+      isActive: t.isActive !== false,
+      subTypes: this.accountingSubTypes().filter((s) => Number(s.mainTypeId) === Number(t.id)),
+      sourceTypeId: t.id,
+      sourceTable: 'accounting_main_types',
+    }));
+
+    return [...baseTypes, ...customMainTypes].map((t, i) => ({
+      ...t,
+      mainSequence: i + 1,
+    }));
   });
 
   // إحصائيات
@@ -234,18 +250,26 @@ export class AccountTypesComponent extends BasePageComponent {
   }
 
   supportsSubTypeManagement(mainTypeKey: string): boolean {
-    return ['fund', 'bank', 'exchange', 'e_wallet', 'warehouse', 'accounting'].includes(mainTypeKey);
+    if (mainTypeKey.startsWith('accounting_main_')) return true;
+    return ['fund', 'bank', 'exchange', 'e_wallet', 'warehouse'].includes(mainTypeKey);
+  }
+
+  private getCustomMainTypeId(mainTypeKey: string): number | null {
+    if (!mainTypeKey.startsWith('accounting_main_')) return null;
+    const id = Number(mainTypeKey.replace('accounting_main_', ''));
+    return Number.isInteger(id) && id > 0 ? id : null;
   }
 
   async loadData() {
     this.loading.set(true);
     try {
-      const [fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, warehouseTypesData, accountingTypesData] = await Promise.all([
+      const [fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, warehouseTypesData, accountingMainTypesData, accountingSubTypesData] = await Promise.all([
         this.api.getFundTypes(this.bizId).catch(() => []),
         this.api.getBankTypes(this.bizId).catch(() => []),
         this.api.getExchangeTypes(this.bizId).catch(() => []),
         this.api.getEWalletTypes(this.bizId).catch(() => []),
         this.api.getWarehouseTypes(this.bizId).catch(() => []),
+        this.api.getAccountingMainTypes(this.bizId).catch(() => []),
         this.api.getAccountingTypes(this.bizId).catch(() => []),
       ]);
       this.fundTypes.set(fundTypesData);
@@ -253,7 +277,8 @@ export class AccountTypesComponent extends BasePageComponent {
       this.exchangeTypes.set(exchangeTypesData);
       this.eWalletTypes.set(eWalletTypesData);
       this.warehouseTypes.set(warehouseTypesData);
-      this.accountingTypes.set(accountingTypesData);
+      this.accountingMainTypes.set(accountingMainTypesData);
+      this.accountingSubTypes.set(accountingSubTypesData);
     } catch (e: unknown) {
       this.error.set(e instanceof Error ? e.message : 'خطأ في تحميل البيانات');
     } finally {
@@ -290,6 +315,7 @@ export class AccountTypesComponent extends BasePageComponent {
       return;
     }
     this.activeMainType.set(mainTypeKey);
+    this.formMode.set('sub');
     this.editingSubType.set(null);
     const mainType = this.mainAccountTypes().find(t => t.key === mainTypeKey);
     const nextSeq = (mainType?.subTypes.length || 0) + 1;
@@ -304,8 +330,26 @@ export class AccountTypesComponent extends BasePageComponent {
     this.showSubTypeForm.set(true);
   }
 
+  openAddMainType() {
+    this.activeMainType.set('accounting');
+    this.formMode.set('main');
+    this.editingMainTypeId.set(null);
+    this.editingSubType.set(null);
+    const nextSeq = (this.accountingMainTypes().length || 0) + 1;
+    this.subTypeForm.set({
+      name: '',
+      subTypeKey: '',
+      description: '',
+      icon: 'category',
+      color: '#14b8a6',
+      sequenceNumber: nextSeq,
+    });
+    this.showSubTypeForm.set(true);
+  }
+
   openEditSubType(mainTypeKey: string, subType: SubType) {
     this.activeMainType.set(mainTypeKey);
+    this.formMode.set('sub');
     this.editingSubType.set(subType);
     this.subTypeForm.set({
       name: subType.name,
@@ -318,10 +362,52 @@ export class AccountTypesComponent extends BasePageComponent {
     this.showSubTypeForm.set(true);
   }
 
+  openEditMainType(mainType: MainAccountType) {
+    const mainTypeId = Number(mainType.sourceTypeId);
+    if (!Number.isInteger(mainTypeId) || mainTypeId <= 0) {
+      this.toast.error('النوع الرئيسي غير قابل للتعديل من هذه الشاشة');
+      return;
+    }
+    this.activeMainType.set(mainType.key);
+    this.formMode.set('main');
+    this.editingMainTypeId.set(mainTypeId);
+    this.editingSubType.set(null);
+    this.subTypeForm.set({
+      name: mainType.label || '',
+      subTypeKey: '',
+      description: mainType.description || '',
+      icon: mainType.icon || 'category',
+      color: mainType.color || '#14b8a6',
+      sequenceNumber: mainType.mainSequence || 0,
+    });
+    const current = this.accountingMainTypes().find((t: any) => Number(t.id) === mainTypeId);
+    if (current?.subTypeKey) {
+      this.setFormField('subTypeKey', String(current.subTypeKey));
+    }
+    this.showSubTypeForm.set(true);
+  }
+
+  async toggleMainTypeActive(mainType: MainAccountType) {
+    const mainTypeId = Number(mainType.sourceTypeId);
+    if (!Number.isInteger(mainTypeId) || mainTypeId <= 0) {
+      this.toast.error('النوع الرئيسي غير قابل للتحديث');
+      return;
+    }
+    try {
+      const nextActive = mainType.isActive === false;
+      await this.api.updateAccountingMainType(this.bizId, mainTypeId, { isActive: nextActive });
+      this.toast.success(nextActive ? 'تم تفعيل النوع الرئيسي' : 'تم تعطيل النوع الرئيسي');
+      await this.loadData();
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحديث حالة النوع');
+    }
+  }
+
   async saveSubType() {
     const form = this.subTypeForm();
     const mainType = this.activeMainType();
-    if (!this.supportsSubTypeManagement(mainType)) {
+    const mode = this.formMode();
+    if (mode === 'sub' && !this.supportsSubTypeManagement(mainType)) {
       this.toast.error('لا يمكن حفظ التصنيف لهذا النوع حالياً');
       return;
     }
@@ -346,6 +432,26 @@ export class AccountTypesComponent extends BasePageComponent {
       };
 
       const editing = this.editingSubType();
+
+      if (mode === 'main') {
+        const editingMainTypeId = this.editingMainTypeId();
+        if (editingMainTypeId) {
+          await this.api.updateAccountingMainType(this.bizId, editingMainTypeId, data);
+        } else {
+          await this.api.createAccountingMainType(this.bizId, data);
+        }
+        this.showSubTypeForm.set(false);
+        this.toast.success(editingMainTypeId ? 'تم تحديث النوع الرئيسي بنجاح' : 'تم إنشاء النوع الرئيسي بنجاح');
+        await this.loadData();
+        const reversed = [...this.mainAccountTypes()].reverse();
+        const lastCustom = reversed.find((t: MainAccountType) => t.sourceTable === 'accounting_main_types');
+        const lastCustomKey = lastCustom?.key;
+        if (lastCustomKey) {
+          this.expandedTypes.update((set) => new Set([...set, lastCustomKey]));
+        }
+        this.editingMainTypeId.set(null);
+        return;
+      }
       
       if (mainType === 'fund') {
         if (editing) await this.api.updateFundType(editing.id, data);
@@ -362,9 +468,17 @@ export class AccountTypesComponent extends BasePageComponent {
       } else if (mainType === 'warehouse' && this.api.createWarehouseType) {
         if (editing && this.api.updateWarehouseType) await this.api.updateWarehouseType(editing.id, data);
         else await this.api.createWarehouseType(this.bizId, data);
-      } else if (mainType === 'accounting' && this.api.createAccountingType) {
-        if (editing && this.api.updateAccountingType) await this.api.updateAccountingType(this.bizId, editing.id, data);
-        else await this.api.createAccountingType(this.bizId, data);
+      } else if (mainType.startsWith('accounting_main_') && this.api.createAccountingType) {
+        const customMainTypeId = this.getCustomMainTypeId(mainType);
+        if (!customMainTypeId) {
+          this.toast.error('النوع الرئيسي المرن غير صالح');
+          return;
+        }
+        if (editing && this.api.updateAccountingType) {
+          await this.api.updateAccountingType(this.bizId, editing.id, { ...data, mainTypeId: customMainTypeId });
+        } else {
+          await this.api.createAccountingType(this.bizId, { ...data, mainTypeId: customMainTypeId });
+        }
       } else {
         this.toast.error('لا توجد آلية حفظ معرفة لهذا النوع');
         return;
@@ -397,7 +511,7 @@ export class AccountTypesComponent extends BasePageComponent {
         await this.api.deleteEWalletType(subType.id);
       } else if (mainTypeKey === 'warehouse' && this.api.deleteWarehouseType) {
         await this.api.deleteWarehouseType(subType.id);
-      } else if (mainTypeKey === 'accounting' && this.api.deleteAccountingType) {
+      } else if (mainTypeKey.startsWith('accounting_main_') && this.api.deleteAccountingType) {
         await this.api.deleteAccountingType(this.bizId, subType.id);
       }
 
@@ -420,14 +534,15 @@ export class AccountTypesComponent extends BasePageComponent {
   generateSubTypeKey(name: string): string {
     return name
       .toLowerCase()
-      .replace(/\s+/g, '_')
-      .replace(/[^\w\u0621-\u064A]/g, '')
+      .replaceAll(/\s+/g, '_')
+      .replaceAll(/[^\w\u0621-\u064A]/g, '')
       .slice(0, 50);
   }
 
   onNameChange(name: string) {
     this.setFormField('name', name);
-    if (!this.editingSubType()) {
+    const isEditingMain = this.formMode() === 'main' && !!this.editingMainTypeId();
+    if (!this.editingSubType() && !isEditingMain) {
       this.setFormField('subTypeKey', this.generateSubTypeKey(name));
     }
   }

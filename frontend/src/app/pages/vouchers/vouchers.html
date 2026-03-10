@@ -281,11 +281,17 @@
               <div class="step-num">{{ voucherOpTypes().length > 0 ? '٢' : '١' }}</div>
               <span>الحسابات</span>
             </div>
+            <div class="form-row" style="margin-bottom:10px">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer">
+                <input type="checkbox" [checked]="isMultiMode()" (change)="isMultiMode.set($any($event.target).checked)">
+                سند متعدد البنود (نفس الخزينة مع عدة حسابات)
+              </label>
+            </div>
             <div class="form-row">
               @if (voucherType() === 'receipt') {
                 <div class="form-group">
                   <label class="form-label">صندوق الوارد (اختياري)</label>
-                  <select class="form-select" [value]="form().toFundId"
+                  <select class="form-select" title="صندوق الوارد" [value]="form().toFundId"
                           (change)="setFormField('toFundId', +$any($event.target).value || null)">
                     <option [value]="null">بدون صندوق...</option>
                     @for (fnd of funds(); track fnd.id) {
@@ -296,7 +302,7 @@
               } @else {
                 <div class="form-group">
                   <label class="form-label">صندوق الصادر (اختياري)</label>
-                  <select class="form-select" [value]="form().fromFundId"
+                  <select class="form-select" title="صندوق الصادر" [value]="form().fromFundId"
                           (change)="setFormField('fromFundId', +$any($event.target).value || null)">
                     <option [value]="null">بدون صندوق...</option>
                     @for (fnd of funds(); track fnd.id) {
@@ -312,7 +318,7 @@
                   الحساب المصروف منه
                   <span class="required">*</span>
                 </label>
-                <select class="form-select" [value]="form().fromAccountId"
+                <select class="form-select" title="الحساب المصروف منه" [value]="form().fromAccountId"
                         (change)="setFormField('fromAccountId', +$any($event.target).value || null)">
                   <option [value]="null">اختر الحساب...</option>
                   @for (acc of filteredFromAccounts(); track acc.id) {
@@ -320,20 +326,61 @@
                   }
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">
-                  الحساب المستلِم
-                  <span class="required">*</span>
-                </label>
-                <select class="form-select" [value]="form().toAccountId"
-                        (change)="setFormField('toAccountId', +$any($event.target).value || null)">
-                  <option [value]="null">اختر الحساب...</option>
-                  @for (acc of filteredToAccounts(); track acc.id) {
-                    <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
-                  }
-                </select>
-              </div>
+              @if (!isMultiMode()) {
+                <div class="form-group">
+                  <label class="form-label">
+                    الحساب المستلِم
+                    <span class="required">*</span>
+                  </label>
+                  <select class="form-select" title="الحساب المستلم" [value]="form().toAccountId"
+                          (change)="setFormField('toAccountId', +$any($event.target).value || null)">
+                    <option [value]="null">اختر الحساب...</option>
+                    @for (acc of filteredToAccounts(); track acc.id) {
+                      <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
+                    }
+                  </select>
+                </div>
+              }
             </div>
+            @if (isMultiMode()) {
+              <div class="form-group">
+                <label class="form-label">بنود السند <span class="required">*</span></label>
+                <div style="display:grid;gap:8px">
+                  @for (row of multiEntries(); track $index) {
+                    <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:8px;align-items:center">
+                      <select class="form-select" title="حساب البند" [value]="row.accountId"
+                              (change)="updateMultiEntry($index, 'accountId', +$any($event.target).value || null)">
+                        <option [value]="null">اختر الحساب...</option>
+                        @for (acc of getMultiEntryAccounts(); track acc.id) {
+                          <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
+                        }
+                      </select>
+                      <input class="form-input" type="number" placeholder="المبلغ" title="مبلغ البند"
+                             [value]="row.amount"
+                             (input)="updateMultiEntry($index, 'amount', $any($event.target).value)">
+                      <input class="form-input" type="text" placeholder="المرجع (اختياري)" title="مرجع البند"
+                             [value]="row.reference || ''"
+                             (input)="updateMultiEntry($index, 'reference', $any($event.target).value)">
+                      <input class="form-input" type="text" placeholder="ملاحظة (اختياري)" title="ملاحظة البند"
+                             [value]="row.notes || ''"
+                             (input)="updateMultiEntry($index, 'notes', $any($event.target).value)">
+                      <button class="icon-btn delete-btn" type="button" title="حذف البند" (click)="removeMultiEntry($index)">
+                        <span class="material-icons-round">delete</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                  <button class="btn-3d btn-ghost" type="button" (click)="addMultiEntry()">
+                    <span class="material-icons-round">add</span>
+                    إضافة بند
+                  </button>
+                  <div style="font-size:13px;color:#0f766e;font-weight:600">
+                    الإجمالي: {{ formatAmount(getMultiTotalAmount()) }}
+                  </div>
+                </div>
+              </div>
+            }
           </div>
 
           <!-- Step 3: Amount & Details -->
@@ -343,18 +390,28 @@
               <span>المبلغ والبيان</span>
             </div>
             <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">المبلغ <span class="required">*</span></label>
-                <div class="amount-input-wrap">
-                  <input class="form-input amount-input" type="number" placeholder="0"
-                         [value]="form().amount"
-                         (input)="setFormField('amount', $any($event.target).value)">
-                  <span class="currency-label">ر.ي</span>
+              @if (!isMultiMode()) {
+                <div class="form-group">
+                  <label class="form-label">المبلغ <span class="required">*</span></label>
+                  <div class="amount-input-wrap">
+                    <input class="form-input amount-input" type="number" placeholder="0"
+                           [value]="form().amount"
+                           (input)="setFormField('amount', $any($event.target).value)">
+                    <span class="currency-label">ر.ي</span>
+                  </div>
                 </div>
-              </div>
+              } @else {
+                <div class="form-group">
+                  <label class="form-label">إجمالي البنود</label>
+                  <div class="amount-input-wrap">
+                    <input class="form-input amount-input" type="text" title="إجمالي البنود" [value]="formatAmount(getMultiTotalAmount())" disabled>
+                    <span class="currency-label">ر.ي</span>
+                  </div>
+                </div>
+              }
               <div class="form-group">
                 <label class="form-label">التاريخ</label>
-                <input class="form-input" type="date" [value]="form().voucherDate"
+                <input class="form-input" type="date" title="تاريخ السند" [value]="form().voucherDate"
                        (change)="setFormField('voucherDate', $any($event.target).value)">
               </div>
             </div>

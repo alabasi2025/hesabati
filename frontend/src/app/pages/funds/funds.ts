@@ -94,9 +94,13 @@ export class FundsComponent extends BasePageComponent {
 
   // ============ Fund CRUD ============
   openAddAccount(subType?: string) {
+    if (!this.fundTypes().length) {
+      this.toast.error('لا يمكن إضافة صندوق بدون تصنيف. أضف تصنيف صندوق أولاً.');
+      return;
+    }
     this.fundForm = {
       name: '',
-      fundType: subType || (this.fundTypes().length ? this.fundTypes()[0].subTypeKey : 'collection'),
+      fundType: subType || (this.fundTypes().length ? this.fundTypes()[0].subTypeKey : ''),
       sequenceNumber: '',
       responsiblePerson: '',
       stationId: null,
@@ -124,6 +128,12 @@ export class FundsComponent extends BasePageComponent {
   async saveAccount() {
     try {
       const data = { ...this.fundForm };
+      const selectedType = String(data.fundType || '').trim();
+      const hasType = this.fundTypes().some((t) => String(t.subTypeKey) === selectedType);
+      if (!selectedType || !hasType) {
+        this.toast.error('اختيار تصنيف صندوق صحيح إلزامي قبل الحفظ');
+        return;
+      }
       if (data.stationId === '' || data.stationId === null) delete data.stationId;
       if (data.sequenceNumber === '' || data.sequenceNumber === null || data.sequenceNumber === undefined) {
         delete data.sequenceNumber;

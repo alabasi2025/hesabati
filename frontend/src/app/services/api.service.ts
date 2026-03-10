@@ -537,11 +537,16 @@ export class ApiService {
   updateWarehouseType(id: number, d: any)         { return this.request<any>(`/warehouse-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteWarehouseType(id: number)                 { return this.request<any>(`/warehouse-types/${id}`, { method: 'DELETE' }); }
 
-  // ===================== تصنيفات "أخرى" =====================
-  getAccountingTypes(bizId: number)               { return this.request<any[]>(`/businesses/${bizId}/accounting-types`); }
-  createAccountingType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/accounting-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateAccountingType(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteAccountingType(bizId: number, id: number) { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'DELETE' }); }
+  // ===================== الأنواع المرنة (رئيسي + فرعي) =====================
+  getAccountingMainTypes(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/accounting-main-types`); }
+  createAccountingMainType(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/accounting-main-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateAccountingMainType(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounting-main-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteAccountingMainType(bizId: number, id: number)      { return this.request<any>(`/businesses/${bizId}/accounting-main-types/${id}`, { method: 'DELETE' }); }
+
+  getAccountingTypes(bizId: number)                        { return this.request<any[]>(`/businesses/${bizId}/accounting-types`); }
+  createAccountingType(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/accounting-types`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateAccountingType(bizId: number, id: number, d: any)  { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteAccountingType(bizId: number, id: number)          { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'DELETE' }); }
 
   // ===================== تصنيفات قيود اليومية =====================
   getJournalEntryCategories(bizId: number)        { return this.request<any[]>(`/businesses/${bizId}/journal-entry-categories`); }

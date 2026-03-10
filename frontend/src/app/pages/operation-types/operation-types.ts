@@ -53,6 +53,7 @@ export class OperationTypesComponent extends BasePageComponent {
 
   // ===================== Wizard State =====================
   wizardStep = signal(1);
+  wizardSystemMessage = signal('');
 
   wiz = signal<any>({
     name: '',
@@ -87,18 +88,30 @@ export class OperationTypesComponent extends BasePageComponent {
 
   // ===================== Computed: التصنيفات =====================
   dynamicCategories = computed(() => {
-    return this.categories().map(c => c.id);
+    return this.categories().map(c => {
+      const id = Number(c.id);
+      return {
+        id,
+        name: c.name || `تصنيف ${id}`,
+        icon: c.icon || 'label',
+        color: c.color || '#3b82f6',
+        count: this.operationTypes().filter(ot => Number(ot.categoryId) === id).length,
+      };
+    });
   });
 
   categoryDetails = computed(() => {
     return this.categories().map(cat => {
-      const templates = this.operationTypes().filter(ot => ot.categoryId === cat.id);
+      const catId = Number(cat.id);
+      const templates = this.operationTypes().filter(ot => Number(ot.categoryId) === catId);
       return {
-        id: cat.id,
+        id: catId,
         name: cat.name,
         count: templates.length,
         icon: cat.icon || 'label',
         color: cat.color || '#3b82f6',
+        sequenceNumber: cat.sequenceNumber || null,
+        code: cat.code || null,
       };
     });
   });
@@ -248,12 +261,12 @@ export class OperationTypesComponent extends BasePageComponent {
     const groups: { category: string; categoryId: number; items: any[] }[] = [];
     const catMap = new Map<number, any[]>();
     for (const ot of all) {
-      const catId = ot.categoryId || 0;
+      const catId = Number(ot.categoryId) || 0;
       if (!catMap.has(catId)) catMap.set(catId, []);
       catMap.get(catId)!.push(ot);
     }
     for (const [catId, items] of catMap) {
-      const cat = this.categories().find(c => c.id === catId);
+      const cat = this.categories().find(c => Number(c.id) === catId);
       groups.push({ category: cat?.name || 'عام', categoryId: catId, items });
     }
     return groups;
@@ -411,8 +424,9 @@ export class OperationTypesComponent extends BasePageComponent {
 
   // ===================== Wizard (تبويب القوالب) =====================
   openWizard() {
+    this.wizardSystemMessage.set('');
     if (this.dynamicCategories().length === 0) {
-      this.showError('أنشئ تصنيفاً أولاً من تبويب "التصنيفات" قبل إنشاء قالب');
+      this.showWizardError('لا يمكن إنشاء قالب الآن. أنشئ تصنيفاً أولاً من تبويب "التصنيفات" ثم أعد المحاولة.');
       return;
     }
     this.editingId.set(null);
@@ -435,6 +449,7 @@ export class OperationTypesComponent extends BasePageComponent {
   }
 
   openEditWizard(ot: any) {
+    this.wizardSystemMessage.set('');
     this.editingId.set(ot.id);
     // لا نستخدم la.id لأنه معرّف صف الربط (operation_type_accounts.id) وليس معرّف الحساب
     const linked = (ot.linkedAccounts || []).map((la: any) => {
@@ -451,13 +466,14 @@ export class OperationTypesComponent extends BasePageComponent {
     });
     type LinkedAccountItem = { accountId: number; accountName: string; accountType: string; permission: string };
     const linkedFiltered = linked.filter((x: LinkedAccountItem | null): x is LinkedAccountItem => x != null);
+    const categoryName = this.categories().find(c => Number(c.id) === Number(ot.categoryId))?.name || '';
     this.wiz.set({
       name: ot.name || '',
       description: ot.description || '',
       icon: ot.icon || 'receipt_long',
       color: ot.color || '#3b82f6',
       categoryId: ot.categoryId || null,
-      category: '',
+      category: categoryName,
       voucherType: ot.voucherType || '',
       paymentMethod: ot.paymentMethod || '',
       sourceAccountId: ot.sourceAccountId || null,
@@ -483,9 +499,9 @@ export class OperationTypesComponent extends BasePageComponent {
     this.wiz.update(w => ({ ...w, [field]: value }));
   }
 
-  selectCategory(catId: number) {
-    this.setWizField('categoryId', catId);
-    this.setWizField('category', '');
+  selectCategory(cat: { id: number; name: string }) {
+    this.setWizField('categoryId', cat.id);
+    this.setWizField('category', cat.name);
   }
 
   selectVoucherType(vt: string) {
@@ -717,10 +733,11 @@ export class OperationTypesComponent extends BasePageComponent {
 
   async saveWizard() {
     const w = this.wiz();
-    if (!w.name.trim()) { this.showError('اسم القالب مطلوب'); return; }
-    if (!w.categoryId) { this.showError('نوع القالب مطلوب'); return; }
+    if (!w.name.trim()) { this.showWizardError('اسم القالب مطلوب قبل الحفظ'); return; }
+    if (!w.categoryId) { this.showWizardError('لا يمكن إنشاء القالب بدون تصنيف. اختر تصنيفاً أولاً.'); return; }
 
     this.saving.set(true);
+    this.wizardSystemMessage.set('');
     try {
       const payload: any = {
         name: w.name,
@@ -764,7 +781,7 @@ export class OperationTypesComponent extends BasePageComponent {
       this.showSuccess(this.editingId() ? 'تم تعديل القالب بنجاح' : 'تم إنشاء القالب بنجاح');
       await this.loadAll();
     } catch (e: unknown) {
-      this.showError(e instanceof Error ? e.message : 'خطأ في الحفظ');
+      this.showWizardError(e instanceof Error ? e.message : 'تعذر حفظ القالب. تحقق من البيانات ثم أعد المحاولة.');
     }
     this.saving.set(false);
   }
@@ -845,12 +862,19 @@ export class OperationTypesComponent extends BasePageComponent {
   // ===================== Helpers =====================
   showError(msg: string) {
     this.error.set(msg);
+    this.toast.error(msg, 'رسالة النظام', 7000);
     setTimeout(() => this.error.set(''), 5000);
   }
 
   showSuccess(msg: string) {
     this.success.set(msg);
+    this.toast.success(msg, 'رسالة النظام', 4500);
     setTimeout(() => this.success.set(''), 4000);
+  }
+
+  showWizardError(msg: string) {
+    this.wizardSystemMessage.set(msg);
+    this.toast.error(msg, 'رسالة النظام', 8000);
   }
 
   getAccountName(id: number): string {
@@ -900,7 +924,7 @@ export class OperationTypesComponent extends BasePageComponent {
   }
 
   countByCategory(category: string): number {
-    return this.operationTypes().filter(ot => ot.category === category).length;
+    return this.operationTypes().filter(ot => String(ot.categoryId) === String(category)).length;
   }
 
   countAccountsByType(accountType: string): number {

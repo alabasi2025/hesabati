@@ -8,6 +8,9 @@ import {
   accounts,
   accountBalances,
   accountAllowedLinks,
+  bankTypes,
+  eWalletTypes,
+  exchangeTypes,
   funds,
   fundBalances,
   currencies,
@@ -15,23 +18,116 @@ import {
   employees,
   employeeBillingAccounts,
   billingSystemsConfig,
+  accountingSubTypes,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { accountSchema, validateBody } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired } from '../../middleware/helpers.ts';
-import { TYPE_PREFIXES, generateItemCode, getNextAccountSequence } from '../../middleware/sequencing.ts';
+import { TYPE_PREFIXES, buildAccountHierarchyCode, generateItemCode, getNextAccountSequence, getNextSequence } from '../../middleware/sequencing.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const accountsRoutes = new Hono();
 
+function buildAccountCode(
+  businessId: number,
+  accountType: string,
+  categorySequence: number,
+  sequenceNumber: number,
+): string {
+  const hierarchy = buildAccountHierarchyCode(
+    businessId,
+    accountType,
+    categorySequence,
+    sequenceNumber,
+  );
+  return hierarchy || generateItemCode(TYPE_PREFIXES[accountType] || 'ACC', sequenceNumber);
+}
+
+async function resolveSubTypeInfo(
+  bizId: number,
+  accountType: string,
+  rawSubTypeId: unknown,
+  rawSubType: unknown,
+): Promise<{ id: number; key: string; categorySequence: number } | null> {
+  const parsedId = Number(rawSubTypeId);
+  if (Number.isInteger(parsedId) && parsedId > 0) {
+    if (accountType === 'bank') {
+      const [row] = await db.select({ id: bankTypes.id, key: bankTypes.subTypeKey, seq: bankTypes.sequenceNumber }).from(bankTypes).where(and(eq(bankTypes.businessId, bizId), eq(bankTypes.id, parsedId))).limit(1);
+      if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+    }
+    if (accountType === 'exchange') {
+      const [row] = await db.select({ id: exchangeTypes.id, key: exchangeTypes.subTypeKey, seq: exchangeTypes.sequenceNumber }).from(exchangeTypes).where(and(eq(exchangeTypes.businessId, bizId), eq(exchangeTypes.id, parsedId))).limit(1);
+      if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+    }
+    if (accountType === 'e_wallet') {
+      const [row] = await db.select({ id: eWalletTypes.id, key: eWalletTypes.subTypeKey, seq: eWalletTypes.sequenceNumber }).from(eWalletTypes).where(and(eq(eWalletTypes.businessId, bizId), eq(eWalletTypes.id, parsedId))).limit(1);
+      if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+    }
+    if (accountType === 'accounting') {
+      const [row] = await db
+        .select({ id: accountingSubTypes.id, key: accountingSubTypes.subTypeKey, seq: accountingSubTypes.sequenceNumber })
+        .from(accountingSubTypes)
+        .where(and(eq(accountingSubTypes.businessId, bizId), eq(accountingSubTypes.id, parsedId)))
+        .limit(1);
+      if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+      return null;
+    }
+    return { id: parsedId, key: typeof rawSubType === 'string' ? rawSubType : '', categorySequence: 0 };
+  }
+
+  const subTypeKey = typeof rawSubType === 'string' ? rawSubType.trim() : '';
+  if (!subTypeKey) return null;
+  if (accountType === 'bank') {
+    const [row] = await db.select({ id: bankTypes.id, key: bankTypes.subTypeKey, seq: bankTypes.sequenceNumber }).from(bankTypes).where(and(eq(bankTypes.businessId, bizId), eq(bankTypes.subTypeKey, subTypeKey))).limit(1);
+    if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+  }
+  if (accountType === 'exchange') {
+    const [row] = await db.select({ id: exchangeTypes.id, key: exchangeTypes.subTypeKey, seq: exchangeTypes.sequenceNumber }).from(exchangeTypes).where(and(eq(exchangeTypes.businessId, bizId), eq(exchangeTypes.subTypeKey, subTypeKey))).limit(1);
+    if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+  }
+  if (accountType === 'e_wallet') {
+    const [row] = await db.select({ id: eWalletTypes.id, key: eWalletTypes.subTypeKey, seq: eWalletTypes.sequenceNumber }).from(eWalletTypes).where(and(eq(eWalletTypes.businessId, bizId), eq(eWalletTypes.subTypeKey, subTypeKey))).limit(1);
+    if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+  }
+  if (accountType === 'accounting') {
+    const [row] = await db
+      .select({ id: accountingSubTypes.id, key: accountingSubTypes.subTypeKey, seq: accountingSubTypes.sequenceNumber })
+      .from(accountingSubTypes)
+      .where(and(eq(accountingSubTypes.businessId, bizId), eq(accountingSubTypes.subTypeKey, subTypeKey)))
+      .limit(1);
+    if (row) return { id: row.id, key: String(row.key), categorySequence: Number(row.seq) || 0 };
+  }
+  return null;
+}
+
+async function hasAnySubTypesForAccountType(bizId: number, accountType: string): Promise<boolean> {
+  if (accountType === 'bank') {
+    const [row] = await db.select({ id: bankTypes.id }).from(bankTypes).where(eq(bankTypes.businessId, bizId)).limit(1);
+    return !!row?.id;
+  }
+  if (accountType === 'exchange') {
+    const [row] = await db.select({ id: exchangeTypes.id }).from(exchangeTypes).where(eq(exchangeTypes.businessId, bizId)).limit(1);
+    return !!row?.id;
+  }
+  if (accountType === 'e_wallet') {
+    const [row] = await db.select({ id: eWalletTypes.id }).from(eWalletTypes).where(eq(eWalletTypes.businessId, bizId)).limit(1);
+    return !!row?.id;
+  }
+  if (accountType === 'accounting') {
+    const [row] = await db.select({ id: accountingSubTypes.id }).from(accountingSubTypes).where(eq(accountingSubTypes.businessId, bizId)).limit(1);
+    return !!row?.id;
+  }
+  return true;
+}
+
 // ===================== الحسابات مع الصلاحيات =====================
 accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandler('جلب الحسابات', async (c) => {
   const bizId = getBizId(c);
   const includeAll = c.req.query('all') === 'true';
 
-  const accountRows = await db.select().from(accounts).where(eq(accounts.businessId, bizId)).orderBy(accounts.accountType, accounts.name);
+  const accountRows = await db.select().from(accounts).where(eq(accounts.businessId, bizId)).orderBy(accounts.accountType, accounts.subTypeId, accounts.sequenceNumber, accounts.name);
 
   const accountIds = accountRows.map(a => a.id);
 
@@ -218,14 +314,29 @@ accountsRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), checkPer
   const { ...accountData } = validation.data as Record<string, unknown>;
   const allowedLinks = (body as { allowedLinks?: { toAccountId: number; linkType: string }[] }).allowedLinks;
 
-  const subTypeId = Number(accountData.subTypeId);
-  if (!Number.isInteger(subTypeId) || subTypeId <= 0) {
-    return c.json({ error: 'التصنيف مطلوب ولا يمكن الحفظ بدون تصنيف' }, 400);
-  }
   const accountType = typeof accountData.accountType === 'string' ? accountData.accountType : '';
-  const sequenceNumber = await getNextAccountSequence(bizId, accountType, subTypeId);
+  const resolvedSubType = await resolveSubTypeInfo(bizId, accountType, accountData.subTypeId, accountData.subType);
+  if (!resolvedSubType || !Number.isInteger(resolvedSubType.id) || resolvedSubType.id <= 0) {
+    const hasAny = await hasAnySubTypesForAccountType(bizId, accountType);
+    return c.json({
+      error: hasAny
+        ? 'التصنيف المختار غير موجود. اختر تصنيفاً من القائمة.'
+        : 'لا توجد تصنيفات لهذا النوع. أنشئ تصنيفاً أولاً ثم أضف الحساب.',
+    }, 400);
+  }
+  const subTypeId = resolvedSubType.id;
+  accountData.subTypeId = subTypeId;
+  if (resolvedSubType.key) accountData.subType = resolvedSubType.key;
+
+  let sequenceNumber = 0;
+  if (accountType === 'bank') sequenceNumber = await getNextSequence(bizId, 'item_in_bank_type', subTypeId, 0);
+  else if (accountType === 'exchange') sequenceNumber = await getNextSequence(bizId, 'item_in_exchange_type', subTypeId, 0);
+  else if (accountType === 'e_wallet') sequenceNumber = await getNextSequence(bizId, 'item_in_ewallet_type', subTypeId, 0);
+  else sequenceNumber = await getNextAccountSequence(bizId, accountType, subTypeId);
   accountData.sequenceNumber = sequenceNumber;
-  accountData.code = generateItemCode(TYPE_PREFIXES[accountType] || 'ACC', sequenceNumber);
+  accountData.code = (accountType === 'bank' || accountType === 'exchange' || accountType === 'e_wallet')
+    ? buildAccountCode(bizId, accountType, Number(resolvedSubType.categorySequence) || 0, sequenceNumber)
+    : generateItemCode(TYPE_PREFIXES[accountType] || 'ACC', sequenceNumber);
 
   const [created] = await db.insert(accounts).values({ ...accountData, businessId: bizId } as typeof accounts.$inferInsert).returning();
 

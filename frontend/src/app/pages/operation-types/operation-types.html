@@ -109,6 +109,20 @@
             </div>
             <div class="ot-card-body">
               <h3 class="ot-name">{{ cat.name }}</h3>
+              <div class="ot-info-row">
+                @if (cat.code) {
+                  <div class="ot-info-chip">
+                    <span class="material-icons-round">tag</span>
+                    {{ cat.code }}
+                  </div>
+                }
+                @if (cat.sequenceNumber) {
+                  <div class="ot-info-chip">
+                    <span class="material-icons-round">format_list_numbered</span>
+                    #{{ cat.sequenceNumber }}
+                  </div>
+                }
+              </div>
               <p class="ot-desc">{{ cat.count }} قالب مرتبط</p>
             </div>
           </div>
@@ -379,6 +393,15 @@
 
         <!-- Wizard Body -->
         <div class="wizard-body">
+          @if (wizardSystemMessage()) {
+            <div class="wizard-system-alert" role="alert" aria-live="assertive">
+              <span class="material-icons-round">campaign</span>
+              <div class="wsa-text">
+                <strong>رسالة النظام</strong>
+                <p>{{ wizardSystemMessage() }}</p>
+              </div>
+            </div>
+          }
 
           <!-- ===== محتوى: اختيار التصنيف ===== -->
           @if (getContentType() === 'category') {
@@ -396,17 +419,17 @@
                 </div>
               } @else {
                 <div class="type-cards">
-                  @for (cat of dynamicCategories(); track cat) {
-                    <div class="type-card" [class.selected]="wiz().category === cat"
+                  @for (cat of dynamicCategories(); track cat.id) {
+                    <div class="type-card" [class.selected]="wiz().categoryId === cat.id"
                          (click)="selectCategory(cat)">
-                      <div class="tc-icon" [style.background]="getCategoryColor(cat)">
-                        <span class="material-icons-round">{{ getCategoryIcon(cat) }}</span>
+                      <div class="tc-icon" [style.background]="cat.color">
+                        <span class="material-icons-round">{{ cat.icon }}</span>
                       </div>
                       <div class="tc-body">
-                        <strong>{{ cat }}</strong>
-                        <p>{{ countByCategory(cat) }} قالب</p>
+                        <strong>{{ cat.name }}</strong>
+                        <p>{{ cat.count }} قالب</p>
                       </div>
-                      @if (wiz().category === cat) {
+                      @if (wiz().categoryId === cat.id) {
                         <span class="material-icons-round tc-check">check_circle</span>
                       }
                     </div>

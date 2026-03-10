@@ -5,6 +5,7 @@ import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
   accounts, accountBalances, funds, fundBalances,
   fundTypes, bankTypes, exchangeTypes, eWalletTypes,
+  operationCategories,
   journalEntries, journalEntryLines,
   sidebarSections, sidebarItems, userSidebarConfig,
   screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
@@ -14,7 +15,7 @@ import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
 import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
 import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
+import { getNextSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
 import { postMultiTransaction, postTransaction } from '../services/transaction.service.ts';
 import { wsService } from '../services/websocket.service.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
@@ -429,6 +430,27 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
 
   const body = await getBody(c);
   const newName = body.name || `${original.name} (نسخة)`;
+  const normalizedCategoryId = Number.isInteger(original.categoryId) && Number(original.categoryId) > 0
+    ? Number(original.categoryId)
+    : 0;
+  const { sequenceNumber: seqNum } = await getNextItemInCategorySequence(
+    bizId,
+    'operation',
+    normalizedCategoryId,
+  );
+
+  let categoryPrefix = String(original.code || 'OT').split('-')[0] || 'OT';
+  if (normalizedCategoryId > 0) {
+    const [cat] = await db
+      .select({ name: operationCategories.name })
+      .from(operationCategories)
+      .where(and(eq(operationCategories.id, normalizedCategoryId), eq(operationCategories.businessId, bizId)))
+      .limit(1);
+    if (cat?.name) {
+      categoryPrefix = String(cat.name).substring(0, 3).toUpperCase();
+    }
+  }
+  const autoCode = `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
 
   // إنشاء النسخة
   const [cloned] = await db.insert(operationTypes).values({
@@ -438,6 +460,8 @@ enhancements.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddlew
     icon: original.icon,
     color: original.color,
     categoryId: original.categoryId,
+    sequenceNumber: seqNum,
+    code: autoCode,
     voucherType: original.voucherType,
     paymentMethod: original.paymentMethod,
     sourceAccountId: original.sourceAccountId,

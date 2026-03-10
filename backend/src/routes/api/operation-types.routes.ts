@@ -15,23 +15,6 @@ import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const operationTypesRoutes = new Hono();
 
-/** الحصول على معرّف تصنيف العمليات (إنشاء السجل إن لم يكن موجوداً) لاستخدامه في محرك الترقيم */
-async function getOrCreateOperationCategoryId(bizId: number, categoryKey: string): Promise<number> {
-  const key = categoryKey.trim() || 'عام';
-  const [existing] = await db
-    .select({ id: operationCategories.id })
-    .from(operationCategories)
-    .where(and(eq(operationCategories.businessId, bizId), eq(operationCategories.categoryKey, key)))
-    .limit(1);
-  if (existing) return existing.id;
-  const [inserted] = await db
-    .insert(operationCategories)
-    .values({ businessId: bizId, categoryKey: key, name: key })
-    .returning({ id: operationCategories.id });
-  if (!inserted) throw new Error('فشل إنشاء تصنيف العمليات');
-  return inserted.id;
-}
-
 operationTypesRoutes.get('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler('جلب أنواع العمليات', async (c) => {
   const bizId = getBizId(c);
   const category = c.req.query('category');
@@ -102,21 +85,50 @@ operationTypesRoutes.post('/businesses/:bizId/operation-types', bizAuthMiddlewar
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(operationTypeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const data = validation.data as Record<string, unknown> & { screens?: unknown; linkedAccounts?: unknown[]; category?: string; code?: string };
+  const data = validation.data as Record<string, unknown> & {
+    screens?: unknown;
+    linkedAccounts?: unknown[];
+    category?: string;
+    categoryId?: number | string;
+    code?: string;
+  };
   if (typeof data.screens === 'string') data.screens = [data.screens];
   const { linkedAccounts: laList, screens: _screensOt, ...otData } = data;
-  const category = typeof otData.category === 'string' ? otData.category.trim() || 'عام' : 'عام';
+  const rawCategoryId = otData.categoryId;
+  const parsedCategoryId = typeof rawCategoryId === 'string' ? Number.parseInt(rawCategoryId, 10) : Number(rawCategoryId);
+  const [anyCategoryBeforeValidation] = await db
+    .select({ id: operationCategories.id })
+    .from(operationCategories)
+    .where(eq(operationCategories.businessId, bizId))
+    .limit(1);
+  if (!Number.isInteger(parsedCategoryId) || parsedCategoryId <= 0) {
+    if (!anyCategoryBeforeValidation) {
+      return c.json({ error: 'لا توجد تصنيفات. أنشئ تصنيفاً أولاً ثم أنشئ القالب' }, 400);
+    }
+    return c.json({ error: 'اختر تصنيفاً من قائمة التصنيفات قبل إنشاء القالب' }, 400);
+  }
+  const [catById] = await db
+    .select({ id: operationCategories.id, name: operationCategories.name })
+    .from(operationCategories)
+    .where(and(eq(operationCategories.id, parsedCategoryId), eq(operationCategories.businessId, bizId)))
+    .limit(1);
+  if (!catById) {
+    if (!anyCategoryBeforeValidation) return c.json({ error: 'لا توجد تصنيفات. أنشئ تصنيفاً أولاً ثم أنشئ القالب' }, 400);
+    return c.json({ error: 'التصنيف المحدد غير موجود' }, 400);
+  }
+  const categoryId = catById.id;
+  const categoryName = catById.name || '';
 
   // ترقيم عبر محرك الترقيم: معرّف التصنيف ثم العداد item_in_operation_category
-  const categoryId = await getOrCreateOperationCategoryId(bizId, category);
   const { sequenceNumber: seqNum } = await getNextItemInCategorySequence(bizId, 'operation', categoryId);
-  const categoryPrefix = category.substring(0, 3).toUpperCase();
+  const categoryPrefix = categoryName.substring(0, 3).toUpperCase();
   const autoCode = typeof otData.code === 'string' ? otData.code : `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
-  const name = String(otData.name ?? '');
+  const name = typeof otData.name === 'string' ? otData.name : '';
 
   const [created] = await db.insert(operationTypes).values({
     ...otData,
     name,
+    categoryId,
     businessId: bizId,
     sequenceNumber: seqNum,
     code: autoCode,
@@ -128,9 +140,11 @@ operationTypesRoutes.post('/businesses/:bizId/operation-types', bizAuthMiddlewar
         const accId = typeof la === 'number' ? la : (la as { accountId?: number; id?: number }).accountId ?? (la as { id?: number }).id;
         const obj = typeof la === 'object' && la !== null ? (la as Record<string, unknown>) : {};
         if (accId == null) return null;
+        const accountId = Number(accId);
+        if (!Number.isFinite(accountId)) return null;
         return {
           operationTypeId: created.id,
-          accountId: accId as number,
+          accountId,
           label: (obj.label as string | null) ?? null,
           permission: (obj.permission as string) ?? 'both',
           sortOrder: typeof obj.sortOrder === 'number' ? obj.sortOrder : i,

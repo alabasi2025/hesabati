@@ -135,6 +135,10 @@ export const operationTypeSchema = z.object({
   icon: z.string().max(50).optional(),
   color: z.string().max(20).optional(),
   category: z.string().max(50).optional(), // تصنيف ديناميكي ينشئه المستخدم
+  categoryId: z.union([
+    z.number().int().positive(),
+    z.string().regex(/^\d+$/, 'categoryId يجب أن يكون رقماً صحيحاً'),
+  ]).optional().nullable(),
   voucherType: z.string().max(30).optional().nullable(),
   paymentMethod: z.string().max(30).optional().nullable(),
   screens: z.union([z.string(), z.array(z.string())]).optional(),
@@ -263,7 +267,7 @@ export const widgetSchema = z.object({
 
 export const fundSchema = z.object({
   name: z.string().min(1, 'اسم الصندوق مطلوب').max(200),
-  fundType: z.enum(['collection', 'salary_advance', 'custody', 'safe', 'expense', 'deposit']),
+  fundType: z.string().min(1, 'تصنيف الصندوق مطلوب').max(100),
   stationId: z.number().int().positive().optional().nullable(),
   responsiblePerson: z.string().max(200).optional().nullable(),
   description: z.string().optional().nullable(),

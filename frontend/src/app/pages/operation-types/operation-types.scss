@@ -753,6 +753,39 @@
   }
 }
 
+.wizard-system-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+
+  .material-icons-round {
+    font-size: 20px;
+    margin-top: 2px;
+  }
+}
+
+.wsa-text {
+  strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+}
+
 /* ===== Wizard Steps Bar ===== */
 .wizard-steps-bar {
   display: flex;
