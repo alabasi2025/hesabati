@@ -132,11 +132,16 @@ export class ApiService {
 
   // ===================== الحسابات مع الصلاحيات =====================
   getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
-  getAccount(id: number)                         { return this.request<any>(`/accounts/${id}`); }
-  getAllAccounts(bizId: number)                   { return this.request<{ accounts: any[]; stations: any[] }>(`/businesses/${bizId}/accounts?all=true`); }
+  getAllAccounts(bizId: number)                  { return this.request<any>(`/businesses/${bizId}/accounts`); }
   createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateAccount(id: number, d: any)              { return this.request<any>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteAccount(id: number)                      { return this.request<any>(`/accounts/${id}`, { method: 'DELETE' }); }
+  updateAccount(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteAccount(bizId: number, id: number)       { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'DELETE' }); }
+
+  // ===================== أنواع الحسابات الفرعية =====================
+  getAccountSubNatures(bizId: number)                 { return this.request<any[]>(`/businesses/${bizId}/account-sub-natures`); }
+  createAccountSubNature(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/account-sub-natures`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateAccountSubNature(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/account-sub-natures/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteAccountSubNature(bizId: number, id: number)   { return this.request<any>(`/businesses/${bizId}/account-sub-natures/${id}`, { method: 'DELETE' }); }
 
   // ===================== ربط الحسابات المسموحة =====================
   getAccountLinks(accountId: number)             { return this.request<any[]>(`/accounts/${accountId}/allowed-links`); }

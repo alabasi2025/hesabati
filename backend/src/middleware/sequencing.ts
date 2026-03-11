@@ -112,37 +112,30 @@ export const TYPE_PREFIXES: Record<string, string> = {
 };
 
 /**
- * رقم النوع الرئيسي ضمن تسلسل الحسابات (ثابت ومعتمد للنظام المالي)
- * هذا خاص بهيكل الحسابات فقط، ولا يغيّر تسلسل السندات/العمليات.
+ * النظام الجديد للترقيم: شجري بسيط parent.child (مثال: 1.1.2)
  */
-export const MAIN_ACCOUNT_TYPE_SEQUENCE: Record<string, number> = {
-  fund: 1,
-  bank: 2,
-  e_wallet: 3,
-  exchange: 4,
-};
+export function generateTreeAccountCode(
+  parentCode: string | null,
+  sequenceNumber: number,
+): string {
+  if (!parentCode) return String(sequenceNumber);
+  return `${parentCode}.${sequenceNumber}`;
+}
 
-export function getMainAccountTypeSequence(accountType: string): number {
-  return MAIN_ACCOUNT_TYPE_SEQUENCE[accountType] ?? 0;
+export async function getNextChildAccountSequence(
+  businessId: number,
+  parentId: number | null,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "account_child", parentId || 0, 0, tx);
 }
 
 /**
- * يولد كودًا هرميًا للحسابات/الخزائن:
- * business-mainType-category-item
- * مثال: 1-2-3-5
+ * @deprecated - Legacy hierarchical code builder (kept for compatibility)
  */
-export function buildAccountHierarchyCode(
-  businessId: number,
-  accountType: string,
-  categorySequence: number,
-  itemSequence: number,
-): string {
-  const mainSeq = getMainAccountTypeSequence(accountType);
-  if (businessId <= 0 || mainSeq <= 0 || categorySequence <= 0 || itemSequence <= 0) {
-    return "";
-  }
-  return `${businessId}-${mainSeq}-${categorySequence}-${itemSequence}`;
-}
+export const MAIN_ACCOUNT_TYPE_SEQUENCE: Record<string, number> = {};
+export function getMainAccountTypeSequence(_accountType: string): number { return 0; }
+export function buildAccountHierarchyCode(_a: number, _b: string, _c: number, _d: number): string { return ""; }
 
 // ===================== الدوال الأساسية =====================
 

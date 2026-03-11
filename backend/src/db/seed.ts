@@ -34,6 +34,38 @@ async function seed() {
   const [b3] = await db.insert(schema.businesses).values({ name: 'أعمال شخصية', code: 'personal', description: 'حسابات المالك الشخصية وأعماله الخاصة', icon: 'account_circle', color: '#6366f1', sortOrder: 3 }).returning();
   console.log('✅ الأعمال:', b1.id, b2.id, b3.id);
 
+  // ===================== أنواع الحسابات الفرعية الوظيفية =====================
+  const systemNatures = [
+    { natureKey: 'fund', name: 'صندوق', icon: 'savings', requiresStation: true },
+    { natureKey: 'bank', name: 'بنك', icon: 'account_balance', requiresProvider: true, requiresAccountNumber: true },
+    { natureKey: 'e_wallet', name: 'محفظة', icon: 'account_balance_wallet', requiresProvider: true },
+    { natureKey: 'exchange', name: 'صراف', icon: 'currency_exchange', requiresProvider: true },
+    { natureKey: 'warehouse', name: 'مخزن', icon: 'warehouse', requiresStation: true },
+    { natureKey: 'custody', name: 'عهدة', icon: 'lock' },
+    { natureKey: 'supplier', name: 'مورد', icon: 'local_shipping', requiresSupplierType: true },
+    { natureKey: 'employee', name: 'موظف', icon: 'person', requiresEmployee: true },
+    { natureKey: 'partner', name: 'شريك', icon: 'handshake' },
+    { natureKey: 'billing', name: 'نظام فوترة', icon: 'receipt', requiresStation: true, requiresEmployee: true },
+    { natureKey: 'budget', name: 'ميزانية', icon: 'account_balance_wallet' },
+    { natureKey: 'settlement', name: 'تصفية', icon: 'balance' },
+    { natureKey: 'pending', name: 'معلق', icon: 'pending_actions' },
+  ] as const;
+
+  for (const biz of [b1, b2, b3]) {
+    await db.insert(schema.accountSubNatures).values(
+      systemNatures.map((n, idx) => ({
+        businessId: biz.id, name: n.name, natureKey: n.natureKey, isSystem: true, icon: n.icon, color: '#64748b', sequenceNumber: idx + 1,
+        requiresStation: 'requiresStation' in n && n.requiresStation === true,
+        requiresEmployee: 'requiresEmployee' in n && n.requiresEmployee === true,
+        requiresProvider: 'requiresProvider' in n && n.requiresProvider === true,
+        requiresAccountNumber: 'requiresAccountNumber' in n && n.requiresAccountNumber === true,
+        requiresSupplierType: 'requiresSupplierType' in n && n.requiresSupplierType === true,
+        supportsCashOperations: true, canReceivePayment: true, canMakePayment: true, isActive: true,
+      })),
+    );
+  }
+  console.log('✅ أنواع الحسابات الفرعية الوظيفية');
+
   // ===================== شركاء العمل =====================
   await db.insert(schema.businessPartners).values([
     { businessId: b1.id, fullName: 'المالك (أنت)', sharePercentage: '50', role: 'مالك' },

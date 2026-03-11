@@ -1,0 +1,54 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">label</span> أنواع الحسابات الفرعية</h2>
+    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة نوع</button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!items().length) {
+    <div class="empty-state"><span class="material-icons-round">label</span><p>لا توجد أنواع حسابات فرعية</p></div>
+  } @else {
+    <div class="grid">
+      @for (item of items(); track item.id) {
+        <div class="card">
+          <div class="head">
+            <div class="title">
+              <span class="material-icons-round">{{ item.icon || 'label' }}</span>
+              <div><h3>{{ item.name }}</h3><p>{{ item.natureKey }}</p></div>
+            </div>
+            <div class="actions">
+              <button class="action-btn edit" (click)="openEdit(item)"><span class="material-icons-round">edit</span></button>
+              @if (!item.isSystem) {
+                <button class="action-btn delete" (click)="remove(item)"><span class="material-icons-round">delete</span></button>
+              }
+            </div>
+          </div>
+          <div class="flags">
+            <span class="status-badge" [class.active]="item.isActive">{{ item.isActive ? 'نشط' : 'متوقف' }}</span>
+            <span class="status-badge partner">{{ item.isSystem ? 'نظامي' : 'خاص' }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="showForm.set(false)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row"><div class="modal-icon blue"><span class="material-icons-round">label</span></div><div><h2>{{ editingId() ? 'تعديل نوع فرعي' : 'إضافة نوع فرعي' }}</h2></div></div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group"><label>الاسم</label><input [(ngModel)]="form.name" /></div>
+          <div class="form-group"><label>المفتاح</label><input [(ngModel)]="form.natureKey" dir="ltr" /></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-save" (click)="save()">حفظ</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,878 +1,100 @@
-<div class="page-container">
-
-  <!-- ===== Page Header ===== -->
+<div class="page-content">
   <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d blue">
-        <span class="material-icons-round">account_balance_wallet</span>
-      </div>
-      <div>
-        <h1 class="page-title">قائمة الحسابات</h1>
-        <p class="page-subtitle">السجل المركزي لجميع الحسابات</p>
-      </div>
-    </div>
-    <div class="header-right">
-      <button class="help-btn" (click)="showHowItWorks.set(true)" title="مبدأ العمل">
-        <span class="material-icons-round">lightbulb</span>
-      </button>
-      <button class="btn-3d btn-primary" (click)="openCreate()">
-        <span class="material-icons-round">add</span>
-        حساب جديد
-      </button>
-    </div>
+    <h2><span class="material-icons-round">account_balance_wallet</span> دليل الحسابات</h2>
+    <button class="add-btn" (click)="openCreate()"><span class="material-icons-round">add</span> إضافة حساب</button>
   </div>
 
-  <!-- ===== Error ===== -->
-  @if (error()) {
-    <div class="alert-error" (click)="error.set('')">
-      <span class="material-icons-round">error_outline</span>
-      {{ error() }}
-      <span class="material-icons-round close-x">close</span>
-    </div>
-  }
-
-  <!-- ===== 3D Network View Toggle ===== -->
-  @if (!loading() && accounts().length > 2) {
-    <div class="network-toggle-bar">
-      <button class="btn-3d" [class.btn-primary]="showNetworkView()" [class.btn-ghost]="!showNetworkView()" (click)="toggleNetworkView()">
-        <span class="material-icons-round">{{ showNetworkView() ? 'grid_view' : 'hub' }}</span>
-        {{ showNetworkView() ? 'عرض البطاقات' : 'عرض شبكة العلاقات' }}
-      </button>
-    </div>
-  }
-
-  <!-- ===== 3D Network View ===== -->
-  @if (showNetworkView() && networkNodes().length > 0) {
-    <div class="network-container">
-      <app-three-network
-        [nodes]="networkNodes()"
-        [links]="networkLinks()"
-        title="شبكة الحسابات">
-      </app-three-network>
-    </div>
-  }
-
-  <!-- ===== Stats Bar ===== -->
-  @if (!loading() && accounts().length > 0) {
-    <div class="stats-bar">
-      <div class="stat-card clickable" [class.active-stat]="activeType() === 'all'" [style.--card-color]="'#3b82f6'" (click)="setActiveType('all')">
-        <div class="stat-icon blue"><span class="material-icons-round">account_balance_wallet</span></div>
-        <div>
-          <div class="stat-num">{{ stats().total }}</div>
-          <div class="stat-label">الكل</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green"><span class="material-icons-round">check_circle</span></div>
-        <div>
-          <div class="stat-num">{{ stats().active }}</div>
-          <div class="stat-label">نشط</div>
-        </div>
-      </div>
-      @for (t of stats().byType; track t.value) {
-        @if (t.count > 0) {
-          <div class="stat-card clickable"
-               [class.active-stat]="activeType() === t.value"
-               [style.--card-color]="t.color"
-               (click)="setActiveType(activeType() === t.value ? 'all' : t.value)">
-            <div class="stat-icon" [style.background]="'linear-gradient(135deg, ' + t.color + ', ' + t.color + 'cc)'">
-              <span class="material-icons-round" style="color:white">{{ t.icon }}</span>
-            </div>
-            <div>
-              <div class="stat-num">{{ t.count }}</div>
-              <div class="stat-label">{{ t.label }}</div>
-            </div>
-          </div>
+  <div class="filter-row">
+    <input type="text" placeholder="ابحث..." class="search-box" [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
+    <div class="nature-chips">
+      <button class="chip" [class.active]="activeNatureFilter() === null" (click)="setNatureFilter(null)"><span class="material-icons-round">apps</span>الكل</button>
+      @for (n of naturesStats(); track n.id) {
+        @if (n.count > 0) {
+          <button class="chip" [class.active]="activeNatureFilter() === n.id" (click)="setNatureFilter(n.id)"><span class="material-icons-round">{{ n.icon }}</span>{{ n.name }} ({{ n.count }})</button>
         }
-      }
-    </div>
-  }
-
-  <!-- ===== Search + Main Filter ===== -->
-  <div class="filter-bar">
-    <div class="search-box">
-      <span class="material-icons-round search-icon">search</span>
-      <input type="text" placeholder="ابحث عن حساب..." class="search-input"
-             [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
-    </div>
-    <div class="type-tabs">
-      <button class="type-tab" [class.active]="activeType() === 'all'"
-              [style.--tab-color]="'#64748b'"
-              (click)="setActiveType('all')">
-        <span class="material-icons-round">apps</span>
-        الكل
-      </button>
-      @for (t of dynamicFilters(); track t.value) {
-        <button class="type-tab" [class.active]="activeType() === t.value"
-                [style.--tab-color]="t.color"
-                (click)="setActiveType(t.value)">
-          <span class="material-icons-round">{{ t.icon }}</span>
-          {{ withTypeSequence(t.value, t.label) }}
-        </button>
       }
     </div>
   </div>
 
-  <!-- ===== Sub-Filters Panel (ديناميكي حسب النوع المختار) ===== -->
-  @if (activeType() !== 'all' && (subFilterOptions().length > 0 || (typeHasStationFilter() && availableStations().length > 0))) {
-    <div class="sub-filters-panel">
-      <div class="sub-filters-header">
-        <span class="material-icons-round">tune</span>
-        <span class="sub-filters-title">فلاتر {{ getTypeInfo(activeType()).label }}</span>
-        @if (hasActiveSubFilters()) {
-          <button class="clear-sub-btn" (click)="clearSubFilters()">
-            <span class="material-icons-round">clear_all</span>
-            مسح الفلاتر
-          </button>
-        }
-      </div>
-      <div class="sub-filters-body">
-        <!-- فلتر المحطة (للصناديق والفوترة) -->
-        @if (typeHasStationFilter() && availableStations().length > 0) {
-          <div class="sub-filter-group">
-            <div class="sub-filter-label">
-              <span class="material-icons-round">location_on</span>
-              المحطة
-            </div>
-            <div class="sub-filter-chips">
-              @for (station of availableStations(); track station.id) {
-                <button class="sub-chip"
-                        [class.active]="activeStationFilter() === station.id"
-                        [style.--chip-color]="getTypeInfo(activeType()).color"
-                        (click)="setStationFilter(station.id)">
-                  <span class="material-icons-round sub-chip-icon">local_gas_station</span>
-                  {{ station.name }}
-                </button>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- فلاتر فرعية ديناميكية -->
-        @for (filter of subFilterOptions(); track filter.key) {
-          <div class="sub-filter-group">
-            <div class="sub-filter-label">
-              <span class="material-icons-round">{{ filter.icon }}</span>
-              {{ filter.label }}
-            </div>
-            <div class="sub-filter-chips">
-              @for (opt of filter.values; track opt.value) {
-                <button class="sub-chip"
-                        [class.active]="isSubFilterActive(filter.key, opt.value)"
-                        [style.--chip-color]="opt.color || getTypeInfo(activeType()).color"
-                        (click)="toggleSubFilter(filter.key, opt.value)">
-                  @if (opt.icon) {
-                    <span class="material-icons-round sub-chip-icon">{{ opt.icon }}</span>
-                  }
-                  {{ opt.displayName || opt.value }}
-                  <span class="chip-count">{{ opt.count }}</span>
-                </button>
-              }
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-  }
-
-  <!-- ===== Loading ===== -->
   @if (loading()) {
-    <div class="accounts-grid">
-      @for (i of [1,2,3,4,5,6]; track i) {
-        <div class="skeleton-card"></div>
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (filteredAccounts().length === 0) {
+    <div class="empty-state"><span class="material-icons-round">account_balance_wallet</span><p>لا توجد حسابات</p></div>
+  } @else {
+    <div class="grid">
+      @for (acc of filteredAccounts(); track acc.id) {
+        <div class="card">
+          <div class="head">
+            <div class="title">
+              <span class="material-icons-round">{{ acc.isLeafAccount ? 'account_balance_wallet' : 'folder' }}</span>
+              <div><h3>{{ acc.name }}</h3><p>{{ acc.code || '---' }}</p></div>
+            </div>
+            <div class="actions">
+              <button class="action-btn edit" (click)="openEdit(acc)"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="deleteAccount(acc)"><span class="material-icons-round">delete</span></button>
+            </div>
+          </div>
+          <div class="flags">
+            <span class="status-badge" [class.active]="acc.isLeafAccount">{{ acc.isLeafAccount ? 'حساب فرعي' : 'حساب رئيسي' }}</span>
+            @if (acc.accountSubNatureId) {
+              <span class="status-badge partner">{{ (accountSubNatures().find(n => n.id === acc.accountSubNatureId))?.name || 'نوع' }}</span>
+            }
+          </div>
+        </div>
       }
     </div>
   }
 
-  <!-- ===== Grouped Accounts ===== -->
-  @if (!loading()) {
-    @if (filteredAccounts().length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d">
-          <span class="material-icons-round">account_balance_wallet</span>
-        </div>
-        <h3>لا توجد حسابات</h3>
-        @if (activeType() !== 'all') {
-          <p>لا توجد حسابات من نوع "{{ getTypeInfo(activeType()).label }}"</p>
-          <button class="btn-3d btn-ghost" (click)="setActiveType('all')">
-            <span class="material-icons-round">clear</span>
-            إلغاء الفلتر
-          </button>
-        } @else {
-          <p>أضف حسابات العمل (صناديق، بنوك، محافظ...) لتبدأ في تسجيل العمليات</p>
-          <button class="btn-3d btn-primary" (click)="openCreate()">
-            <span class="material-icons-round">add</span>
-            أضف أول حساب
-          </button>
-        }
-      </div>
-    } @else {
-      <!-- View mode: Grouped by type vs sub-type -->
-      <div class="view-mode-bar">
-        <div class="view-mode-toggle">
-          <button class="view-mode-btn" [class.active]="viewMode() === 'grouped'" (click)="viewMode.set('grouped')">
-            <span class="material-icons-round">folder_open</span>
-            حسب النوع
-          </button>
-          <button class="view-mode-btn" [class.active]="viewMode() === 'subtype'" (click)="viewMode.set('subtype')">
-            <span class="material-icons-round">category</span>
-            حسب التصنيف الفرعي
-          </button>
-        </div>
-      </div>
-
-      @if (viewMode() === 'grouped') {
-      <!-- Group Controls -->
-      @if (displayGroups().length > 1) {
-        <div class="group-controls">
-          <span class="group-summary">
-            <span class="material-icons-round">folder_open</span>
-            {{ displayGroups().length }} مجموعات · {{ filteredAccounts().length }} حساب
-          </span>
-          <div class="group-actions">
-            <button class="group-action-btn" (click)="expandAll()" title="فتح الكل">
-              <span class="material-icons-round">unfold_more</span>
-            </button>
-            <button class="group-action-btn" (click)="collapseAll()" title="طي الكل">
-              <span class="material-icons-round">unfold_less</span>
-            </button>
-          </div>
-        </div>
-      }
-
-      <!-- Grouped Display -->
-      @for (group of displayGroups(); track group.key) {
-        <div class="account-group" [style.--group-color]="group.color">
-          <div class="group-header" (click)="toggleGroup(group.key)">
-            <div class="group-header-right">
-              <div class="group-icon" [style.background]="'linear-gradient(135deg, ' + group.color + ', ' + group.color + 'cc)'">
-                <span class="material-icons-round">{{ group.icon }}</span>
-              </div>
-              <div class="group-info">
-                <h3 class="group-title">{{ group.label }}</h3>
-                <span class="group-count">{{ group.count }} حساب</span>
-              </div>
-            </div>
-            <button class="group-toggle-btn">
-              <span class="material-icons-round">
-                {{ group.collapsed ? 'expand_more' : 'expand_less' }}
-              </span>
-            </button>
-          </div>
-
-          @if (!group.collapsed) {
-            <div class="group-body">
-              <div class="accounts-grid">
-                @for (acc of group.accounts; track acc.id) {
-                  <div class="account-card-3d" [class.inactive]="!acc.isActive"
-                       [style.--card-color]="getTypeInfo(acc.accountType).color">
-                    <div class="card-glow"></div>
-
-                    <div class="acc-card-top">
-                      <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.accountType).color + ', ' + getTypeInfo(acc.accountType).color + 'cc)'">
-                        <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
-                      </div>
-                      <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
-                           [style.background]="getTypeInfo(acc.accountType).color + '18'">
-                        {{ acc.subTypeLabel || acc.subType || acc.provider || getTypeInfo(acc.accountType).label }}
-                      </div>
-                      <div class="acc-actions-top">
-                        @if (acc._source !== 'billing') {
-                          <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
-                            <span class="material-icons-round">edit</span>
-                          </button>
-                          <button class="icon-btn delete-btn" (click)="deleteAccount(acc); $event.stopPropagation()">
-                            <span class="material-icons-round">delete</span>
-                          </button>
-                        }
-                      </div>
-                    </div>
-
-                    <div class="acc-card-body">
-                      <h3 class="acc-name">{{ acc.name }}</h3>
-                      @if (acc.provider && acc.accountType !== 'billing') {
-                        <div class="acc-detail">
-                          <span class="material-icons-round">business</span>
-                          {{ acc.provider }}
-                        </div>
-                      }
-                      @if (acc.responsiblePerson) {
-                        <div class="acc-detail">
-                          <span class="material-icons-round">person</span>
-                          {{ acc.responsiblePerson }}
-                        </div>
-                      }
-                      @if (acc.stationName) {
-                        <div class="acc-detail">
-                          <span class="material-icons-round">local_gas_station</span>
-                          {{ acc.stationName }}
-                        </div>
-                      }
-                      @if (acc.accountNumber) {
-                        <div class="acc-detail">
-                          <span class="material-icons-round">tag</span>
-                          {{ acc.accountNumber }}
-                        </div>
-                      }
-                      @if (acc.code != null && acc.code !== '') {
-                        <div class="acc-detail acc-numbering">
-                          <span class="material-icons-round">pin</span>
-                          الرمز: {{ acc.code }}
-                        </div>
-                      }
-                      @if (acc.sequenceNumber != null && acc.sequenceNumber !== '') {
-                        <div class="acc-detail acc-numbering">
-                          <span class="material-icons-round">format_list_numbered</span>
-                          تسلسل: {{ acc.sequenceNumber }}
-                        </div>
-                      }
-                      @if (acc.balances && acc.balances.length > 0) {
-                        @for (bal of acc.balances; track bal.currencyId) {
-                          <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
-                            <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
-                            {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
-                          </div>
-                        }
-                      }
-                    </div>
-
-                    <div class="acc-card-footer">
-                      @if (!acc.isActive) {
-                        <span class="inactive-badge">
-                          <span class="material-icons-round">pause_circle</span>
-                          موقوف
-                        </span>
-                      } @else {
-                        <span class="active-badge">
-                          <span class="material-icons-round">check_circle</span>
-                          نشط
-                        </span>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      }
-      } @else if (viewMode() === 'subtype') {
-      @if (typeSubtypeGroups().length > 0) {
-        <div class="group-controls">
-          <span class="group-summary">
-            <span class="material-icons-round">category</span>
-            {{ typeSubtypeGroups().length }} أنواع · {{ filteredAccounts().length }} حساب
-          </span>
-          <div class="group-actions">
-            <button class="group-action-btn" (click)="expandAllSubtype()" title="فتح الكل">
-              <span class="material-icons-round">unfold_more</span>
-            </button>
-            <button class="group-action-btn" (click)="collapseAllSubtype()" title="طي الكل">
-              <span class="material-icons-round">unfold_less</span>
-            </button>
-          </div>
-        </div>
-
-        @for (typeGroup of typeSubtypeGroups(); track typeGroup.key) {
-          <div class="account-group" [style.--group-color]="typeGroup.color">
-            <div class="group-header" (click)="toggleGroup(typeGroup.key)">
-              <div class="group-header-right">
-                <div class="group-icon" [style.background]="'linear-gradient(135deg, ' + typeGroup.color + ', ' + typeGroup.color + 'cc)'">
-                  <span class="material-icons-round">{{ typeGroup.icon }}</span>
-                </div>
-                <div class="group-info">
-                  <h3 class="group-title">{{ typeGroup.label }}</h3>
-                  <span class="group-count">{{ typeGroup.count }} حساب</span>
-                </div>
-              </div>
-              <button class="group-toggle-btn">
-                <span class="material-icons-round">
-                  {{ typeGroup.collapsed ? 'expand_more' : 'expand_less' }}
-                </span>
-              </button>
-            </div>
-
-            @if (!typeGroup.collapsed) {
-              <div class="group-body">
-                @for (subGroup of typeGroup.subGroups; track subGroup.key) {
-                  <div class="account-group" [style.--group-color]="typeGroup.color">
-                    <div class="group-header" (click)="toggleGroup(subGroup.key)">
-                      <div class="group-header-right">
-                        <div class="group-icon" [style.background]="'linear-gradient(135deg, ' + typeGroup.color + ', ' + typeGroup.color + 'cc)'">
-                          <span class="material-icons-round">category</span>
-                        </div>
-                        <div class="group-info">
-                          <h3 class="group-title">{{ subGroup.label }}</h3>
-                          <span class="group-count">{{ subGroup.count }} حساب</span>
-                        </div>
-                      </div>
-                      <button class="group-toggle-btn">
-                        <span class="material-icons-round">
-                          {{ subGroup.collapsed ? 'expand_more' : 'expand_less' }}
-                        </span>
-                      </button>
-                    </div>
-
-                    @if (!subGroup.collapsed) {
-                      <div class="group-body">
-                        <div class="accounts-grid">
-                          @for (acc of subGroup.accounts; track acc.id) {
-                            <div class="account-card-3d" [class.inactive]="!acc.isActive"
-                                 [style.--card-color]="getTypeInfo(acc.accountType).color">
-                              <div class="card-glow"></div>
-                              <div class="acc-card-top">
-                                <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.accountType).color + ', ' + getTypeInfo(acc.accountType).color + 'cc)'">
-                                  <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
-                                </div>
-                                <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
-                                     [style.background]="getTypeInfo(acc.accountType).color + '18'">
-                                  {{ acc.subTypeLabel || acc.subType || acc.provider || getTypeInfo(acc.accountType).label }}
-                                </div>
-                                <div class="acc-actions-top">
-                                  @if (acc._source !== 'billing') {
-                                    <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
-                                      <span class="material-icons-round">edit</span>
-                                    </button>
-                                    <button class="icon-btn delete-btn" (click)="deleteAccount(acc); $event.stopPropagation()">
-                                      <span class="material-icons-round">delete</span>
-                                    </button>
-                                  }
-                                </div>
-                              </div>
-                              <div class="acc-card-body">
-                                <h3 class="acc-name">{{ acc.name }}</h3>
-                                @if (acc.provider && acc.accountType !== 'billing') {
-                                  <div class="acc-detail">
-                                    <span class="material-icons-round">business</span>
-                                    {{ acc.provider }}
-                                  </div>
-                                }
-                                @if (acc.responsiblePerson) {
-                                  <div class="acc-detail">
-                                    <span class="material-icons-round">person</span>
-                                    {{ acc.responsiblePerson }}
-                                  </div>
-                                }
-                                @if (acc.stationName) {
-                                  <div class="acc-detail">
-                                    <span class="material-icons-round">local_gas_station</span>
-                                    {{ acc.stationName }}
-                                  </div>
-                                }
-                                @if (acc.accountNumber) {
-                                  <div class="acc-detail">
-                                    <span class="material-icons-round">tag</span>
-                                    {{ acc.accountNumber }}
-                                  </div>
-                                }
-                                @if (acc.code != null && acc.code !== '') {
-                                  <div class="acc-detail acc-numbering">
-                                    <span class="material-icons-round">pin</span>
-                                    الرمز: {{ acc.code }}
-                                  </div>
-                                }
-                                @if (acc.sequenceNumber != null && acc.sequenceNumber !== '') {
-                                  <div class="acc-detail acc-numbering">
-                                    <span class="material-icons-round">format_list_numbered</span>
-                                    تسلسل: {{ acc.sequenceNumber }}
-                                  </div>
-                                }
-                                @if (acc.balances && acc.balances.length > 0) {
-                                  @for (bal of acc.balances; track bal.currencyId) {
-                                    <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
-                                      <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
-                                      {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
-                                    </div>
-                                  }
-                                }
-                              </div>
-                              <div class="acc-card-footer">
-                                @if (!acc.isActive) {
-                                  <span class="inactive-badge"><span class="material-icons-round">pause_circle</span> موقوف</span>
-                                } @else {
-                                  <span class="active-badge"><span class="material-icons-round">check_circle</span> نشط</span>
-                                }
-                              </div>
-                            </div>
-                          }
-                        </div>
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
-      }
-      } @else {
-      <!-- Tree View -->
-      @if (accountsTree().length > 0 || nonTreeAccounts().length > 0) {
-        @if (accountsTree().length > 0) {
-          <div class="tree-controls">
-            <span class="group-summary">
-              <span class="material-icons-round">account_tree</span>
-              عرض شجري · {{ treeList().length }} عقدة
-            </span>
-            <div class="group-actions">
-              <button class="group-action-btn" (click)="expandAllTree()" title="فتح كل المستويات">
-                <span class="material-icons-round">unfold_more</span>
-              </button>
-              <button class="group-action-btn" (click)="collapseAllTree()" title="طي الكل">
-                <span class="material-icons-round">unfold_less</span>
-              </button>
-            </div>
-          </div>
-          <div class="accounts-grid tree-grid">
-            @for (row of treeList(); track row.node.item.id) {
-              <div class="tree-row" [style.padding-inline-start.rem]="row.depth * 1.5">
-                @if (row.node.children.length > 0) {
-                  <button type="button" class="tree-expand-btn" (click)="toggleTreeExpand(row.node.item.id)">
-                    <span class="material-icons-round">
-                      {{ expandedTreeIds().has(row.node.item.id) ? 'expand_more' : 'chevron_right' }}
-                    </span>
-                  </button>
-                } @else {
-                  <span class="tree-expand-placeholder"></span>
-                }
-                <div class="account-card-3d tree-card" [class.inactive]="!row.node.item.isActive"
-                     [style.--card-color]="getTypeInfo(row.node.item.accountType).color">
-                  <div class="card-glow"></div>
-                  <div class="acc-card-top">
-                    <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(row.node.item.accountType).color + ', ' + getTypeInfo(row.node.item.accountType).color + 'cc)'">
-                      <span class="material-icons-round">{{ getTypeInfo(row.node.item.accountType).icon }}</span>
-                    </div>
-                    <div class="acc-type-badge" [style.color]="getTypeInfo(row.node.item.accountType).color"
-                         [style.background]="getTypeInfo(row.node.item.accountType).color + '18'">
-                      {{ row.node.item.subTypeLabel || row.node.item.subType || row.node.item.provider || getTypeInfo(row.node.item.accountType).label }}
-                    </div>
-                    <div class="acc-actions-top">
-                      @if (row.node.item._source !== 'billing') {
-                        <button class="icon-btn edit-btn" (click)="openEdit(row.node.item); $event.stopPropagation()">
-                          <span class="material-icons-round">edit</span>
-                        </button>
-                        <button class="icon-btn delete-btn" (click)="deleteAccount(row.node.item); $event.stopPropagation()">
-                          <span class="material-icons-round">delete</span>
-                        </button>
-                      }
-                    </div>
-                  </div>
-                  <div class="acc-card-body">
-                    <h3 class="acc-name">{{ row.node.item.name }}</h3>
-                    @if (row.node.item.provider && row.node.item.accountType !== 'billing') {
-                      <div class="acc-detail">
-                        <span class="material-icons-round">business</span>
-                        {{ row.node.item.provider }}
-                      </div>
-                    }
-                    @if (row.node.item.responsiblePerson) {
-                      <div class="acc-detail">
-                        <span class="material-icons-round">person</span>
-                        {{ row.node.item.responsiblePerson }}
-                      </div>
-                    }
-                    @if (row.node.item.accountNumber) {
-                      <div class="acc-detail">
-                        <span class="material-icons-round">tag</span>
-                        {{ row.node.item.accountNumber }}
-                      </div>
-                    }
-                    @if (row.node.item.code != null && row.node.item.code !== '') {
-                      <div class="acc-detail acc-numbering">
-                        <span class="material-icons-round">pin</span>
-                        الرمز: {{ row.node.item.code }}
-                      </div>
-                    }
-                    @if (row.node.item.sequenceNumber != null && row.node.item.sequenceNumber !== '') {
-                      <div class="acc-detail acc-numbering">
-                        <span class="material-icons-round">format_list_numbered</span>
-                        تسلسل: {{ row.node.item.sequenceNumber }}
-                      </div>
-                    }
-                    @if (row.node.item.balances && row.node.item.balances.length > 0) {
-                      @for (bal of row.node.item.balances; track bal.currencyId) {
-                        <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
-                          <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
-                          {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
-                        </div>
-                      }
-                    }
-                  </div>
-                  <div class="acc-card-footer">
-                    @if (!row.node.item.isActive) {
-                      <span class="inactive-badge">
-                        <span class="material-icons-round">pause_circle</span>
-                        موقوف
-                      </span>
-                    } @else {
-                      <span class="active-badge">
-                        <span class="material-icons-round">check_circle</span>
-                        نشط
-                      </span>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        }
-        @if (nonTreeAccounts().length > 0) {
-          <div class="tree-other-section">
-            <h4 class="tree-other-title">
-              <span class="material-icons-round">account_balance_wallet</span>
-              صناديق وحسابات فوترة ({{ nonTreeAccounts().length }})
-            </h4>
-            <div class="accounts-grid">
-              @for (acc of nonTreeAccounts(); track acc._key || acc.id) {
-                <div class="account-card-3d" [class.inactive]="!acc.isActive"
-                     [style.--card-color]="getTypeInfo(acc.accountType).color">
-                  <div class="card-glow"></div>
-                  <div class="acc-card-top">
-                    <div class="acc-icon-3d" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.accountType).color + ', ' + getTypeInfo(acc.accountType).color + 'cc)'">
-                      <span class="material-icons-round">{{ getTypeInfo(acc.accountType).icon }}</span>
-                    </div>
-                    <div class="acc-type-badge" [style.color]="getTypeInfo(acc.accountType).color"
-                         [style.background]="getTypeInfo(acc.accountType).color + '18'">
-                      {{ acc.subTypeLabel || acc.subType || acc.provider || getTypeInfo(acc.accountType).label }}
-                    </div>
-                    <div class="acc-actions-top">
-                      @if (acc._source !== 'billing') {
-                        <button class="icon-btn edit-btn" (click)="openEdit(acc); $event.stopPropagation()">
-                          <span class="material-icons-round">edit</span>
-                        </button>
-                        <button class="icon-btn delete-btn" (click)="deleteAccount(acc); $event.stopPropagation()">
-                          <span class="material-icons-round">delete</span>
-                        </button>
-                      }
-                    </div>
-                  </div>
-                  <div class="acc-card-body">
-                    <h3 class="acc-name">{{ acc.name }}</h3>
-                    @if (acc.provider && acc.accountType !== 'billing') {
-                      <div class="acc-detail">
-                        <span class="material-icons-round">business</span>
-                        {{ acc.provider }}
-                      </div>
-                    }
-                    @if (acc.accountNumber) {
-                      <div class="acc-detail">
-                        <span class="material-icons-round">tag</span>
-                        {{ acc.accountNumber }}
-                      </div>
-                    }
-                    @if (acc.code != null && acc.code !== '') {
-                      <div class="acc-detail acc-numbering">
-                        <span class="material-icons-round">pin</span>
-                        الرمز: {{ acc.code }}
-                      </div>
-                    }
-                    @if (acc.sequenceNumber != null && acc.sequenceNumber !== '') {
-                      <div class="acc-detail acc-numbering">
-                        <span class="material-icons-round">format_list_numbered</span>
-                        تسلسل: {{ acc.sequenceNumber }}
-                      </div>
-                    }
-                    @if (acc.balances && acc.balances.length > 0) {
-                      @for (bal of acc.balances; track bal.currencyId) {
-                        <div class="acc-detail" [style.color]="(bal.balance || 0) >= 0 ? '#22c55e' : '#ef4444'" [style.font-weight]="'800'">
-                          <span class="material-icons-round">{{ (bal.balance || 0) >= 0 ? 'trending_up' : 'trending_down' }}</span>
-                          {{ bal.balance | number:'1.0-0' }} {{ bal.currencySymbol || bal.currencyCode || '' }}
-                        </div>
-                      }
-                    }
-                  </div>
-                  <div class="acc-card-footer">
-                    @if (!acc.isActive) {
-                      <span class="inactive-badge"><span class="material-icons-round">pause_circle</span> موقوف</span>
-                    } @else {
-                      <span class="active-badge"><span class="material-icons-round">check_circle</span> نشط</span>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      }
-      }
-    }
-  }
-
-  <!-- ===== How It Works Modal ===== -->
-  @if (showHowItWorks()) {
-    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
-      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon amber">
-            <span class="material-icons-round">lightbulb</span>
-          </div>
-          <h2>مبدأ العمل - الحسابات</h2>
-          <button class="modal-close" (click)="showHowItWorks.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">hub</span> السجل المركزي</h3>
-            <p>
-              هذه الصفحة هي السجل المركزي لجميع الحسابات في النظام. تعرض الحسابات من جميع المصادر:
-              الحسابات العادية، الصناديق، وحسابات الفوترة.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">filter_list</span> الفلاتر الذكية</h3>
-            <p>
-              اختر نوع الحساب من الأزرار أعلاه لتظهر فلاتر فرعية خاصة بكل نوع:
-              عند اختيار "فوترة" تظهر فلاتر حسب النظام والمحطة والموظف.
-              عند اختيار "صندوق" تظهر فلاتر حسب نوع الصندوق والمحطة.
-              عند اختيار "بنك" تظهر فلاتر حسب نوع الحساب والبنك.
-              عند اختيار "صراف" تظهر فلاتر حسب الصراف.
-              عند اختيار "محفظة" تظهر فلاتر حسب نوع المحفظة والمحفظة.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">sync</span> التكامل مع الشاشات المتخصصة</h3>
-            <p>
-              الشاشات المتخصصة (إدارة الصناديق، أنظمة الفوترة، إدارة البنوك...) هي طرق وصول سريعة لنفس الحسابات.
-              أي حساب يُنشأ من شاشة متخصصة يظهر تلقائياً هنا.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">category</span> أنواع الحسابات الموجودة</h3>
-            <div class="hiw-types">
-              @for (t of dynamicFilters(); track t.value) {
-                <div class="hiw-type-row">
-                  <div class="hiw-type-icon" [style.background]="'linear-gradient(135deg, ' + t.color + ', ' + t.color + 'cc)'">
-                    <span class="material-icons-round">{{ t.icon }}</span>
-                  </div>
-                  <strong>{{ t.label }}</strong>
-                </div>
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ===== Create/Edit Form Modal ===== -->
   @if (showForm()) {
     <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <div class="modal-icon" [style.background]="'linear-gradient(135deg, ' + (selectedFormMainType()?.color || getTypeInfo(form().accountType).color) + ', ' + (selectedFormMainType()?.color || getTypeInfo(form().accountType).color) + 'cc)'">
-            <span class="material-icons-round">{{ selectedFormMainType()?.icon || getTypeInfo(form().accountType).icon }}</span>
-          </div>
-          <h2>{{ editingId() ? 'تعديل الحساب' : 'حساب جديد' }}</h2>
-          <button class="modal-close" (click)="showForm.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
+          <div class="modal-title-row"><div class="modal-icon blue"><span class="material-icons-round">account_balance_wallet</span></div><div><h2>{{ editingId() ? 'تعديل حساب' : 'إضافة حساب جديد' }}</h2><p>الشجرة الموحدة للحسابات</p></div></div>
+          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
-
+          
           <div class="form-group">
-            <label class="form-label">اسم الحساب <span class="required">*</span></label>
-            <input class="form-input" type="text" placeholder="مثال: صندوق التحصيل والتوريد"
-                   [value]="form().name" (input)="setFormField('name', $any($event.target).value)">
-          </div>
-
-          <!-- النوع الرئيسي للحساب -->
-          <div class="form-group">
-            <label class="form-label">النوع الرئيسي <span class="required">*</span></label>
-            <div class="type-selector">
-              @for (t of formMainTypeOptions(); track t.key) {
-                <button class="type-option" [class.selected]="selectedFormMainType()?.key === t.key"
-                        [style.--opt-color]="t.color"
-                        (click)="onAccountTypeChange(t.key)"
-                        type="button">
-                  <span class="material-icons-round">{{ t.icon }}</span>
-                  {{ t.label }}
-                </button>
-              }
+            <label>نوع الحساب</label>
+            <div class="radio-row">
+              <label class="radio-opt"><input type="radio" name="level" [value]="false" [checked]="!form().isLeafAccount" (change)="form.update(f => ({ ...f, isLeafAccount: false, accountSubNatureId: null }))"><span class="material-icons-round">folder</span><div><strong>حساب رئيسي</strong><small>للتنظيم</small></div></label>
+              <label class="radio-opt"><input type="radio" name="level" [value]="true" [checked]="form().isLeafAccount" (change)="form.update(f => ({ ...f, isLeafAccount: true }))"><span class="material-icons-round">account_balance_wallet</span><div><strong>حساب فرعي</strong><small>مالي فعلي</small></div></label>
             </div>
-            @if (selectedFormMainType()?.description) {
-              <p class="form-hint">
-                <span class="material-icons-round">info</span>
-                {{ selectedFormMainType()?.description }}
-              </p>
-            }
           </div>
 
-          <!-- التصنيف الفرعي (إذا كانت هناك تصنيفات متاحة) -->
-          @if (availableSubTypes().length > 0) {
+          <div class="form-group"><label>اسم الحساب <span class="required">*</span></label><input [(ngModel)]="form().name" placeholder="مثال: النقدية، صندوق الدهمية"></div>
+
+          <div class="form-group"><label>الحساب الأب</label><select [(ngModel)]="form().parentAccountId"><option [value]="null">جذر (مستوى أول)</option>@for (parent of parentAccountOptions(); track parent.id) {<option [value]="parent.id">{{ parent.code }} - {{ parent.name }}</option>}</select></div>
+
+          @if (form().isLeafAccount) {
             <div class="form-group">
-              <label class="form-label">التصنيف الفرعي <span class="required">*</span></label>
-              <div class="subtype-selector">
-                @for (st of availableSubTypes(); track st.id) {
-                  <button class="subtype-option" [class.selected]="form().subTypeId === st.id"
-                          [style.--opt-color]="st.color"
-                          (click)="onSubTypeChange(st.id)" type="button">
-                    <span class="material-icons-round">{{ st.icon || 'label' }}</span>
-                    {{ st.name }}
+              <label>نوع الحساب الفرعي <span class="required">*</span></label>
+              <div class="sub-nature-grid">
+                @for (nature of accountSubNatures(); track nature.id) {
+                  <button type="button" class="nature-btn" [class.selected]="form().accountSubNatureId === nature.id" (click)="selectSubNature(nature.id)">
+                    <span class="material-icons-round">{{ nature.icon }}</span>
+                    <span>{{ nature.name }}</span>
+                    @if (nature.isSystem) {<span class="badge-sys">نظامي</span>}
                   </button>
                 }
               </div>
             </div>
-          } @else {
-            <div class="form-group">
-              <label class="form-label">التصنيف الفرعي <span class="required">*</span></label>
-              <p class="form-hint">
-                <span class="material-icons-round">info</span>
-                لا يمكن حفظ الحساب بدون تصنيف. أضف تصنيفًا فرعيًا لهذا النوع من صفحة أنواع الحسابات ثم ارجع للإضافة.
-              </p>
-            </div>
+
+            @if (showStationField()) {<div class="form-group"><label>المحطة</label><select [(ngModel)]="form().stationId"><option [value]="null">اختر محطة</option>@for (st of stations(); track st.id) {<option [value]="st.id">{{ st.name }}</option>}</select></div>}
+            @if (showProviderField()) {<div class="form-group"><label>الجهة (مثال: بنك الكريمي، جوالي)</label><input [(ngModel)]="form().provider" placeholder="اسم الجهة"></div>}
+            @if (showAccountNumberField()) {<div class="form-group"><label>رقم الحساب</label><input [(ngModel)]="form().accountNumber" placeholder="رقم الحساب"></div>}
           }
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">الجهة / المزود</label>
-              <input class="form-input" type="text" placeholder="مثال: بنك الكريمي، جوالي"
-                     [value]="form().provider" (input)="setFormField('provider', $any($event.target).value)">
-            </div>
-            <div class="form-group">
-              <label class="form-label">رقم الحساب</label>
-              <input class="form-input" type="text" placeholder="رقم الحساب أو الرقم المرجعي"
-                     [value]="form().accountNumber" (input)="setFormField('accountNumber', $any($event.target).value)">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">المسؤول</label>
-              <input class="form-input" type="text" placeholder="اسم المسؤول عن الحساب"
-                     [value]="form().responsiblePerson" (input)="setFormField('responsiblePerson', $any($event.target).value)">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">ملاحظات</label>
-            <textarea class="form-input" rows="2" placeholder="ملاحظات إضافية..."
-                      [value]="form().notes || ''"
-                      (input)="setFormField('notes', $any($event.target).value)"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="toggle-label">
-              <span>الحساب نشط</span>
-              <div class="toggle-switch" [class.on]="form().isActive"
-                   (click)="setFormField('isActive', !form().isActive)">
-                <div class="toggle-knob"></div>
-              </div>
-            </label>
-          </div>
+          <div class="form-group"><label>الرمز/الكود (اختياري)</label><input [(ngModel)]="form().code" placeholder="يتم توليده تلقائياً"></div>
+          <div class="form-group"><label>المسؤول</label><input [(ngModel)]="form().responsiblePerson" placeholder="اسم المسؤول"></div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form().notes" rows="3" placeholder="ملاحظات إضافية..."></textarea></div>
 
         </div>
         <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
-          <button class="btn-3d btn-primary"
-                  [disabled]="!form().name?.trim() || !form().subTypeTouched || !hasValidSubTypeSelection()"
-                  (click)="saveForm()">
-            <span class="material-icons-round">save</span>
-            {{ editingId() ? 'حفظ التعديلات' : 'إضافة الحساب' }}
-          </button>
+          <button class="btn-save" (click)="saveForm()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء الحساب' }}</button>
+          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
         </div>
       </div>
     </div>
   }
-
 </div>

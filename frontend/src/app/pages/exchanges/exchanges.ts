@@ -92,7 +92,7 @@ export class ExchangesComponent extends BasePageComponent {
     try {
       const data = { ...this.accountForm, accountType: 'exchange' };
       if (this.editingAccountId()) {
-        await this.api.updateAccount(this.editingAccountId()!, data);
+        await this.api.updateAccount(this.bizId, this.editingAccountId()!, data);
       } else {
         await this.api.createAccount(this.bizId, data);
       }
@@ -136,7 +136,7 @@ export class ExchangesComponent extends BasePageComponent {
     const target = this.deleteTarget();
     if (!target) return;
     try {
-      if (target.type === 'account') await this.api.deleteAccount(target.id);
+      if (target.type === 'account') await this.api.deleteAccount(this.bizId, target.id);
       else await this.api.deleteExchangeType(target.id);
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);

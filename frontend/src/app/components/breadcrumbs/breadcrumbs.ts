@@ -83,7 +83,7 @@ export class BreadcrumbsComponent implements OnDestroy {
     '': { label: 'لوحة التحكم', icon: 'dashboard' },
     'stations': { label: 'المحطات', icon: 'bolt' },
     'accounts': { label: 'الحسابات المركزية', icon: 'account_balance' },
-    'account-types': { label: 'أنواع الحسابات', icon: 'category' },
+    'account-sub-natures': { label: 'أنواع الحسابات الفرعية', icon: 'label' },
     'employees': { label: 'الموظفين', icon: 'people' },
     'funds': { label: 'الصناديق', icon: 'savings' },
     'vouchers': { label: 'السندات', icon: 'receipt_long' },

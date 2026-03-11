@@ -26,6 +26,7 @@ import jobTitlesRoutes from './job-titles.routes.ts';
 import custodyRoutes from './custody.routes.ts';
 import accountingTypesRoutes from './accounting-types.routes.ts';
 import reconciliationsRoutes from './reconciliations.routes.ts';
+import accountSubNaturesRoutes from './account-sub-natures.routes.ts';
 
 const api = new Hono();
 
@@ -56,5 +57,6 @@ api.route('/', jobTitlesRoutes);
 api.route('/', custodyRoutes);
 api.route('/', accountingTypesRoutes);
 api.route('/', reconciliationsRoutes);
+api.route('/', accountSubNaturesRoutes);
 
 export default api;

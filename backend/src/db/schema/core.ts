@@ -198,7 +198,8 @@ export const accounts = pgTable('accounts', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
-  accountType: accountTypeEnum('account_type').notNull(),
+  accountType: accountTypeEnum('account_type'),
+  accountSubNatureId: integer('account_sub_nature_id'),
   accountNumber: varchar('account_number', { length: 100 }),
   provider: varchar('provider', { length: 200 }),
   subType: varchar('sub_type', { length: 100 }),
@@ -207,6 +208,7 @@ export const accounts = pgTable('accounts', {
   code: varchar('code', { length: 30 }),
   responsiblePerson: varchar('responsible_person', { length: 200 }),
   parentAccountId: integer('parent_account_id'),
+  isLeafAccount: boolean('is_leaf_account').notNull().default(true),
   linkedEmployeeId: integer('linked_employee_id'),
   supportedCurrencies: jsonb('supported_currencies').$type<string[]>().default(['YER', 'SAR', 'USD']),
   
@@ -225,7 +227,6 @@ export const accounts = pgTable('accounts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
   codeUnique: unique('accounts_biz_code_unique').on(table.businessId, table.code),
-  seqUnique: unique('accounts_biz_type_subtype_seq_unique').on(table.businessId, table.accountType, table.subTypeId, table.sequenceNumber),
 }));
 
 // ===================== ACCOUNT ALLOWED LINKS (الحسابات المسموح التعامل بينها) =====================
@@ -259,6 +260,7 @@ export const employeeBillingAccounts = pgTable('employee_billing_accounts', {
   employeeId: integer('employee_id').notNull().references(() => employees.id),
   stationId: integer('station_id').notNull().references(() => stations.id),
   billingSystemId: integer('billing_system_id').references(() => billingSystemsConfig.id),
+  accountId: integer('account_id').references(() => accounts.id),
   collectionMethod: collectionMethodEnum('collection_method').notNull(),
   label: varchar('label', { length: 200 }).notNull(), // مثل: "المغربي - نقدي جوال"
   sortOrder: integer('sort_order').default(0),
@@ -307,6 +309,7 @@ export const funds = pgTable('funds', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
   // ديناميكي: يعتمد على fund_types.sub_type_key وليس enum ثابت.
   fundType: varchar('fund_type', { length: 100 }).notNull(),
   subType: varchar('sub_type', { length: 100 }),
@@ -345,7 +348,7 @@ export const suppliers = pgTable('suppliers', {
   supplierTypeId: integer('supplier_type_id'),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
-  accountId: integer('account_id'),
+  accountId: integer('account_id').references(() => accounts.id),
   name: varchar('name', { length: 200 }).notNull(),
   category: varchar('category', { length: 100 }),
   phone: varchar('phone', { length: 20 }),
@@ -486,6 +489,7 @@ export const warehouses = pgTable('warehouses', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
   warehouseType: warehouseTypeEnum('warehouse_type').notNull(),
   subType: varchar('sub_type', { length: 100 }),
   subTypeId: integer('sub_type_id'),
@@ -1074,6 +1078,32 @@ export const accountingSubTypes = pgTable('accounting_sub_types', {
 }, (table) => ({
   keyUnique: unique('accounting_sub_types_biz_key_unique').on(table.businessId, table.subTypeKey),
   seqUnique: unique('accounting_sub_types_biz_main_seq_unique').on(table.businessId, table.mainTypeId, table.sequenceNumber),
+}));
+
+// ===================== ACCOUNT SUB NATURES (أنواع الحسابات الفرعية الوظيفية) =====================
+export const accountSubNatures = pgTable('account_sub_natures', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  natureKey: varchar('nature_key', { length: 100 }).notNull(),
+  isSystem: boolean('is_system').notNull().default(true),
+  icon: varchar('icon', { length: 100 }).default('category'),
+  color: varchar('color', { length: 50 }).default('#64748b'),
+  sequenceNumber: integer('sequence_number'),
+  requiresStation: boolean('requires_station').notNull().default(false),
+  requiresEmployee: boolean('requires_employee').notNull().default(false),
+  requiresProvider: boolean('requires_provider').notNull().default(false),
+  requiresAccountNumber: boolean('requires_account_number').notNull().default(false),
+  requiresSupplierType: boolean('requires_supplier_type').notNull().default(false),
+  supportsCashOperations: boolean('supports_cash_operations').notNull().default(true),
+  canReceivePayment: boolean('can_receive_payment').notNull().default(true),
+  canMakePayment: boolean('can_make_payment').notNull().default(true),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  keyUnique: unique('account_sub_natures_biz_key_unique').on(table.businessId, table.natureKey),
+  seqUnique: unique('account_sub_natures_biz_seq_unique').on(table.businessId, table.sequenceNumber),
 }));
 
 // ===================== JOURNAL ENTRY CATEGORIES (تصنيفات قيود اليومية - مستقلة) =====================

@@ -60,7 +60,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     title: '3. الحسابات والأرصدة',
     items: [
       { icon: 'account_balance_wallet', label: 'الحسابات', path: 'accounts', showFor: ['stations', 'single_station', 'personal'] },
-      { icon: 'category', label: 'أنواع الحسابات', path: 'account-types', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'label', label: 'أنواع الحسابات الفرعية', path: 'account-sub-natures', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'savings', label: 'الصناديق', path: 'funds', showFor: ['stations', 'single_station'] },
       { icon: 'account_balance', label: 'البنوك', path: 'banks', showFor: ['stations', 'single_station'] },
       { icon: 'currency_exchange', label: 'الصرافين', path: 'exchangers', showFor: ['stations', 'single_station'] },

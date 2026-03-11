@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { db } from "../../db/index.ts";
 import { eq, and, inArray, ne, sql } from "drizzle-orm";
 import {
+  accounts,
+  accountSubNatures,
   funds,
   fundBalances,
   stations,
@@ -14,6 +16,7 @@ import {
   safeHandler,
   normalizeBody,
   parseId,
+  getBody,
 } from "../../middleware/helpers.ts";
 import {
   buildAccountHierarchyCode,
@@ -223,6 +226,20 @@ fundsRoutes.post(
       .insert(funds)
       .values(insertPayload as typeof funds.$inferInsert)
       .returning();
+
+    // ربط الصندوق بحساب مالي تلقائياً
+    const [fundNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures).where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
+    if (created && fundNature) {
+      const [createdAccount] = await db.insert(accounts).values({
+        businessId: bizId, name: created.name, accountType: 'fund', accountSubNatureId: fundNature.id,
+        isLeafAccount: true, code: created.code, sequenceNumber: created.sequenceNumber,
+        notes: created.notes, isActive: created.isActive,
+      }).returning();
+      if (createdAccount) {
+        await db.update(funds).set({ accountId: createdAccount.id, updatedAt: new Date() }).where(eq(funds.id, created.id));
+      }
+    }
+
     return c.json(created, 201);
   }),
 );

@@ -60,7 +60,9 @@ export function xssSanitizeMiddleware() {
 
 export const accountSchema = z.object({
   name: z.string().min(1, 'اسم الحساب مطلوب').max(200),
-  accountType: z.enum(['fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'custody', 'warehouse', 'billing', 'budget', 'supplier', 'employee', 'partner', 'settlement', 'pending']),
+  accountType: z.enum(['fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'custody', 'warehouse', 'billing', 'budget', 'supplier', 'employee', 'partner', 'settlement', 'pending']).optional(),
+  accountSubNatureId: z.number().int().positive().optional().nullable(),
+  isLeafAccount: z.boolean().optional(),
   accountNumber: z.string().max(100).optional().nullable(),
   provider: z.string().max(200).optional().nullable(),
   subType: z.string().max(100).optional().nullable(),
@@ -69,7 +71,7 @@ export const accountSchema = z.object({
   supportedCurrencies: z.array(z.string()).optional(),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
-  subTypeId: z.number().int().positive('التصنيف مطلوب'),
+  subTypeId: z.number().int().positive().optional(),
 });
 
 export const voucherSchema = z.object({
