@@ -47,6 +47,7 @@ export const routes: Routes = [
       { path: 'warehouse', loadComponent: () => import('./pages/warehouse/warehouse').then(m => m.WarehouseComponent) },
       { path: 'suppliers', loadComponent: () => import('./pages/suppliers/suppliers').then(m => m.SuppliersComponent) },
       { path: 'purchase-invoices', loadComponent: () => import('./pages/purchase-invoices/purchase-invoices').then(m => m.PurchaseInvoicesComponent) },
+      { path: 'intermediary-accounts', loadComponent: () => import('./pages/intermediary-accounts/intermediary-accounts').then(m => m.IntermediaryAccountsComponent) },
       { path: 'settlements', loadComponent: () => import('./pages/settlements/settlements').then(m => m.SettlementsComponent) },
       { path: 'pending', loadComponent: () => import('./pages/pending-accounts/pending-accounts').then(m => m.PendingAccountsComponent) },
       { path: 'custom-screens', loadComponent: () => import('./pages/custom-screens/custom-screens').then(m => m.CustomScreensComponent) },

@@ -1,0 +1,180 @@
+@use '../shared-page.scss';
+
+.page-desc {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.info-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 51, 234, 0.05));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+
+  .material-icons-round {
+    font-size: 32px;
+    color: #3b82f6;
+  }
+
+  strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  p {
+    margin: 8px 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  ul {
+    margin: 12px 0 0;
+    padding-left: 24px;
+    
+    li {
+      margin: 6px 0;
+      color: var(--text-secondary);
+      line-height: 1.6;
+
+      strong {
+        display: inline;
+        font-size: 14px;
+        color: #3b82f6;
+        font-family: 'Courier New', monospace;
+      }
+    }
+  }
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.account-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px;
+  transition: all 0.2s;
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .material-icons-round {
+    font-size: 28px;
+    color: white;
+  }
+}
+
+.card-title {
+  flex: 1;
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+}
+
+.code-badge {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+
+  &.intermediary {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.15);
+  }
+}
+
+.card-body {
+  margin-bottom: 16px;
+}
+
+.balance-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-surface);
+  border-radius: 10px;
+  margin-bottom: 12px;
+
+  .material-icons-round {
+    font-size: 24px;
+    color: #10b981;
+  }
+}
+
+.balance-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.balance-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.balance-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+}
+
+.notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(100, 116, 139, 0.08);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+
+  .material-icons-round {
+    font-size: 18px;
+  }
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}

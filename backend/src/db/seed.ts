@@ -720,11 +720,12 @@ async function seed() {
 
     // --- الوحدة 12: المعلقات والتصفيات ---
     const pendingItems: any[] = [
-      { sectionId: sec12.id, screenKey: 'settlements', label: 'التصفيات', icon: 'balance', route: '/biz/{bizId}/settlements', sortOrder: 1 },
+      { sectionId: sec12.id, screenKey: 'intermediary_accounts', label: 'الحسابات الوسيطة', icon: 'sync_alt', route: '/biz/{bizId}/intermediary-accounts', sortOrder: 1 },
+      { sectionId: sec12.id, screenKey: 'settlements', label: 'التصفيات', icon: 'balance', route: '/biz/{bizId}/settlements', sortOrder: 2 },
     ];
     if (bizType === 'stations') {
       pendingItems.push(
-        { sectionId: sec12.id, screenKey: 'pending_accounts', label: 'حسابات معلقة', icon: 'warning', route: '/biz/{bizId}/pending', badge: 3, badgeColor: 'red', sortOrder: 2 },
+        { sectionId: sec12.id, screenKey: 'pending_accounts', label: 'حسابات معلقة', icon: 'warning', route: '/biz/{bizId}/pending', badge: 3, badgeColor: 'red', sortOrder: 3 },
       );
     }
     await db.insert(schema.sidebarItems).values(pendingItems);

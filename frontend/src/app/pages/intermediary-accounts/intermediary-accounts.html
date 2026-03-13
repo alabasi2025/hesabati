@@ -1,0 +1,68 @@
+<div class="page-content">
+  <div class="page-header">
+    <h2><span class="material-icons-round">sync_alt</span> الحسابات الوسيطة</h2>
+    <p class="page-desc">حسابات للعمليات التشغيلية قيد الانتظار (فواتير مشتريات، تحويلات مخزنية، طلبات توريد)</p>
+  </div>
+
+  <div class="info-card">
+    <span class="material-icons-round">info</span>
+    <div>
+      <strong>ما هي الحسابات الوسيطة؟</strong>
+      <p>حسابات مؤقتة تستخدم لتتبع العمليات التشغيلية قيد الانتظار:</p>
+      <ul>
+        <li><strong>INT-01:</strong> فواتير مشتريات قيد الاستلام (تم التأكيد، بانتظار إدخال المخزن)</li>
+        <li><strong>INT-02:</strong> تحويلات مخزنية قيد الاستلام (تم الإرسال، بانتظار الاستلام)</li>
+        <li><strong>INT-03:</strong> طلبات توريد قيد المعالجة (تم الطلب، بانتظار وصول البضاعة)</li>
+      </ul>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (!accounts().length) {
+    <div class="empty-state">
+      <span class="material-icons-round">task_alt</span>
+      <p>لا توجد عمليات قيد الانتظار</p>
+      <small>جميع العمليات تم استكمالها</small>
+    </div>
+  } @else {
+    <div class="accounts-grid">
+      @for (acc of accounts(); track acc.id) {
+        <div class="account-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <span class="material-icons-round">sync_alt</span>
+            </div>
+            <div class="card-title">
+              <h3>{{ acc.name }}</h3>
+              <span class="code-badge intermediary">{{ acc.code }}</span>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <div class="balance-display">
+              <span class="material-icons-round">account_balance_wallet</span>
+              <div class="balance-info">
+                <span class="balance-label">الرصيد الحالي:</span>
+                <span class="balance-value">{{ getBalanceDisplay(acc) }}</span>
+              </div>
+            </div>
+
+            @if (acc.notes) {
+              <div class="notes">
+                <span class="material-icons-round">notes</span>
+                <span>{{ acc.notes }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="card-footer">
+            <span class="status-badge" [class.active]="acc.isActive">
+              {{ acc.isActive ? 'نشط' : 'متوقف' }}
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
