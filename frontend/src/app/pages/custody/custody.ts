@@ -17,6 +17,7 @@ export class CustodyComponent extends BasePageComponent {
   private readonly toast = inject(ToastService);
 
   records = signal<any[]>([]);
+  custodyAccounts = signal<any[]>([]);
   loading = signal(true);
   showForm = signal(false);
   editingId = signal<number | null>(null);
@@ -59,8 +60,14 @@ export class CustodyComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const data = await this.api.getCustodyRecords(this.bizId);
-      this.records.set(data || []);
+      const [custodyRecordsData, accountsData] = await Promise.all([
+        this.api.getCustodyRecords(this.bizId),
+        this.api.getAccounts(this.bizId),
+      ]);
+      this.records.set(custodyRecordsData || []);
+      // فلترة الحسابات من نوع عهدة
+      const custodyAccs = (accountsData || []).filter((a: any) => a.accountType === 'custody');
+      this.custodyAccounts.set(custodyAccs);
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }

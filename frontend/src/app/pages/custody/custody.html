@@ -1,17 +1,40 @@
 <div class="page-content">
   <div class="page-header">
-    <h2><span class="material-icons-round">account_balance_wallet</span> العهد</h2>
+    <h2><span class="material-icons-round">lock</span> العهد</h2>
     <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إنشاء عهدة</button>
   </div>
+
+  <!-- حسابات العهدة -->
+  @if (custodyAccounts().length > 0) {
+    <div class="custody-accounts-section">
+      <h3><span class="material-icons-round">account_balance_wallet</span> حسابات العهد</h3>
+      <div class="accounts-grid">
+        @for (acc of custodyAccounts(); track acc.id) {
+          <div class="account-card">
+            <div class="account-code">{{ acc.code }}</div>
+            <div class="account-name">{{ acc.name }}</div>
+            <div class="account-balance">
+              <span class="material-icons-round">account_balance_wallet</span>
+              <span>الرصيد: {{ acc.balances?.[0]?.balance || '0' }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
 
   <div class="summary-row">
     <div class="summary-card purple">
       <span class="material-icons-round">account_balance_wallet</span>
-      <div><span class="num">{{ records().length }}</span><span class="lbl">إجمالي العهد</span></div>
+      <div><span class="num">{{ custodyAccounts().length }}</span><span class="lbl">حسابات العهد</span></div>
+    </div>
+    <div class="summary-card amber">
+      <span class="material-icons-round">receipt</span>
+      <div><span class="num">{{ records().length }}</span><span class="lbl">سجلات العهد</span></div>
     </div>
     <div class="summary-card green">
       <span class="material-icons-round">check_circle</span>
-      <div><span class="num">{{ records().filter(r => r.status === 'active').length }}</span><span class="lbl">عهد نشطة</span></div>
+      <div><span class="num">{{ records().filter(r => r.status === 'active').length }}</span><span class="lbl">نشطة</span></div>
     </div>
     <div class="summary-card blue">
       <span class="material-icons-round">done_all</span>
