@@ -25,6 +25,7 @@ export class AccountsComponent extends BasePageComponent {
   eWalletTypes = signal<any[]>([]);
   supplierTypes = signal<any[]>([]);
   warehouseTypes = signal<any[]>([]);
+  departments = signal<any[]>([]);
   stations = signal<any[]>([]);
   showForm = signal(false);
   editingId = signal<number | null>(null);
@@ -56,6 +57,7 @@ export class AccountsComponent extends BasePageComponent {
     if (key === 'e_wallet') return this.eWalletTypes();
     if (key === 'supplier') return this.supplierTypes();
     if (key === 'warehouse') return this.warehouseTypes();
+    if (key === 'employee') return this.departments();
     return [] as any[];
   });
   requiresSubTypeSelection = computed(() => this.form().isLeafAccount && this.subTypeOptions().length > 0);
@@ -174,7 +176,7 @@ export class AccountsComponent extends BasePageComponent {
     if (this.bizId <= 0) { this.loading.set(false); return; }
     this.loading.set(true);
     try {
-      const [accountsData, naturesData, stationsData, fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, supplierTypesData, warehouseTypesData] = await Promise.all([
+      const [accountsData, naturesData, stationsData, fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, supplierTypesData, warehouseTypesData, departmentsData] = await Promise.all([
         this.api.getAccounts(this.bizId),
         this.api.getAccountSubNatures(this.bizId),
         this.api.getStations(this.bizId).catch(() => []),
@@ -184,6 +186,7 @@ export class AccountsComponent extends BasePageComponent {
         this.api.getEWalletTypes(this.bizId).catch(() => []),
         this.api.getSupplierTypes(this.bizId).catch(() => []),
         this.api.getWarehouseTypes(this.bizId).catch(() => []),
+        this.api.getDepartments(this.bizId).catch(() => []),
       ]);
       this.accounts.set(
         (accountsData || []).map((a: any) => ({
@@ -199,6 +202,7 @@ export class AccountsComponent extends BasePageComponent {
       this.eWalletTypes.set(eWalletTypesData || []);
       this.supplierTypes.set(supplierTypesData || []);
       this.warehouseTypes.set(warehouseTypesData || []);
+      this.departments.set(departmentsData || []);
     } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'فشل التحميل'); this.accounts.set([]); }
     finally { this.loading.set(false); }
   }
