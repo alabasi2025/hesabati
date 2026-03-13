@@ -26,10 +26,8 @@ export class IntermediaryAccountsComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const allAccounts = await this.api.getAccounts(this.bizId);
-      // فلترة الحسابات من النوع الفرعي "وسيطة"
-      const intermediaryAccounts = allAccounts.filter((a: any) => a.accountType === 'intermediary');
-      this.accounts.set(intermediaryAccounts);
+      const intermediaryAccounts = await this.api.getIntermediaryAccounts(this.bizId);
+      this.accounts.set(intermediaryAccounts || []);
     } catch (e: unknown) {
       console.error(e);
       this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل الحسابات الوسيطة');

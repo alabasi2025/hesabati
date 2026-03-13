@@ -133,6 +133,9 @@ export class ApiService {
   // ===================== الحسابات مع الصلاحيات =====================
   getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
   getAllAccounts(bizId: number)                  { return this.request<any>(`/businesses/${bizId}/accounts?all=true`); }
+  getCustodyAccounts(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/custody-accounts`); }
+  getIntermediaryAccounts(bizId: number)         { return this.request<any[]>(`/businesses/${bizId}/intermediary-accounts`); }
+  getPendingAccountsList(bizId: number)          { return this.request<any[]>(`/businesses/${bizId}/pending-accounts-list`); }
   createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   updateAccount(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteAccount(bizId: number, id: number)       { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'DELETE' }); }

@@ -60,30 +60,12 @@ export class CustodyComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [custodyRecordsData, accountsData] = await Promise.all([
+      const [custodyRecordsData, custodyAccountsData] = await Promise.all([
         this.api.getCustodyRecords(this.bizId),
-        this.api.getAccounts(this.bizId),
+        this.api.getCustodyAccounts(this.bizId),
       ]);
-      
       this.records.set(custodyRecordsData || []);
-      
-      // معالجة البيانات - قد تكون array أو object
-      let accountsList: any[] = [];
-      if (Array.isArray(accountsData)) {
-        accountsList = accountsData;
-      } else if (accountsData && typeof accountsData === 'object') {
-        const data = accountsData as any;
-        if (Array.isArray(data.accounts)) {
-          accountsList = data.accounts;
-        }
-      }
-      
-      // فلترة الحسابات من نوع عهدة (Drizzle يرجع snake_case)
-      const custodyAccs = accountsList.filter((a: any) => 
-        a.accountType === 'custody' || a.account_type === 'custody'
-      );
-      
-      this.custodyAccounts.set(custodyAccs);
+      this.custodyAccounts.set(custodyAccountsData || []);
     } catch (e) { 
       console.error(e); 
     }

@@ -41,6 +41,53 @@ function toAccountTypeFromNature(natureKey: string): string {
   return NATURE_TO_ACCOUNT_TYPE[natureKey] || 'accounting';
 }
 
+// ===================== Endpoints مخصصة للأداء =====================
+
+accountsRoutes.get('/businesses/:bizId/custody-accounts', bizAuthMiddleware(), safeHandler('جلب حسابات العهد', async (c) => {
+  const bizId = getBizId(c);
+  const rows = await db
+    .select()
+    .from(accounts)
+    .innerJoin(accountSubNatures, eq(accounts.accountSubNatureId, accountSubNatures.id))
+    .where(and(
+      eq(accounts.businessId, bizId),
+      eq(accountSubNatures.natureKey, 'custody'),
+      eq(accounts.isLeafAccount, true)
+    ))
+    .orderBy(accounts.code);
+  return c.json(rows.map(r => r.accounts));
+}));
+
+accountsRoutes.get('/businesses/:bizId/intermediary-accounts', bizAuthMiddleware(), safeHandler('جلب الحسابات الوسيطة', async (c) => {
+  const bizId = getBizId(c);
+  const rows = await db
+    .select()
+    .from(accounts)
+    .innerJoin(accountSubNatures, eq(accounts.accountSubNatureId, accountSubNatures.id))
+    .where(and(
+      eq(accounts.businessId, bizId),
+      eq(accountSubNatures.natureKey, 'intermediary'),
+      eq(accounts.isLeafAccount, true)
+    ))
+    .orderBy(accounts.code);
+  return c.json(rows.map(r => r.accounts));
+}));
+
+accountsRoutes.get('/businesses/:bizId/pending-accounts-list', bizAuthMiddleware(), safeHandler('جلب الحسابات المعلقة', async (c) => {
+  const bizId = getBizId(c);
+  const rows = await db
+    .select()
+    .from(accounts)
+    .innerJoin(accountSubNatures, eq(accounts.accountSubNatureId, accountSubNatures.id))
+    .where(and(
+      eq(accounts.businessId, bizId),
+      eq(accountSubNatures.natureKey, 'pending'),
+      eq(accounts.isLeafAccount, true)
+    ))
+    .orderBy(accounts.code);
+  return c.json(rows.map(r => r.accounts));
+}));
+
 accountsRoutes.get('/businesses/:bizId/accounts', bizAuthMiddleware(), safeHandler('جلب الحسابات', async (c) => {
   const bizId = getBizId(c);
   const rows = await db.select().from(accounts).where(eq(accounts.businessId, bizId)).orderBy(accounts.code, accounts.name);
