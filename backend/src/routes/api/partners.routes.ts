@@ -11,6 +11,7 @@ import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts
 import {
   TYPE_PREFIXES,
   generateItemCode,
+  generateLeafAccountCode,
   getNextAccountSequence,
   getNextBusinessPartnerSequence,
   getNextSupplierSequence,
@@ -56,15 +57,18 @@ partnersRoutes.post('/businesses/:bizId/partners', bizAuthMiddleware(), safeHand
       : null;
   const [created] = await db.transaction(async (tx) => {
     const partnerSeq = await getNextBusinessPartnerSequence(bizId, tx);
-    const seq = await getNextAccountSequence(bizId, 'partner', 0, tx);
+    
+    // استخدام آلية الترقيم الصحيحة حسب النوع الفرعي
+    const { code, sequenceNumber } = await generateLeafAccountCode(bizId, 'partner', tx as any);
+    
     const [account] = await tx.insert(accounts).values({
       businessId: bizId,
       name: `حساب شريك - ${partnerFullName}`.trim(),
       accountType: 'partner',
       subType: partnerRole,
       subTypeId: partnerSubTypeId,
-      sequenceNumber: seq,
-      code: generateItemCode(TYPE_PREFIXES.partner || 'PRT', seq),
+      sequenceNumber,
+      code,
       isActive: true,
       notes: partnerNotes,
     }).returning();
@@ -148,15 +152,18 @@ partnersRoutes.post('/businesses/:bizId/suppliers', bizAuthMiddleware(), safeHan
   }
   const [created] = await db.transaction(async (tx) => {
     const supplierSeq = await getNextSupplierSequence(bizId, supplierTypeId, tx);
-    const seq = await getNextAccountSequence(bizId, 'supplier', supplierTypeId, tx);
+    
+    // استخدام آلية الترقيم الصحيحة حسب النوع الفرعي
+    const { code, sequenceNumber } = await generateLeafAccountCode(bizId, 'supplier', tx as any);
+    
     const [account] = await tx.insert(accounts).values({
       businessId: bizId,
       name: `حساب مورد - ${String(d.name ?? '')}`.trim(),
       accountType: 'supplier',
       subType: d.category ? String(d.category) : 'default',
       subTypeId: supplierTypeId,
-      sequenceNumber: seq,
-      code: generateItemCode(TYPE_PREFIXES.supplier || 'SUP', seq),
+      sequenceNumber,
+      code,
       isActive: true,
       notes: d.notes ? String(d.notes) : null,
     }).returning();

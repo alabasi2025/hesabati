@@ -5,7 +5,7 @@ import { accounts, employees, stations } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { employeeSchema, validateBody } from '../../middleware/validation.ts';
 import { safeHandler, getBody, parseId } from '../../middleware/helpers.ts';
-import { TYPE_PREFIXES, generateItemCode, getNextAccountSequence, getNextEmployeeSequence } from '../../middleware/sequencing.ts';
+import { TYPE_PREFIXES, generateItemCode, generateLeafAccountCode, getNextAccountSequence, getNextEmployeeSequence } from '../../middleware/sequencing.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { getFirstRow } from './_shared/db-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
@@ -88,7 +88,10 @@ employeesRoutes.post('/businesses/:bizId/employees', bizAuthMiddleware(), safeHa
     `);
     const newEmployee = getFirstRow<any>(insertResult);
     if (!newEmployee) throw new Error('فشل إنشاء الموظف');
-    const seq = await getNextAccountSequence(bizId, 'employee', departmentId, tx);
+    
+    // استخدام آلية الترقيم الصحيحة حسب النوع الفرعي
+    const { code, sequenceNumber } = await generateLeafAccountCode(bizId, 'employee', tx as any);
+    
     await tx.insert(accounts).values({
       businessId: bizId,
       name: `حساب موظف - ${newEmployee.fullName}`.trim(),
@@ -96,8 +99,8 @@ employeesRoutes.post('/businesses/:bizId/employees', bizAuthMiddleware(), safeHa
       subType: data.department || 'default',
       subTypeId: departmentId,
       linkedEmployeeId: newEmployee.id,
-      sequenceNumber: seq,
-      code: generateItemCode(TYPE_PREFIXES.employee || 'EMP', seq),
+      sequenceNumber,
+      code,
       isActive: true,
       notes: data.notes ?? null,
     });
