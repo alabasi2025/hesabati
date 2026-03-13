@@ -70,8 +70,11 @@ export class CustodyComponent extends BasePageComponent {
       let accountsList: any[] = [];
       if (Array.isArray(accountsData)) {
         accountsList = accountsData;
-      } else if (accountsData && typeof accountsData === 'object' && Array.isArray(accountsData.accounts)) {
-        accountsList = accountsData.accounts;
+      } else if (accountsData && typeof accountsData === 'object') {
+        const data = accountsData as any;
+        if (Array.isArray(data.accounts)) {
+          accountsList = data.accounts;
+        }
       }
       
       // فلترة الحسابات من نوع عهدة
