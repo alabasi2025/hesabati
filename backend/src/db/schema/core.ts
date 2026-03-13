@@ -592,6 +592,7 @@ export const reconciliations = pgTable('reconciliations', {
 export const pendingAccounts = pgTable('pending_accounts', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').references(() => businesses.id),
+  accountId: integer('account_id').references(() => accounts.id),
   personOrEntity: varchar('person_or_entity', { length: 200 }).notNull(),
   description: text('description').notNull(),
   status: pendingStatusEnum('status').notNull().default('pending'),

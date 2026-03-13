@@ -367,11 +367,27 @@ async function seed() {
   console.log('✅ أصناف المخزون');
 
   // ===================== الحسابات المعلقة =====================
-  await db.insert(schema.pendingAccounts).values([
+  const pendingItems = [
     { businessId: b1.id, personOrEntity: 'علي الصعدي - حساب 2023', description: 'صندوق مخلوط فيه عجز - يحتاج تصفية كاملة', status: 'pending' },
     { businessId: b1.id, personOrEntity: 'أمجد الصلوي', description: 'حساب العدادات والمواد الكهربائية فيه شعبطة كبيرة', status: 'pending' },
     { businessId: b1.id, personOrEntity: 'المهندس محمد حسن', description: 'شاشات وقواطع دمج - له سنة ما كمل', status: 'pending' },
-  ]);
+  ];
+  
+  for (const item of pendingItems) {
+    // إنشاء حساب مالي فعلي لكل حساب معلق
+    const account = await createLinkedAccount(
+      item.businessId,
+      `حساب معلق - ${item.personOrEntity}`,
+      'pending',
+      getNatureId(item.businessId, 'pending'),
+    );
+    
+    // إنشاء سجل في pending_accounts مع ربطه بالحساب
+    await db.insert(schema.pendingAccounts).values({
+      ...item,
+      accountId: account.id,
+    });
+  }
   console.log('✅ الحسابات المعلقة');
 
   // ===================== أنظمة الفوترة (5 أنظمة) =====================

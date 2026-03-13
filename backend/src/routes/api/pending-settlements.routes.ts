@@ -3,11 +3,12 @@
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { eq, desc } from 'drizzle-orm';
-import { pendingAccounts, reconciliations } from '../../db/schema/index.ts';
+import { eq, desc, and } from 'drizzle-orm';
+import { pendingAccounts, reconciliations, accounts, accountSubNatures } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { pendingAccountSchema, settlementSchema, validateBody } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { generateLeafAccountCode } from '../../middleware/sequencing.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 
@@ -16,7 +17,26 @@ const pendingSettlementsRoutes = new Hono();
 // ===================== الحسابات المعلقة =====================
 pendingSettlementsRoutes.get('/businesses/:bizId/pending-accounts', bizAuthMiddleware(), safeHandler('جلب الحسابات المعلقة', async (c) => {
   const bizId = getBizId(c);
-  const rows = await db.select().from(pendingAccounts).where(eq(pendingAccounts.businessId, bizId));
+  const rows = await db
+    .select({
+      id: pendingAccounts.id,
+      businessId: pendingAccounts.businessId,
+      accountId: pendingAccounts.accountId,
+      personOrEntity: pendingAccounts.personOrEntity,
+      description: pendingAccounts.description,
+      status: pendingAccounts.status,
+      estimatedAmount: pendingAccounts.estimatedAmount,
+      currencyId: pendingAccounts.currencyId,
+      notes: pendingAccounts.notes,
+      createdAt: pendingAccounts.createdAt,
+      updatedAt: pendingAccounts.updatedAt,
+      // إضافة الكود من الحساب المرتبط
+      accountCode: accounts.code,
+      accountSequence: accounts.sequenceNumber,
+    })
+    .from(pendingAccounts)
+    .leftJoin(accounts, eq(pendingAccounts.accountId, accounts.id))
+    .where(eq(pendingAccounts.businessId, bizId));
   return c.json(rows);
 }));
 
@@ -25,12 +45,48 @@ pendingSettlementsRoutes.post('/businesses/:bizId/pending-accounts', bizAuthMidd
   const body = normalizeBody(await c.req.json());
   const validation = validateBody(pendingAccountSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const d = validation.data as Record<string, unknown> & { estimatedAmount?: string | number | null };
-  const [created] = await db.insert(pendingAccounts).values({
-    ...validation.data,
-    businessId: bizId,
-    estimatedAmount: d.estimatedAmount != null ? String(d.estimatedAmount) : null,
-  }).returning();
+  const d = validation.data as Record<string, unknown> & { 
+    personOrEntity?: string;
+    estimatedAmount?: string | number | null;
+  };
+  
+  const [created] = await db.transaction(async (tx) => {
+    // إنشاء حساب مالي فعلي من نوع "معلق"
+    const [pendingNature] = await tx
+      .select({ id: accountSubNatures.id })
+      .from(accountSubNatures)
+      .where(and(
+        eq(accountSubNatures.businessId, bizId),
+        eq(accountSubNatures.natureKey, 'pending')
+      ))
+      .limit(1);
+    
+    if (!pendingNature) {
+      throw new Error('النوع الفرعي "معلق" غير موجود');
+    }
+    
+    const { code, sequenceNumber } = await generateLeafAccountCode(bizId, 'pending', tx as any);
+    
+    const [account] = await tx.insert(accounts).values({
+      businessId: bizId,
+      name: `حساب معلق - ${d.personOrEntity || 'غير معروف'}`,
+      accountType: 'pending',
+      accountSubNatureId: pendingNature.id,
+      isLeafAccount: true,
+      code,
+      sequenceNumber,
+      isActive: true,
+    }).returning();
+    
+    // إنشاء السجل في pending_accounts مع ربطه بالحساب
+    return tx.insert(pendingAccounts).values({
+      ...validation.data,
+      businessId: bizId,
+      accountId: account.id,
+      estimatedAmount: d.estimatedAmount != null ? String(d.estimatedAmount) : null,
+    }).returning();
+  });
+  
   return c.json(created, 201);
 }));
 

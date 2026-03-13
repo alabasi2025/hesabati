@@ -25,11 +25,12 @@
     <div class="empty-state"><span class="material-icons-round">task_alt</span><p>لا يوجد حسابات معلقة</p></div>
   } @else {
     <table class="data-table">
-      <thead><tr><th>#</th><th>الشخص / الجهة</th><th>الوصف</th><th>المبلغ التقديري</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
+      <thead><tr><th>#</th><th>الكود</th><th>الشخص / الجهة</th><th>الوصف</th><th>المبلغ التقديري</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
       <tbody>
         @for (item of filteredItems(); track item.id; let i = $index) {
           <tr>
             <td>{{ i + 1 }}</td>
+            <td><span class="code-badge">{{ item.accountCode || '-' }}</span></td>
             <td>
               <div class="person-cell">
                 <div class="person-avatar"><span class="material-icons-round">person</span></div>
