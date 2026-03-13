@@ -669,6 +669,8 @@ async function seed() {
     // --- الوحدة 7: الموردين ---
     await db.insert(schema.sidebarItems).values([
       { sectionId: sec7.id, screenKey: 'suppliers', label: 'الموردين', icon: 'local_shipping', route: '/biz/{bizId}/suppliers', sortOrder: 1 },
+      { sectionId: sec7.id, screenKey: 'supplier_types', label: 'تصنيفات الموردين', icon: 'label', route: '/biz/{bizId}/supplier-types', sortOrder: 2 },
+      { sectionId: sec7.id, screenKey: 'purchase_invoices', label: 'فواتير المشتريات', icon: 'receipt', route: '/biz/{bizId}/purchase-invoices', sortOrder: 3 },
     ]);
 
     // --- الوحدة 8: التحصيل والفوترة ---
