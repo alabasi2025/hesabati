@@ -735,9 +735,37 @@ async function seed() {
       { sectionId: sec13.id, screenKey: 'expense_budget', label: 'ميزانية المصروفات', icon: 'account_balance_wallet', route: '/biz/{bizId}/expense-budget', sortOrder: 2 },
       { sectionId: sec13.id, screenKey: 'salaries', label: 'الرواتب', icon: 'payments', route: '/biz/{bizId}/salaries', sortOrder: 3 },
     ]);
+
+    // --- إضافة جميع العناصر للمستخدمين تلقائياً ---
+    const allItemsInBiz = await db.select({
+      id: schema.sidebarItems.id,
+      sectionId: schema.sidebarItems.sectionId,
+      sortOrder: schema.sidebarItems.sortOrder,
+    }).from(schema.sidebarItems)
+      .innerJoin(schema.sidebarSections, eq(schema.sidebarItems.sectionId, schema.sidebarSections.id))
+      .where(eq(schema.sidebarSections.businessId, biz.id));
+
+    const allUsers = await db.select({ id: schema.users.id }).from(schema.users);
+    
+    const userConfigsToInsert: any[] = [];
+    for (const user of allUsers) {
+      for (const item of allItemsInBiz) {
+        userConfigsToInsert.push({
+          userId: user.id,
+          businessId: biz.id,
+          sidebarItemId: item.id,
+          isVisible: true,
+          customSortOrder: item.sortOrder || 0,
+        });
+      }
+    }
+    
+    if (userConfigsToInsert.length > 0) {
+      await db.insert(schema.userSidebarConfig).values(userConfigsToInsert);
+    }
   }
 
-  console.log('✅ أقسام وعناصر القائمة الجانبية (sidebar_sections + sidebar_items)');
+  console.log('✅ أقسام وعناصر القائمة الجانبية (sidebar_sections + sidebar_items + user_sidebar_config)');
 
   console.log('\n🎉 تم تهيئة جميع البيانات بنجاح!');
   process.exit(0);
