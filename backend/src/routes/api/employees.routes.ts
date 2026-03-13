@@ -54,9 +54,18 @@ employeesRoutes.get('/businesses/:bizId/employees', bizAuthMiddleware(), safeHan
       isManager: employees.isManager,
       createdAt: employees.createdAt,
       stationName: stations.name,
+      // إضافة الكود والترقيم من الحساب المرتبط
+      code: accounts.code,
+      sequenceNumber: accounts.sequenceNumber,
+      accountId: accounts.id,
     })
     .from(employees)
     .leftJoin(stations, eq(employees.stationId, stations.id))
+    .leftJoin(accounts, and(
+      eq(accounts.businessId, bizId),
+      eq(accounts.accountType, 'employee'),
+      eq(accounts.linkedEmployeeId, employees.id)
+    ))
     .where(eq(employees.businessId, bizId))
     .orderBy(employees.stationId, employees.fullName);
   return c.json(rows);

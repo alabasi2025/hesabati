@@ -29,7 +29,7 @@
           <tr>
             <td>{{ i + 1 }}</td>
             <td><div class="emp-cell"><div class="emp-avatar-sm"><span class="material-icons-round">person</span></div><span class="emp-name-cell">{{ emp.fullName }}</span></div></td>
-            <td>{{ emp.code || '-' }}</td>
+            <td><span class="code-badge">{{ emp.code || '-' }}</span></td>
             <td>{{ emp.sequenceNumber || '-' }}</td>
             <td>{{ getJobTitleName(emp.jobTitleId) || emp.jobTitle || '-' }}</td>
             <td>{{ emp.stationName || 'الإدارة' }}</td>

@@ -45,8 +45,8 @@
           </div>
           <h3 class="partner-name">{{ p.fullName }}</h3>
           @if (p.role) { <span class="partner-role">{{ p.role }}</span> }
-          <div class="partner-detail"><span class="material-icons-round">tag</span> الكود: {{ p.code || '-' }}</div>
-          <div class="partner-detail"><span class="material-icons-round">format_list_numbered</span> التسلسل: {{ p.sequenceNumber || '-' }}</div>
+          <div class="partner-detail"><span class="material-icons-round">tag</span> الكود: {{ p.accountCode || p.code || '-' }}</div>
+          <div class="partner-detail"><span class="material-icons-round">format_list_numbered</span> التسلسل: {{ p.accountSequence || p.sequenceNumber || '-' }}</div>
           <div class="share-display">
             <div class="share-ring" [style.background]="'conic-gradient(' + getShareColor(+p.sharePercentage) + ' ' + p.sharePercentage + '%, var(--bg-surface) 0)'">
               <div class="share-inner">{{ p.sharePercentage }}%</div>

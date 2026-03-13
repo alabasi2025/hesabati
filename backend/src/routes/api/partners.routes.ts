@@ -34,7 +34,30 @@ function roleToSubTypeId(role: string): number {
 // ===================== الشركاء =====================
 partnersRoutes.get('/businesses/:bizId/partners', bizAuthMiddleware(), safeHandler('جلب الشركاء', async (c) => {
   const bizId = getBizId(c);
-  const rows = await db.select().from(businessPartners).where(eq(businessPartners.businessId, bizId));
+  const rows = await db
+    .select({
+      id: businessPartners.id,
+      fullName: businessPartners.fullName,
+      role: businessPartners.role,
+      sharePercentage: businessPartners.sharePercentage,
+      phone: businessPartners.phone,
+      notes: businessPartners.notes,
+      accountId: businessPartners.accountId,
+      sequenceNumber: businessPartners.sequenceNumber,
+      code: businessPartners.code,
+      createdAt: businessPartners.createdAt,
+      updatedAt: businessPartners.updatedAt,
+      // إضافة الكود من الحساب المرتبط (الكود الصحيح)
+      accountCode: accounts.code,
+      accountSequence: accounts.sequenceNumber,
+    })
+    .from(businessPartners)
+    .leftJoin(accounts, and(
+      eq(accounts.businessId, bizId),
+      eq(accounts.accountType, 'partner'),
+      eq(accounts.id, businessPartners.accountId)
+    ))
+    .where(eq(businessPartners.businessId, bizId));
   return c.json(rows);
 }));
 
