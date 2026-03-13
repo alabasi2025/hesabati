@@ -65,8 +65,10 @@ export class CustodyComponent extends BasePageComponent {
         this.api.getAccounts(this.bizId),
       ]);
       this.records.set(custodyRecordsData || []);
-      // فلترة الحسابات من نوع عهدة
-      const custodyAccs = (accountsData || []).filter((a: any) => a.accountType === 'custody');
+      // فلترة الحسابات من نوع عهدة (accountType قد يكون camelCase أو snake_case)
+      const custodyAccs = (accountsData || []).filter((a: any) => 
+        a.accountType === 'custody' || a.account_type === 'custody'
+      );
       this.custodyAccounts.set(custodyAccs);
     } catch (e) { console.error(e); }
     this.loading.set(false);
