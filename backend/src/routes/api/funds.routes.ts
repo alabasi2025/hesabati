@@ -29,6 +29,18 @@ import type { AppContext } from "./_shared/types.ts";
 
 const fundsRoutes = new Hono();
 
+/**
+ * توليد كود الصندوق
+ * 
+ * آلية الترقيم:
+ * - الكود: FND-01, FND-02, FND-03...
+ * - التصنيفات (fund_types) للتنظيم والفلترة فقط وليس لها علاقة بالترقيم
+ * - الترقيم يعتمد على النوع الفرعي "صندوق" من account_sub_natures
+ * 
+ * @param businessId - معرف العمل (غير مستخدم حالياً)
+ * @param categorySequence - رقم التصنيف (غير مستخدم في الكود الفعلي)
+ * @param sequenceNumber - رقم الصندوق التسلسلي
+ */
 function buildFundCode(
   businessId: number,
   categorySequence: number,
@@ -169,7 +181,10 @@ fundsRoutes.post(
       businessId: bizId,
     };
 
-    // ترقيم تلقائي للصندوق داخل تصنيفه (fundType) + دعم إدخال رقم يدوي عند الحاجة.
+    // آلية الترقيم:
+    // - الكود: FND-01, FND-02, FND-03...
+    // - التصنيف (fundType) للتنظيم فقط وليس له علاقة بالكود
+    // - يمكن إدخال رقم يدوي (sequenceNumber) أو تلقائي
     const fundTypeKey = String((validation.data as any).fundType || "");
     const typeInfo = await resolveFundTypeInfo(bizId, fundTypeKey);
     if (!typeInfo) {

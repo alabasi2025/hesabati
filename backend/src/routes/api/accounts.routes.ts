@@ -19,6 +19,7 @@ import { safeHandler, getBody, parseId } from '../../middleware/helpers.ts';
 import {
   generateItemCode,
   generateTreeAccountCode,
+  generateLeafAccountCode,
   getNextChildAccountSequence,
   getNextItemInCategorySequence,
   getNextSupplierSequence,
@@ -105,59 +106,71 @@ accountsRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), checkPer
     : [null];
   if (accountSubNatureId && !subNature) return c.json({ error: 'نوع الحساب الفرعي غير موجود' }, 400);
 
-  let sequenceNumber = await getNextChildAccountSequence(bizId, parentAccountId, db);
-  let generatedCode = generateTreeAccountCode(parent?.code ?? null, sequenceNumber);
   const accountType = subNature ? toAccountTypeFromNature(String(subNature.natureKey)) : (typeof body.accountType === 'string' ? body.accountType : 'accounting');
   const hasManualCode = typeof body.code === 'string' && body.code.trim().length > 0;
 
-  const resolveAvailableAutoCode = async (startSequence: number): Promise<{ seq: number; code: string }> => {
-    let seq = startSequence;
-    for (let i = 0; i < 2000; i++) {
-      const code = generateTreeAccountCode(parent?.code ?? null, seq);
-      const [exists] = await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.businessId, bizId), eq(accounts.code, code))).limit(1);
-      if (!exists) return { seq, code };
-      seq += 1;
-    }
-    throw new Error('تعذر إيجاد كود حساب متاح');
-  };
+  let sequenceNumber: number;
+  let generatedCode: string;
 
-  if (!hasManualCode) {
-    const available = await resolveAvailableAutoCode(sequenceNumber);
-    sequenceNumber = available.seq;
-    generatedCode = available.code;
-  }
-  
-  let created: typeof accounts.$inferSelect | undefined;
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const payload: Record<string, unknown> = {
-      ...body,
-      businessId: bizId,
-      name: accountName,
-      accountType,
-      parentAccountId,
-      accountSubNatureId,
-      isLeafAccount,
-      sequenceNumber,
-      code: hasManualCode ? String(body.code).trim() : generatedCode,
-      updatedAt: new Date(),
+  // آلية الترقيم الصحيحة:
+  // 1. الحسابات الفرعية (isLeafAccount = true): تأخذ كود حسب النوع الفرعي (FND-01, BNK-01, إلخ)
+  // 2. الحسابات الرئيسية (isLeafAccount = false): تأخذ كود شجري للتنظيم (1, 1.1, 2.3, إلخ)
+  if (isLeafAccount && subNature) {
+    // حساب فرعي: استخدم آلية الكود حسب النوع الفرعي
+    const result = await generateLeafAccountCode(bizId, subNature.natureKey, db);
+    sequenceNumber = result.sequenceNumber;
+    generatedCode = result.code;
+  } else {
+    // حساب رئيسي: استخدم آلية الترقيم الشجري
+    sequenceNumber = await getNextChildAccountSequence(bizId, parentAccountId, db);
+    generatedCode = generateTreeAccountCode(parent?.code ?? null, sequenceNumber);
+
+    // التحقق من عدم تكرار الكود للحسابات الرئيسية
+    const resolveAvailableTreeCode = async (startSequence: number): Promise<{ seq: number; code: string }> => {
+      let seq = startSequence;
+      for (let i = 0; i < 2000; i++) {
+        const code = generateTreeAccountCode(parent?.code ?? null, seq);
+        const [exists] = await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.businessId, bizId), eq(accounts.code, code))).limit(1);
+        if (!exists) return { seq, code };
+        seq += 1;
+      }
+      throw new Error('تعذر إيجاد كود حساب متاح');
     };
-    delete payload.linkedEntityType;
-    delete payload.linkedEntityId;
 
-    try {
-      [created] = await db.insert(accounts).values(payload as typeof accounts.$inferInsert).returning();
-      break;
-    } catch (error) {
-      const pgError = error as PostgresError;
-      const isCodeConflict = pgError?.code === '23505' && String(pgError?.constraint_name || '').includes('accounts_biz_code_unique');
-      if (!isCodeConflict || hasManualCode || attempt >= 11) throw error;
-      sequenceNumber = sequenceNumber + 1;
-      const available = await resolveAvailableAutoCode(sequenceNumber);
+    if (!hasManualCode) {
+      const available = await resolveAvailableTreeCode(sequenceNumber);
       sequenceNumber = available.seq;
       generatedCode = available.code;
     }
   }
-  if (!created) return c.json({ error: 'تعذر إنشاء الحساب تلقائياً بعد عدة محاولات' }, 409);
+  
+  let created: typeof accounts.$inferSelect | undefined;
+  const payload: Record<string, unknown> = {
+    ...body,
+    businessId: bizId,
+    name: accountName,
+    accountType,
+    parentAccountId,
+    accountSubNatureId,
+    isLeafAccount,
+    sequenceNumber,
+    code: hasManualCode ? String(body.code).trim() : generatedCode,
+    updatedAt: new Date(),
+  };
+  delete payload.linkedEntityType;
+  delete payload.linkedEntityId;
+
+  try {
+    [created] = await db.insert(accounts).values(payload as typeof accounts.$inferInsert).returning();
+  } catch (error) {
+    const pgError = error as PostgresError;
+    const isCodeConflict = pgError?.code === '23505' && String(pgError?.constraint_name || '').includes('accounts_biz_code_unique');
+    if (!isCodeConflict || hasManualCode) throw error;
+    
+    // في حالة التكرار (نادر جداً مع آلية التسلسل الجديدة)، ارجع خطأ واضح
+    return c.json({ error: 'حدث تعارض في الكود، يرجى المحاولة مرة أخرى' }, 409);
+  }
+  if (!created) return c.json({ error: 'تعذر إنشاء الحساب' }, 500);
 
   // إنشاء صندوق تلقائي عند إنشاء حساب فرعي من طبيعة "fund" من صفحة الدليل مباشرة
   const hasLinkedEntityPayload = body.linkedEntityId != null && body.linkedEntityType != null;
