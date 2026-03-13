@@ -46,7 +46,6 @@ partnersRoutes.get('/businesses/:bizId/partners', bizAuthMiddleware(), safeHandl
       sequenceNumber: businessPartners.sequenceNumber,
       code: businessPartners.code,
       createdAt: businessPartners.createdAt,
-      updatedAt: businessPartners.updatedAt,
       // إضافة الكود من الحساب المرتبط (الكود الصحيح)
       accountCode: accounts.code,
       accountSequence: accounts.sequenceNumber,

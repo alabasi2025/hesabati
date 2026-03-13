@@ -11,6 +11,7 @@ import {
   operationTypes,
   inventoryItems,
   warehouseTypes,
+  accounts,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { warehouseSchema, validateBody } from '../../middleware/validation.ts';

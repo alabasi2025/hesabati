@@ -385,7 +385,10 @@ async function seed() {
     
     // إنشاء سجل في pending_accounts مع ربطه بالحساب
     await db.insert(schema.pendingAccounts).values({
-      ...item,
+      businessId: item.businessId,
+      personOrEntity: item.personOrEntity,
+      description: item.description,
+      status: item.status as 'pending' | 'in_progress' | 'resolved' | 'written_off',
       accountId: account.id,
     });
   }
