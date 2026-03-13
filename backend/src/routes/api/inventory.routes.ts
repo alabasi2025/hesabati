@@ -2,6 +2,9 @@
  * مسارات محرك المخزون (قراءة أرصدة، تنبيهات، تقييم، حركات) — فصل عن api.rest
  */
 import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
+import { db } from '../../db/index.ts';
+import { inventoryItems } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
@@ -15,6 +18,17 @@ import {
 } from '../../services/inventory.service.ts';
 
 const inventoryRoutes = new Hono();
+
+// ===================== أصناف المخزون =====================
+inventoryRoutes.get('/businesses/:bizId/inventory-items', bizAuthMiddleware(), safeHandler('جلب أصناف المخزون', async (c) => {
+  const bizId = getBizId(c);
+  const rows = await db
+    .select()
+    .from(inventoryItems)
+    .where(eq(inventoryItems.businessId, bizId))
+    .orderBy(inventoryItems.name);
+  return c.json(rows);
+}));
 
 inventoryRoutes.get('/businesses/:bizId/stock-levels', bizAuthMiddleware(), checkPermission('inventory', 'read'), safeHandler('أرصدة المخزون', async (c) => {
   const bizId = getBizId(c);
