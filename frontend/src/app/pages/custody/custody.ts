@@ -64,25 +64,44 @@ export class CustodyComponent extends BasePageComponent {
         this.api.getCustodyRecords(this.bizId),
         this.api.getAccounts(this.bizId),
       ]);
+      
+      console.log('🔍 [العهد] accountsData:', accountsData);
+      console.log('🔍 [العهد] نوع البيانات:', typeof accountsData);
+      console.log('🔍 [العهد] هل array؟', Array.isArray(accountsData));
+      
       this.records.set(custodyRecordsData || []);
       
       // معالجة البيانات - قد تكون array أو object
       let accountsList: any[] = [];
       if (Array.isArray(accountsData)) {
         accountsList = accountsData;
+        console.log('🔍 [العهد] استخدام array مباشر:', accountsList.length);
       } else if (accountsData && typeof accountsData === 'object') {
         const data = accountsData as any;
         if (Array.isArray(data.accounts)) {
           accountsList = data.accounts;
+          console.log('🔍 [العهد] استخدام data.accounts:', accountsList.length);
         }
       }
       
+      console.log('🔍 [العهد] إجمالي الحسابات:', accountsList.length);
+      
       // فلترة الحسابات من نوع عهدة
-      const custodyAccs = accountsList.filter((a: any) => 
-        a.accountType === 'custody' || a.account_type === 'custody'
-      );
+      const custodyAccs = accountsList.filter((a: any) => {
+        const match = a.accountType === 'custody' || a.account_type === 'custody';
+        if (match) {
+          console.log('🔍 [العهد] وجدت حساب عهدة:', a.code, a.name);
+        }
+        return match;
+      });
+      
+      console.log('🔍 [العهد] حسابات العهد بعد الفلتر:', custodyAccs.length);
+      console.log('🔍 [العهد] الحسابات:', custodyAccs);
+      
       this.custodyAccounts.set(custodyAccs);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error('❌ [العهد] خطأ:', e); 
+    }
     this.loading.set(false);
   }
 
