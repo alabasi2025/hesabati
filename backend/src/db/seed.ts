@@ -4,11 +4,20 @@ import { eq, isNull } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema/index.ts';
 import bcrypt from 'bcryptjs';
+import { generateLeafAccountCode } from '../middleware/sequencing.ts';
 
 const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:774424555@localhost:5432/hesabati';
 const client = postgres(connectionString);
 const db = drizzle(client, { schema });
 
+/**
+ * تهيئة البيانات الأولية للنظام
+ * 
+ * ملاحظة: تم تحديث آلية الترقيم لتعكس النظام الصحيح:
+ * - الحسابات الفرعية: تأخذ كود حسب النوع (FND-01, BNK-01, WHS-01, SUP-01, إلخ)
+ * - التصنيفات (fund_types, bank_types): للتنظيم والفلترة فقط
+ * - الترقيم يعتمد على أنواع الحسابات الفرعية (account_sub_natures)
+ */
 async function seed() {
   console.log('🌱 بدء تهيئة البيانات الأولية...');
 
@@ -85,8 +94,10 @@ async function seed() {
   const getNatureId = (businessId: number, natureKey: string): number | null =>
     businessNatureByKey.get(businessId)?.[natureKey] ?? null;
 
-  const accountSequenceByBusiness = new Map<number, number>();
-
+  /**
+   * إنشاء حساب مرتبط بكيان تشغيلي (صندوق، مخزن، مورد، إلخ)
+   * تطبق آلية الترقيم الصحيحة: FND-01, BNK-01, WHS-01, SUP-01, إلخ
+   */
   const createLinkedAccount = async (
     businessId: number,
     name: string,
@@ -95,10 +106,38 @@ async function seed() {
     code?: string | null,
     sequenceNumber?: number | null,
   ) => {
-    const currentSeq = accountSequenceByBusiness.get(businessId) ?? 0;
-    const resolvedSequence = sequenceNumber ?? currentSeq + 1;
-    const nextStoredSeq = Math.max(currentSeq, resolvedSequence);
-    accountSequenceByBusiness.set(businessId, nextStoredSeq);
+    // إذا كان هناك كود محدد مسبقاً، استخدمه مباشرة
+    if (code) {
+      const [account] = await db
+        .insert(schema.accounts)
+        .values({
+          businessId,
+          name,
+          accountType,
+          accountSubNatureId,
+          isLeafAccount: true,
+          code,
+          sequenceNumber: sequenceNumber ?? null,
+        })
+        .returning();
+      return account;
+    }
+
+    // استخدام آلية الترقيم الصحيحة حسب النوع الفرعي
+    // احصل على natureKey من accountSubNatureId
+    const [subNature] = accountSubNatureId
+      ? await db.select({ natureKey: schema.accountSubNatures.natureKey })
+          .from(schema.accountSubNatures)
+          .where(eq(schema.accountSubNatures.id, accountSubNatureId))
+          .limit(1)
+      : [null];
+
+    const natureKey = subNature?.natureKey || accountType;
+    const { code: generatedCode, sequenceNumber: generatedSeq } = await generateLeafAccountCode(
+      businessId,
+      natureKey,
+      db as any
+    );
 
     const [account] = await db
       .insert(schema.accounts)
@@ -108,8 +147,8 @@ async function seed() {
         accountType,
         accountSubNatureId,
         isLeafAccount: true,
-        code: code ?? String(resolvedSequence),
-        sequenceNumber: resolvedSequence,
+        code: generatedCode,
+        sequenceNumber: generatedSeq,
       })
       .returning();
 
