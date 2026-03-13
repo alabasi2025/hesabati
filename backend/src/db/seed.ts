@@ -491,6 +491,24 @@ async function seed() {
       .where(eq(schema.warehouses.id, warehouse.id));
   }
 
+  // ربط الموظفين بحسابات مالية
+  const allEmployees = await db.select().from(schema.employees);
+  for (const employee of allEmployees) {
+    // إنشاء حساب مالي لكل موظف
+    const account = await createLinkedAccount(
+      employee.businessId,
+      `حساب موظف - ${employee.fullName}`,
+      'employee',
+      getNatureId(employee.businessId, 'employee'),
+    );
+    
+    // ربط الحساب بالموظف
+    await db
+      .update(schema.accounts)
+      .set({ linkedEmployeeId: employee.id, updatedAt: new Date() })
+      .where(eq(schema.accounts.id, account.id));
+  }
+
   const missingBillingAccounts = await db
     .select()
     .from(schema.employeeBillingAccounts)
