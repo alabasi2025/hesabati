@@ -97,19 +97,22 @@ export const ARABIC_LABELS: Record<string, string> = {
 
 /** بادئات الأنواع بالإنجليزي (للكود) */
 export const TYPE_PREFIXES: Record<string, string> = {
+  // أنواع الحسابات الفرعية (Account Sub-Natures)
   fund: "FND",
   bank: "BNK",
   e_wallet: "WLT",
   exchange: "EXC",
   warehouse: "WHS",
-  accounting: "ACC",
-  budget: "BDG",
+  custody: "CUS",
   supplier: "SUP",
   employee: "EMP",
   partner: "PRT",
+  billing: "BIL",
+  budget: "BDG",
   settlement: "STL",
   pending: "PNG",
-  custody: "CUS",
+  accounting: "ACC",
+  // أنواع العمليات
   receipt: "RCV",
   payment: "PAY",
   transfer: "TRF",
