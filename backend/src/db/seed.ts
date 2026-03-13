@@ -723,12 +723,13 @@ async function seed() {
 
     // --- الوحدة 12: المعلقات والتصفيات ---
     const pendingItems: any[] = [
-      { sectionId: sec12.id, screenKey: 'intermediary_accounts', label: 'الحسابات الوسيطة', icon: 'sync_alt', route: '/biz/{bizId}/intermediary-accounts', sortOrder: 1 },
-      { sectionId: sec12.id, screenKey: 'settlements', label: 'التصفيات', icon: 'balance', route: '/biz/{bizId}/settlements', sortOrder: 2 },
+      { sectionId: sec12.id, screenKey: 'custody', label: 'العهد', icon: 'lock', route: '/biz/{bizId}/custody', sortOrder: 1 },
+      { sectionId: sec12.id, screenKey: 'intermediary_accounts', label: 'الحسابات الوسيطة', icon: 'sync_alt', route: '/biz/{bizId}/intermediary-accounts', sortOrder: 2 },
+      { sectionId: sec12.id, screenKey: 'settlements', label: 'التصفيات', icon: 'balance', route: '/biz/{bizId}/settlements', sortOrder: 3 },
     ];
     if (bizType === 'stations') {
       pendingItems.push(
-        { sectionId: sec12.id, screenKey: 'pending_accounts', label: 'حسابات معلقة', icon: 'warning', route: '/biz/{bizId}/pending', badge: 3, badgeColor: 'red', sortOrder: 3 },
+        { sectionId: sec12.id, screenKey: 'pending_accounts', label: 'حسابات معلقة', icon: 'warning', route: '/biz/{bizId}/pending', badge: 3, badgeColor: 'red', sortOrder: 4 },
       );
     }
     await db.insert(schema.sidebarItems).values(pendingItems);
