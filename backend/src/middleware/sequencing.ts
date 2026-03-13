@@ -108,6 +108,7 @@ export const TYPE_PREFIXES: Record<string, string> = {
   employee: "EMP",
   partner: "PRT",
   billing: "BIL",
+  intermediary: "INT",
   budget: "BDG",
   settlement: "STL",
   pending: "PNG",

@@ -7,7 +7,7 @@ export const currencyCodeEnum = pgEnum('currency_code', ['YER', 'SAR', 'USD']);
 
 export const accountTypeEnum = pgEnum('account_type', [
   'fund', 'bank', 'e_wallet', 'exchange', 'accounting', 'custody', 'warehouse', 'billing',
-  'budget', 'supplier', 'employee', 'partner', 'settlement', 'pending',
+  'budget', 'supplier', 'employee', 'partner', 'intermediary', 'settlement', 'pending',
 ]);
 
 export const fundTypeEnum = pgEnum('fund_type', [

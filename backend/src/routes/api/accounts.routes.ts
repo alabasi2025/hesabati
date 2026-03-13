@@ -34,7 +34,7 @@ const NATURE_TO_ACCOUNT_TYPE: Record<string, string> = {
   fund: 'fund', bank: 'bank', e_wallet: 'e_wallet', exchange: 'exchange',
   custody: 'custody', warehouse: 'warehouse', supplier: 'supplier',
   employee: 'employee', partner: 'partner', billing: 'billing',
-  budget: 'budget', settlement: 'settlement', pending: 'pending',
+  intermediary: 'intermediary', budget: 'budget', settlement: 'settlement', pending: 'pending',
 };
 
 function toAccountTypeFromNature(natureKey: string): string {

@@ -55,6 +55,7 @@ async function seed() {
     { natureKey: 'employee', name: 'موظف', icon: 'person', requiresEmployee: true },
     { natureKey: 'partner', name: 'شريك', icon: 'handshake' },
     { natureKey: 'billing', name: 'نظام فوترة', icon: 'receipt', requiresStation: true, requiresEmployee: true },
+    { natureKey: 'intermediary', name: 'وسيطة', icon: 'sync_alt' },
     { natureKey: 'budget', name: 'ميزانية', icon: 'account_balance_wallet' },
     { natureKey: 'settlement', name: 'تصفية', icon: 'balance' },
     { natureKey: 'pending', name: 'معلق', icon: 'pending_actions' },
@@ -366,7 +367,7 @@ async function seed() {
   ]);
   console.log('✅ أصناف المخزون');
 
-  // ===================== الحسابات المعلقة =====================
+  // ===================== الحسابات المعلقة (حسابات إدارية معلقة) =====================
   const pendingItems = [
     { businessId: b1.id, personOrEntity: 'علي الصعدي - حساب 2023', description: 'صندوق مخلوط فيه عجز - يحتاج تصفية كاملة', status: 'pending' },
     { businessId: b1.id, personOrEntity: 'أمجد الصلوي', description: 'حساب العدادات والمواد الكهربائية فيه شعبطة كبيرة', status: 'pending' },
@@ -389,6 +390,24 @@ async function seed() {
     });
   }
   console.log('✅ الحسابات المعلقة');
+
+  // ===================== الحسابات الوسيطة (عمليات قيد الانتظار) =====================
+  // حسابات وسيطة للعمليات التشغيلية (فواتير مشتريات، تحويلات مخازن، إلخ)
+  const intermediaryAccounts = [
+    { name: 'فواتير مشتريات قيد الاستلام', description: 'فواتير تم تسجيلها وبانتظار إدخال المخزن' },
+    { name: 'تحويلات مخزنية قيد الاستلام', description: 'تحويلات تم إرسالها وبانتظار الاستلام' },
+    { name: 'طلبات توريد قيد المعالجة', description: 'طلبات توريد بانتظار وصول البضاعة' },
+  ];
+
+  for (const intAcc of intermediaryAccounts) {
+    await createLinkedAccount(
+      b1.id,
+      intAcc.name,
+      'intermediary',
+      getNatureId(b1.id, 'intermediary'),
+    );
+  }
+  console.log('✅ الحسابات الوسيطة');
 
   // ===================== أنظمة الفوترة (5 أنظمة) =====================
   const billingConfigs = await db.insert(schema.billingSystemsConfig).values([
