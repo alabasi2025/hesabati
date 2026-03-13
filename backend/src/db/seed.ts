@@ -275,23 +275,30 @@ async function seed() {
     { businessId: b3.id, name: 'خزنة شخصية', accountType: 'fund' as const },
   ];
 
-  const normalizedAccounts = accountSeedRows.map((row) => {
-    const nextSeq = (accountSequenceByBusiness.get(row.businessId) ?? 0) + 1;
-    accountSequenceByBusiness.set(row.businessId, nextSeq);
-
+  // إنشاء الحسابات باستخدام آلية الترقيم الصحيحة
+  const normalizedAccounts: any[] = [];
+  for (const row of accountSeedRows) {
     const natureId =
       row.accountType
         ? businessNatureByKey.get(row.businessId)?.[row.accountType]
         : undefined;
 
-    return {
+    // استخدام آلية الترقيم الصحيحة حسب النوع
+    const natureKey = row.accountType || 'accounting';
+    const { code, sequenceNumber } = await generateLeafAccountCode(
+      row.businessId,
+      natureKey,
+      db as any
+    );
+
+    normalizedAccounts.push({
       ...row,
       accountSubNatureId: natureId ?? null,
       isLeafAccount: true,
-      sequenceNumber: nextSeq,
-      code: String(nextSeq),
-    };
-  });
+      sequenceNumber,
+      code,
+    });
+  }
 
   await db.insert(schema.accounts).values(normalizedAccounts);
   console.log('✅ الحسابات');
@@ -417,6 +424,7 @@ async function seed() {
   console.log('✅ حسابات الفوترة للموظفين');
 
   // ===================== ربط الكيانات التشغيلية بحسابات مالية =====================
+  // ربط الصناديق وتحديث أكوادها بالآلية الصحيحة
   const missingFunds = await db.select().from(schema.funds).where(isNull(schema.funds.accountId));
   for (const fund of missingFunds) {
     const account = await createLinkedAccount(
@@ -427,9 +435,15 @@ async function seed() {
       fund.code,
       fund.sequenceNumber,
     );
+    // تحديث الصندوق بالكود والترقيم من الحساب المنشأ
     await db
       .update(schema.funds)
-      .set({ accountId: account.id, updatedAt: new Date() })
+      .set({ 
+        accountId: account.id,
+        code: account.code,
+        sequenceNumber: account.sequenceNumber,
+        updatedAt: new Date() 
+      })
       .where(eq(schema.funds.id, fund.id));
   }
 
@@ -443,9 +457,15 @@ async function seed() {
       supplier.code,
       supplier.sequenceNumber,
     );
+    // تحديث المورد بالكود والترقيم من الحساب المنشأ
     await db
       .update(schema.suppliers)
-      .set({ accountId: account.id, updatedAt: new Date() })
+      .set({ 
+        accountId: account.id,
+        code: account.code,
+        sequenceNumber: account.sequenceNumber,
+        updatedAt: new Date() 
+      })
       .where(eq(schema.suppliers.id, supplier.id));
   }
 
@@ -459,9 +479,15 @@ async function seed() {
       warehouse.code,
       warehouse.sequenceNumber,
     );
+    // تحديث المخزن بالكود والترقيم من الحساب المنشأ
     await db
       .update(schema.warehouses)
-      .set({ accountId: account.id, updatedAt: new Date() })
+      .set({ 
+        accountId: account.id,
+        code: account.code,
+        sequenceNumber: account.sequenceNumber,
+        updatedAt: new Date() 
+      })
       .where(eq(schema.warehouses.id, warehouse.id));
   }
 

@@ -13,7 +13,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:baseline": "tsx scripts/baseline-drizzle-migrations.ts",
     "db:push": "drizzle-kit push",
+    "db:reset": "tsx scripts/reset-database.ts",
     "db:seed": "tsx src/db/seed.ts",
+    "db:fresh": "npm run db:reset && npm run db:push && npm run db:seed",
     "db:check": "tsx src/db/check-schema-match.ts",
     "check:tdad": "node ../.tdad/scripts/validate-workflows.mjs"
   },
