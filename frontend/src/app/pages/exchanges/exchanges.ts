@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 
@@ -19,6 +18,7 @@ export class ExchangesComponent extends BasePageComponent {
 
   accounts = signal<any[]>([]);
   exchangeTypes = signal<any[]>([]);
+  accountSubNatures = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
 
@@ -46,12 +46,14 @@ export class ExchangesComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [accs, types] = await Promise.all([
+      const [accs, types, subNatures] = await Promise.all([
         this.api.getAccounts(this.bizId),
         this.api.getExchangeTypes(this.bizId),
+        this.api.getAccountSubNatures(this.bizId),
       ]);
       this.accounts.set(accs.filter((a: any) => a.accountType === 'exchange'));
       this.exchangeTypes.set(types);
+      this.accountSubNatures.set(subNatures || []);
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }
@@ -73,10 +75,14 @@ export class ExchangesComponent extends BasePageComponent {
 
   getTypeInfo(subType: string) {
     const t = this.exchangeTypes().find(et => et.subTypeKey === subType);
-    return t || { name: subType || 'عام', icon: 'currency_exchange', color: '#607D8B' };
+    return t || { name: subType || 'غير مصنف', icon: 'currency_exchange', color: '#607D8B' };
   }
 
   openAddAccount(subType?: string) {
+    if (!this.exchangeTypes().length) {
+      this.toast.error('لا يمكن إضافة صراف بدون تصنيف. أضف تصنيف صراف أولاً.');
+      return;
+    }
     this.accountForm = { name: '', subType: subType || (this.exchangeTypes().length ? this.exchangeTypes()[0].subTypeKey : ''), accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
     this.editingAccountId.set(null);
     this.showAccountForm.set(true);
@@ -90,7 +96,19 @@ export class ExchangesComponent extends BasePageComponent {
 
   async saveAccount() {
     try {
-      const data = { ...this.accountForm, accountType: 'exchange' };
+      const exchangeSubNatureId = this.accountSubNatures().find((n: any) => n.natureKey === 'exchange')?.id;
+      if (!exchangeSubNatureId) {
+        this.toast.error('نوع الحساب الفرعي "صراف" غير موجود. أضفه من أنواع الحسابات الفرعية أولاً.');
+        return;
+      }
+      const selectedSubType = String(this.accountForm?.subType || '').trim();
+      const validSubType = this.exchangeTypes().some((t: any) => String(t.subTypeKey) === selectedSubType);
+      if (!selectedSubType || !validSubType) {
+        this.toast.error('اختيار تصنيف صراف صحيح إلزامي قبل الحفظ.');
+        return;
+      }
+
+      const data = { ...this.accountForm, accountType: 'exchange', accountSubNatureId: exchangeSubNatureId, isLeafAccount: true };
       if (this.editingAccountId()) {
         await this.api.updateAccount(this.bizId, this.editingAccountId()!, data);
       } else {

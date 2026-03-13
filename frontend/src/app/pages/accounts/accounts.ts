@@ -19,14 +19,22 @@ export class AccountsComponent extends BasePageComponent {
   loading = signal(true);
   accounts = signal<any[]>([]);
   accountSubNatures = signal<any[]>([]);
+  fundTypes = signal<any[]>([]);
+  bankTypes = signal<any[]>([]);
+  exchangeTypes = signal<any[]>([]);
+  eWalletTypes = signal<any[]>([]);
+  supplierTypes = signal<any[]>([]);
+  warehouseTypes = signal<any[]>([]);
   stations = signal<any[]>([]);
   showForm = signal(false);
   editingId = signal<number | null>(null);
   searchQuery = signal('');
   activeNatureFilter = signal<number | null>(null);
+  collapsedIds = signal<Set<number>>(new Set<number>());
 
   form = signal<any>({
     isLeafAccount: true, parentAccountId: null, accountSubNatureId: null,
+    subTypeId: null,
     name: '', code: '', stationId: null, provider: '', accountNumber: '',
     responsiblePerson: '', notes: '', isActive: true,
   });
@@ -40,13 +48,33 @@ export class AccountsComponent extends BasePageComponent {
   showStationField = computed(() => this.selectedSubNature()?.requiresStation === true);
   showProviderField = computed(() => this.selectedSubNature()?.requiresProvider === true);
   showAccountNumberField = computed(() => this.selectedSubNature()?.requiresAccountNumber === true);
+  subTypeOptions = computed(() => {
+    const key = String(this.selectedSubNature()?.natureKey || '');
+    if (key === 'fund') return this.fundTypes();
+    if (key === 'bank') return this.bankTypes();
+    if (key === 'exchange') return this.exchangeTypes();
+    if (key === 'e_wallet') return this.eWalletTypes();
+    if (key === 'supplier') return this.supplierTypes();
+    if (key === 'warehouse') return this.warehouseTypes();
+    return [] as any[];
+  });
+  requiresSubTypeSelection = computed(() => this.form().isLeafAccount && this.subTypeOptions().length > 0);
+  selectedSubType = computed(() => {
+    const selectedId = Number(this.form().subTypeId);
+    if (!Number.isInteger(selectedId) || selectedId <= 0) return null;
+    return this.subTypeOptions().find((x: any) => x.id === selectedId) || null;
+  });
 
-  parentAccountOptions = computed(() => this.accounts().filter(a => a.isLeafAccount === false));
+  parentAccountOptions = computed(() =>
+    this.accounts()
+      .filter(a => a.isLeafAccount === false)
+      .sort((a, b) => String(a.code || '').localeCompare(String(b.code || ''))),
+  );
 
-  filteredAccounts = computed(() => {
-    let list = this.accounts();
+  private readonly filteredAccounts = computed(() => {
+    let list = [...this.accounts()];
     const query = this.searchQuery().toLowerCase().trim();
-    if (query) list = list.filter(a => a.name?.toLowerCase().includes(query));
+    if (query) list = list.filter(a => a.name?.toLowerCase().includes(query) || String(a.code || '').toLowerCase().includes(query));
     const natureFilter = this.activeNatureFilter();
     if (natureFilter && Number.isInteger(natureFilter) && natureFilter > 0) {
       list = list.filter(a => a.accountSubNatureId === natureFilter);
@@ -54,8 +82,88 @@ export class AccountsComponent extends BasePageComponent {
     return list;
   });
 
+  treeRows = computed(() => {
+    const all = this.accounts();
+    const filtered = this.filteredAccounts();
+    if (!all.length || !filtered.length) {
+      return [] as Array<{ acc: any; level: number; hasChildren: boolean; isCollapsed: boolean; childrenCount: number }>;
+    }
+
+    const byId = new Map<number, any>();
+    const childrenByParent = new Map<number | null, any[]>();
+    const orderById = new Map<number, number>();
+    all.forEach((acc, idx) => {
+      orderById.set(acc.id, idx);
+      byId.set(acc.id, acc);
+    });
+
+    const visibleIds = new Set<number>();
+    for (const acc of filtered) {
+      let current: any | undefined = acc;
+      while (current && Number.isInteger(current.id) && !visibleIds.has(current.id)) {
+        visibleIds.add(current.id);
+        current = current.parentAccountId ? byId.get(current.parentAccountId) : undefined;
+      }
+    }
+
+    const visibleList = all.filter(acc => visibleIds.has(acc.id));
+    for (const acc of visibleList) {
+      const parentId = Number.isInteger(acc.parentAccountId) ? acc.parentAccountId : null;
+      if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+      childrenByParent.get(parentId)!.push(acc);
+    }
+
+    for (const [, items] of childrenByParent.entries()) {
+      items.sort((a, b) => {
+        if (a.isLeafAccount !== b.isLeafAccount) {
+          return a.isLeafAccount ? 1 : -1;
+        }
+        const aCode = String(a.code || '');
+        const bCode = String(b.code || '');
+        if (aCode !== bCode) return aCode.localeCompare(bCode);
+        return (orderById.get(a.id) ?? 0) - (orderById.get(b.id) ?? 0);
+      });
+    }
+
+    const rows: Array<{ acc: any; level: number; hasChildren: boolean; isCollapsed: boolean; childrenCount: number }> = [];
+    const collapsed = this.collapsedIds();
+    const pushNode = (node: any, level: number) => {
+      const children = childrenByParent.get(node.id) || [];
+      const hasChildren = children.length > 0;
+      const isCollapsed = hasChildren && collapsed.has(node.id);
+      rows.push({ acc: node, level, hasChildren, isCollapsed, childrenCount: children.length });
+      if (isCollapsed) return;
+      for (const child of children) pushNode(child, level + 1);
+    };
+
+    const roots = [
+      ...(childrenByParent.get(null) || []),
+      ...visibleList.filter(acc => acc.parentAccountId != null && !visibleIds.has(acc.parentAccountId)),
+    ];
+    const seen = new Set<number>();
+    for (const root of roots) {
+      if (seen.has(root.id)) continue;
+      seen.add(root.id);
+      pushNode(root, 0);
+    }
+
+    return rows;
+  });
+
+  treeSummary = computed(() => {
+    const rows = this.treeRows();
+    const main = rows.filter(r => r.acc.isLeafAccount === false).length;
+    const leaf = rows.filter(r => r.acc.isLeafAccount === true).length;
+    return { total: rows.length, main, leaf };
+  });
+
   naturesStats = computed(() => {
-    const natures = this.accountSubNatures();
+    const natures = [...this.accountSubNatures()].sort((a, b) => {
+      const aSeq = Number(a?.sequenceNumber) || 0;
+      const bSeq = Number(b?.sequenceNumber) || 0;
+      if (aSeq !== bSeq) return aSeq - bSeq;
+      return Number(a?.id || 0) - Number(b?.id || 0);
+    });
     const accs = this.accounts();
     return natures.map(n => ({ ...n, count: accs.filter(a => a.accountSubNatureId === n.id).length }));
   });
@@ -66,27 +174,44 @@ export class AccountsComponent extends BasePageComponent {
     if (this.bizId <= 0) { this.loading.set(false); return; }
     this.loading.set(true);
     try {
-      const [accountsData, naturesData, stationsData] = await Promise.all([
+      const [accountsData, naturesData, stationsData, fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, supplierTypesData, warehouseTypesData] = await Promise.all([
         this.api.getAccounts(this.bizId),
         this.api.getAccountSubNatures(this.bizId),
         this.api.getStations(this.bizId).catch(() => []),
+        this.api.getFundTypes(this.bizId).catch(() => []),
+        this.api.getBankTypes(this.bizId).catch(() => []),
+        this.api.getExchangeTypes(this.bizId).catch(() => []),
+        this.api.getEWalletTypes(this.bizId).catch(() => []),
+        this.api.getSupplierTypes(this.bizId).catch(() => []),
+        this.api.getWarehouseTypes(this.bizId).catch(() => []),
       ]);
-      this.accounts.set((accountsData || []).map((a: any) => ({ ...a, isLeafAccount: a.isLeafAccount !== false })));
+      this.accounts.set(
+        (accountsData || []).map((a: any) => ({
+          ...a,
+          isLeafAccount: this.coerceLeafFlag(a.isLeafAccount),
+        })),
+      );
       this.accountSubNatures.set(naturesData || []);
       this.stations.set(stationsData || []);
+      this.fundTypes.set(fundTypesData || []);
+      this.bankTypes.set(bankTypesData || []);
+      this.exchangeTypes.set(exchangeTypesData || []);
+      this.eWalletTypes.set(eWalletTypesData || []);
+      this.supplierTypes.set(supplierTypesData || []);
+      this.warehouseTypes.set(warehouseTypesData || []);
     } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'فشل التحميل'); this.accounts.set([]); }
     finally { this.loading.set(false); }
   }
 
   openCreate() {
     this.editingId.set(null);
-    this.form.set({ isLeafAccount: true, parentAccountId: null, accountSubNatureId: null, name: '', code: '', stationId: null, provider: '', accountNumber: '', responsiblePerson: '', notes: '', isActive: true });
+    this.form.set({ isLeafAccount: true, parentAccountId: null, accountSubNatureId: null, subTypeId: null, name: '', code: '', stationId: null, provider: '', accountNumber: '', responsiblePerson: '', notes: '', isActive: true });
     this.showForm.set(true);
   }
 
   openEdit(acc: any) {
     this.editingId.set(acc.id);
-    this.form.set({ isLeafAccount: acc.isLeafAccount !== false, parentAccountId: acc.parentAccountId || null, accountSubNatureId: acc.accountSubNatureId || null, name: acc.name || '', code: acc.code || '', stationId: acc.stationId || null, provider: acc.provider || '', accountNumber: acc.accountNumber || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '', isActive: acc.isActive !== false });
+    this.form.set({ isLeafAccount: acc.isLeafAccount !== false, parentAccountId: acc.parentAccountId || null, accountSubNatureId: acc.accountSubNatureId || null, subTypeId: acc.subTypeId || null, name: acc.name || '', code: acc.code || '', stationId: acc.stationId || null, provider: acc.provider || '', accountNumber: acc.accountNumber || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '', isActive: acc.isActive !== false });
     this.showForm.set(true);
   }
 
@@ -96,8 +221,15 @@ export class AccountsComponent extends BasePageComponent {
     if (f.isLeafAccount && (!f.accountSubNatureId || !Number.isInteger(f.accountSubNatureId) || f.accountSubNatureId <= 0)) {
       this.toast.error('يجب اختيار نوع الحساب الفرعي'); return;
     }
+    if (this.requiresSubTypeSelection() && (!f.subTypeId || !Number.isInteger(f.subTypeId) || f.subTypeId <= 0)) {
+      this.toast.error('يجب اختيار التصنيف قبل حفظ الحساب'); return;
+    }
     try {
       const payload: any = { name: f.name, isLeafAccount: f.isLeafAccount, parentAccountId: f.parentAccountId || null, accountSubNatureId: f.accountSubNatureId || null, code: f.code || null, stationId: f.stationId || null, provider: f.provider || null, accountNumber: f.accountNumber || null, responsiblePerson: f.responsiblePerson || null, notes: f.notes || null, isActive: f.isActive !== false };
+      if (f.isLeafAccount && Number.isInteger(f.subTypeId) && f.subTypeId > 0) {
+        payload.subTypeId = Number(f.subTypeId);
+        payload.subType = this.selectedSubType()?.subTypeKey || null;
+      }
       if (this.editingId()) { await this.api.updateAccount(this.bizId, this.editingId()!, payload); this.toast.success('تم تحديث الحساب'); }
       else { await this.api.createAccount(this.bizId, payload); this.toast.success('تم إنشاء الحساب'); }
       this.showForm.set(false); await this.loadAccounts();
@@ -111,7 +243,32 @@ export class AccountsComponent extends BasePageComponent {
     catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'فشل الحذف'); }
   }
 
-  selectSubNature(id: number) { this.form.update(f => ({ ...f, accountSubNatureId: id })); }
+  selectSubNature(id: number) { this.form.update(f => ({ ...f, accountSubNatureId: id, subTypeId: null })); }
   setNatureFilter(id: number | null) { this.activeNatureFilter.set(id); }
   trackById(_: number, item: any) { return item?.id; }
+  toggleNode(id: number) {
+    this.collapsedIds.update(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  collapseAll() {
+    const ids = new Set<number>();
+    for (const row of this.treeRows()) {
+      if (row.hasChildren) ids.add(row.acc.id);
+    }
+    this.collapsedIds.set(ids);
+  }
+
+  expandAll() {
+    this.collapsedIds.set(new Set<number>());
+  }
+
+  private coerceLeafFlag(value: unknown): boolean {
+    if (value === false || value === 'false' || value === 0 || value === '0') return false;
+    return true;
+  }
 }

@@ -1,6 +1,7 @@
 import { Context, Next } from 'hono';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 
 // إصلاح #14: إزالة مفتاح JWT الاحتياطي الثابت واستبداله بمفتاح عشوائي
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
@@ -8,10 +9,25 @@ const JWT_SECRET = process.env.JWT_SECRET || (() => {
     console.error('❌ JWT_SECRET مطلوب في الإنتاج. أعد تشغيل الخادم بعد تعيين المتغير.');
     process.exit(1);
   }
-  const generated = crypto.randomBytes(64).toString('hex');
-  console.warn('⚠️ تحذير: لم يتم تعيين JWT_SECRET في متغيرات البيئة. تم توليد مفتاح عشوائي مؤقت.');
-  console.warn('⚠️ سيتم إبطال جميع الجلسات عند إعادة تشغيل الخادم.');
-  return generated;
+  const devSecretPath = new URL('../../.jwt-dev-secret', import.meta.url);
+  try {
+    if (fs.existsSync(devSecretPath)) {
+      const existing = fs.readFileSync(devSecretPath, 'utf8').trim();
+      if (existing.length >= 32) {
+        console.warn('⚠️ JWT_SECRET غير موجود في البيئة. تم استخدام مفتاح تطوير محفوظ لضمان استمرار الجلسات.');
+        return existing;
+      }
+    }
+    const generated = crypto.randomBytes(64).toString('hex');
+    fs.writeFileSync(devSecretPath, generated, { encoding: 'utf8' });
+    console.warn('⚠️ JWT_SECRET غير موجود في البيئة. تم إنشاء مفتاح تطوير محلي ثابت.');
+    console.warn('⚠️ لتجاوز ذلك، عيّن JWT_SECRET في ملف البيئة.');
+    return generated;
+  } catch {
+    const generated = crypto.randomBytes(64).toString('hex');
+    console.warn('⚠️ تعذر حفظ مفتاح تطوير JWT. سيتم استخدام مفتاح مؤقت وقد تنتهي الجلسات بعد إعادة التشغيل.');
+    return generated;
+  }
 })();
 
 export interface JwtPayload {

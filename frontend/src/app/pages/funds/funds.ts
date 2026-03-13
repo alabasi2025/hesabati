@@ -59,37 +59,45 @@ export class FundsComponent extends BasePageComponent {
     try {
       // إصلاح #4: جلب الصناديق من endpoint الصحيح (GET /api/businesses/:bizId/funds)
       const [fundsList, types, sts] = await Promise.all([
-        this.api.getFunds(this.bizId),
+        this.api.getFunds(this.bizId, true),
         this.api.getFundTypes(this.bizId),
         this.api.getStations(this.bizId),
       ]);
       this.fundsData.set(fundsList);
       this.fundTypes.set(types);
       this.stations.set(sts);
+      this.activeFilter.set('all');
+      const allowedFilters = new Set<string>([
+        'all',
+        ...types
+          .filter((t: any) => t.subTypeKey !== 'custody')
+          .map((t: any) => String(t.subTypeKey)),
+      ]);
+      if (!allowedFilters.has(this.activeFilter())) {
+        this.activeFilter.set('all');
+      }
     } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
 
   getFilterTabs() {
-    const nonCustody = this.fundsData().filter(f => f.fundType !== 'custody');
-    return [{ value: 'all', label: 'الكل', icon: 'apps', count: nonCustody.length },
-      ...this.fundTypes().filter(t => t.subTypeKey !== 'custody').map(t => ({
+    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.fundsData().length },
+      ...this.fundTypes().map(t => ({
         value: t.subTypeKey, label: t.name, icon: t.icon,
-        count: nonCustody.filter(f => f.fundType === t.subTypeKey).length,
+        count: this.fundsData().filter(f => f.fundType === t.subTypeKey).length,
       }))
     ];
   }
 
   filteredAccounts() {
     const f = this.activeFilter();
-    const data = this.fundsData().filter(fund => fund.fundType !== 'custody');
-    if (f === 'all') return data;
-    return data.filter(fund => fund.fundType === f);
+    if (f === 'all') return this.fundsData();
+    return this.fundsData().filter(fund => fund.fundType === f);
   }
 
   getTypeInfo(fundType: string) {
     const t = this.fundTypes().find(ft => ft.subTypeKey === fundType);
-    return t || { name: fundType || 'عام', icon: 'inventory_2', color: '#607D8B' };
+    return t || { name: fundType || 'غير مصنف', icon: 'inventory_2', color: '#607D8B' };
   }
 
   // ============ Fund CRUD ============

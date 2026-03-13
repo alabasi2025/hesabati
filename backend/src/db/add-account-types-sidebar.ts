@@ -1,5 +1,5 @@
 /**
- * إضافة عنصر "أنواع الحسابات" إلى التبويب الجانبي للأعمال الموجودة.
+ * إضافة عنصر "أنواع الحسابات الفرعية" إلى التبويب الجانبي للأعمال الموجودة.
  * تشغيل مرة واحدة: npx tsx src/db/add-account-types-sidebar.ts
  */
 import 'dotenv/config';
@@ -12,11 +12,11 @@ const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:post
 const client = postgres(connectionString);
 const db = drizzle(client, { schema });
 
-const ACCOUNT_TYPES_ITEM = {
-  screenKey: 'account_types',
-  label: 'أنواع الحسابات',
-  icon: 'category',
-  route: '/biz/{bizId}/account-types',
+const ACCOUNT_SUB_NATURES_ITEM = {
+  screenKey: 'account_sub_natures',
+  label: 'أنواع الحسابات الفرعية',
+  icon: 'label',
+  route: '/biz/{bizId}/account-sub-natures',
   sortOrder: 2,
   isActive: true,
 };
@@ -42,12 +42,12 @@ async function main() {
       .where(
         and(
           eq(schema.sidebarItems.sectionId, sec.id),
-          eq(schema.sidebarItems.screenKey, 'account_types')
+          eq(schema.sidebarItems.screenKey, 'account_sub_natures')
         )
       );
 
     if (existing.length > 0) {
-      console.log(`  ⏭️ العمل (section ${sec.id}) لديه "أنواع الحسابات" مسبقاً - تخطي`);
+      console.log(`  ⏭️ العمل (section ${sec.id}) لديه "أنواع الحسابات الفرعية" مسبقاً - تخطي`);
       continue;
     }
 
@@ -70,10 +70,10 @@ async function main() {
 
     await db.insert(schema.sidebarItems).values({
       sectionId: sec.id,
-      ...ACCOUNT_TYPES_ITEM,
+      ...ACCOUNT_SUB_NATURES_ITEM,
     });
 
-    console.log(`  ✅ تمت إضافة "أنواع الحسابات" للقسم (section ${sec.id}, business ${sec.businessId})`);
+    console.log(`  ✅ تمت إضافة "أنواع الحسابات الفرعية" للقسم (section ${sec.id}, business ${sec.businessId})`);
   }
 
   console.log('\n🎉 انتهى. حدّث الصفحة أو أعد تسجيل الدخول لرؤية العنصر في التبويب الجانبي.');

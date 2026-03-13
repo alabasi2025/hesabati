@@ -81,7 +81,7 @@ async function seedSidebar() {
     // --- الوحدة 3 ---
     const accountItems: any[] = [
       { sectionId: sec3.id, screenKey: 'accounts', label: 'الحسابات', icon: 'account_balance_wallet', route: '/biz/{bizId}/accounts', sortOrder: 1 },
-      { sectionId: sec3.id, screenKey: 'account_types', label: 'أنواع الحسابات', icon: 'category', route: '/biz/{bizId}/account-types', sortOrder: 2 },
+      { sectionId: sec3.id, screenKey: 'account_sub_natures', label: 'أنواع الحسابات الفرعية', icon: 'label', route: '/biz/{bizId}/account-sub-natures', sortOrder: 2 },
     ];
     if (bizType === 'stations' || bizType === 'single_station') {
       accountItems.push(

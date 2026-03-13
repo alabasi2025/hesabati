@@ -132,7 +132,7 @@ export class ApiService {
 
   // ===================== الحسابات مع الصلاحيات =====================
   getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
-  getAllAccounts(bizId: number)                  { return this.request<any>(`/businesses/${bizId}/accounts`); }
+  getAllAccounts(bizId: number)                  { return this.request<any>(`/businesses/${bizId}/accounts?all=true`); }
   createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
   updateAccount(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteAccount(bizId: number, id: number)       { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'DELETE' }); }
@@ -150,7 +150,10 @@ export class ApiService {
   deleteAccountLink(id: number)                  { return this.request<any>(`/account-links/${id}`, { method: 'DELETE' }); }
 
   // ===================== الصناديق =====================
-  getFunds(bizId: number)                        { return this.request<any[]>(`/businesses/${bizId}/funds`); }
+  getFunds(bizId: number, includeCustody = false) {
+    const query = includeCustody ? '?includeCustody=true' : '';
+    return this.request<any[]>(`/businesses/${bizId}/funds${query}`);
+  }
   getFund(id: number)                            { return this.request<any>(`/funds/${id}`); }
   createFund(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/funds`, { method: 'POST', body: JSON.stringify(d) }); }
   updateFund(bizId: number, id: number, d: any)  { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }

@@ -16,7 +16,6 @@ import {
   safeHandler,
   normalizeBody,
   parseId,
-  getBody,
 } from "../../middleware/helpers.ts";
 import {
   buildAccountHierarchyCode,
@@ -309,6 +308,21 @@ fundsRoutes.put(
       .set(payload)
       .where(eq(funds.id, id))
       .returning();
+
+    if (updated.accountId) {
+      await db.update(accounts).set({
+        name: updated.name,
+        subTypeId: typeInfo.id,
+        subType: nextFundType,
+        code: updated.code,
+        sequenceNumber: updated.sequenceNumber,
+        responsiblePerson: updated.responsiblePerson,
+        notes: updated.notes,
+        isActive: updated.isActive,
+        updatedAt: new Date(),
+      }).where(eq(accounts.id, updated.accountId));
+    }
+
     return c.json(updated);
   }),
 );

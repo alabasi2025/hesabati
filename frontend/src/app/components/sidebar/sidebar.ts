@@ -361,7 +361,7 @@ export class SidebarComponent {
       ]},
       { title: '3. الحسابات والأرصدة', items: [
         { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
-        { icon: 'category', label: 'أنواع الحسابات', route: `${b}/account-types` },
+        { icon: 'label', label: 'أنواع الحسابات الفرعية', route: `${b}/account-sub-natures` },
         { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
         { icon: 'account_balance', label: 'البنوك', route: `${b}/banks` },
         { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
@@ -422,7 +422,7 @@ export class SidebarComponent {
       ]},
       { title: '3. الحسابات والأرصدة', items: [
         { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
-        { icon: 'category', label: 'أنواع الحسابات', route: `${b}/account-types` },
+        { icon: 'label', label: 'أنواع الحسابات الفرعية', route: `${b}/account-sub-natures` },
         { icon: 'savings', label: 'الصناديق', route: `${b}/funds` },
         { icon: 'account_balance', label: 'البنوك', route: `${b}/banks` },
         { icon: 'currency_exchange', label: 'الصرافين', route: `${b}/exchangers` },
@@ -478,7 +478,7 @@ export class SidebarComponent {
       ]},
       { title: '3. الحسابات والأرصدة', items: [
         { icon: 'account_balance_wallet', label: 'الحسابات', route: `${b}/accounts` },
-        { icon: 'category', label: 'أنواع الحسابات', route: `${b}/account-types` },
+        { icon: 'label', label: 'أنواع الحسابات الفرعية', route: `${b}/account-sub-natures` },
       ]},
       { title: '4. العمليات المالية', items: [
         { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },

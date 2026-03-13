@@ -20,7 +20,10 @@ import {
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import {
-  voucherSchema, typeSchema, validateBody,
+  voucherSchema,
+  typeSchema,
+  journalCategorySchema,
+  validateBody,
   sidebarSectionSchema,
   employeeBillingAccountSchema,
 } from '../../middleware/validation.ts';
@@ -2164,10 +2167,10 @@ api.get('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safe
 api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('إضافة تصنيف قيد يومية', async (c) => {
   const bizId = getBizId(c);
   const body = normalizeBody(await c.req.json());
-  const validation = validateBody(typeSchema, body);
+  const validation = validateBody(journalCategorySchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
-  const { subTypeKey, ...rest } = validation.data;
-  const [created] = await db.insert(journalEntryCategories).values({ ...rest, categoryKey: subTypeKey, businessId: bizId }).returning();
+  const seqNum = await getNextCategorySequence(bizId, 'journal');
+  const [created] = await db.insert(journalEntryCategories).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
   return c.json(created, 201);
 }));
 

@@ -267,7 +267,7 @@ export class OperationTypesComponent extends BasePageComponent {
     }
     for (const [catId, items] of catMap) {
       const cat = this.categories().find(c => Number(c.id) === catId);
-      groups.push({ category: cat?.name || 'عام', categoryId: catId, items });
+      groups.push({ category: cat?.name || 'غير مصنف', categoryId: catId, items });
     }
     return groups;
   });
@@ -344,7 +344,7 @@ export class OperationTypesComponent extends BasePageComponent {
   getCategoryIcon(cat: string): string {
     const iconMap: Record<string, string> = {
       'تحصيل': 'payments', 'توريد': 'local_shipping', 'سندات': 'receipt_long',
-      'قيود': 'book', 'عام': 'folder',
+      'قيود': 'book', 'غير مصنف': 'folder_off',
     };
     return iconMap[cat] || 'label';
   }
@@ -352,7 +352,7 @@ export class OperationTypesComponent extends BasePageComponent {
   getCategoryColor(cat: string): string {
     const colorMap: Record<string, string> = {
       'تحصيل': '#22c55e', 'توريد': '#3b82f6', 'سندات': '#f59e0b',
-      'قيود': '#8b5cf6', 'عام': '#64748b',
+      'قيود': '#8b5cf6', 'غير مصنف': '#64748b',
     };
     if (colorMap[cat]) return colorMap[cat];
     const firstOT = this.operationTypes().find(ot => ot.category === cat);

@@ -182,13 +182,23 @@ export const journalEntrySchema = z.object({
 });
 
 export const typeSchema = z.object({
-  name: z.string().min(1, 'الاسم مطلوب').max(200),
-  subTypeKey: z.string().min(1).max(100),
+  name: z.string({ required_error: 'الاسم مطلوب', invalid_type_error: 'الاسم يجب أن يكون نصاً' }).min(1, 'الاسم لا يمكن أن يكون فارغاً').max(200, 'الاسم طويل جداً (حد أقصى 200 حرف)'),
+  subTypeKey: z.string({ required_error: 'المفتاح مطلوب (subTypeKey)', invalid_type_error: 'المفتاح يجب أن يكون نصاً' }).min(1, 'المفتاح لا يمكن أن يكون فارغاً').max(100, 'المفتاح طويل جداً (حد أقصى 100 حرف)'),
   description: z.string().optional().nullable(),
-  icon: z.string().max(100).optional(),
-  color: z.string().max(50).optional(),
-  sortOrder: z.number().int().optional(),
-  isActive: z.boolean().optional(),
+  icon: z.string().max(100, 'الأيقونة طويلة جداً').optional(),
+  color: z.string().max(50, 'اللون طويل جداً').optional(),
+  sortOrder: z.number({ invalid_type_error: 'الترتيب يجب أن يكون رقماً' }).int({ message: 'الترتيب يجب أن يكون رقماً صحيحاً' }).optional(),
+  isActive: z.boolean({ invalid_type_error: 'الحالة يجب أن تكون true أو false' }).optional(),
+});
+
+export const journalCategorySchema = z.object({
+  name: z.string({ required_error: 'الاسم مطلوب', invalid_type_error: 'الاسم يجب أن يكون نصاً' }).min(1, 'الاسم لا يمكن أن يكون فارغاً').max(200, 'الاسم طويل جداً'),
+  categoryKey: z.string({ required_error: 'المفتاح مطلوب', invalid_type_error: 'المفتاح يجب أن يكون نصاً' }).min(1, 'المفتاح لا يمكن أن يكون فارغاً').max(100, 'المفتاح طويل جداً'),
+  description: z.string().optional().nullable(),
+  icon: z.string().max(100, 'الأيقونة طويلة جداً').optional(),
+  color: z.string().max(50, 'اللون طويل جداً').optional(),
+  sortOrder: z.number({ invalid_type_error: 'الترتيب يجب أن يكون رقماً' }).int({ message: 'الترتيب يجب أن يكون رقماً صحيحاً' }).optional(),
+  isActive: z.boolean({ invalid_type_error: 'الحالة يجب أن تكون true أو false' }).optional(),
 });
 
 // ===================== Schemas إضافية =====================
@@ -205,24 +215,24 @@ export const stationSchema = z.object({
 });
 
 export const supplierSchema = z.object({
-  name: z.string().min(1, 'اسم المورد مطلوب').max(200),
-  supplierTypeId: z.number().int().positive('تصنيف المورد مطلوب'),
-  category: z.string().max(100).optional().nullable(),
-  phone: z.string().max(20).optional().nullable(),
-  address: z.string().max(300).optional().nullable(),
-  contactPerson: z.string().max(200).optional().nullable(),
+  name: z.string({ required_error: 'اسم المورد مطلوب' }).min(1, 'اسم المورد لا يمكن أن يكون فارغاً').max(200, 'اسم المورد طويل جداً'),
+  supplierTypeId: z.number({ required_error: 'تصنيف المورد مطلوب', invalid_type_error: 'تصنيف المورد يجب أن يكون رقماً' }).int().positive('تصنيف المورد مطلوب'),
+  category: z.string().max(100, 'التصنيف طويل جداً').optional().nullable(),
+  phone: z.string().max(20, 'رقم الهاتف طويل جداً').optional().nullable(),
+  address: z.string().max(300, 'العنوان طويل جداً').optional().nullable(),
+  contactPerson: z.string().max(200, 'جهة الاتصال طويلة جداً').optional().nullable(),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
 export const warehouseSchema = z.object({
-  name: z.string().min(1, 'اسم المخزن مطلوب').max(200),
-  warehouseType: z.enum(['main', 'station']),
-  subType: z.string().max(100).optional().nullable(),
-  subTypeId: z.number().int().positive().optional().nullable(),
-  stationId: z.number().int().positive().optional().nullable(),
-  responsiblePerson: z.string().max(200).optional().nullable(),
-  location: z.string().max(300).optional().nullable(),
+  name: z.string({ required_error: 'اسم المخزن مطلوب' }).min(1, 'اسم المخزن لا يمكن أن يكون فارغاً').max(200, 'اسم المخزن طويل جداً'),
+  warehouseType: z.enum(['main', 'station'], { required_error: 'نوع المخزن مطلوب', invalid_type_error: 'نوع المخزن غير صالح' }),
+  subType: z.string().max(100, 'التصنيف الفرعي طويل جداً').optional().nullable(),
+  subTypeId: z.number({ invalid_type_error: 'معرّف التصنيف يجب أن يكون رقماً' }).int().positive().optional().nullable(),
+  stationId: z.number({ invalid_type_error: 'معرّف المحطة يجب أن يكون رقماً' }).int().positive().optional().nullable(),
+  responsiblePerson: z.string().max(200, 'اسم المسؤول طويل جداً').optional().nullable(),
+  location: z.string().max(300, 'الموقع طويل جداً').optional().nullable(),
   isActive: z.boolean().optional(),
   notes: z.string().optional().nullable(),
 });
@@ -268,10 +278,10 @@ export const widgetSchema = z.object({
 });
 
 export const fundSchema = z.object({
-  name: z.string().min(1, 'اسم الصندوق مطلوب').max(200),
-  fundType: z.string().min(1, 'تصنيف الصندوق مطلوب').max(100),
-  stationId: z.number().int().positive().optional().nullable(),
-  responsiblePerson: z.string().max(200).optional().nullable(),
+  name: z.string({ required_error: 'اسم الصندوق مطلوب' }).min(1, 'اسم الصندوق لا يمكن أن يكون فارغاً').max(200, 'اسم الصندوق طويل جداً'),
+  fundType: z.string({ required_error: 'تصنيف الصندوق مطلوب' }).min(1, 'تصنيف الصندوق لا يمكن أن يكون فارغاً').max(100, 'تصنيف الصندوق طويل جداً'),
+  stationId: z.number({ invalid_type_error: 'معرّف المحطة يجب أن يكون رقماً' }).int().positive().optional().nullable(),
+  responsiblePerson: z.string().max(200, 'اسم المسؤول طويل جداً').optional().nullable(),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   notes: z.string().optional().nullable(),
@@ -340,11 +350,60 @@ export const employeeBillingAccountSchema = z.object({
 /**
  * دالة مساعدة للتحقق من صحة البيانات
  */
+const FIELD_LABELS: Record<string, string> = {
+  name: 'الاسم',
+  subTypeKey: 'المفتاح',
+  description: 'الوصف',
+  icon: 'الأيقونة',
+  color: 'اللون',
+  sortOrder: 'الترتيب',
+  isActive: 'الحالة',
+  fullName: 'الاسم الكامل',
+  category: 'التصنيف',
+  categoryId: 'معرّف التصنيف',
+  voucherType: 'نوع السند',
+  paymentMethod: 'وسيلة الدفع',
+  accountType: 'نوع الحساب',
+  fundType: 'نوع الصندوق',
+  warehouseType: 'نوع المخزن',
+  supplierTypeId: 'تصنيف المورد',
+  departmentId: 'القسم',
+  stationId: 'المحطة',
+  responsiblePerson: 'المسؤول',
+  notes: 'ملاحظات',
+  code: 'الرمز',
+  phone: 'الهاتف',
+  address: 'العنوان',
+  contactPerson: 'جهة الاتصال',
+  role: 'الدور',
+  sharePercentage: 'نسبة الحصة',
+  amount: 'المبلغ',
+  accountNumber: 'رقم الحساب',
+  provider: 'الجهة',
+};
+
 export function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): { success: true; data: T } | { success: false; error: string } {
   const result = schema.safeParse(body);
   if (result.success) {
     return { success: true, data: result.data };
   }
-  const errors = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
+  
+  const errors = result.error.issues.map(i => {
+    const fieldPath = i.path.join('.');
+    const lastField = i.path.length > 0 ? i.path[i.path.length - 1] : '';
+    const fieldLabel = FIELD_LABELS[fieldPath] || FIELD_LABELS[lastField as string] || fieldPath || 'حقل';
+    
+    let message = i.message;
+    if (message === 'Required') message = 'مطلوب';
+    if (message === 'Invalid input') message = 'قيمة غير صالحة';
+    if (message === 'Expected string, received undefined') message = 'مطلوب';
+    if (message === 'Expected string, received null') message = 'مطلوب';
+    if (message === 'Expected number, received undefined') message = 'مطلوب';
+    if (message === 'Expected number, received null') message = 'مطلوب';
+    
+    if (i.message.includes(fieldPath)) return message;
+    return `${fieldLabel}: ${message}`;
+  }).join(' • ');
+  
   return { success: false, error: errors };
 }

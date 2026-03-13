@@ -54,7 +54,7 @@ journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware
 
 journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إضافة قيد محاسبي', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json()) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number };
+  const body = normalizeBody(await c.req.json()) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string };
   const { lines, ...entryData } = body;
   if (!lines || !Array.isArray(lines) || lines.length < 2) {
     return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل (مدين ودائن)' }, 400);
@@ -114,12 +114,15 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
     journalFullSeqNum = entryNumber;
   }
 
+  const categoryToSave = entryData.categoryKey || body.categoryKey || null;
+
   const [entry] = await db.insert(journalEntries).values({
     businessId: bizId,
     entryNumber,
     entryDate,
     description: entryData.description || '',
     reference: entryData.reference || null,
+    category: categoryToSave,
     operationTypeId: entryData.operationTypeId || null,
     totalDebit: String(totalDebit),
     totalCredit: String(totalCredit),

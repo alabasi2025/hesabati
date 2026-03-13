@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { eq } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema/index.ts';
 import bcrypt from 'bcryptjs';
@@ -65,6 +65,56 @@ async function seed() {
     );
   }
   console.log('✅ أنواع الحسابات الفرعية الوظيفية');
+
+  const businessNatureByKey = new Map<number, Record<string, number>>();
+  for (const biz of [b1, b2, b3]) {
+    const natures = await db
+      .select({
+        id: schema.accountSubNatures.id,
+        natureKey: schema.accountSubNatures.natureKey,
+      })
+      .from(schema.accountSubNatures)
+      .where(eq(schema.accountSubNatures.businessId, biz.id));
+
+    businessNatureByKey.set(
+      biz.id,
+      Object.fromEntries(natures.map((n) => [n.natureKey, n.id])),
+    );
+  }
+
+  const getNatureId = (businessId: number, natureKey: string): number | null =>
+    businessNatureByKey.get(businessId)?.[natureKey] ?? null;
+
+  const accountSequenceByBusiness = new Map<number, number>();
+
+  const createLinkedAccount = async (
+    businessId: number,
+    name: string,
+    accountType: NonNullable<(typeof schema.accounts.$inferInsert)['accountType']>,
+    accountSubNatureId: number | null,
+    code?: string | null,
+    sequenceNumber?: number | null,
+  ) => {
+    const currentSeq = accountSequenceByBusiness.get(businessId) ?? 0;
+    const resolvedSequence = sequenceNumber ?? currentSeq + 1;
+    const nextStoredSeq = Math.max(currentSeq, resolvedSequence);
+    accountSequenceByBusiness.set(businessId, nextStoredSeq);
+
+    const [account] = await db
+      .insert(schema.accounts)
+      .values({
+        businessId,
+        name,
+        accountType,
+        accountSubNatureId,
+        isLeafAccount: true,
+        code: code ?? String(resolvedSequence),
+        sequenceNumber: resolvedSequence,
+      })
+      .returning();
+
+    return account;
+  };
 
   // ===================== شركاء العمل =====================
   await db.insert(schema.businessPartners).values([
@@ -136,7 +186,7 @@ async function seed() {
   console.log('✅ الموظفين');
 
   // ===================== الحسابات والمحافظ =====================
-  await db.insert(schema.accounts).values([
+  const accountSeedRows: (typeof schema.accounts.$inferInsert)[] = [
     // محافظ إلكترونية - المحطات
     { businessId: b1.id, name: 'جوالي 1 - شخصي', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', subType: 'شخصي', receivesFromStations: true },
     { businessId: b1.id, name: 'جوالي 2 - شخصي', accountType: 'e_wallet' as const, accountNumber: '771506017', provider: 'جوالي', subType: 'شخصي' },
@@ -184,7 +234,27 @@ async function seed() {
     { businessId: b3.id, name: 'حساب شخصي - جوالي', accountType: 'e_wallet' as const, provider: 'جوالي' },
     { businessId: b3.id, name: 'حساب شخصي - كريمي', accountType: 'bank' as const, provider: 'بنك الكريمي' },
     { businessId: b3.id, name: 'خزنة شخصية', accountType: 'fund' as const },
-  ]);
+  ];
+
+  const normalizedAccounts = accountSeedRows.map((row) => {
+    const nextSeq = (accountSequenceByBusiness.get(row.businessId) ?? 0) + 1;
+    accountSequenceByBusiness.set(row.businessId, nextSeq);
+
+    const natureId =
+      row.accountType
+        ? businessNatureByKey.get(row.businessId)?.[row.accountType]
+        : undefined;
+
+    return {
+      ...row,
+      accountSubNatureId: natureId ?? null,
+      isLeafAccount: true,
+      sequenceNumber: nextSeq,
+      code: String(nextSeq),
+    };
+  });
+
+  await db.insert(schema.accounts).values(normalizedAccounts);
   console.log('✅ الحسابات');
 
   // ===================== الصناديق =====================
@@ -307,6 +377,100 @@ async function seed() {
   }
   console.log('✅ حسابات الفوترة للموظفين');
 
+  // ===================== ربط الكيانات التشغيلية بحسابات مالية =====================
+  const missingFunds = await db.select().from(schema.funds).where(isNull(schema.funds.accountId));
+  for (const fund of missingFunds) {
+    const account = await createLinkedAccount(
+      fund.businessId,
+      fund.name,
+      'fund',
+      getNatureId(fund.businessId, 'fund'),
+      fund.code,
+      fund.sequenceNumber,
+    );
+    await db
+      .update(schema.funds)
+      .set({ accountId: account.id, updatedAt: new Date() })
+      .where(eq(schema.funds.id, fund.id));
+  }
+
+  const missingSuppliers = await db.select().from(schema.suppliers).where(isNull(schema.suppliers.accountId));
+  for (const supplier of missingSuppliers) {
+    const account = await createLinkedAccount(
+      supplier.businessId,
+      supplier.name,
+      'supplier',
+      getNatureId(supplier.businessId, 'supplier'),
+      supplier.code,
+      supplier.sequenceNumber,
+    );
+    await db
+      .update(schema.suppliers)
+      .set({ accountId: account.id, updatedAt: new Date() })
+      .where(eq(schema.suppliers.id, supplier.id));
+  }
+
+  const missingWarehouses = await db.select().from(schema.warehouses).where(isNull(schema.warehouses.accountId));
+  for (const warehouse of missingWarehouses) {
+    const account = await createLinkedAccount(
+      warehouse.businessId,
+      warehouse.name,
+      'warehouse',
+      getNatureId(warehouse.businessId, 'warehouse'),
+      warehouse.code,
+      warehouse.sequenceNumber,
+    );
+    await db
+      .update(schema.warehouses)
+      .set({ accountId: account.id, updatedAt: new Date() })
+      .where(eq(schema.warehouses.id, warehouse.id));
+  }
+
+  const missingBillingAccounts = await db
+    .select()
+    .from(schema.employeeBillingAccounts)
+    .where(isNull(schema.employeeBillingAccounts.accountId));
+  for (const billingAccount of missingBillingAccounts) {
+    const [employee] = await db
+      .select({ businessId: schema.employees.businessId })
+      .from(schema.employees)
+      .where(eq(schema.employees.id, billingAccount.employeeId))
+      .limit(1);
+
+    if (!employee) continue;
+
+    const account = await createLinkedAccount(
+      employee.businessId,
+      billingAccount.label,
+      'billing',
+      getNatureId(employee.businessId, 'billing'),
+    );
+    await db
+      .update(schema.employeeBillingAccounts)
+      .set({ accountId: account.id })
+      .where(eq(schema.employeeBillingAccounts.id, billingAccount.id));
+  }
+
+  const missingPartnerAccounts = await db
+    .select()
+    .from(schema.businessPartners)
+    .where(isNull(schema.businessPartners.accountId));
+  for (const partner of missingPartnerAccounts) {
+    const account = await createLinkedAccount(
+      partner.businessId,
+      `حساب شريك - ${partner.fullName}`,
+      'partner',
+      getNatureId(partner.businessId, 'partner'),
+      partner.code,
+      partner.sequenceNumber,
+    );
+    await db
+      .update(schema.businessPartners)
+      .set({ accountId: account.id })
+      .where(eq(schema.businessPartners.id, partner.id));
+  }
+  console.log('✅ ربط الكيانات التشغيلية بحساباتها');
+
   // ===================== أنواع المخروجات (expense_categories) =====================
   // تُضاف يدوياً من واجهة المستخدم عند الحاجة
   // console.log('✅ أنواع المخروجات');
@@ -373,13 +537,14 @@ async function seed() {
     // --- الوحدة 3: الحسابات والأرصدة ---
     const accountItems: any[] = [
       { sectionId: sec3.id, screenKey: 'accounts', label: 'الحسابات', icon: 'account_balance_wallet', route: '/biz/{bizId}/accounts', sortOrder: 1 },
+      { sectionId: sec3.id, screenKey: 'account_sub_natures', label: 'أنواع الحسابات الفرعية', icon: 'label', route: '/biz/{bizId}/account-sub-natures', sortOrder: 2 },
     ];
     if (bizType === 'stations' || bizType === 'single_station') {
       accountItems.push(
-        { sectionId: sec3.id, screenKey: 'funds', label: 'الصناديق', icon: 'savings', route: '/biz/{bizId}/funds', sortOrder: 2 },
-        { sectionId: sec3.id, screenKey: 'banks', label: 'البنوك', icon: 'account_balance', route: '/biz/{bizId}/banks', sortOrder: 3 },
-        { sectionId: sec3.id, screenKey: 'exchangers', label: 'الصرافين', icon: 'currency_exchange', route: '/biz/{bizId}/exchangers', sortOrder: 4 },
-        { sectionId: sec3.id, screenKey: 'wallets', label: 'المحافظ الإلكترونية', icon: 'wallet', route: '/biz/{bizId}/wallets', sortOrder: 5 },
+        { sectionId: sec3.id, screenKey: 'funds', label: 'الصناديق', icon: 'savings', route: '/biz/{bizId}/funds', sortOrder: 3 },
+        { sectionId: sec3.id, screenKey: 'banks', label: 'البنوك', icon: 'account_balance', route: '/biz/{bizId}/banks', sortOrder: 4 },
+        { sectionId: sec3.id, screenKey: 'exchangers', label: 'الصرافين', icon: 'currency_exchange', route: '/biz/{bizId}/exchangers', sortOrder: 5 },
+        { sectionId: sec3.id, screenKey: 'wallets', label: 'المحافظ الإلكترونية', icon: 'wallet', route: '/biz/{bizId}/wallets', sortOrder: 6 },
       );
     }
     await db.insert(schema.sidebarItems).values(accountItems);

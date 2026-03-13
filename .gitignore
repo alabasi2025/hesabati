@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .env.local
+.jwt-dev-secret
 *.log
 .DS_Store
 .angular/

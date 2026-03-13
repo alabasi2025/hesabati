@@ -190,7 +190,7 @@ partnersRoutes.put('/suppliers/:id', safeHandler('تعديل مورد', async (c
   const [updated] = await db.transaction(async (tx) => {
     const [u] = await tx
       .update(suppliers)
-      .set({ ...body, updatedAt: new Date() })
+      .set({ ...body, supplierTypeId, updatedAt: new Date() })
       .where(eq(suppliers.id, id))
       .returning();
 
@@ -203,7 +203,10 @@ partnersRoutes.put('/suppliers/:id', safeHandler('تعديل مورد', async (c
           name: `حساب مورد - ${u.name}`.trim(),
           subType: accountSubType,
           subTypeId: supplierTypeId,
+          code: u.code,
+          sequenceNumber: u.sequenceNumber,
           notes: u.notes ?? null,
+          isActive: u.isActive,
           updatedAt: new Date(),
         })
         .where(and(eq(accounts.id, u.accountId), eq(accounts.accountType, 'supplier')));

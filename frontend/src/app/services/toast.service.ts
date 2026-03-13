@@ -34,7 +34,7 @@ export class ToastService {
     this.add('success', title, message, duration);
   }
 
-  error(message: string, title = 'حدث خطأ', duration = 5000) {
+  error(message: string, title = 'حدث خطأ', duration = 0) {
     this.add('error', title, message, duration);
   }
 
@@ -51,7 +51,9 @@ export class ToastService {
     const toast: ToastMessage = { id, type, title, message, duration };
     this.toasts.update(list => [...list, toast]);
 
-    setTimeout(() => this.startRemove(id), duration);
+    if (duration > 0) {
+      setTimeout(() => this.startRemove(id), duration);
+    }
   }
 
   startRemove(id: number) {

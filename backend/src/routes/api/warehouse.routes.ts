@@ -81,6 +81,21 @@ warehouseRoutes.put('/warehouses/:id', safeHandler('تعديل مخزن', async 
   const body = normalizeBody(await c.req.json());
   const [updated] = await db.update(warehouses).set({ ...body, updatedAt: new Date() }).where(eq(warehouses.id, id)).returning();
   if (!updated) return c.json({ error: 'مخزن غير موجود' }, 404);
+
+  if (updated.accountId) {
+    await db.update(accounts).set({
+      name: updated.name,
+      subTypeId: updated.subTypeId,
+      subType: updated.subType,
+      code: updated.code,
+      sequenceNumber: updated.sequenceNumber,
+      responsiblePerson: updated.responsiblePerson,
+      notes: updated.notes,
+      isActive: updated.isActive,
+      updatedAt: new Date(),
+    }).where(eq(accounts.id, updated.accountId));
+  }
+
   return c.json(updated);
 }));
 

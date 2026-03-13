@@ -4,14 +4,16 @@
       <div class="toast-icon-wrap" [class]="'icon-' + t.type">
         <span class="material-icons-round">{{ getIcon(t.type) }}</span>
       </div>
-      <div class="toast-content">
-        <div class="toast-title">{{ t.title }}</div>
-        <div class="toast-message">{{ t.message }}</div>
+      <div class="toast-content" style="user-select: text; cursor: text;">
+        <div class="toast-title" style="user-select: text;">{{ t.title }}</div>
+        <div class="toast-message" style="user-select: text;">{{ t.message }}</div>
       </div>
       <button class="toast-close" (click)="close(t.id)">
         <span class="material-icons-round">close</span>
       </button>
-      <div class="toast-progress" [class]="'progress-' + t.type" [style.animation-duration]="t.duration + 'ms'"></div>
+      @if (t.duration > 0) {
+        <div class="toast-progress" [class]="'progress-' + t.type" [style.animation-duration]="t.duration + 'ms'"></div>
+      }
     </div>
   }
 </div>
