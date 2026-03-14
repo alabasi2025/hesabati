@@ -217,6 +217,7 @@
 /* ===================== Modals ===================== */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px); display: flex; align-items: center;
   justify-content: center; z-index: 1000; padding: 20px;
   animation: fadeIn 0.2s ease;
@@ -354,6 +355,46 @@
   border-right: 1px solid var(--border-color, #e2e8f0);
 }
 
+.voucher-lines-list {
+  display: grid;
+  gap: 10px;
+}
+
+.voucher-line-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.5fr 0.8fr 1.4fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-card, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.line-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 12px;
+}
+
+.voucher-lines-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.summary-values {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #475569);
+}
+
 /* ===================== How It Works ===================== */
 .hiw-section {
   padding: 14px 0; border-bottom: 1px solid var(--border-color, #e2e8f0);
@@ -416,6 +457,9 @@
   .page-header { flex-direction: column; gap: 14px; align-items: flex-start; }
   .stats-row { flex-direction: column; }
   .form-row { grid-template-columns: 1fr; }
+  .voucher-line-row { grid-template-columns: 1fr; }
+  .voucher-lines-summary { flex-direction: column; align-items: stretch; }
+  .summary-values { flex-direction: column; align-items: flex-start; gap: 6px; }
   .modal-3d { border-radius: 16px; }
   .voucher-row-3d { flex-wrap: wrap; }
 }

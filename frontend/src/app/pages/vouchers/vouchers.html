@@ -8,7 +8,7 @@
       </div>
       <div>
         <h1 class="page-title">سندات الصرف والقبض</h1>
-        <p class="page-subtitle">تسجيل حركات الأموال بين الحسابات</p>
+        <p class="page-subtitle">إدارة الحركات المالية من خزينة واحدة إلى عدة أطراف</p>
       </div>
     </div>
     <div class="header-right">
@@ -97,11 +97,7 @@
           <span class="material-icons-round">receipt_long</span>
         </div>
         <h3>لا توجد سندات</h3>
-        <p>سجّل عملية من خلال قالب (تسجيل عملية)</p>
-        <a class="btn-3d btn-primary" [routerLink]="['/biz', bizId, 'register-operation']">
-          <span class="material-icons-round">play_circle</span>
-          تسجيل عملية
-        </a>
+        <p>أنشئ أول سند قبض أو صرف من هذه الشاشة</p>
       </div>
     } @else {
       <div class="vouchers-list">
@@ -201,24 +197,23 @@
           <div class="hiw-section">
             <h3><span class="material-icons-round">call_received</span> سند القبض</h3>
             <p>
-              يُستخدم عند <strong>استلام</strong> مبلغ إلى خزينة (صندوق/بنك/صراف/محفظة) من حساب آخر.
+              يُستخدم عند <strong>استلام</strong> مبلغ إلى خزينة واحدة ثابتة من عدة أطراف عبر سطور السند.
               <br />
-              <small>السند القياسي يرحّل على <strong>حسابين فقط</strong>: مدين + دائن.</small>
+              <small>كل سطر يمثل طرفاً مالياً مقابلاً يدخل ضمن نفس السند.</small>
             </p>
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">call_made</span> سند الصرف</h3>
             <p>
-              يُستخدم عند <strong>صرف</strong> مبلغ من خزينة (صندوق/بنك/صراف/محفظة) إلى حساب آخر.
+              يُستخدم عند <strong>صرف</strong> مبلغ من خزينة واحدة ثابتة إلى عدة أطراف عبر سطور السند.
               <br />
-              <small>السند القياسي يرحّل على <strong>حسابين فقط</strong>: مدين + دائن.</small>
+              <small>مجموع مبالغ السطور يجب أن يساوي مبلغ السند.</small>
             </p>
           </div>
           <div class="hiw-section">
-            <h3><span class="material-icons-round">category</span> أنواع العمليات</h3>
+            <h3><span class="material-icons-round">list_alt</span> بنود السند</h3>
             <p>
-              لما تنشئ سنداً، تختار أولاً "نوع العملية" من القوالب المحفوظة.
-              هذا يحدد الحسابات المتاحة تلقائياً.
+              كل بند يحتوي على نوع حساب فرعي، حساب فرعي، مبلغ، وبيان مستقل داخل نفس السند.
             </p>
           </div>
           <div class="hiw-section">
@@ -263,184 +258,165 @@
           </button>
         </div>
         <div class="modal-body">
-
-          <!-- Step 1: Select Operation Type -->
-          @if (voucherOpTypes().length > 0) {
-            <div class="form-step">
-              <div class="step-header">
-                <div class="step-num">١</div>
-                <span>اختر نوع العملية (القالب) <span class="required">*</span></span>
-              </div>
-              <div class="op-types-grid">
-                @for (ot of voucherOpTypes(); track ot.id) {
-                  <button class="op-type-btn" [class.selected]="selectedOpType()?.id === ot.id"
-                          (click)="selectOpType(ot)">
-                    <span class="material-icons-round">{{ ot.icon || 'receipt_long' }}</span>
-                    {{ ot.name }}
-                  </button>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- Step 2: Accounts -->
+          <!-- Step 1: Treasury -->
           <div class="form-step">
             <div class="step-header">
-              <div class="step-num">{{ voucherOpTypes().length > 0 ? '٢' : '١' }}</div>
-              <span>الحسابات</span>
-            </div>
-            <div class="form-row" style="margin-bottom:10px">
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer">
-                <input type="checkbox" [checked]="isMultiMode()" (change)="isMultiMode.set($any($event.target).checked)">
-                سند متعدد البنود (نفس الخزينة مع عدة حسابات)
-              </label>
-            </div>
-            <div class="form-row">
-              @if (voucherType() === 'receipt') {
-                <div class="form-group">
-                  <label class="form-label">صندوق الوارد (اختياري)</label>
-                  <select class="form-select" title="صندوق الوارد" [value]="form().toFundId"
-                          (change)="setFormField('toFundId', +$any($event.target).value || null)">
-                    <option [value]="null">بدون صندوق...</option>
-                    @for (fnd of funds(); track fnd.id) {
-                      <option [value]="fnd.id">{{ fnd.name }}@if (fnd.code) { ({{ fnd.code }}) } @else if (fnd.sequenceNumber) { (#{{ fnd.sequenceNumber }}) }</option>
-                    }
-                  </select>
-                </div>
-              } @else {
-                <div class="form-group">
-                  <label class="form-label">صندوق الصادر (اختياري)</label>
-                  <select class="form-select" title="صندوق الصادر" [value]="form().fromFundId"
-                          (change)="setFormField('fromFundId', +$any($event.target).value || null)">
-                    <option [value]="null">بدون صندوق...</option>
-                    @for (fnd of funds(); track fnd.id) {
-                      <option [value]="fnd.id">{{ fnd.name }}@if (fnd.code) { ({{ fnd.code }}) } @else if (fnd.sequenceNumber) { (#{{ fnd.sequenceNumber }}) }</option>
-                    }
-                  </select>
-                </div>
-              }
+              <div class="step-num">١</div>
+              <span>الخزينة</span>
             </div>
             <div class="form-row">
               <div class="form-group">
+                <label class="form-label">نوع الخزينة <span class="required">*</span></label>
+                <select class="form-select" title="نوع الخزينة" [value]="treasuryType() || ''"
+                        (change)="setTreasuryType($any($event.target).value)">
+                  <option value="">اختر النوع...</option>
+                  <option value="fund">صندوق</option>
+                  <option value="bank">بنك</option>
+                  <option value="exchange">صراف</option>
+                  <option value="e_wallet">محفظة</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label class="form-label">
-                  الحساب المصروف منه
+                  {{ voucherType() === 'payment' ? 'الخزينة المصروف منها' : 'الخزينة المستلمة' }}
                   <span class="required">*</span>
                 </label>
-                <select class="form-select" title="الحساب المصروف منه" [value]="form().fromAccountId"
-                        (change)="setFormField('fromAccountId', +$any($event.target).value || null)">
-                  <option [value]="null">اختر الحساب...</option>
-                  @for (acc of filteredFromAccounts(); track acc.id) {
-                    <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
+                <select class="form-select" title="الخزينة" [value]="selectedTreasuryId()"
+                        (change)="setSelectedTreasury(+$any($event.target).value || null)">
+                  <option [value]="null">اختر الخزينة...</option>
+                  @for (item of treasuryOptions(); track item.id) {
+                    <option [value]="item.id">
+                      {{ item.label || item.name }}
+                      @if (item.code) { ({{ item.code }}) }
+                      @else if (item.sequenceNumber) { (#{{ item.sequenceNumber }}) }
+                    </option>
                   }
                 </select>
               </div>
-              @if (!isMultiMode()) {
-                <div class="form-group">
-                  <label class="form-label">
-                    الحساب المستلِم
-                    <span class="required">*</span>
-                  </label>
-                  <select class="form-select" title="الحساب المستلم" [value]="form().toAccountId"
-                          (change)="setFormField('toAccountId', +$any($event.target).value || null)">
-                    <option [value]="null">اختر الحساب...</option>
-                    @for (acc of filteredToAccounts(); track acc.id) {
-                      <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
-                    }
-                  </select>
-                </div>
-              }
-            </div>
-            @if (isMultiMode()) {
-              <div class="form-group">
-                <label class="form-label">بنود السند <span class="required">*</span></label>
-                <div style="display:grid;gap:8px">
-                  @for (row of multiEntries(); track $index) {
-                    <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:8px;align-items:center">
-                      <select class="form-select" title="حساب البند" [value]="row.accountId"
-                              (change)="updateMultiEntry($index, 'accountId', +$any($event.target).value || null)">
-                        <option [value]="null">اختر الحساب...</option>
-                        @for (acc of getMultiEntryAccounts(); track acc.id) {
-                          <option [value]="acc.id">{{ acc.linkedName || acc.name }}</option>
-                        }
-                      </select>
-                      <input class="form-input" type="number" placeholder="المبلغ" title="مبلغ البند"
-                             [value]="row.amount"
-                             (input)="updateMultiEntry($index, 'amount', $any($event.target).value)">
-                      <input class="form-input" type="text" placeholder="المرجع (اختياري)" title="مرجع البند"
-                             [value]="row.reference || ''"
-                             (input)="updateMultiEntry($index, 'reference', $any($event.target).value)">
-                      <input class="form-input" type="text" placeholder="ملاحظة (اختياري)" title="ملاحظة البند"
-                             [value]="row.notes || ''"
-                             (input)="updateMultiEntry($index, 'notes', $any($event.target).value)">
-                      <button class="icon-btn delete-btn" type="button" title="حذف البند" (click)="removeMultiEntry($index)">
-                        <span class="material-icons-round">delete</span>
-                      </button>
-                    </div>
-                  }
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-                  <button class="btn-3d btn-ghost" type="button" (click)="addMultiEntry()">
-                    <span class="material-icons-round">add</span>
-                    إضافة بند
-                  </button>
-                  <div style="font-size:13px;color:#0f766e;font-weight:600">
-                    الإجمالي: {{ formatAmount(getMultiTotalAmount()) }}
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-
-          <!-- Step 3: Amount & Details -->
-          <div class="form-step">
-            <div class="step-header">
-              <div class="step-num">{{ voucherOpTypes().length > 0 ? '٣' : '٢' }}</div>
-              <span>المبلغ والبيان</span>
             </div>
             <div class="form-row">
-              @if (!isMultiMode()) {
-                <div class="form-group">
-                  <label class="form-label">المبلغ <span class="required">*</span></label>
-                  <div class="amount-input-wrap">
-                    <input class="form-input amount-input" type="number" placeholder="0"
-                           [value]="form().amount"
-                           (input)="setFormField('amount', $any($event.target).value)">
-                    <span class="currency-label">ر.ي</span>
-                  </div>
-                </div>
-              } @else {
-                <div class="form-group">
-                  <label class="form-label">إجمالي البنود</label>
-                  <div class="amount-input-wrap">
-                    <input class="form-input amount-input" type="text" title="إجمالي البنود" [value]="formatAmount(getMultiTotalAmount())" disabled>
-                    <span class="currency-label">ر.ي</span>
-                  </div>
-                </div>
-              }
+              <div class="form-group">
+                <label class="form-label">رقم السند</label>
+                <input class="form-input" type="text" title="رقم السند"
+                       [value]="previewLoading() ? 'جاري توليد الرقم...' : (voucherNumberPreview() || 'سيظهر بعد اختيار الخزينة')"
+                       readonly>
+              </div>
+              <div class="form-group">
+                <label class="form-label">الخزينة المختارة</label>
+                <input class="form-input" type="text" title="الخزينة المختارة"
+                       [value]="getTreasuryTypeLabel(treasuryType()) + ' - ' + getSelectedTreasuryLabel()"
+                       readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Voucher Data -->
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">٢</div>
+              <span>بيانات السند</span>
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label">التاريخ</label>
                 <input class="form-input" type="date" title="تاريخ السند" [value]="form().voucherDate"
                        (change)="setFormField('voucherDate', $any($event.target).value)">
               </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">البيان <span class="required">*</span></label>
-              <input class="form-input" type="text" placeholder="وصف العملية..."
-                     [value]="form().description"
-                     (input)="setFormField('description', $any($event.target).value)">
+              <div class="form-group">
+                <label class="form-label">العملة</label>
+                <select class="form-select" title="العملة" [value]="form().currencyId"
+                        (change)="setFormField('currencyId', +$any($event.target).value || 1)">
+                  @for (currency of currencies(); track currency.id) {
+                    <option [value]="currency.id">{{ currency.nameAr }} ({{ currency.code }})</option>
+                  }
+                </select>
+              </div>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">الرقم المرجعي</label>
-                <input class="form-input" type="text" placeholder="رقم الإشعار أو المرجع"
+                <label class="form-label">مبلغ السند <span class="required">*</span></label>
+                <div class="amount-input-wrap">
+                  <input class="form-input amount-input" type="number" placeholder="0"
+                         [value]="form().amount"
+                         (input)="setFormField('amount', $any($event.target).value)">
+                  <span class="currency-label">{{ getCurrencyLabel(form().currencyId) }}</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">المرجع</label>
+                <input class="form-input" type="text" placeholder="رقم المرجع أو الإشعار"
                        [value]="form().reference"
                        (input)="setFormField('reference', $any($event.target).value)">
               </div>
-              <div class="form-group">
-                <label class="form-label">ملاحظات</label>
-                <input class="form-input" type="text" placeholder="ملاحظات إضافية"
-                       [value]="form().notes || ''"
-                       (input)="setFormField('notes', $any($event.target).value)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">بيان السند <span class="required">*</span></label>
+              <input class="form-input" type="text" placeholder="بيان الصندوق أو وصف الحركة المالية..."
+                     [value]="form().description"
+                     (input)="setFormField('description', $any($event.target).value)">
+            </div>
+          </div>
+
+          <!-- Step 3: Voucher Lines -->
+          <div class="form-step">
+            <div class="step-header">
+              <div class="step-num">٣</div>
+              <span>سطور السند</span>
+            </div>
+            <div class="voucher-lines-list">
+              @for (line of voucherLines(); track $index) {
+                <div class="voucher-line-row">
+                  <div class="form-group">
+                    <label class="form-label">نوع الحساب الفرعي</label>
+                    <select class="form-select" title="نوع الحساب الفرعي" [value]="line.accountSubNatureId"
+                            (change)="updateVoucherLine($index, 'accountSubNatureId', +$any($event.target).value || null)">
+                      <option [value]="null">اختر النوع...</option>
+                      @for (nature of counterpartySubNatures(); track nature.id) {
+                        <option [value]="nature.id">{{ nature.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">الحساب الفرعي</label>
+                    <select class="form-select" title="الحساب الفرعي" [value]="line.accountId"
+                            (change)="updateVoucherLine($index, 'accountId', +$any($event.target).value || null)">
+                      <option [value]="null">اختر الحساب...</option>
+                      @for (account of getLineAccounts(line); track account.id) {
+                        <option [value]="account.id">
+                          {{ account.name }}
+                          @if (account.code) { ({{ account.code }}) }
+                        </option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">المبلغ</label>
+                    <input class="form-input" type="number" placeholder="0"
+                           [value]="line.amount"
+                           (input)="updateVoucherLine($index, 'amount', $any($event.target).value)">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">البيان</label>
+                    <input class="form-input" type="text" placeholder="بيان السطر"
+                           [value]="line.notes"
+                           (input)="updateVoucherLine($index, 'notes', $any($event.target).value)">
+                  </div>
+                  <div class="line-actions">
+                    <button class="icon-btn delete-btn" type="button" title="حذف السطر" (click)="removeVoucherLine($index)">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="voucher-lines-summary">
+              <button class="btn-3d btn-ghost" type="button" (click)="addVoucherLine()">
+                <span class="material-icons-round">add</span>
+                إضافة سطر
+              </button>
+              <div class="summary-values">
+                <span>إجمالي السطور: {{ formatAmount(getVoucherLinesTotal()) }}</span>
+                <span>الفرق: {{ formatAmount(getVoucherAmountDifference()) }}</span>
               </div>
             </div>
           </div>
@@ -524,8 +500,7 @@
                   <span class="detail-label">الخزينة</span>
                   <span class="detail-value">
                     {{ getTreasuryKindLabel(detailsVoucherNumberParts()?.treasuryKindCode || '') }}
-                    • تصنيف {{ detailsVoucherNumberParts()?.categoryNo }}
-                    • رقم {{ detailsVoucherNumberParts()?.vaultNo }}
+                    • الكود {{ detailsVoucherNumberParts()?.treasuryCode }}
                   </span>
                 </div>
                 <div class="detail-row">
@@ -535,7 +510,7 @@
                 <div class="detail-row">
                   <span class="detail-label">الصيغة المختصرة</span>
                   <span class="detail-value" dir="ltr">
-                    {{ detailsVoucherNumberParts()?.categoryNo }}-{{ detailsVoucherNumberParts()?.vaultNo }}-{{ detailsVoucherNumberParts()?.year }}-{{ detailsVoucherNumberParts()?.serial }}
+                    {{ detailsVoucherNumberParts()?.treasuryCode }}-{{ detailsVoucherNumberParts()?.year }}-{{ detailsVoucherNumberParts()?.serial }}
                   </span>
                 </div>
               }

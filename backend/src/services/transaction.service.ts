@@ -23,10 +23,6 @@ import { eq, and, sql } from "drizzle-orm";
 import {
   accounts,
   funds,
-  fundTypes,
-  bankTypes,
-  exchangeTypes,
-  eWalletTypes,
   operationTypes,
   vouchers,
   journalEntries,
@@ -231,19 +227,12 @@ type TreasuryAccountType = "bank" | "exchange" | "e_wallet";
 interface TreasuryInfo {
   kind: TreasuryKind;
   kindCode: string;
-  categoryNo: number;
-  vaultNo: number;
+  treasuryCode: string;
   treasuryId: number;
 }
 
 function isTreasuryAccountType(t: unknown): t is TreasuryAccountType {
   return t === "bank" || t === "exchange" || t === "e_wallet";
-}
-
-function requirePositiveInt(label: string, v: unknown): number {
-  const n = typeof v === "number" ? v : Number.parseInt(String(v ?? ""), 10);
-  if (!Number.isInteger(n) || n <= 0) throw new Error(`${label} غير صالح`);
-  return n;
 }
 
 /** التحقق من وجود رقم خزينة صالح مع رسالة تنبيه واضحة */
@@ -264,6 +253,30 @@ function requireVaultNumber(
   return n;
 }
 
+function resolveTreasuryCode(
+  code: unknown,
+  fallbackKind: TreasuryKind,
+  sequenceNumber: unknown,
+  treasuryName: string,
+  fromPage: string,
+): { kindCode: string; treasuryCode: string } {
+  const normalizedCode = String(code ?? "").trim().toUpperCase();
+  const matched = normalizedCode.match(/^([A-Z]+)-(\d+)$/);
+  if (matched) {
+    return {
+      kindCode: matched[1]!,
+      treasuryCode: `${matched[1]}-${matched[2]}`,
+    };
+  }
+
+  const seq = requireVaultNumber(sequenceNumber, treasuryName, fromPage);
+  const kindCode = TYPE_PREFIXES[fallbackKind] || fallbackKind.toUpperCase().substring(0, 3);
+  return {
+    kindCode,
+    treasuryCode: `${kindCode}-${String(seq).padStart(2, "0")}`,
+  };
+}
+
 async function resolveFundTreasury(
   tx: any,
   bizId: number,
@@ -273,7 +286,7 @@ async function resolveFundTreasury(
     .select({
       id: funds.id,
       name: funds.name,
-      fundType: funds.fundType,
+      code: funds.code,
       sequenceNumber: funds.sequenceNumber,
     })
     .from(funds)
@@ -286,24 +299,18 @@ async function resolveFundTreasury(
     fund.name,
     "الصناديق",
   );
-
-  const [ft] = await tx
-    .select({ sortOrder: fundTypes.sortOrder })
-    .from(fundTypes)
-    .where(
-      and(
-        eq(fundTypes.businessId, bizId),
-        eq(fundTypes.subTypeKey, fund.fundType),
-      ),
-    )
-    .limit(1);
-  const categoryNo = requirePositiveInt("رقم تصنيف الصندوق", ft?.sortOrder);
+  const { kindCode, treasuryCode } = resolveTreasuryCode(
+    fund.code,
+    "fund",
+    vaultNo,
+    fund.name,
+    "الصناديق",
+  );
 
   return {
     kind: "fund",
-    kindCode: TYPE_PREFIXES.fund || "FND",
-    categoryNo,
-    vaultNo,
+    kindCode,
+    treasuryCode,
     treasuryId: fundId,
   };
 }
@@ -318,7 +325,7 @@ async function resolveAccountTreasury(
       id: accounts.id,
       name: accounts.name,
       accountType: accounts.accountType,
-      subType: accounts.subType,
+      code: accounts.code,
       sequenceNumber: accounts.sequenceNumber,
     })
     .from(accounts)
@@ -330,59 +337,25 @@ async function resolveAccountTreasury(
       "سندات القبض/الصرف يجب أن تكون مرتبطة بخزينة: صندوق/بنك/صراف/محفظة",
     );
   }
-  const subTypeKey = String(acc.subType ?? "").trim();
-  if (!subTypeKey) throw new Error("تصنيف الخزينة مطلوب (subType)");
   const vaultNo = requireVaultNumber(acc.sequenceNumber, acc.name, "الحسابات");
-
-  let categoryNo = 0;
   let kind: TreasuryKind = "bank";
-  let kindCode = TYPE_PREFIXES.bank || "BNK";
-
   if (acc.accountType === "bank") {
     kind = "bank";
-    kindCode = TYPE_PREFIXES.bank || "BNK";
-    const [t] = await tx
-      .select({ sortOrder: bankTypes.sortOrder })
-      .from(bankTypes)
-      .where(
-        and(
-          eq(bankTypes.businessId, bizId),
-          eq(bankTypes.subTypeKey, subTypeKey),
-        ),
-      )
-      .limit(1);
-    categoryNo = requirePositiveInt("رقم تصنيف البنك", t?.sortOrder);
   } else if (acc.accountType === "exchange") {
     kind = "exchange";
-    kindCode = TYPE_PREFIXES.exchange || "EXC";
-    const [t] = await tx
-      .select({ sortOrder: exchangeTypes.sortOrder })
-      .from(exchangeTypes)
-      .where(
-        and(
-          eq(exchangeTypes.businessId, bizId),
-          eq(exchangeTypes.subTypeKey, subTypeKey),
-        ),
-      )
-      .limit(1);
-    categoryNo = requirePositiveInt("رقم تصنيف الصراف", t?.sortOrder);
   } else {
     kind = "e_wallet";
-    kindCode = TYPE_PREFIXES.e_wallet || "WLT";
-    const [t] = await tx
-      .select({ sortOrder: eWalletTypes.sortOrder })
-      .from(eWalletTypes)
-      .where(
-        and(
-          eq(eWalletTypes.businessId, bizId),
-          eq(eWalletTypes.subTypeKey, subTypeKey),
-        ),
-      )
-      .limit(1);
-    categoryNo = requirePositiveInt("رقم تصنيف المحفظة", t?.sortOrder);
   }
 
-  return { kind, kindCode, categoryNo, vaultNo, treasuryId: accountId };
+  const { kindCode, treasuryCode } = resolveTreasuryCode(
+    acc.code,
+    kind,
+    vaultNo,
+    acc.name,
+    "الحسابات",
+  );
+
+  return { kind, kindCode, treasuryCode, treasuryId: accountId };
 }
 
 async function resolveTreasuryForVoucher(
@@ -441,8 +414,8 @@ async function generateVoucherNumberByTreasury(
   const voucherSeq = seq; // يبدأ من 1
   const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
   return {
-    voucherNumber: `${vPrefix}-${treasury.kindCode}-${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
-    accountSequence: `${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
+    voucherNumber: `${vPrefix}-${treasury.treasuryCode}-${year}-${voucherSeq}`,
+    accountSequence: `${treasury.treasuryCode}-${year}-${voucherSeq}`,
   };
 }
 
@@ -464,8 +437,8 @@ async function generateVoucherNumberByTreasuryMulti(
   const voucherSeq = seq; // يبدأ من 1
   const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
   return {
-    voucherNumber: `${vPrefix}-${treasury.kindCode}-${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
-    accountSequence: `${treasury.categoryNo}-${treasury.vaultNo}-${year}-${voucherSeq}`,
+    voucherNumber: `${vPrefix}-${treasury.treasuryCode}-${year}-${voucherSeq}`,
+    accountSequence: `${treasury.treasuryCode}-${year}-${voucherSeq}`,
   };
 }
 

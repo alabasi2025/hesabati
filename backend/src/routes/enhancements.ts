@@ -15,7 +15,7 @@ import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
 import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
 import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
+import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
 import { postMultiTransaction, postTransaction } from '../services/transaction.service.ts';
 import { wsService } from '../services/websocket.service.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
@@ -27,6 +27,92 @@ interface PeriodStatsRow {
   receipts: string | number;
   payments: string | number;
   operations_count: string | number;
+}
+
+interface TreasuryPreviewInfo {
+  kind: 'fund' | 'bank' | 'exchange' | 'e_wallet';
+  kindCode: string;
+  treasuryCode: string;
+  treasuryId: number;
+}
+
+function normalizeTreasuryCode(
+  code: unknown,
+  fallbackKind: 'fund' | 'bank' | 'exchange' | 'e_wallet',
+  sequenceNumber: unknown,
+): { kindCode: string; treasuryCode: string } | null {
+  const normalizedCode = String(code ?? '').trim().toUpperCase();
+  const matched = normalizedCode.match(/^([A-Z]+)-(\d+)$/);
+  if (matched) {
+    return {
+      kindCode: matched[1]!,
+      treasuryCode: `${matched[1]}-${matched[2]}`,
+    };
+  }
+
+  const seq = typeof sequenceNumber === 'number'
+    ? sequenceNumber
+    : Number.parseInt(String(sequenceNumber ?? ''), 10);
+  if (!Number.isInteger(seq) || seq <= 0) return null;
+  const kindCode = TYPE_PREFIXES[fallbackKind] || fallbackKind.toUpperCase().substring(0, 3);
+  return {
+    kindCode,
+    treasuryCode: `${kindCode}-${String(seq).padStart(2, '0')}`,
+  };
+}
+
+async function resolveVoucherTreasuryInfo(
+  bizId: number,
+  voucherType: string,
+  fromFundId?: number | null,
+  toFundId?: number | null,
+  fromAccountId?: number | null,
+  toAccountId?: number | null,
+): Promise<TreasuryPreviewInfo | null> {
+  if (voucherType === 'receipt') {
+    if (toFundId) {
+      const [fund] = await db.select({ id: funds.id, code: funds.code, sequenceNumber: funds.sequenceNumber })
+        .from(funds).where(and(eq(funds.id, toFundId), eq(funds.businessId, bizId))).limit(1);
+      if (!fund) return null;
+      const normalized = normalizeTreasuryCode(fund.code, 'fund', fund.sequenceNumber);
+      if (!normalized) return null;
+      return { kind: 'fund', treasuryId: toFundId, ...normalized };
+    }
+    if (toAccountId) {
+      const [account] = await db.select({ id: accounts.id, code: accounts.code, accountType: accounts.accountType, sequenceNumber: accounts.sequenceNumber })
+        .from(accounts).where(and(eq(accounts.id, toAccountId), eq(accounts.businessId, bizId))).limit(1);
+      if (!account) return null;
+      const accountType = String(account.accountType);
+      if (!['bank', 'exchange', 'e_wallet'].includes(accountType)) return null;
+      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber);
+      if (!normalized) return null;
+      return { kind: accountType as 'bank' | 'exchange' | 'e_wallet', treasuryId: toAccountId, ...normalized };
+    }
+    return null;
+  }
+
+  if (voucherType === 'payment') {
+    if (fromFundId) {
+      const [fund] = await db.select({ id: funds.id, code: funds.code, sequenceNumber: funds.sequenceNumber })
+        .from(funds).where(and(eq(funds.id, fromFundId), eq(funds.businessId, bizId))).limit(1);
+      if (!fund) return null;
+      const normalized = normalizeTreasuryCode(fund.code, 'fund', fund.sequenceNumber);
+      if (!normalized) return null;
+      return { kind: 'fund', treasuryId: fromFundId, ...normalized };
+    }
+    if (fromAccountId) {
+      const [account] = await db.select({ id: accounts.id, code: accounts.code, accountType: accounts.accountType, sequenceNumber: accounts.sequenceNumber })
+        .from(accounts).where(and(eq(accounts.id, fromAccountId), eq(accounts.businessId, bizId))).limit(1);
+      if (!account) return null;
+      const accountType = String(account.accountType);
+      if (!['bank', 'exchange', 'e_wallet'].includes(accountType)) return null;
+      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber);
+      if (!normalized) return null;
+      return { kind: accountType as 'bank' | 'exchange' | 'e_wallet', treasuryId: fromAccountId, ...normalized };
+    }
+  }
+
+  return null;
 }
 
 // ===================== تحسينات السندات (Vouchers) =====================
@@ -117,17 +203,27 @@ enhancements.post(
     if (!validation.success) return c.json({ error: validation.error }, 400);
     const data = validation.data as any;
 
-    const [opType] = await db.select().from(operationTypes)
-      .where(and(eq(operationTypes.id, data.operationTypeId), eq(operationTypes.businessId, bizId)));
-    if (!opType) return c.json({ error: 'نوع العملية غير موجود' }, 404);
-    if (opType.isActive === false) return c.json({ error: 'نوع العملية غير مفعّل' }, 400);
+    const [opType] = data.operationTypeId
+      ? await db
+          .select()
+          .from(operationTypes)
+          .where(and(eq(operationTypes.id, data.operationTypeId), eq(operationTypes.businessId, bizId)))
+      : [null];
+    if (data.operationTypeId && !opType) return c.json({ error: 'نوع العملية غير موجود' }, 404);
+    if (opType?.isActive === false) return c.json({ error: 'نوع العملية غير مفعّل' }, 400);
 
     const currencyId = data.currencyId || 1;
-    const vType = (opType.voucherType as any) || data.voucherType || 'receipt';
+    const vType = (opType?.voucherType as any) || data.voucherType || 'receipt';
 
-    let treasuryAccountId = data.fromAccountId ?? opType.sourceAccountId ?? null;
-    // دعم القوالب النقدية: لو المصدر صندوق بدون حساب خزينة، استخدم حساب صندوق نظامي
-    if (!treasuryAccountId && opType.paymentMethod === 'cash' && opType.sourceFundId) {
+    const treasuryFundId = vType === 'receipt'
+      ? (data.toFundId ?? opType?.sourceFundId ?? null)
+      : (data.fromFundId ?? opType?.sourceFundId ?? null);
+    let treasuryAccountId = vType === 'receipt'
+      ? (data.toAccountId ?? opType?.sourceAccountId ?? null)
+      : (data.fromAccountId ?? opType?.sourceAccountId ?? null);
+
+    // عند اختيار صندوق كخزينة، نستخدم حساب خزينة داخلي موحّد لمعالجة الأثر الداخلي
+    if (!treasuryAccountId && treasuryFundId) {
       const accRows = await db.execute(sql`
         SELECT id FROM accounts
         WHERE business_id = ${bizId}
@@ -150,10 +246,12 @@ enhancements.post(
         treasuryAccountId = created?.id ?? null;
       }
     }
-    if (!treasuryAccountId) return c.json({ error: 'حساب الخزينة مطلوب (fromAccountId أو sourceAccountId في القالب)' }, 400);
+    if (!treasuryAccountId) {
+      return c.json({ error: 'الخزينة مطلوبة. اختر صندوقاً أو حساب خزينة صالحاً قبل الحفظ' }, 400);
+    }
 
     const voucherDate = data.voucherDate ? new Date(data.voucherDate) : null;
-    const baseDesc = (data.description || opType.name || '').trim();
+    const baseDesc = (data.description || opType?.name || '').trim();
 
     const entries = (data.entries || [])
       .map((e: any) => {
@@ -170,10 +268,7 @@ enhancements.post(
     const treasuryLineType: 'debit' | 'credit' = vType === 'receipt' ? 'debit' : 'credit';
 
     const lines = entries.map((e: any) => {
-      const extras: string[] = [];
-      if (e.reference) extras.push(`إشعار: ${e.reference}`);
-      if (e.notes) extras.push(String(e.notes));
-      const desc = extras.length ? `${baseDesc} (${extras.join(' | ')})` : baseDesc;
+      const desc = [baseDesc, e.notes ? String(e.notes).trim() : ''].filter(Boolean).join(' - ');
       return {
         accountId: e.accountId,
         lineType: entryLineType,
@@ -195,16 +290,16 @@ enhancements.post(
         currencyId,
         lines,
         operationTypeId: data.operationTypeId,
-        operationTypeName: opType.name || null,
-        description: baseDesc || opType.name || '',
+        operationTypeName: opType?.name || null,
+        description: baseDesc || opType?.name || '',
         reference: data.reference || null,
         voucherDate,
         stationId: data.stationId || null,
         employeeId: data.employeeId || null,
         supplierId: data.supplierId || null,
         // ربط الخزينة بالصندوق/الحساب حسب نوع السند
-        toFundId: vType === 'receipt' ? (data.toFundId || opType.sourceFundId || null) : (data.toFundId || null),
-        fromFundId: vType === 'payment' ? (data.fromFundId || opType.sourceFundId || null) : (data.fromFundId || null),
+        toFundId: vType === 'receipt' ? treasuryFundId : null,
+        fromFundId: vType === 'payment' ? treasuryFundId : null,
         fromAccountId: vType === 'payment' ? treasuryAccountId : null,
         toAccountId: vType === 'receipt' ? treasuryAccountId : null,
       });
@@ -215,6 +310,46 @@ enhancements.post(
     }
   })
 );
+
+enhancements.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddleware(), safeHandler('معاينة رقم السند', async (c) => {
+  const bizId = getBizId(c);
+  const voucherType = String(c.req.query('voucherType') || 'receipt');
+  const voucherDate = c.req.query('voucherDate') ? new Date(String(c.req.query('voucherDate'))) : new Date();
+  const year = voucherDate.getFullYear();
+  const fromFundId = parseId(c.req.query('fromFundId') || '');
+  const toFundId = parseId(c.req.query('toFundId') || '');
+  const fromAccountId = parseId(c.req.query('fromAccountId') || '');
+  const toAccountId = parseId(c.req.query('toAccountId') || '');
+
+  const treasury = await resolveVoucherTreasuryInfo(
+    bizId,
+    voucherType,
+    fromFundId || null,
+    toFundId || null,
+    fromAccountId || null,
+    toAccountId || null,
+  );
+
+  if (!treasury) {
+    return c.json({ error: 'لا يمكن توليد رقم السند قبل اختيار خزينة صحيحة' }, 400);
+  }
+
+  const counterType = `treasury_${treasury.kind}_${voucherType}`;
+  const current = await getCurrentSequence(bizId, counterType, treasury.treasuryId, year);
+  const nextSerial = current + 1;
+  const voucherPrefix = TYPE_PREFIXES[voucherType] || 'VCH';
+  const voucherNumber = `${voucherPrefix}-${treasury.treasuryCode}-${year}-${nextSerial}`;
+
+  return c.json({
+    voucherNumber,
+    accountSequence: `${treasury.treasuryCode}-${year}-${nextSerial}`,
+    treasuryKind: treasury.kind,
+    treasuryKindCode: treasury.kindCode,
+    treasuryCode: treasury.treasuryCode,
+    year,
+    serial: nextSerial,
+  });
+}));
 
 // 2. تعديل سند (قبل الاعتماد)
 enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('تعديل سند', async (c) => {
@@ -858,99 +993,7 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
   const voucherDate = body.voucherDate ? new Date(body.voucherDate) : new Date();
   const year = voucherDate.getFullYear();
 
-  // توليد رقم السند حسب الخزينة: (نوع السند + نوع الخزينة + رقم التصنيف + رقم الخزينة + السنة + تسلسل يبدأ 1000)
-  // ملاحظة: التصنيف = sortOrder في جدول النوع (fundTypes/bankTypes/...)
-  let kind: 'fund' | 'bank' | 'exchange' | 'e_wallet' | null = null;
-  let kindCode = '';
-  let categoryNo = 0;
-  let vaultNo = 0;
-  let treasuryId = 0;
-
-  if (vType === 'receipt') {
-    if (body.toFundId) {
-      kind = 'fund';
-      treasuryId = Number(body.toFundId);
-      const [f] = await db.select({ fundType: funds.fundType, sequenceNumber: funds.sequenceNumber })
-        .from(funds).where(and(eq(funds.id, treasuryId), eq(funds.businessId, bizId))).limit(1);
-      if (!f) return c.json({ error: 'صندوق الوارد غير موجود أو لا ينتمي لهذا العمل' }, 400);
-      vaultNo = Number(f.sequenceNumber ?? 0);
-      const [t] = await db.select({ sortOrder: fundTypes.sortOrder }).from(fundTypes)
-        .where(and(eq(fundTypes.businessId, bizId), eq(fundTypes.subTypeKey, f.fundType))).limit(1);
-      categoryNo = Number(t?.sortOrder ?? 0);
-      kindCode = TYPE_PREFIXES.fund || 'FND';
-    } else if (body.toAccountId) {
-      treasuryId = Number(body.toAccountId);
-      const [a] = await db.select({ accountType: accounts.accountType, subType: accounts.subType, sequenceNumber: accounts.sequenceNumber })
-        .from(accounts).where(and(eq(accounts.id, treasuryId), eq(accounts.businessId, bizId))).limit(1);
-      if (!a) return c.json({ error: 'حساب الوارد غير موجود أو لا ينتمي لهذا العمل' }, 400);
-      if (!['bank', 'exchange', 'e_wallet'].includes(String(a.accountType))) {
-        return c.json({ error: 'سند القبض يجب أن يكون مرتبطاً بخزينة: صندوق/بنك/صراف/محفظة' }, 400);
-      }
-      vaultNo = Number(a.sequenceNumber ?? 0);
-      const subTypeKey = String(a.subType ?? '').trim();
-      if (!subTypeKey) return c.json({ error: 'تصنيف الخزينة مطلوب (subType)' }, 400);
-      if (a.accountType === 'bank') {
-        kind = 'bank'; kindCode = TYPE_PREFIXES.bank || 'BNK';
-        const [t] = await db.select({ sortOrder: bankTypes.sortOrder }).from(bankTypes)
-          .where(and(eq(bankTypes.businessId, bizId), eq(bankTypes.subTypeKey, subTypeKey))).limit(1);
-        categoryNo = Number(t?.sortOrder ?? 0);
-      } else if (a.accountType === 'exchange') {
-        kind = 'exchange'; kindCode = TYPE_PREFIXES.exchange || 'EXC';
-        const [t] = await db.select({ sortOrder: exchangeTypes.sortOrder }).from(exchangeTypes)
-          .where(and(eq(exchangeTypes.businessId, bizId), eq(exchangeTypes.subTypeKey, subTypeKey))).limit(1);
-        categoryNo = Number(t?.sortOrder ?? 0);
-      } else {
-        kind = 'e_wallet'; kindCode = TYPE_PREFIXES.e_wallet || 'WLT';
-        const [t] = await db.select({ sortOrder: eWalletTypes.sortOrder }).from(eWalletTypes)
-          .where(and(eq(eWalletTypes.businessId, bizId), eq(eWalletTypes.subTypeKey, subTypeKey))).limit(1);
-        categoryNo = Number(t?.sortOrder ?? 0);
-      }
-    } else {
-      return c.json({ error: 'الخزينة المستلمة مطلوبة (toFundId أو toAccountId)' }, 400);
-    }
-  } else if (vType === 'payment') {
-    if (body.fromFundId) {
-      kind = 'fund';
-      treasuryId = Number(body.fromFundId);
-      const [f] = await db.select({ fundType: funds.fundType, sequenceNumber: funds.sequenceNumber })
-        .from(funds).where(and(eq(funds.id, treasuryId), eq(funds.businessId, bizId))).limit(1);
-      if (!f) return c.json({ error: 'صندوق الصادر غير موجود أو لا ينتمي لهذا العمل' }, 400);
-      vaultNo = Number(f.sequenceNumber ?? 0);
-      const [t] = await db.select({ sortOrder: fundTypes.sortOrder }).from(fundTypes)
-        .where(and(eq(fundTypes.businessId, bizId), eq(fundTypes.subTypeKey, f.fundType))).limit(1);
-      categoryNo = Number(t?.sortOrder ?? 0);
-      kindCode = TYPE_PREFIXES.fund || 'FND';
-    } else if (body.fromAccountId) {
-      treasuryId = Number(body.fromAccountId);
-      const [a] = await db.select({ accountType: accounts.accountType, subType: accounts.subType, sequenceNumber: accounts.sequenceNumber })
-        .from(accounts).where(and(eq(accounts.id, treasuryId), eq(accounts.businessId, bizId))).limit(1);
-      if (!a) return c.json({ error: 'حساب الصادر غير موجود أو لا ينتمي لهذا العمل' }, 400);
-      if (!['bank', 'exchange', 'e_wallet'].includes(String(a.accountType))) {
-        return c.json({ error: 'سند الصرف يجب أن يكون مرتبطاً بخزينة: صندوق/بنك/صراف/محفظة' }, 400);
-      }
-      vaultNo = Number(a.sequenceNumber ?? 0);
-      const subTypeKey = String(a.subType ?? '').trim();
-      if (!subTypeKey) return c.json({ error: 'تصنيف الخزينة مطلوب (subType)' }, 400);
-      if (a.accountType === 'bank') {
-        kind = 'bank'; kindCode = TYPE_PREFIXES.bank || 'BNK';
-        const [t] = await db.select({ sortOrder: bankTypes.sortOrder }).from(bankTypes)
-          .where(and(eq(bankTypes.businessId, bizId), eq(bankTypes.subTypeKey, subTypeKey))).limit(1);
-        categoryNo = Number(t?.sortOrder ?? 0);
-      } else if (a.accountType === 'exchange') {
-        kind = 'exchange'; kindCode = TYPE_PREFIXES.exchange || 'EXC';
-        const [t] = await db.select({ sortOrder: exchangeTypes.sortOrder }).from(exchangeTypes)
-          .where(and(eq(exchangeTypes.businessId, bizId), eq(exchangeTypes.subTypeKey, subTypeKey))).limit(1);
-        categoryNo = Number(t?.sortOrder ?? 0);
-      } else {
-        kind = 'e_wallet'; kindCode = TYPE_PREFIXES.e_wallet || 'WLT';
-        const [t] = await db.select({ sortOrder: eWalletTypes.sortOrder }).from(eWalletTypes)
-          .where(and(eq(eWalletTypes.businessId, bizId), eq(eWalletTypes.subTypeKey, subTypeKey))).limit(1);
-        categoryNo = Number(t?.sortOrder ?? 0);
-      }
-    } else {
-      return c.json({ error: 'الخزينة المصروف منها مطلوبة (fromFundId أو fromAccountId)' }, 400);
-    }
-  } else {
+  if (vType !== 'receipt' && vType !== 'payment') {
     // fallback للأنواع الأخرى (transfer/journal) بترقيم معزول لكل businessId
     const prefix = TYPE_PREFIXES[vType] || 'VCH';
     const counterType = `voucher_${vType}_fallback`;
@@ -976,15 +1019,24 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
     return c.json(created, 201);
   }
 
-  if (!kind || categoryNo <= 0 || vaultNo <= 0) {
-    return c.json({ error: 'لا يمكن توليد رقم السند: تأكد من رقم التصنيف ورقم الخزينة' }, 400);
+  const treasury = await resolveVoucherTreasuryInfo(
+    bizId,
+    vType,
+    body.fromFundId ? Number(body.fromFundId) : null,
+    body.toFundId ? Number(body.toFundId) : null,
+    body.fromAccountId ? Number(body.fromAccountId) : null,
+    body.toAccountId ? Number(body.toAccountId) : null,
+  );
+
+  if (!treasury) {
+    return c.json({ error: 'لا يمكن توليد رقم السند: تأكد من اختيار خزينة مرقمة بشكل صحيح' }, 400);
   }
 
-  const counterType = `treasury_${kind}_${vType}`;
-  const seq = await getNextSequence(bizId, counterType, treasuryId, year);
+  const counterType = `treasury_${treasury.kind}_${vType}`;
+  const seq = await getNextSequence(bizId, counterType, treasury.treasuryId, year);
   const voucherSeq = seq; // يبدأ من 1
   const voucherPrefix = TYPE_PREFIXES[vType] || 'VCH';
-  const voucherNumber = `${voucherPrefix}-${kindCode}-${categoryNo}-${vaultNo}-${year}-${voucherSeq}`;
+  const voucherNumber = `${voucherPrefix}-${treasury.treasuryCode}-${year}-${voucherSeq}`;
 
   const [created] = await db.insert(vouchers).values({
     businessId: bizId,

@@ -10,10 +10,19 @@ import { formatAmount as formatAmountShared, formatDate as formatDateShared, for
 interface TreasuryVoucherNumberParts {
   voucherPrefix: string;
   treasuryKindCode: string;
-  categoryNo: number;
-  vaultNo: number;
+  treasuryCode: string;
+  treasurySequence: number;
   year: number;
   serial: number;
+}
+
+type TreasuryType = 'fund' | 'bank' | 'exchange' | 'e_wallet';
+
+interface VoucherLine {
+  accountSubNatureId: number | null;
+  accountId: number | null;
+  amount: string;
+  notes: string;
 }
 
 @Component({
@@ -32,6 +41,7 @@ export class VouchersComponent extends BasePageComponent {
   vouchers = signal<any[]>([]);
   operationTypes = signal<any[]>([]);
   accounts = signal<any[]>([]);
+  accountSubNatures = signal<any[]>([]);
   funds = signal<any[]>([]);
   currencies = signal<any[]>([]);
   error = signal('');
@@ -84,121 +94,42 @@ export class VouchersComponent extends BasePageComponent {
 
   // Form state
   voucherType = signal<'receipt' | 'payment'>('payment');
-  isMultiMode = signal(false);
-  multiEntries = signal<any[]>([]);
-  selectedOpType = signal<any>(null);
+  treasuryType = signal<TreasuryType | null>(null);
+  selectedTreasuryId = signal<number | null>(null);
+  previewLoading = signal(false);
+  voucherNumberPreview = signal('');
+  voucherLines = signal<VoucherLine[]>([]);
   form = signal<any>({
-    operationTypeId: null,
-    fromAccountId: null,
-    toAccountId: null,
-    fromFundId: null,
-    toFundId: null,
     amount: '',
     description: '',
     voucherDate: new Date().toISOString().split('T')[0],
     reference: '',
     currencyId: 1,
-    status: 'confirmed',
   });
 
-  // ===================== Template-linked accounts =====================
-  linkedAccounts = computed(() => {
-    const ot = this.selectedOpType();
-    if (!ot) return [];
-    return ot.linkedAccounts || ot.accounts || [];
+  treasuryOptions = computed(() => {
+    const type = this.treasuryType();
+    if (!type) return [];
+    if (type === 'fund') {
+      return this.funds().map((fund) => ({ ...fund, label: fund.name }));
+    }
+    return this.accounts()
+      .filter((account) => this.getAccountType(account) === type && account.isLeafAccount !== false)
+      .map((account) => ({ ...account, label: account.name }));
   });
 
-  // Source account from template
-  sourceAccount = computed(() => {
-    const ot = this.selectedOpType();
-    if (!ot) return null;
-    // source_account_id هو الطرف الأول (الصندوق/البنك/الصراف/المحفظة)
-    const srcId = ot.source_account_id || ot.sourceAccountId;
-    if (!srcId) return null;
-    return this.accounts().find(a => a.id === srcId) || null;
-  });
-
-  // Source fund from template
-  sourceFund = computed(() => {
-    const ot = this.selectedOpType();
-    if (!ot) return null;
-    const fundId = ot.source_fund_id || ot.sourceFundId;
-    if (!fundId) return null;
-    return this.funds().find(f => f.id === fundId) || null;
-  });
-
-  treasuryAccounts = computed(() => {
-    return this.accounts().filter(a => {
-      const t = String((a as any).accountType ?? (a as any).account_type ?? '').toLowerCase();
-      return t === 'bank' || t === 'exchange' || t === 'e_wallet';
+  counterpartyAccounts = computed(() => {
+    return this.accounts().filter((account) => {
+      const type = this.getAccountType(account);
+      return !this.isTreasuryType(type) && account.isLeafAccount !== false;
     });
   });
 
-  filteredFromAccounts = computed(() => {
-    const vType = this.voucherType();
-    const linked = this.linkedAccounts();
-
-    // سند صرف: الطرف الأول = خزينة (بنك/صراف/محفظة)
-    if (vType === 'payment') return this.treasuryAccounts();
-
-    // سند قبض: الطرف الأول = الحساب المصروف منه (يمكن أن يحدده القالب عبر linkedAccounts)
-    if (linked.length > 0) {
-      return linked.map((la: any) => {
-        const id = la.accountId || la.account_id || la.id;
-        const name = la.label || la.accountName || la.account_name;
-        const acc = this.accounts().find(a => a.id === id);
-        return acc ? { ...acc, linkedName: name || acc.name } : null;
-      }).filter(Boolean);
-    }
-
-    const toId = this.form().toAccountId;
-    return this.accounts().filter(a => a.id !== toId);
-  });
-
-  filteredToAccounts = computed(() => {
-    const vType = this.voucherType();
-    const linked = this.linkedAccounts();
-
-    // سند قبض: الطرف الثاني = خزينة (بنك/صراف/محفظة)
-    if (vType === 'receipt') {
-      const fromId = this.form().fromAccountId;
-      return this.treasuryAccounts().filter(a => a.id !== fromId);
-    }
-
-    // سند صرف: الطرف الثاني = الحساب المستلِم (قد يحدده القالب عبر linkedAccounts)
-    if (linked.length > 0) {
-      return linked.map((la: any) => {
-        const id = la.accountId || la.account_id || la.id;
-        const name = la.displayName || la.label || la.accountName || la.account_name;
-        const acc = this.accounts().find(a => a.id === id);
-        return acc ? { ...acc, linkedName: name || acc.name } : null;
-      }).filter(Boolean);
-    }
-
-    const fromId = this.form().fromAccountId;
-    return this.accounts().filter(a => a.id !== fromId);
-  });
-
-  // Voucher operation types only (receipt/payment) — أي قالب نوعه قبض أو صرف يظهر
-  receiptOpTypes = computed(() => {
-    return this.operationTypes().filter(ot => {
-      const vt = ot.voucher_type || ot.voucherType;
-      return vt === 'receipt' && ot.isActive !== false;
-    });
-  });
-
-  paymentOpTypes = computed(() => {
-    return this.operationTypes().filter(ot => {
-      const vt = ot.voucher_type || ot.voucherType;
-      return vt === 'payment' && ot.isActive !== false;
-    });
-  });
-
-  voucherOpTypes = computed(() => {
-    const type = this.voucherType();
-    if (type === 'receipt') return this.receiptOpTypes();
-    if (type === 'payment') return this.paymentOpTypes();
-    return this.operationTypes().filter(ot => (ot.category || ot.operationCategory) === 'voucher');
+  counterpartySubNatures = computed(() => {
+    const used = new Set(this.counterpartyAccounts().map((account) => account.accountSubNatureId).filter(Boolean));
+    return this.accountSubNatures()
+      .filter((nature) => used.has(nature.id))
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'));
   });
 
   filteredVouchers = computed(() => {
@@ -238,7 +169,14 @@ export class VouchersComponent extends BasePageComponent {
   ];
 
   protected override onBizIdChange(_bizId: number): void {
-    void Promise.all([this.loadVouchers(), this.loadOperationTypes(), this.loadAccounts(), this.loadFunds()]);
+    void Promise.all([
+      this.loadVouchers(),
+      this.loadOperationTypes(),
+      this.loadAccounts(),
+      this.loadFunds(),
+      this.loadAccountSubNatures(),
+      this.loadCurrencies(),
+    ]);
   }
 
   async loadVouchers() {
@@ -290,11 +228,25 @@ export class VouchersComponent extends BasePageComponent {
     } catch { /* non-critical: accounts list unavailable */ }
   }
 
+  async loadAccountSubNatures() {
+    try {
+      const data = await this.api.getAccountSubNatures(this.bizId);
+      this.accountSubNatures.set(data || []);
+    } catch { /* non-critical: sub-natures unavailable */ }
+  }
+
   async loadFunds() {
     try {
       const data = await this.api.getFunds(this.bizId);
       this.funds.set(data);
     } catch { /* non-critical: funds list unavailable */ }
+  }
+
+  async loadCurrencies() {
+    try {
+      const data = await this.api.getCurrencies();
+      this.currencies.set(data || []);
+    } catch { /* non-critical: currencies unavailable */ }
   }
 
   // ===================== Filters =====================
@@ -353,121 +305,117 @@ export class VouchersComponent extends BasePageComponent {
   // ===================== Create / Edit =====================
   openCreate(type: 'receipt' | 'payment') {
     this.voucherType.set(type);
-    this.isMultiMode.set(false);
-    this.multiEntries.set([{ accountId: null, amount: '', notes: '', reference: '' }]);
-    this.selectedOpType.set(null);
+    this.treasuryType.set(null);
+    this.selectedTreasuryId.set(null);
+    this.voucherNumberPreview.set('');
     this.isEditing.set(false);
     this.editingVoucher.set(null);
     this.form.set({
-      operationTypeId: null,
-      fromAccountId: null,
-      toAccountId: null,
-      fromFundId: null,
-      toFundId: null,
       amount: '',
       description: '',
       voucherDate: new Date().toISOString().split('T')[0],
       reference: '',
       currencyId: 1,
-      status: 'confirmed',
     });
+    this.voucherLines.set([{ accountSubNatureId: null, accountId: null, amount: '', notes: '' }]);
     this.showForm.set(true);
   }
 
   openEdit(voucher: any) {
-    if (voucher.status !== 'draft') {
-      this.toast.warning('لا يمكن تعديل سند معتمد أو ملغي');
-      return;
+    void voucher;
+    this.toast.warning('تعديل السندات بهذا النموذج غير مدعوم حالياً بعد تحديث آلية الإدخال');
+  }
+
+  addVoucherLine() {
+    this.voucherLines.update((rows) => [...rows, { accountSubNatureId: null, accountId: null, amount: '', notes: '' }]);
+  }
+
+  removeVoucherLine(index: number) {
+    this.voucherLines.update((rows) => rows.filter((_, i) => i !== index));
+    if (this.voucherLines().length === 0) {
+      this.voucherLines.set([{ accountSubNatureId: null, accountId: null, amount: '', notes: '' }]);
     }
-    this.isEditing.set(true);
-    this.editingVoucher.set(voucher);
-    this.voucherType.set(voucher.voucherType);
-    const ot = this.operationTypes().find(o => o.id === voucher.operationTypeId);
-    this.selectedOpType.set(ot || null);
-    this.form.set({
-      operationTypeId: voucher.operationTypeId,
-      fromAccountId: voucher.fromAccountId,
-      toAccountId: voucher.toAccountId,
-      fromFundId: voucher.fromFundId,
-      toFundId: voucher.toFundId,
-      amount: String(voucher.amount),
-      description: voucher.description || '',
-      voucherDate: voucher.voucherDate ? new Date(voucher.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      reference: voucher.reference || '',
-      currencyId: voucher.currencyId || 1,
-      status: voucher.status || 'draft',
+  }
+
+  updateVoucherLine(index: number, field: keyof VoucherLine, value: any) {
+    this.voucherLines.update((rows) =>
+      rows.map((row, i) => {
+        if (i !== index) return row;
+        if (field === 'accountSubNatureId') {
+          return { ...row, accountSubNatureId: value, accountId: null };
+        }
+        return { ...row, [field]: value };
+      }),
+    );
+  }
+
+  getLineAccounts(line: VoucherLine) {
+    const selectedTreasuryId = this.selectedTreasuryId();
+    return this.counterpartyAccounts().filter((account) => {
+      if (line.accountSubNatureId && account.accountSubNatureId !== line.accountSubNatureId) return false;
+      if (selectedTreasuryId && this.treasuryType() !== 'fund' && account.id === selectedTreasuryId) return false;
+      return true;
     });
-    this.isMultiMode.set(false);
-    this.multiEntries.set([{ accountId: null, amount: '', notes: '', reference: '' }]);
-    this.showForm.set(true);
   }
 
-  addMultiEntry() {
-    this.multiEntries.update((rows) => [...rows, { accountId: null, amount: '', notes: '', reference: '' }]);
-  }
-
-  removeMultiEntry(index: number) {
-    this.multiEntries.update((rows) => rows.filter((_, i) => i !== index));
-    if (this.multiEntries().length === 0) {
-      this.multiEntries.set([{ accountId: null, amount: '', notes: '', reference: '' }]);
-    }
-  }
-
-  updateMultiEntry(index: number, field: string, value: any) {
-    this.multiEntries.update((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
-  }
-
-  getMultiEntryAccounts() {
-    return this.voucherType() === 'receipt' ? this.filteredFromAccounts() : this.filteredToAccounts();
-  }
-
-  getMultiTotalAmount(): number {
-    return this.multiEntries().reduce((sum, row) => {
+  getVoucherLinesTotal(): number {
+    return this.voucherLines().reduce((sum, row) => {
       const n = Number.parseFloat(String(row.amount || 0));
       return Number.isFinite(n) ? sum + n : sum;
     }, 0);
   }
 
-  // ===================== Template Selection - Auto-fill =====================
-  selectOpType(ot: any) {
-    this.selectedOpType.set(ot);
+  setTreasuryType(value: string) {
+    const normalized = String(value || '').toLowerCase();
+    const valid: TreasuryType[] = ['fund', 'bank', 'exchange', 'e_wallet'];
+    this.treasuryType.set(valid.includes(normalized as TreasuryType) ? (normalized as TreasuryType) : null);
+    this.selectedTreasuryId.set(null);
+    this.voucherNumberPreview.set('');
+  }
 
-    const srcAccId = ot.source_account_id || ot.sourceAccountId;
-    const srcFundId = ot.source_fund_id || ot.sourceFundId;
-    const vType = this.voucherType();
+  async setSelectedTreasury(value: any) {
+    const treasuryId = value ? Number(value) : null;
+    this.selectedTreasuryId.set(Number.isInteger(treasuryId) && (treasuryId as number) > 0 ? treasuryId : null);
+    if (this.treasuryType() !== 'fund' && this.selectedTreasuryId()) {
+      await this.loadAccountBalance(this.selectedTreasuryId()!);
+    }
+    await this.refreshVoucherNumberPreview();
+  }
 
-    // تعبئة تلقائية للحسابات حسب القالب
-    if (vType === 'receipt') {
-      // سند قبض: المصدر (الطرف الأول) يستلم المبلغ
-      this.form.update(f => ({
-        ...f,
-        operationTypeId: ot.id,
-        toAccountId: srcAccId || null,   // الطرف الأول يستلم (مدين)
-        toFundId: srcFundId || null,
-        fromAccountId: null,              // الطرف الثاني يدفع (دائن) - يختاره المستخدم
-        description: ot.name || f.description,
-      }));
-    } else {
-      // سند صرف: المصدر (الطرف الأول) يدفع المبلغ
-      this.form.update(f => ({
-        ...f,
-        operationTypeId: ot.id,
-        fromAccountId: srcAccId || null,  // الطرف الأول يدفع (دائن)
-        fromFundId: srcFundId || null,
-        toAccountId: null,                // الطرف الثاني يستلم (مدين) - يختاره المستخدم
-        description: ot.name || f.description,
-      }));
+  async refreshVoucherNumberPreview() {
+    const treasuryType = this.treasuryType();
+    const treasuryId = this.selectedTreasuryId();
+    if (!treasuryType || !treasuryId) {
+      this.voucherNumberPreview.set('');
+      return;
     }
 
-    // تحميل رصيد الحساب المصدر
-    if (srcAccId) this.loadAccountBalance(srcAccId);
+    this.previewLoading.set(true);
+    try {
+      const params: any = {
+        voucherType: this.voucherType(),
+        voucherDate: this.form().voucherDate || null,
+      };
+      if (treasuryType === 'fund') {
+        if (this.voucherType() === 'payment') params.fromFundId = treasuryId;
+        else params.toFundId = treasuryId;
+      } else {
+        if (this.voucherType() === 'payment') params.fromAccountId = treasuryId;
+        else params.toAccountId = treasuryId;
+      }
+      const preview = await this.api.getVoucherNumberPreview(this.bizId, params);
+      this.voucherNumberPreview.set(preview?.voucherNumber || '');
+    } catch {
+      this.voucherNumberPreview.set('');
+    } finally {
+      this.previewLoading.set(false);
+    }
   }
 
   setFormField(field: string, value: any) {
     this.form.update(f => ({ ...f, [field]: value }));
-    // تحميل الرصيد عند اختيار حساب
-    if ((field === 'fromAccountId' || field === 'toAccountId') && value) {
-      this.loadAccountBalance(value);
+    if (field === 'voucherDate') {
+      void this.refreshVoucherNumberPreview();
     }
   }
 
@@ -489,80 +437,61 @@ export class VouchersComponent extends BasePageComponent {
   // ===================== Save Voucher =====================
   async saveVoucher() {
     const f = this.form();
-    if (!f.operationTypeId) { this.error.set('يجب اختيار نوع العملية (القالب) أولاً'); return; }
-    if (!f.description) { this.error.set('أدخل البيان'); return; }
-    if (!this.isMultiMode() && (!f.amount || Number.parseFloat(f.amount) <= 0)) { this.error.set('أدخل المبلغ'); return; }
+    const treasuryType = this.treasuryType();
+    const treasuryId = this.selectedTreasuryId();
+    const amount = Number.parseFloat(String(f.amount || 0));
 
-    const vType = this.voucherType();
-    const isTreasuryAcc = (id: number | null) => {
-      if (!id) return false;
-      return this.treasuryAccounts().some(a => a.id === id);
-    };
+    if (!treasuryType || !treasuryId) { this.error.set('اختر نوع الخزينة ثم الخزينة نفسها'); return; }
+    if (!f.description?.trim()) { this.error.set('أدخل بيان السند'); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { this.error.set('أدخل مبلغ السند'); return; }
 
-    if (vType === 'receipt') {
-      if (!f.toAccountId && !f.toFundId) { this.error.set('اختر الخزينة المستلِمة (حساب خزينة أو صندوق)'); return; }
-      if (f.toAccountId && !isTreasuryAcc(f.toAccountId)) { this.error.set('الخزينة المستلِمة يجب أن تكون بنك/صراف/محفظة'); return; }
-      if (!this.isMultiMode() && !f.fromAccountId) { this.error.set('اختر الحساب المصروف منه'); return; }
-    } else {
-      if (!f.fromAccountId && !f.fromFundId) { this.error.set('اختر الخزينة المصروف منها (حساب خزينة أو صندوق)'); return; }
-      if (f.fromAccountId && !isTreasuryAcc(f.fromAccountId)) { this.error.set('الخزينة المصروف منها يجب أن تكون بنك/صراف/محفظة'); return; }
-      if (!this.isMultiMode() && !f.toAccountId) { this.error.set('اختر الحساب المستلِم'); return; }
+    const entries = this.voucherLines()
+      .map((row) => ({
+        accountSubNatureId: row.accountSubNatureId ? Number(row.accountSubNatureId) : null,
+        accountId: row.accountId ? Number(row.accountId) : null,
+        amount: Number.parseFloat(String(row.amount || 0)),
+        notes: String(row.notes || '').trim() || null,
+      }))
+      .filter((row) => Number.isInteger(row.accountId) && (row.accountId as number) > 0 && Number.isFinite(row.amount) && row.amount > 0);
+
+    if (entries.length === 0) {
+      this.error.set('أدخل سطراً واحداً على الأقل في بنود السند');
+      return;
+    }
+
+    const linesTotal = entries.reduce((sum, row) => sum + row.amount, 0);
+    if (Math.abs(linesTotal - amount) > 0.001) {
+      this.error.set('مجموع السطور يجب أن يساوي مبلغ السند');
+      return;
     }
 
     this.saving.set(true);
     this.error.set('');
     try {
-      const payload = {
-        ...f,
+      const payload: any = {
         voucherType: this.voucherType(),
-        amount: String(Number.parseFloat(f.amount)),
+        amount: String(amount),
+        description: String(f.description || '').trim(),
+        reference: String(f.reference || '').trim() || null,
+        voucherDate: f.voucherDate,
         currencyId: f.currencyId || 1,
+        entries: entries.map((row) => ({
+          accountId: row.accountId,
+          amount: row.amount,
+          notes: row.notes,
+        })),
       };
 
-      if (this.isEditing() && this.editingVoucher()) {
-        await this.api.updateVoucher(this.bizId, this.editingVoucher().id, payload);
-        this.toast.success('تم تعديل السند بنجاح');
-      } else if (this.isMultiMode()) {
-        const entries = this.multiEntries()
-          .map((row) => ({
-            accountId: row.accountId ? Number(row.accountId) : null,
-            amount: Number.parseFloat(String(row.amount || 0)),
-            notes: row.notes || null,
-            reference: row.reference || null,
-          }))
-          .filter((row) => Number.isInteger(row.accountId) && (row.accountId as number) > 0 && Number.isFinite(row.amount) && row.amount > 0);
-
-        if (entries.length === 0) {
-          this.error.set('أدخل بنداً واحداً على الأقل في السند المتعدد');
-          return;
-        }
-
-        const treasuryAccountId = vType === 'receipt' ? f.toAccountId : f.fromAccountId;
-        if (!treasuryAccountId) {
-          this.error.set('اختر حساب الخزينة أولاً');
-          return;
-        }
-
-        await this.api.createVoucherMulti(this.bizId, {
-          voucherType: vType,
-          operationTypeId: f.operationTypeId,
-          fromAccountId: treasuryAccountId,
-          fromFundId: vType === 'payment' ? f.fromFundId || null : null,
-          toFundId: vType === 'receipt' ? f.toFundId || null : null,
-          description: f.description,
-          reference: f.reference || null,
-          voucherDate: f.voucherDate,
-          currencyId: f.currencyId || 1,
-          entries,
-        });
-        this.toast.success('تم إنشاء السند المتعدد بنجاح');
-      } else if (f.status === 'draft') {
-        await this.api.createVoucherDraft(this.bizId, payload);
-        this.toast.success('تم حفظ السند كمسودة');
+      if (treasuryType === 'fund') {
+        if (this.voucherType() === 'payment') payload.fromFundId = treasuryId;
+        else payload.toFundId = treasuryId;
       } else {
-        await this.api.createVoucher(this.bizId, payload);
-        this.toast.success('تم إنشاء السند بنجاح');
+        if (this.voucherType() === 'payment') payload.fromAccountId = treasuryId;
+        else payload.toAccountId = treasuryId;
       }
+
+      await this.api.createVoucherMulti(this.bizId, payload);
+      this.toast.success(`تم إنشاء ${this.getTypeLabel(this.voucherType())} بنجاح`);
       this.showForm.set(false);
       await this.loadVouchers();
     } catch (e: unknown) {
@@ -718,6 +647,50 @@ export class VouchersComponent extends BasePageComponent {
     } catch (e: unknown) { this.error.set(e instanceof Error ? e.message : String(e)); }
   }
 
+  getAccountType(account: any): string {
+    const subNature = this.accountSubNatures().find((nature) => nature.id === account?.accountSubNatureId);
+    if (subNature?.natureKey) return String(subNature.natureKey).toLowerCase();
+    return String(account?.accountType ?? account?.account_type ?? '').toLowerCase();
+  }
+
+  isTreasuryType(type: string): boolean {
+    return type === 'fund' || type === 'bank' || type === 'exchange' || type === 'e_wallet';
+  }
+
+  getTreasuryTypeLabel(type: string | null | undefined): string {
+    const labels: Record<string, string> = {
+      fund: 'صندوق',
+      bank: 'بنك',
+      exchange: 'صراف',
+      e_wallet: 'محفظة',
+    };
+    return labels[String(type || '')] || '-';
+  }
+
+  getSelectedTreasuryLabel(): string {
+    const type = this.treasuryType();
+    const id = this.selectedTreasuryId();
+    if (!type || !id) return '-';
+    const item = this.treasuryOptions().find((option) => option.id === id);
+    return item?.name || item?.label || '-';
+  }
+
+  getSubNatureName(id: number | null | undefined): string {
+    if (!id) return '-';
+    return this.accountSubNatures().find((nature) => nature.id === id)?.name || '-';
+  }
+
+  getCurrencyLabel(currencyId: number | null | undefined): string {
+    const currency = this.currencies().find((item) => item.id === currencyId);
+    return currency?.nameAr || currency?.code || 'العملة الافتراضية';
+  }
+
+  getVoucherAmountDifference(): number {
+    const amount = Number.parseFloat(String(this.form().amount || 0));
+    if (!Number.isFinite(amount)) return 0;
+    return amount - this.getVoucherLinesTotal();
+  }
+
   getAccountName(id: number): string {
     const acc = this.accounts().find(a => a.id === id);
     return acc?.name || '-';
@@ -751,15 +724,21 @@ export class VouchersComponent extends BasePageComponent {
   parseTreasuryVoucherNumber(voucherNumber: string | null | undefined): TreasuryVoucherNumberParts | null {
     if (!voucherNumber) return null;
     const parts = String(voucherNumber).split('-');
-    if (parts.length !== 6) return null;
-    const [voucherPrefix, treasuryKindCode, cat, vault, year, serial] = parts;
-    const categoryNo = Number.parseInt(cat, 10);
-    const vaultNo = Number.parseInt(vault, 10);
+    if (parts.length !== 5) return null;
+    const [voucherPrefix, treasuryKindCode, treasurySequence, year, serial] = parts;
+    const vaultNo = Number.parseInt(treasurySequence, 10);
     const y = Number.parseInt(year, 10);
     const s = Number.parseInt(serial, 10);
-    if (!Number.isInteger(categoryNo) || !Number.isInteger(vaultNo) || !Number.isInteger(y) || !Number.isInteger(s)) return null;
-    if (categoryNo <= 0 || vaultNo <= 0 || y <= 0 || s <= 0) return null;
-    return { voucherPrefix, treasuryKindCode, categoryNo, vaultNo, year: y, serial: s };
+    if (!Number.isInteger(vaultNo) || !Number.isInteger(y) || !Number.isInteger(s)) return null;
+    if (vaultNo <= 0 || y <= 0 || s <= 0) return null;
+    return {
+      voucherPrefix,
+      treasuryKindCode,
+      treasuryCode: `${treasuryKindCode}-${treasurySequence}`,
+      treasurySequence: vaultNo,
+      year: y,
+      serial: s,
+    };
   }
 
   getTreasuryKindLabel(kindCode: string): string {

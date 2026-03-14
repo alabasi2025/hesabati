@@ -166,6 +166,23 @@ export class ApiService {
   getVouchers(bizId: number, type?: string)      { return this.request<any[]>(`/businesses/${bizId}/vouchers${type ? '?type=' + type : ''}`); }
   createVoucher(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/vouchers`, { method: 'POST', body: JSON.stringify(d) }); }
   createVoucherMulti(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/vouchers-multi`, { method: 'POST', body: JSON.stringify(d) }); }
+  getVoucherNumberPreview(bizId: number, params: {
+    voucherType: 'receipt' | 'payment';
+    voucherDate?: string | null;
+    fromAccountId?: number | null;
+    toAccountId?: number | null;
+    fromFundId?: number | null;
+    toFundId?: number | null;
+  }) {
+    const search = new URLSearchParams();
+    search.set('voucherType', params.voucherType);
+    if (params.voucherDate) search.set('voucherDate', params.voucherDate);
+    if (params.fromAccountId) search.set('fromAccountId', String(params.fromAccountId));
+    if (params.toAccountId) search.set('toAccountId', String(params.toAccountId));
+    if (params.fromFundId) search.set('fromFundId', String(params.fromFundId));
+    if (params.toFundId) search.set('toFundId', String(params.toFundId));
+    return this.request<any>(`/businesses/${bizId}/voucher-number-preview?${search.toString()}`);
+  }
   deleteVoucher(id: number)                      { return this.request<any>(`/vouchers/${id}`, { method: 'DELETE' }); }
 
   // ===================== التحصيل اليومي =====================
