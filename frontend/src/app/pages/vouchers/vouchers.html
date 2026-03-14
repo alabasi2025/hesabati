@@ -15,6 +15,14 @@
       <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
         <span class="material-icons-round">help_outline</span>
       </button>
+      <button class="btn-3d btn-receipt" (click)="openCreate('receipt')" title="إنشاء سند قبض">
+        <span class="material-icons-round">call_received</span>
+        سند قبض
+      </button>
+      <button class="btn-3d btn-payment" (click)="openCreate('payment')" title="إنشاء سند صرف">
+        <span class="material-icons-round">call_made</span>
+        سند صرف
+      </button>
       <button class="btn-3d btn-primary" [routerLink]="['/biz', bizId, 'register-operation']">
         <span class="material-icons-round">play_circle</span>
         تسجيل عملية
