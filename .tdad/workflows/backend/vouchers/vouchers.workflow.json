@@ -46,12 +46,12 @@
       "testLayers": ["api"]
     },
     {
-      "id": "post-voucher-reverse",
+      "id": "post-voucher-status-cancelled",
       "workflowId": "backend/vouchers",
-      "title": "Post Voucher Reverse",
-      "description": "POST /api/businesses/:bizId/vouchers/:id/reverse with optional body {reverseDate, note}. Creates reversing voucher with opposite journal entries. Original voucher status updated to 'reversed'. Balances adjusted back. Returns 200 with reversed voucher {id, voucherNumber, isReversed: true, originalVoucherId}. Returns 404 if voucher not found. Returns 400 if already reversed or invalid state. Requires vouchers reverse permission.",
+      "title": "Post Voucher Status Cancelled",
+      "description": "POST /api/businesses/:bizId/vouchers/:id/status with body {status: 'cancelled'}. For confirmed vouchers, delegates cancellation to transaction engine and reverts balances without creating any compensating voucher document. Returns 200 with updated voucher, 400 for invalid transitions.",
       "nodeType": "feature",
-      "fileName": "post-voucher-reverse",
+      "fileName": "post-voucher-status-cancelled",
       "position": { "x": 300, "y": 300 },
       "dependencies": ["get-vouchers-list"],
       "testLayers": ["api"]
@@ -60,7 +60,7 @@
       "id": "delete-voucher",
       "workflowId": "backend/vouchers",
       "title": "Delete Voucher",
-      "description": "DELETE /api/businesses/:bizId/vouchers/:id. Validates ownership. Deletes voucher and related journal lines. Reverses balance changes. Returns 200 with {success: true}. Returns 404 if not found. Returns 400 if voucher already posted or reversed (cannot delete). Requires vouchers delete permission.",
+      "description": "DELETE /api/businesses/:bizId/vouchers/:id. Validates ownership and delegates to cancellation behavior in transaction engine. Returns 200 with {success: true}. Returns 404 if not found.",
       "nodeType": "feature",
       "fileName": "delete-voucher",
       "position": { "x": 100, "y": 300 },
@@ -91,7 +91,7 @@
     }
   ],
   "edges": [
-    { "id": "list-to-reverse", "source": "get-vouchers-list", "target": "post-voucher-reverse" },
+    { "id": "list-to-cancelled-status", "source": "get-vouchers-list", "target": "post-voucher-status-cancelled" },
     { "id": "list-to-transitions", "source": "get-vouchers-list", "target": "get-voucher-transitions" },
     { "id": "transitions-to-execute", "source": "get-voucher-transitions", "target": "post-execute-transition" }
   ]

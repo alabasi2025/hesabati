@@ -105,7 +105,7 @@
 | **الجداول** | `vouchers`, `voucher_categories`, `journal_entries`, `journal_entry_lines`, `journal_entry_categories`, `attachments`, `audit_log`, `workflow_transitions`, `workflow_history` |
 | **الصفحات** | `vouchers`, `journal`, `journal-categories` |
 | **مسارات الواجهة** | `/biz/:bizId/vouchers`, `/biz/:bizId/journal`, `/biz/:bizId/journal-categories` |
-| **API (Backend)** | `GET/POST/DELETE /businesses/:bizId/vouchers`, `GET /businesses/:bizId/vouchers-enhanced`, `PUT /businesses/:bizId/vouchers/:id`, `POST /businesses/:bizId/vouchers/:id/status`, `POST /businesses/:bizId/vouchers/:id/reverse`, `GET /businesses/:bizId/vouchers/:id/details`, `POST /businesses/:bizId/vouchers-draft`, `GET/POST/DELETE /businesses/:bizId/journal-entries`, `GET/POST/PUT/DELETE /businesses/:bizId/journal-entry-categories`, `GET /businesses/:bizId/voucher-categories`, `GET/POST/DELETE /attachments/*` |
+| **API (Backend)** | `GET/POST/DELETE /businesses/:bizId/vouchers`, `GET /businesses/:bizId/vouchers-enhanced`, `PUT /businesses/:bizId/vouchers/:id`, `POST /businesses/:bizId/vouchers/:id/status`, `GET /businesses/:bizId/vouchers/:id/details`, `POST /businesses/:bizId/vouchers-draft`, `GET/POST/DELETE /businesses/:bizId/journal-entries`, `GET/POST/PUT/DELETE /businesses/:bizId/journal-entry-categories`, `GET /businesses/:bizId/voucher-categories`, `GET/POST/DELETE /attachments/*` |
 | **الملفات (Backend)** | `services/transaction.service.ts`, `services/workflow.service.ts`, `routes/enhancements.ts` |
 
 ---

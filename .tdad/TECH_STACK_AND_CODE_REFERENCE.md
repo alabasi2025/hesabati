@@ -122,7 +122,7 @@
 
 | الملف | الوظيفة من الاستخدام في الكود |
 |-------|-------------------------------|
-| `transaction.service.ts` | إنشاء السندات والقيود وعكسها (postTransaction, cancelTransaction, reverseTransaction) وتحديث الأرصدة. |
+| `transaction.service.ts` | إنشاء السندات والقيود وإلغاء السندات (postTransaction, cancelTransaction, confirmDraftTransaction) وتحديث الأرصدة. |
 | `workflow.service.ts` | سير عمل السندات (getAvailableTransitions, executeTransition, getWorkflowHistory، إلخ). |
 | `reporting.service.ts` | التقارير المالية (getProfitAndLoss, getTrialBalance, getAccountStatement, getDailySummary، إلخ). |
 | `inventory.service.ts` | حركة المخزون وتقاريره (processStockMovement, getStockLevels, getLowStockAlerts, getStockValuation، إلخ). |

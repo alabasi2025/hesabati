@@ -18,13 +18,13 @@
   5. تحديث `account_balances` و `fund_balances` عبر `INSERT ... ON CONFLICT DO UPDATE`.
   6. تسجيل `auditLog`.
 
-- **الدوال المرتبطة:** `cancelTransaction`، `reverseTransaction`، `confirmDraftTransaction` — كلها تعمل داخل transaction وتحدّث الأرصدة بشكل متماسك.
+- **الدوال المرتبطة:** `cancelTransaction`، `confirmDraftTransaction`، `postTransaction` — كلها تعمل داخل transaction وتحدّث الأرصدة بشكل متماسك.
 
 ### 1.2 نقاط القوة
 
 - عزل تام لكل عمل (`bizId`)؛ التحقق من الملكية قبل التنفيذ.
 - استخدام parameterized SQL (قوالب `sql` مع متغيرات) يمنع حقن SQL في المحرك.
-- سجل تدقيق لكل عملية إنشاء/إلغاء/عكس.
+- سجل تدقيق لكل عملية إنشاء/اعتماد/إلغاء.
 
 ### 1.3 ملاحظة
 

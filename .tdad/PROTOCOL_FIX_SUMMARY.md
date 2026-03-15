@@ -12,7 +12,7 @@
 |---------|---------|------------------------|
 | 1. backend/employees | ✅ مكتمل | +4 عقد (salaries CRUD) |
 | 2. backend/accounts | ✅ مكتمل | +5 عقد (PUT/DELETE + account-links) |
-| 3. backend/vouchers | ✅ مكتمل | +3 عقد (transfer, transitions, reverse مصحح) |
+| 3. backend/vouchers | ✅ مكتمل | +3 عقد (transfer, transitions, status-cancelled) |
 | 4. frontend/dashboard | ✅ مكتمل | 1 → 10 عقد (تقسيم كامل) |
 | 5. frontend/login | ✅ مكتمل | +2 عقد (validation + toggle password) |
 | 6. frontend/vouchers | ✅ مكتمل | 2 → 9 عقد (تقسيم + أوصاف TDAD) |
@@ -70,9 +70,9 @@
 - `post-execute-transition` - POST /api/businesses/:bizId/vouchers/:voucherId/transition
 
 **تصحيحات:**
-- ✅ مسار `reverse` مصحح من `/reverse` إلى `/:id/reverse`
+- ✅ توثيق الإلغاء عبر مسار الحالة `POST /:id/status` بدل مسار عكس مستقل
 - ✅ أوصاف توضح workflow state machine
-- ✅ توضيح permissions (vouchers create, delete, reverse; workflow execute)
+- ✅ توضيح permissions (vouchers create, delete, workflow execute)
 
 ---
 
@@ -150,7 +150,7 @@
 6. submit-voucher-to-api - POST /api
 7. refresh-vouchers-list - reload after mutation
 8. delete-voucher-with-confirm - confirmation modal + DELETE
-9. reverse-voucher-with-confirm - confirmation modal + POST reverse
+9. cancel-confirmed-voucher - confirmation modal + POST status cancelled
 ```
 
 **الأوصاف:**

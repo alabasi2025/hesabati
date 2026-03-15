@@ -442,11 +442,6 @@ export class ApiService {
   assignUserRole(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/user-roles`, { method: 'POST', body: JSON.stringify(d) }); }
   removeUserRole(bizId: number, userId: number)        { return this.request<any>(`/businesses/${bizId}/user-roles/${userId}`, { method: 'DELETE' }); }
 
-  // ===================== عكس العمليات =====================
-  reverseVoucher(bizId: number, voucherId: number, reason: string) {
-    return this.request<any>(`/businesses/${bizId}/vouchers/${voucherId}/reverse`, { method: 'POST', body: JSON.stringify({ reason }) });
-  }
-
   // ===================== التقارير =====================
   getProfitLossReport(bizId: number, dateFrom?: string, dateTo?: string) {
     let url = `/businesses/${bizId}/reports/profit-loss`;
@@ -456,11 +451,18 @@ export class ApiService {
     if (params.length) url += '?' + params.join('&');
     return this.request<any>(url);
   }
-  getAccountStatement(bizId: number, accountId: number, dateFrom?: string, dateTo?: string) {
+  getAccountStatement(
+    bizId: number,
+    accountId: number,
+    dateFrom?: string,
+    dateTo?: string,
+    sourceType?: 'all' | 'payment_voucher' | 'receipt_voucher' | 'journal_manual' | 'inventory_txn',
+  ) {
     let url = `/businesses/${bizId}/reports/account-statement/${accountId}`;
     const params: string[] = [];
     if (dateFrom) params.push(`dateFrom=${dateFrom}`);
     if (dateTo) params.push(`dateTo=${dateTo}`);
+    if (sourceType && sourceType !== 'all') params.push(`sourceType=${sourceType}`);
     if (params.length) url += '?' + params.join('&');
     return this.request<any>(url);
   }

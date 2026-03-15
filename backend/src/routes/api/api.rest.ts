@@ -33,7 +33,7 @@ import {
 } from '../../middleware/validation.ts';
 import { safeHandler, normalizeBody, parseId, validateRequired, toErrorMessage } from '../../middleware/helpers.ts';
 import { getNextSequence, getNextCategorySequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
-import { postTransaction, cancelTransaction, reverseTransaction } from '../../services/transaction.service.ts';
+import { postTransaction, cancelTransaction } from '../../services/transaction.service.ts';
 import { checkPermission, validateConstraints } from '../../middleware/permissions.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { normalizeDbResult, getFirstRow } from './_shared/db-helpers.ts';
@@ -2518,26 +2518,6 @@ api.post('/businesses/:bizId/attachments/:id/rebuild-path', bizAuthMiddleware(),
 
   return c.json({ ...updated, importance });
 }));
-
-// ===================== عكس العمليات (Void/Reverse) =====================
-api.post('/businesses/:bizId/vouchers/:id/reverse', bizAuthMiddleware(), checkPermission('vouchers', 'reverse'), safeHandler('عكس سند', async (c) => {
-  const bizId = getBizId(c);
-  const userId = getUserId(c);
-  const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
-  const reason = body.reason || 'عكس عملية';
-  try {
-    const result = await reverseTransaction(bizId, userId ?? 0, id, reason);
-    return c.json(result, 201);
-  } catch (err: unknown) {
-    const message = toErrorMessage(err);
-    const status = message.includes('غير موجود') ? 404 : 400;
-    return c.json({ error: message }, status);
-  }
-}));
-
-
 
 // ===================== إعداد الشاشة المخصصة (تبويبات ديناميكية) =====================
 

@@ -16,7 +16,7 @@ import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '..
 import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
 import { checkPermission } from '../middleware/permissions.ts';
 import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { postMultiTransaction, postTransaction } from '../services/transaction.service.ts';
+import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../services/transaction.service.ts';
 import { wsService } from '../services/websocket.service.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
 import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
@@ -507,7 +507,7 @@ enhancements.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddleware(
 // 2. تعديل سند (قبل الاعتماد)
 enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('تعديل سند', async (c) => {
   const bizId = getBizId(c);
-  const userId = getUserId(c);
+  const userId = getUserId(c) ?? 0;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
@@ -808,7 +808,7 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
 // 3. تغيير حالة السند (مسودة → معتمد → ملغي)
 enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(), safeHandler('تغيير حالة السند', async (c) => {
   const bizId = getBizId(c);
-  const userId = getUserId(c);
+  const userId = getUserId(c) ?? 0;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
@@ -825,187 +825,29 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تغيير حالة سند ملغي' }, 400);
 
   try {
-    // إذا تم اعتماد السند من مسودة → نحدّث الأرصدة وفق سطور القيد (إن وجدت)
+    if (existing.status === newStatus) {
+      return c.json(existing);
+    }
+
+    // نقطة الترحيل الموحدة: اعتماد المسودة فقط عبر المحرك المالي.
     if (existing.status === 'draft' && newStatus === 'confirmed') {
-      const amount = Number.parseFloat(String(existing.amount || 0));
-      const currencyId = existing.currencyId || 1;
-
-      await db.transaction(async (tx) => {
-        const [entry] = await tx
-          .select({ id: journalEntries.id })
-          .from(journalEntries)
-          .where(and(eq(journalEntries.businessId, bizId), eq(journalEntries.reference, existing.voucherNumber)))
-          .limit(1);
-
-        if (entry?.id) {
-          const lines = await tx
-            .select({
-              accountId: journalEntryLines.accountId,
-              lineType: journalEntryLines.lineType,
-              amount: journalEntryLines.amount,
-            })
-            .from(journalEntryLines)
-            .where(eq(journalEntryLines.journalEntryId, entry.id));
-
-          for (const line of lines) {
-            const lineAmount = Number.parseFloat(String(line.amount || 0));
-            const delta = line.lineType === 'debit' ? lineAmount : -lineAmount;
-            await tx.execute(sql`
-              INSERT INTO account_balances (account_id, currency_id, balance)
-              VALUES (${line.accountId}, ${currencyId}, ${delta})
-              ON CONFLICT (account_id, currency_id) DO UPDATE SET
-                balance = account_balances.balance + ${delta},
-                updated_at = NOW()
-            `);
-          }
-        } else {
-          // fallback للسندات القديمة التي لا تحتوي على سطور قيد
-          if (existing.toAccountId) {
-            await tx.execute(sql`
-              INSERT INTO account_balances (account_id, currency_id, balance)
-              VALUES (${existing.toAccountId}, ${currencyId}, ${amount})
-              ON CONFLICT (account_id, currency_id) DO UPDATE SET
-                balance = account_balances.balance + ${amount},
-                updated_at = NOW()
-            `);
-          }
-          if (existing.fromAccountId) {
-            await tx.execute(sql`
-              INSERT INTO account_balances (account_id, currency_id, balance)
-              VALUES (${existing.fromAccountId}, ${currencyId}, ${-amount})
-              ON CONFLICT (account_id, currency_id) DO UPDATE SET
-                balance = account_balances.balance - ${amount},
-                updated_at = NOW()
-            `);
-          }
-        }
-
-        if (existing.toFundId) {
-          await tx.execute(sql`
-            INSERT INTO fund_balances (fund_id, currency_id, balance)
-            VALUES (${existing.toFundId}, ${currencyId}, ${amount})
-            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-              balance = fund_balances.balance + ${amount},
-              updated_at = NOW()
-          `);
-        }
-        if (existing.fromFundId) {
-          await tx.execute(sql`
-            INSERT INTO fund_balances (fund_id, currency_id, balance)
-            VALUES (${existing.fromFundId}, ${currencyId}, ${-amount})
-            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-              balance = fund_balances.balance - ${amount},
-              updated_at = NOW()
-          `);
-        }
-
-        await tx.update(vouchers).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(vouchers.id, id));
-
-        await tx.insert(auditLog).values({
-          userId, businessId: bizId, action: 'change_voucher_status',
-          tableName: 'vouchers', recordId: id,
-          oldData: { status: 'draft' }, newData: { status: 'confirmed' },
-        });
-      });
-
-      const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
-      return c.json(updated);
+      const result = await confirmDraftTransaction(bizId, userId, id);
+      return c.json(result.voucher);
     }
 
-    // إرجاع السند من "معتمد" إلى "مسودة" مع عكس الأثر المحاسبي
+    // لا نسمح بالرجوع من confirmed إلى draft (سياسة اتجاه واحد).
     if (existing.status === 'confirmed' && newStatus === 'draft') {
-      const amount = Number.parseFloat(String(existing.amount || 0));
-      const currencyId = existing.currencyId || 1;
+      return c.json({ error: 'لا يمكن إعادة السند المعتمد إلى مسودة' }, 400);
+    }
 
-      await db.transaction(async (tx) => {
-        const [entry] = await tx
-          .select({ id: journalEntries.id })
-          .from(journalEntries)
-          .where(and(eq(journalEntries.businessId, bizId), eq(journalEntries.reference, existing.voucherNumber)))
-          .limit(1);
-
-        if (entry?.id) {
-          const lines = await tx
-            .select({
-              accountId: journalEntryLines.accountId,
-              lineType: journalEntryLines.lineType,
-              amount: journalEntryLines.amount,
-            })
-            .from(journalEntryLines)
-            .where(eq(journalEntryLines.journalEntryId, entry.id));
-
-          for (const line of lines) {
-            const lineAmount = Number.parseFloat(String(line.amount || 0));
-            const delta = line.lineType === 'debit' ? -lineAmount : lineAmount;
-            await tx.execute(sql`
-              INSERT INTO account_balances (account_id, currency_id, balance)
-              VALUES (${line.accountId}, ${currencyId}, ${delta})
-              ON CONFLICT (account_id, currency_id) DO UPDATE SET
-                balance = account_balances.balance + ${delta},
-                updated_at = NOW()
-            `);
-          }
-
-          await tx.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, entry.id));
-          await tx.delete(journalEntries).where(eq(journalEntries.id, entry.id));
-        } else {
-          // fallback للسندات القديمة التي لا تحتوي على قيد واضح
-          if (existing.toAccountId) {
-            await tx.execute(sql`
-              INSERT INTO account_balances (account_id, currency_id, balance)
-              VALUES (${existing.toAccountId}, ${currencyId}, ${-amount})
-              ON CONFLICT (account_id, currency_id) DO UPDATE SET
-                balance = account_balances.balance - ${amount},
-                updated_at = NOW()
-            `);
-          }
-          if (existing.fromAccountId) {
-            await tx.execute(sql`
-              INSERT INTO account_balances (account_id, currency_id, balance)
-              VALUES (${existing.fromAccountId}, ${currencyId}, ${amount})
-              ON CONFLICT (account_id, currency_id) DO UPDATE SET
-                balance = account_balances.balance + ${amount},
-                updated_at = NOW()
-            `);
-          }
-        }
-
-        if (existing.toFundId) {
-          await tx.execute(sql`
-            INSERT INTO fund_balances (fund_id, currency_id, balance)
-            VALUES (${existing.toFundId}, ${currencyId}, ${-amount})
-            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-              balance = fund_balances.balance - ${amount},
-              updated_at = NOW()
-          `);
-        }
-        if (existing.fromFundId) {
-          await tx.execute(sql`
-            INSERT INTO fund_balances (fund_id, currency_id, balance)
-            VALUES (${existing.fromFundId}, ${currencyId}, ${amount})
-            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-              balance = fund_balances.balance + ${amount},
-              updated_at = NOW()
-          `);
-        }
-
-        await tx.update(vouchers).set({
-          status: 'draft',
-          updatedAt: new Date(),
-        }).where(eq(vouchers.id, id));
-
-        await tx.insert(auditLog).values({
-          userId, businessId: bizId, action: 'change_voucher_status',
-          tableName: 'vouchers', recordId: id,
-          oldData: { status: 'confirmed' }, newData: { status: 'draft' },
-        });
-      });
-
+    // إلغاء السند المعتمد عبر المحرك المالي (يعكس الأثر دون إنشاء سند عكسي).
+    if (existing.status === 'confirmed' && newStatus === 'cancelled') {
+      await cancelTransaction(bizId, userId, id);
       const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
       return c.json(updated);
     }
 
-    // تغيير حالة عادي (ليس من draft إلى confirmed)
+    // حالات لا تتطلب أثر مالي (مثل draft -> cancelled).
     const [updated] = await db.update(vouchers).set({
       status: newStatus, updatedAt: new Date(),
     }).where(eq(vouchers.id, id)).returning();
@@ -1015,7 +857,6 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
       tableName: 'vouchers', recordId: id,
       oldData: { status: existing.status }, newData: { status: newStatus },
     });
-
     return c.json(updated);
   } catch (err: unknown) {
     return c.json({ error: toErrorMessage(err) || 'فشل في تغيير حالة السند' }, 400);
@@ -1412,7 +1253,6 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId} AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
     AND v.voucher_date >= ${currentFrom}::date AND v.voucher_date <= ${currentTo}::date
   `);
   const currentRows = normalizeDbResult<PeriodStatsRow>(currentResult);
@@ -1426,7 +1266,6 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId} AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
     AND v.voucher_date >= ${prevFrom}::date AND v.voucher_date <= ${prevTo}::date
   `);
   const prevRows = normalizeDbResult<PeriodStatsRow>(prevResult);
@@ -1504,7 +1343,6 @@ enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware()
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
     AND v.status = 'confirmed'
-    AND COALESCE(v.reversal_status, 'original') = 'original'
     AND v.voucher_date >= ${fromDate}::date
     AND v.voucher_date <= ${toDate}::date
     GROUP BY ${groupExpr}, ${labelExpr}

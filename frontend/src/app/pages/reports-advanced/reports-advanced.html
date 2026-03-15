@@ -34,20 +34,30 @@
     <div class="filter-card-3d">
       <div class="filter-row">
         <div class="filter-field">
-          <label class="form-label">من تاريخ</label>
-          <input type="date" class="form-input" [(ngModel)]="dateFrom">
+          <label class="form-label" for="adv-date-from">من تاريخ</label>
+          <input id="adv-date-from" title="من تاريخ" type="date" class="form-input" [(ngModel)]="dateFrom">
         </div>
         <div class="filter-field">
-          <label class="form-label">إلى تاريخ</label>
-          <input type="date" class="form-input" [(ngModel)]="dateTo">
+          <label class="form-label" for="adv-date-to">إلى تاريخ</label>
+          <input id="adv-date-to" title="إلى تاريخ" type="date" class="form-input" [(ngModel)]="dateTo">
         </div>
         @if (activeTab === 'statement') {
           <div class="filter-field wide">
-            <label class="form-label">الحساب / الصندوق</label>
-            <select class="form-select" [(ngModel)]="selectedAccountId">
+            <label class="form-label" for="adv-statement-account">الحساب / الصندوق</label>
+            <select id="adv-statement-account" title="الحساب أو الصندوق" class="form-select" [(ngModel)]="selectedAccountId">
               @for (a of allAccountsAndFunds; track a.id) {
                 <option [value]="a.id">{{a.displayName || a.name}}</option>
               }
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="form-label" for="adv-statement-source">نوع الحركة</label>
+            <select id="adv-statement-source" title="نوع الحركة" class="form-select" [(ngModel)]="statementSourceType">
+              <option value="all">الكل</option>
+              <option value="payment_voucher">سند صرف</option>
+              <option value="receipt_voucher">سند قبض</option>
+              <option value="journal_manual">قيد يومية</option>
+              <option value="inventory_txn">حركة مخزنية</option>
             </select>
           </div>
         }
@@ -63,8 +73,8 @@
     <div class="filter-card-3d">
       <div class="filter-row">
         <div class="filter-field">
-          <label class="form-label">التاريخ</label>
-          <input type="date" class="form-input" [(ngModel)]="dailyDate">
+          <label class="form-label" for="adv-daily-date">التاريخ</label>
+          <input id="adv-daily-date" title="التاريخ" type="date" class="form-input" [(ngModel)]="dailyDate">
         </div>
         <div class="filter-action">
           <button class="btn-3d btn-primary" (click)="loadTab()">
@@ -185,6 +195,7 @@
               <th>#</th>
               <th>التاريخ</th>
               <th>المرجع</th>
+              <th>نوع الحركة</th>
               <th>البيان</th>
               <th>مدين</th>
               <th>دائن</th>
@@ -197,6 +208,7 @@
                 <td class="cell-index">{{ $index + 1 }}</td>
                 <td class="cell-date">{{ e.entry_date }}</td>
                 <td class="cell-ref">{{ e.entry_number }}</td>
+                <td>{{ getSourceTypeLabel(e.source_type || e.sourceType) }}</td>
                 <td class="cell-desc">{{ e.entry_description || e.line_description }}</td>
                 <td class="cell-debit">{{ e.line_type === 'debit' ? (e.amount | number:'1.0-2') : '-' }}</td>
                 <td class="cell-credit">{{ e.line_type === 'credit' ? (e.amount | number:'1.0-2') : '-' }}</td>

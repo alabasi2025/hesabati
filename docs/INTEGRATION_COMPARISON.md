@@ -51,7 +51,7 @@
 | إعداد نمط التحصيل | `GET/PUT /api/businesses/:bizId/screens/:screenId/collection-style-config` | `api.ts` (customScreenConfig + layoutConfig) |
 | العملات/المرفقات/أسعار الصرف | `GET /api/currencies`, `*attachments*`, `*exchange-rates*` | `api.ts` |
 | الأدوار والصلاحيات | `*roles*`, `*user-roles*` | `api.ts` |
-| عكس السند / سير العمل | `POST .../vouchers/:id/reverse`, `*transitions*`, `*workflow-history*` | `api.ts` + `enhancements.ts` |
+| سير العمل وحالات السند | `POST .../vouchers/:id/status`, `*transitions*`, `*workflow-history*` | `api.ts` + `enhancements.ts` + `workflow.routes.ts` |
 | التقارير | `*reports/profit-loss*`, `*account-statement*`, `*daily-summary*`, `*trial-balance*`, monthly-revenue, aggregated | `api.ts` |
 | تحسينات السندات | `GET .../vouchers-enhanced`, `PUT .../vouchers/:id`, `POST .../status`, account-balance, details, vouchers-draft | `enhancements.ts` |
 | ويدجت الشاشات | `*widget-stats*`, `*widget-log*`, `*widget-accounts*`, `*widget-chart*`, `*widget-notes*`, enhanced | `api.ts` + `enhancements.ts` |

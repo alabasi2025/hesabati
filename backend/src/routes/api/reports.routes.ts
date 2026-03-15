@@ -34,7 +34,12 @@ reportsRoutes.get('/businesses/:bizId/reports/account-statement/:accountId', biz
   if (!accountId) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
-  const report = await getAccountStatement(bizId, accountId, { dateFrom, dateTo });
+  const sourceType = c.req.query('sourceType');
+  const report = await getAccountStatement(bizId, accountId, {
+    dateFrom,
+    dateTo,
+    sourceType: sourceType as 'all' | 'payment_voucher' | 'receipt_voucher' | 'journal_manual' | 'inventory_txn' | undefined,
+  });
   return c.json(report);
 }));
 

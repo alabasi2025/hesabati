@@ -38,11 +38,10 @@
 
 ---
 
-### ❌ backend/vouchers/vouchers.workflow.json
-**المفقود:**
-- ❌ POST /api/businesses/:bizId/vouchers/:id/reverse (موجود في api.ts سطر 3261)
-
-**الإصلاح المطلوب:** العقدة `post-voucher-reverse` موجودة لكن الوصف يقول `/reverse` بدون `:id` - تصحيح المسار.
+### ✅ backend/vouchers/vouchers.workflow.json
+**تحديث:**
+- ✅ تم اعتماد مسار الحالة `POST /api/businesses/:bizId/vouchers/:id/status` بدل أي مسار عكس.
+- ✅ لا يوجد endpoint `/reverse` في المسارات التشغيلية الحالية.
 
 ---
 
@@ -242,7 +241,7 @@
 ### المرحلة 1: إصلاح المسارات المفقودة (أولوية عالية)
 1. إضافة عقد POST/PUT/DELETE للـ salaries في `backend/employees/`
 2. إضافة عقد PUT/DELETE للـ accounts في `backend/accounts/`
-3. تصحيح مسار `/reverse` في `backend/vouchers/`
+3. توثيق مسار الحالة `POST /vouchers/:id/status` للإلغاء باتجاه واحد في `backend/vouchers/`
 
 ### المرحلة 2: تقسيم العقد العامة (أولوية متوسطة)
 1. تقسيم `fetch-and-display-dashboard-stats` إلى 6-8 عقد

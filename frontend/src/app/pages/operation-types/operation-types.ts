@@ -977,7 +977,7 @@ export class OperationTypesComponent extends BasePageComponent {
   getStateLabel(state: string): string {
     const labels: Record<string, string> = {
       draft: 'مسودة', confirmed: 'معتمد', pending_approval: 'بانتظار الاعتماد',
-      approved: 'موافق عليه', rejected: 'مرفوض', cancelled: 'ملغي', reversed: 'معكوس',
+      approved: 'موافق عليه', rejected: 'مرفوض', cancelled: 'ملغي',
     };
     return labels[state] || state;
   }
@@ -985,7 +985,7 @@ export class OperationTypesComponent extends BasePageComponent {
   getStateColor(state: string): string {
     const colors: Record<string, string> = {
       draft: '#f59e0b', confirmed: '#22c55e', pending_approval: '#3b82f6',
-      approved: '#10b981', rejected: '#ef4444', cancelled: '#64748b', reversed: '#8b5cf6',
+      approved: '#10b981', rejected: '#ef4444', cancelled: '#64748b',
     };
     return colors[state] || '#64748b';
   }

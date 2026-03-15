@@ -143,7 +143,6 @@ hesabati/
   - `postTransaction`: سند بسيط (قبض/صرف/تحويل) — مدين واحد، دائن واحد، مع دعم صناديق.
   - `postMultiTransaction`: سند متعدد السطور (قيد يومية) مع توازن مدين/دائن.
   - `cancelTransaction`: إلغاء سند وعكس الأرصدة.
-  - `reverseTransaction`: إنشاء سند عكسي وربطه بالأصلي.
   - `confirmDraftTransaction`: اعتماد مسودة وتنفيذ القيود والأرصدة.
 - **الترقيم:** تسلسلات حسب الخزينة (صندوق/بنك/صراف/محفظة)، السنة، ونوع السند؛ استخدام `sequence_counters` و`getNextSequence` وربط بـ fundTypes/bankTypes/exchangeTypes/eWalletTypes.
 
@@ -175,7 +174,7 @@ hesabati/
   - `bizAuthMiddleware()` حيث يُستخرج bizId.
   - `safeHandler` للالتفاف حول الـ handlers وتوحيد معالجة الأخطاء.
   - `normalizeBody`، `validateBody` (Zod)، `parseId`، `checkPermission` (RBAC) حيث ينطبق.
-  - استدعاء خدمات مثل `postTransaction`، `reverseTransaction`، `getProfitAndLoss`، إلخ.
+  - استدعاء خدمات مثل `postTransaction`، `confirmDraftTransaction`، `getProfitAndLoss`، إلخ.
 - **الفرونت اند:** `ApiService` (Angular) يستدعي نفس المسارات مع `Authorization: Bearer <token>` ويمرر `bizId` من سياق العمل الحالي.
 
 ### 4.6 الواجهة الأمامية (Frontend)
@@ -245,7 +244,7 @@ hesabati/
 3. **تحسين استعلامات القوائم:** مراجعة استعلامات القوائم الكبيرة (مثل vouchers، journal entries) وإضافة pagination/فهارس حيث يلزم.
 4. **نسخ احتياطي وآلية استعادة:** توثيق واست automatization للـ backups في `/backups` وآلية استعادة موحدة.
 5. **مراقبة وتتبع:** إضافة تتبع طلبات (request id) وسجلات منظمة (structured logging) لتسهيل تتبع الأخطاء والأداء في الإنتاج.
-6. **اختبارات تكامل:** زيادة تغطية اختبارات التكامل للمسارات الحرجة (إنشاء سند، عكس، تحقق صلاحيات، عزل bizId).
+6. **اختبارات تكامل:** زيادة تغطية اختبارات التكامل للمسارات الحرجة (إنشاء سند، إلغاء سند، تحقق صلاحيات، عزل bizId).
 
 ---
 

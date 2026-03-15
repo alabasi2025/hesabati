@@ -47,8 +47,6 @@ async function run() {
       .returning({ id: schema.warehouseOperations.id });
     console.log('إلغاء ربط warehouse_operations بالسندات:', updatedWo.length);
 
-    await db.update(schema.vouchers).set({ reversedVoucherId: null }).where(inArray(schema.vouchers.reversedVoucherId, voucherIds));
-    console.log('إلغاء reversedVoucherId من السندات الأخرى.');
   }
 
   if (journalIds.length > 0) {

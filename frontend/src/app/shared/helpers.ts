@@ -76,7 +76,6 @@ export const VOUCHER_STATUS: Record<string, { label: string; icon: string; color
   draft:     { label: 'مسودة',  icon: 'edit_note',     color: 'orange' },
   confirmed: { label: 'معتمد',  icon: 'check_circle',  color: 'green' },
   cancelled: { label: 'ملغي',   icon: 'cancel',        color: 'red' },
-  reversed:  { label: 'معكوس',  icon: 'undo',          color: 'purple' },
 };
 
 /** Journal entry status labels */

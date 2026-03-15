@@ -108,7 +108,6 @@ CREATE INDEX IF NOT EXISTS idx_vouchers_employee_id ON vouchers (employee_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_from_account_id ON vouchers (from_account_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_from_fund_id ON vouchers (from_fund_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_operation_type_id ON vouchers (operation_type_id);
-CREATE INDEX IF NOT EXISTS idx_vouchers_reversed_by ON vouchers (reversed_by);
 CREATE INDEX IF NOT EXISTS idx_vouchers_station_id ON vouchers (station_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_supplier_id ON vouchers (supplier_id);
 CREATE INDEX IF NOT EXISTS idx_vouchers_to_account_id ON vouchers (to_account_id);

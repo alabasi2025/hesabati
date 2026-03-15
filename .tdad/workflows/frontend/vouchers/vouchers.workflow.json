@@ -22,7 +22,7 @@
       "id": "render-vouchers-table",
       "workflowId": "frontend/vouchers",
       "title": "Render Vouchers Table",
-      "description": "After fetching vouchers, display table with columns: [رقم السند (voucherNumber), النوع (receipt/payment/transfer badge), المبلغ (formatted with currency), من حساب, إلى حساب, الحالة (status badge), التاريخ (formatted voucherDate), إجراءات (edit/delete/reverse buttons)]. Each row clickable to view details. Loading shows skeleton rows. Empty state shows 'لا توجد سندات - ابدأ بإنشاء سند جديد' with create button. Rows alternate colors for readability.",
+      "description": "After fetching vouchers, display table with columns: [رقم السند (voucherNumber), النوع (receipt/payment/transfer badge), المبلغ (formatted with currency), من حساب, إلى حساب, الحالة (status badge), التاريخ (formatted voucherDate), إجراءات (edit/delete/cancel status controls)]. Each row clickable to view details. Loading shows skeleton rows. Empty state shows 'لا توجد سندات - ابدأ بإنشاء سند جديد' with create button. Rows alternate colors for readability.",
       "nodeType": "feature",
       "fileName": "render-vouchers-table",
       "position": {
@@ -111,7 +111,7 @@
       "id": "refresh-vouchers-list",
       "workflowId": "frontend/vouchers",
       "title": "Refresh Vouchers List",
-      "description": "After successful voucher creation, deletion, or reversal, re-call fetch-vouchers-list to reload table data with updated vouchers. Maintains current filter (type) and shows loading briefly. Ensures user sees latest state after mutations.",
+      "description": "After successful voucher creation, deletion, or status cancellation, re-call fetch-vouchers-list to reload table data with updated vouchers. Maintains current filter (type) and shows loading briefly. Ensures user sees latest state after mutations.",
       "nodeType": "feature",
       "fileName": "refresh-vouchers-list",
       "position": {
@@ -145,12 +145,12 @@
       ]
     },
     {
-      "id": "reverse-voucher-with-confirm",
+      "id": "cancel-confirmed-voucher",
       "workflowId": "frontend/vouchers",
-      "title": "Reverse Voucher With Confirm",
-      "description": "When user clicks reverse icon on voucher row, show confirmation modal 'عكس السند سينشئ سند معاكس - هل تريد المتابعة؟'. User confirms → calls POST /api/businesses/:bizId/vouchers/:id/reverse. Success: shows toast 'تم عكس السند بنجاح', triggers refresh-vouchers-list, original voucher now shows 'معكوس' badge. Failure: shows error toast ('السند معكوس مسبقاً', 'حالة السند لا تسمح بالعكس'), keeps modal open.",
+      "title": "Cancel Confirmed Voucher",
+      "description": "When user changes voucher status to cancelled, show confirmation modal. User confirms -> calls POST /api/businesses/:bizId/vouchers/:id/status with {status: 'cancelled'}. Success: shows toast and refresh list. Failure: shows error toast and keeps current state.",
       "nodeType": "feature",
-      "fileName": "reverse-voucher-with-confirm",
+      "fileName": "cancel-confirmed-voucher",
       "position": {
         "x": 500,
         "y": 450
@@ -196,9 +196,9 @@
       "target": "delete-voucher-with-confirm"
     },
     {
-      "id": "table-to-reverse",
+      "id": "table-to-cancel-status",
       "source": "render-vouchers-table",
-      "target": "reverse-voucher-with-confirm"
+      "target": "cancel-confirmed-voucher"
     }
   ]
 }

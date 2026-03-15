@@ -68,9 +68,6 @@ export class VouchersComponent extends BasePageComponent {
   showForm = signal(false);
   activeTab = signal<string>('all');
   selectedVoucher = signal<any>(null);
-  showReverseDialog = signal(false);
-  reverseReason = signal('');
-  reverseTargetId = signal<number | null>(null);
   showAttachments = signal(false);
   attachmentTargetId = signal<number | null>(null);
   attachments = signal<any[]>([]);
@@ -669,7 +666,7 @@ export class VouchersComponent extends BasePageComponent {
     const normalized = this.normalizeVoucher(voucher);
     const status = String(normalized?.status || '').toLowerCase();
     if (status === 'confirmed') {
-      this.toast.warning('لا يمكن تعديل سند معتمد. يمكنك عكسه فقط.');
+      this.toast.warning('لا يمكن تعديل سند معتمد.');
       return;
     }
     if (status === 'cancelled') {
@@ -1287,17 +1284,17 @@ export class VouchersComponent extends BasePageComponent {
   }
 
   getStatusLabel(status: string): string {
-    const m: Record<string, string> = { draft: 'مسودة', confirmed: 'معتمد', cancelled: 'ملغي', reversed: 'معكوس' };
+    const m: Record<string, string> = { draft: 'مسودة', confirmed: 'معتمد', cancelled: 'ملغي' };
     return m[status] || status;
   }
 
   getStatusIcon(status: string): string {
-    const m: Record<string, string> = { draft: 'edit_note', confirmed: 'check_circle', cancelled: 'cancel', reversed: 'undo' };
+    const m: Record<string, string> = { draft: 'edit_note', confirmed: 'check_circle', cancelled: 'cancel' };
     return m[status] || 'help';
   }
 
   getStatusColor(status: string): string {
-    const m: Record<string, string> = { draft: '#f59e0b', confirmed: '#22c55e', cancelled: '#ef4444', reversed: '#8b5cf6' };
+    const m: Record<string, string> = { draft: '#f59e0b', confirmed: '#22c55e', cancelled: '#ef4444' };
     return m[status] || '#64748b';
   }
 
@@ -1331,14 +1328,6 @@ export class VouchersComponent extends BasePageComponent {
   closeDetails() {
     this.showDetailsModal.set(false);
     this.detailsVoucher.set(null);
-  }
-
-  openReverseFromDetails() {
-    const voucher = this.detailsVoucher();
-    const id = Number.parseInt(String(voucher?.id ?? ''), 10);
-    if (!Number.isInteger(id) || id <= 0) return;
-    this.closeDetails();
-    this.openReverse(id);
   }
 
   async openAttachmentsFromDetails() {
@@ -1436,27 +1425,6 @@ export class VouchersComponent extends BasePageComponent {
     if (!confirmed) return;
     try {
       await this.api.deleteVoucher(id);
-      await this.loadVouchers();
-    } catch (e: unknown) {
-      this.error.set(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  // ========== عكس العمليات ==========
-  openReverse(voucherId: number) {
-    this.reverseTargetId.set(voucherId);
-    this.reverseReason.set('');
-    this.showReverseDialog.set(true);
-  }
-
-  async confirmReverse() {
-    const id = this.reverseTargetId();
-    const reason = this.reverseReason();
-    if (!id || !reason) { this.error.set('يجب إدخال سبب العكس'); return; }
-    try {
-      await this.api.reverseVoucher(this.bizId, id, reason);
-      this.showReverseDialog.set(false);
-      this.toast.success('تم عكس السند بنجاح');
       await this.loadVouchers();
     } catch (e: unknown) {
       this.error.set(e instanceof Error ? e.message : String(e));

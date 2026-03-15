@@ -14,7 +14,7 @@
 
 | # | المحرك | الملف/الموقع | الوظيفة الرئيسية |
 |---|--------|---------------|-------------------|
-| 1 | **المحرك المالي المركزي** | `services/transaction.service.ts` | إنشاء السندات والقيود، تحديث أرصدة الحسابات والصناديق، عكس السندات. يُستدعى من `api.rest.ts` و`enhancements.ts`. |
+| 1 | **المحرك المالي المركزي** | `services/transaction.service.ts` | إنشاء السندات والقيود، تحديث أرصدة الحسابات والصناديق، وإلغاء السندات باتجاه واحد. يُستدعى من `api.rest.ts` و`enhancements.ts`. |
 | 2 | **محرك الترقيم الذكي** | `middleware/sequencing.ts` | توليد أرقام تسلسلية للسندات والعمليات (حسب العمل، التصنيف، السنة، نوع العملية). يُستدعى من `transaction.service` ومسارات العمليات المخزنية. |
 | 3 | **محرك المخزون** | `services/inventory.service.ts` | حركات المخزون (processStockMovement)، أرصدة المخزون، تنبيهات المخزون المنخفض، تقييم المخزون، FIFO لـ COGS. |
 | 4 | **محرك سير العمل** | `services/workflow.service.ts` | انتقالات سير العمل (getAvailableTransitions, executeTransition)، سجل التنفيذ (getWorkflowHistory)، إعداد الـ workflow للأنواع. |

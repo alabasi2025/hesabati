@@ -29,7 +29,7 @@
 | 19 | **suppliers** | id, business_id, name, category, phone, address, contact_person, notes, is_active, created_at, updated_at |
 | 20 | **supplier_balances** | id, supplier_id, currency_id, balance, updated_at |
 | 21 | **voucher_categories** | id, business_id, name, type, parent_id, icon, color, is_active, created_at |
-| 22 | **vouchers** | id, business_id, voucher_number, voucher_type, status, amount, currency_id, exchange_rate, from_account_id, to_account_id, from_fund_id, to_fund_id, station_id, employee_id, supplier_id, category_id, operation_type_id, description, reference, voucher_date, account_sequence, template_sequence, created_by, approved_by, reversal_status, reversed_voucher_id, reversal_reason, reversed_at, reversed_by, created_at, updated_at |
+| 22 | **vouchers** | id, business_id, voucher_number, voucher_type, status, amount, currency_id, exchange_rate, from_account_id, to_account_id, from_fund_id, to_fund_id, station_id, employee_id, supplier_id, category_id, operation_type_id, description, reference, voucher_date, account_sequence, template_sequence, created_by, approved_by, created_at, updated_at |
 | 23 | **attachments** | id, entity_type, entity_id, file_name, file_path, file_type, file_size, description, uploaded_by, created_at |
 | 24 | **daily_collections** | id, business_id, station_id, collection_date, currency_id, total_amount, is_fully_delivered, notes, created_by, created_at, updated_at |
 | 25 | **collection_details** | id, collection_id, employee_id, billing_account_id, amount, notes, created_at |

@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { formatAmount as formatAmountShared, formatDate as formatDateShared } from '../../shared/helpers';
@@ -41,6 +40,7 @@ export class ReportsComponent extends BasePageComponent {
   statementLoading = signal(false);
   statementDateFrom = signal('');
   statementDateTo = signal('');
+  statementSourceType = signal<'all' | 'payment_voucher' | 'receipt_voucher' | 'journal_manual' | 'inventory_txn'>('all');
   selectedAccountId = signal<number | null>(null);
 
   // فلاتر
@@ -138,7 +138,13 @@ export class ReportsComponent extends BasePageComponent {
       const params: any = {};
       if (this.statementDateFrom()) params.dateFrom = this.statementDateFrom();
       if (this.statementDateTo()) params.dateTo = this.statementDateTo();
-      const result = await this.api.getAccountStatement(this.bizId, accId, params.dateFrom, params.dateTo);
+      const result = await this.api.getAccountStatement(
+        this.bizId,
+        accId,
+        params.dateFrom,
+        params.dateTo,
+        this.statementSourceType(),
+      );
       this.statementData.set(Array.isArray(result) ? result : (result as any).entries || []);
       this.statementAccount.set(this.accounts().find(a => a.id === accId));
     } catch (e: unknown) {
@@ -149,11 +155,27 @@ export class ReportsComponent extends BasePageComponent {
   }
 
   getStatementTotalDebit(): number {
-    return this.statementData().reduce((s: number, e: any) => s + Number(e.debit || 0), 0);
+    return this.statementData().reduce((s: number, e: any) => {
+      if (e?.debit !== undefined && e?.debit !== null) return s + Number(e.debit || 0);
+      return s + (String(e?.line_type || '').toLowerCase() === 'debit' ? Number(e?.amount || 0) : 0);
+    }, 0);
   }
 
   getStatementTotalCredit(): number {
-    return this.statementData().reduce((s: number, e: any) => s + Number(e.credit || 0), 0);
+    return this.statementData().reduce((s: number, e: any) => {
+      if (e?.credit !== undefined && e?.credit !== null) return s + Number(e.credit || 0);
+      return s + (String(e?.line_type || '').toLowerCase() === 'credit' ? Number(e?.amount || 0) : 0);
+    }, 0);
+  }
+
+  getSourceTypeLabel(sourceType: string | null | undefined): string {
+    const map: Record<string, string> = {
+      payment_voucher: 'سند صرف',
+      receipt_voucher: 'سند قبض',
+      journal_manual: 'قيد يومية',
+      inventory_txn: 'حركة مخزنية',
+    };
+    return map[String(sourceType || '')] || 'غير محدد';
   }
 
   // ===================== طباعة =====================

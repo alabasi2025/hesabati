@@ -60,12 +60,12 @@
 
         <div class="filter-bar">
           <div class="filter-group">
-            <label>من تاريخ</label>
-            <input type="date" [ngModel]="trialDateFrom()" (ngModelChange)="trialDateFrom.set($event)">
+            <label for="trial-date-from">من تاريخ</label>
+            <input id="trial-date-from" title="من تاريخ" type="date" [ngModel]="trialDateFrom()" (ngModelChange)="trialDateFrom.set($event)">
           </div>
           <div class="filter-group">
-            <label>إلى تاريخ</label>
-            <input type="date" [ngModel]="trialDateTo()" (ngModelChange)="trialDateTo.set($event)">
+            <label for="trial-date-to">إلى تاريخ</label>
+            <input id="trial-date-to" title="إلى تاريخ" type="date" [ngModel]="trialDateTo()" (ngModelChange)="trialDateTo.set($event)">
           </div>
           <button class="filter-btn" (click)="loadTrialBalance()">
             <span class="material-icons-round">search</span> عرض
@@ -127,8 +127,8 @@
 
         <div class="filter-bar">
           <div class="filter-group">
-            <label>الحساب</label>
-            <select [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event)">
+            <label for="statement-account">الحساب</label>
+            <select id="statement-account" title="الحساب" [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event)">
               <option [ngValue]="null">-- اختر حساباً --</option>
               @for (acc of accounts(); track acc.id) {
                 <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code || '-' }})</option>
@@ -136,12 +136,22 @@
             </select>
           </div>
           <div class="filter-group">
-            <label>من تاريخ</label>
-            <input type="date" [ngModel]="statementDateFrom()" (ngModelChange)="statementDateFrom.set($event)">
+            <label for="statement-date-from">من تاريخ</label>
+            <input id="statement-date-from" title="من تاريخ" type="date" [ngModel]="statementDateFrom()" (ngModelChange)="statementDateFrom.set($event)">
           </div>
           <div class="filter-group">
-            <label>إلى تاريخ</label>
-            <input type="date" [ngModel]="statementDateTo()" (ngModelChange)="statementDateTo.set($event)">
+            <label for="statement-date-to">إلى تاريخ</label>
+            <input id="statement-date-to" title="إلى تاريخ" type="date" [ngModel]="statementDateTo()" (ngModelChange)="statementDateTo.set($event)">
+          </div>
+          <div class="filter-group">
+            <label for="statement-source-type">نوع الحركة</label>
+            <select id="statement-source-type" title="نوع الحركة" [ngModel]="statementSourceType()" (ngModelChange)="statementSourceType.set($event)">
+              <option value="all">الكل</option>
+              <option value="payment_voucher">سند صرف</option>
+              <option value="receipt_voucher">سند قبض</option>
+              <option value="journal_manual">قيد يومية</option>
+              <option value="inventory_txn">حركة مخزنية</option>
+            </select>
           </div>
           <button class="filter-btn" (click)="loadAccountStatement()">
             <span class="material-icons-round">search</span> عرض
@@ -167,6 +177,7 @@
                 <tr>
                   <th>#</th>
                   <th>التاريخ</th>
+                  <th>نوع الحركة</th>
                   <th>الوصف</th>
                   <th class="amount-col">مدين</th>
                   <th class="amount-col">دائن</th>
@@ -178,7 +189,8 @@
                   <tr>
                     <td>{{ i + 1 }}</td>
                     <td class="date-cell">{{ formatDate(entry.date || entry.entryDate) }}</td>
-                    <td>{{ entry.description || '-' }}</td>
+                    <td>{{ getSourceTypeLabel(entry.source_type || entry.sourceType) }}</td>
+                    <td>{{ entry.entry_description || entry.line_description || entry.description || '-' }}</td>
                     <td class="amount-cell text-green">{{ entry.debit ? formatAmount(entry.debit) : '-' }}</td>
                     <td class="amount-cell text-red">{{ entry.credit ? formatAmount(entry.credit) : '-' }}</td>
                     <td class="amount-cell" [class.text-green]="(entry.runningBalance || 0) > 0" [class.text-red]="(entry.runningBalance || 0) < 0">
@@ -189,7 +201,7 @@
               </tbody>
               <tfoot>
                 <tr class="total-row">
-                  <td colspan="3"><strong>الإجمالي</strong></td>
+                  <td colspan="4"><strong>الإجمالي</strong></td>
                   <td class="amount-cell text-green"><strong>{{ formatAmount(getStatementTotalDebit()) }}</strong></td>
                   <td class="amount-cell text-red"><strong>{{ formatAmount(getStatementTotalCredit()) }}</strong></td>
                   <td class="amount-cell"><strong>{{ formatAmount(getStatementTotalDebit() - getStatementTotalCredit()) }}</strong></td>

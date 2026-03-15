@@ -32,7 +32,7 @@
 | 1 | افتح `.tdad/workflows/backend/backend.workflow.json` — إن لم يكن للمجال مجلد، أضف عقدة `nodeType: "folder"` مع `folderPath: "backend/اسم-المجال"`. |
 | 2 | إن كان المجلد موجوداً، افتح `.tdad/workflows/backend/اسم-المجال/اسم-المجال.workflow.json`. إن لم يكن الملف موجوداً، أنشئه بنفس صيغة الملفات الموجودة. |
 | 3 | أضف عقدة جديدة `nodeType: "feature"`: |
-| | • `id`: فعل-اسم بصيغة kebab (مثل `get-orders-list`, `post-voucher-reverse`) |
+| | • `id`: فعل-اسم بصيغة kebab (مثل `get-orders-list`, `post-voucher-status-cancelled`) |
 | | • `title`: اسم واضح للميزة |
 | | • `description`: وصف BDD (متى، ماذا، نجاح، فشل) — انظر القالب أدناه |
 | | • `fileName`: نفس `id` |

@@ -804,7 +804,7 @@
     @include badge-3d($color-amber);
   }
 
-  &.rejected, &.cancelled, &.reversed {
+  &.rejected, &.cancelled {
     @include badge-3d($color-red);
   }
 

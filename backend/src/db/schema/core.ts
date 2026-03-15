@@ -19,12 +19,11 @@ export const voucherTypeEnum = pgEnum('voucher_type', [
   'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer',
 ]);
 
-export const voucherStatusEnum = pgEnum('voucher_status', ['draft', 'confirmed', 'cancelled', 'pending_approval', 'approved', 'rejected', 'reversed']);
+export const voucherStatusEnum = pgEnum('voucher_status', ['draft', 'confirmed', 'cancelled', 'pending_approval', 'approved', 'rejected']);
 export const expenseTypeEnum = pgEnum('expense_type', ['fixed', 'variable', 'annual']);
 export const warehouseTypeEnum = pgEnum('warehouse_type', ['main', 'station', 'sub', 'custody']);
 export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment', 'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer']);
 export const employeeStatusEnum = pgEnum('employee_status', ['active', 'inactive', 'suspended']);
-export const voucherReversalStatusEnum = pgEnum('voucher_reversal_status', ['original', 'reversed', 'reversal']);
 
 export const billingSystemEnum = pgEnum('billing_system', [
   'moghrabi_v1', 'moghrabi_v2', 'moghrabi_v3',
@@ -101,7 +100,7 @@ export const rolePermissions = pgTable('role_permissions', {
   id: serial('id').primaryKey(),
   roleId: integer('role_id').notNull().references(() => roles.id),
   resource: varchar('resource', { length: 100 }).notNull(), // vouchers | accounts | funds | reports | screens | settings | inventory | workflow | ui_builder
-  action: varchar('action', { length: 50 }).notNull(), // create | read | update | delete | approve | reverse | execute
+  action: varchar('action', { length: 50 }).notNull(), // create | read | update | delete | approve | execute
   constraints: jsonb('constraints').$type<any>().default({}), // قيود إضافية: {maxAmount, stationIds, operationTypeIds, accountIds}
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
@@ -404,11 +403,6 @@ export const vouchers = pgTable('vouchers', {
 
   createdBy: integer('created_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
-  reversalStatus: varchar('reversal_status', { length: 20 }).default('original'),
-  reversedVoucherId: integer('reversed_voucher_id'),
-  reversalReason: text('reversal_reason'),
-  reversedAt: timestamp('reversed_at'),
-  reversedBy: integer('reversed_by').references(() => users.id),
   hasMultipleLines: boolean('has_multiple_lines').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

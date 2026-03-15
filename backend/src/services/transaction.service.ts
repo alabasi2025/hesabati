@@ -122,13 +122,6 @@ export interface MultiTransactionData {
   toAccountId?: number | null;
 }
 
-/** نتيجة عكس المعاملة */
-export interface ReversalResult {
-  originalVoucher: any;
-  reversalVoucher: any;
-  journalEntry: any;
-}
-
 // ===================== التحقق من الملكية (مستورد من _shared/ownership) =====================
 // re-export للاستخدام الخارجي إن لزم
 export {
@@ -960,181 +953,6 @@ export async function cancelTransaction(
   return { success: true };
 }
 
-// ===================== عكس معاملة (Reverse) =====================
-
-/**
- * reverseTransaction - إنشاء سند عكسي لسند موجود
- */
-export async function reverseTransaction(
-  bizId: number,
-  userId: number,
-  voucherId: number,
-  reason: string,
-): Promise<ReversalResult> {
-  const [original] = await db
-    .select()
-    .from(vouchers)
-    .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
-
-  if (!original) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
-  if (original.status === "cancelled") throw new Error("لا يمكن عكس سند ملغي");
-  if (original.reversalStatus === "reversed")
-    throw new Error("هذا السند معكوس مسبقاً");
-
-  const amount = parseFloat(String(original.amount));
-  const currencyId = original.currencyId || 1;
-
-  const result = await db.transaction(async (tx) => {
-    const [origEntry] = await tx
-      .select({ id: journalEntries.id })
-      .from(journalEntries)
-      .where(
-        and(
-          eq(journalEntries.businessId, bizId),
-          eq(journalEntries.reference, original.voucherNumber),
-        ),
-      )
-      .limit(1);
-    if (!origEntry?.id) throw new Error("القيد المحاسبي المرتبط غير موجود");
-
-    const origLines = await tx
-      .select({
-        accountId: journalEntryLines.accountId,
-        lineType: journalEntryLines.lineType,
-        lineAmount: journalEntryLines.amount,
-      })
-      .from(journalEntryLines)
-      .where(eq(journalEntryLines.journalEntryId, origEntry.id));
-    if (origLines.length < 2)
-      throw new Error("القيد المحاسبي غير مكتمل ولا يمكن عكسه");
-
-    const currentYear = new Date().getFullYear();
-    const seqVal = await getNextSequence(bizId, "voucher_reversal", 0, currentYear, tx);
-    const voucherNumber = `REV-${currentYear}-${String(seqVal).padStart(5, "0")}`;
-
-    const [reversalVoucher] = await tx
-      .insert(vouchers)
-      .values({
-        businessId: bizId,
-        voucherNumber,
-        voucherType: original.voucherType,
-        status: "confirmed",
-        amount: String(amount),
-        currencyId,
-        fromAccountId: original.toAccountId,
-        toAccountId: original.fromAccountId,
-        fromFundId: original.toFundId,
-        toFundId: original.fromFundId,
-        stationId: original.stationId,
-        operationTypeId: original.operationTypeId,
-        description: `عكس: ${original.description || ""} - ${reason}`,
-        reference: original.voucherNumber,
-        voucherDate: new Date(),
-        createdBy: userId,
-        reversalStatus: "reversal",
-        reversedVoucherId: original.id,
-      })
-      .returning();
-
-    await tx
-      .update(vouchers)
-      .set({
-        reversalStatus: "reversed",
-        reversedVoucherId: reversalVoucher.id,
-        reversalReason: reason,
-        reversedAt: new Date(),
-        reversedBy: userId,
-        updatedAt: new Date(),
-      })
-      .where(eq(vouchers.id, voucherId));
-
-    const entryDate = new Date().toISOString().split("T")[0];
-    const [entry] = await tx
-      .insert(journalEntries)
-      .values({
-        businessId: bizId,
-        entryNumber: `JE-${voucherNumber}`,
-        entryDate,
-        description: `عكس قيد: ${original.description || ""} - ${reason}`,
-        reference: voucherNumber,
-        operationTypeId: original.operationTypeId,
-        totalDebit: String(amount),
-        totalCredit: String(amount),
-        isBalanced: true,
-        createdBy: userId,
-      })
-      .returning();
-
-    // إدخال سطور عكسية: قلب نوع السطر لكل حساب
-    for (let i = 0; i < origLines.length; i++) {
-      const l = origLines[i]!;
-      const lineAmount = parseFloat(String(l.lineAmount));
-      const reversedType = l.lineType === "debit" ? "credit" : "debit";
-      await tx.insert(journalEntryLines).values({
-        journalEntryId: entry.id,
-        accountId: l.accountId,
-        lineType: reversedType,
-        amount: String(lineAmount),
-        description: `عكس - ${reason}`,
-        sortOrder: i,
-      });
-
-      // تحديث الأرصدة: عكس أثر السطر الأصلي
-      const delta = l.lineType === "debit" ? -lineAmount : lineAmount;
-      await tx.execute(sql`
-        INSERT INTO account_balances (account_id, currency_id, balance)
-        VALUES (${l.accountId}, ${currencyId}, ${delta})
-        ON CONFLICT (account_id, currency_id) DO UPDATE SET
-          balance = account_balances.balance + ${delta},
-          updated_at = NOW()
-      `);
-    }
-
-    if (original.toFundId) {
-      await tx.execute(sql`
-        INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${original.toFundId}, ${currencyId}, ${-amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-          balance = fund_balances.balance - ${amount}, updated_at = NOW()
-      `);
-    }
-    if (original.fromFundId) {
-      await tx.execute(sql`
-        INSERT INTO fund_balances (fund_id, currency_id, balance)
-        VALUES (${original.fromFundId}, ${currencyId}, ${amount})
-        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
-          balance = fund_balances.balance + ${amount}, updated_at = NOW()
-      `);
-    }
-
-    await tx.insert(auditLog).values({
-      userId,
-      businessId: bizId,
-      action: "reverse_voucher",
-      tableName: "vouchers",
-      recordId: original.id,
-      oldData: {
-        voucherNumber: original.voucherNumber,
-        amount: String(amount),
-        status: "original",
-      },
-      newData: {
-        reversalVoucherId: reversalVoucher.id,
-        reversalVoucherNumber: voucherNumber,
-        reason,
-      },
-    });
-
-    return {
-      originalVoucher: { ...original, reversalStatus: "reversed" },
-      reversalVoucher,
-      journalEntry: entry,
-    };
-  });
-
-  return result;
-}
-
 // ===================== اعتماد مسودة (Confirm Draft) =====================
 
 /**
@@ -1153,6 +971,19 @@ export async function confirmDraftTransaction(
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
   if (!existing) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
+  if (existing.status === "confirmed") {
+    const [existingEntry] = await db
+      .select()
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.businessId, bizId),
+          eq(journalEntries.reference, existing.voucherNumber),
+        ),
+      )
+      .limit(1);
+    return { voucher: existing, journalEntry: existingEntry ?? null };
+  }
   if (existing.status !== "draft") throw new Error("يمكن اعتماد المسودات فقط");
 
   const amount = parseFloat(String(existing.amount));

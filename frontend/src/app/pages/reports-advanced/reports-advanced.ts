@@ -28,6 +28,7 @@ export class ReportsAdvancedComponent extends BasePageComponent {
   dateTo = new Date().toISOString().split('T')[0];
   dailyDate = new Date().toISOString().split('T')[0];
   selectedAccountId = '';
+  statementSourceType: 'all' | 'payment_voucher' | 'receipt_voucher' | 'journal_manual' | 'inventory_txn' = 'all';
   accounts: any[] = [];
   funds: any[] = [];
   allAccountsAndFunds: any[] = [];
@@ -69,7 +70,13 @@ export class ReportsAdvancedComponent extends BasePageComponent {
           break;
         case 'statement':
           if (this.selectedAccountId)
-            this.statement = await this.api.getAccountStatement(this.bizId, Number(this.selectedAccountId), this.dateFrom, this.dateTo);
+            this.statement = await this.api.getAccountStatement(
+              this.bizId,
+              Number(this.selectedAccountId),
+              this.dateFrom,
+              this.dateTo,
+              this.statementSourceType,
+            );
           break;
         case 'daily':
           this.dailySummary = await this.api.getDailySummary(this.bizId, this.dailyDate);
@@ -96,6 +103,16 @@ export class ReportsAdvancedComponent extends BasePageComponent {
       fund: 'صندوق', billing: 'فوترة', collection: 'تحصيل',
     };
     return map[type] || type;
+  }
+
+  getSourceTypeLabel(sourceType: string | null | undefined): string {
+    const map: Record<string, string> = {
+      payment_voucher: 'سند صرف',
+      receipt_voucher: 'سند قبض',
+      journal_manual: 'قيد يومية',
+      inventory_txn: 'حركة مخزنية',
+    };
+    return map[String(sourceType || '')] || 'غير محدد';
   }
 
   printReport() {
@@ -224,11 +241,12 @@ export class ReportsAdvancedComponent extends BasePageComponent {
       }
       html += `</div>`;
     }
-    html += `<table><thead><tr><th>التاريخ</th><th>المرجع</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>`;
+    html += `<table><thead><tr><th>التاريخ</th><th>المرجع</th><th>نوع الحركة</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>`;
     for (const e of (this.statement.entries || [])) {
       html += `<tr>
         <td>${e.entry_date}</td>
         <td>${e.entry_number}</td>
+        <td>${this.getSourceTypeLabel(e.source_type || e.sourceType)}</td>
         <td>${e.entry_description || e.line_description || ''}</td>
         <td class="debit">${e.line_type === 'debit' ? Number(e.amount).toLocaleString() : '-'}</td>
         <td class="credit">${e.line_type === 'credit' ? Number(e.amount).toLocaleString() : '-'}</td>
