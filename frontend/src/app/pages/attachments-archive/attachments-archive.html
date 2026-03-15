@@ -1,0 +1,247 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>
+      <span class="material-icons-round">folder_open</span>
+      الأرشفة الإلكترونية للمرفقات
+    </h2>
+    <div class="header-actions">
+      <button class="btn-success" [disabled]="saving()" (click)="saveSettings()">
+        <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+        {{ saving() ? 'جاري الحفظ...' : 'حفظ الإعدادات' }}
+      </button>
+      <button class="btn-primary" [disabled]="creatingTree()" (click)="buildTreeNow()">
+        <span class="material-icons-round">{{ creatingTree() ? 'sync' : 'create_new_folder' }}</span>
+        {{ creatingTree() ? 'جاري الإنشاء...' : 'إنشاء المجلدات تلقائياً' }}
+      </button>
+    </div>
+  </div>
+  <p class="header-subtitle">إعداد مسار الحفظ وبنية المجلدات حسب نوع الخزينة والخزينة</p>
+
+  @if (loading()) {
+    <div class="loading-card">جاري التحميل...</div>
+  } @else {
+    <div class="content-grid">
+      <section class="card">
+        <h3>إعدادات الحفظ</h3>
+
+        <label class="field-label" for="archive-base-path">مسار نظام المرفقات (خارج قاعدة البيانات)</label>
+        <div class="base-path-row">
+          <input
+            id="archive-base-path"
+            class="field-input"
+            type="text"
+            title="مسار نظام المرفقات"
+            [value]="form().basePath"
+            placeholder="D:\Archive\Attachments"
+            (input)="setBasePath($any($event.target).value)"
+          />
+          <button class="btn-primary btn-sm btn-folder" type="button" [disabled]="choosingBasePath()" (click)="openPathPicker()">
+            {{ choosingBasePath() ? 'جاري الفتح...' : 'اختيار مجلد من الجهاز' }}
+          </button>
+        </div>
+        <p class="hint">حدد المسار مرة واحدة (مثال: D:\Archive\Attachments) ثم اضغط حفظ الإعدادات، وسيتم إنشاء الشجرة تلقائياً داخله.</p>
+
+        <div class="split-2">
+          <div>
+            <label class="field-label" for="folder-type-fund">مجلد نوع الخزينة: صندوق</label>
+            <input id="folder-type-fund" class="field-input" title="مجلد نوع الخزينة صندوق" placeholder="صندوق" type="text" [value]="form().folderByType.fund" (input)="setFolderByType('fund', $any($event.target).value)" />
+          </div>
+          <div>
+            <label class="field-label" for="folder-type-bank">مجلد نوع الخزينة: بنك</label>
+            <input id="folder-type-bank" class="field-input" title="مجلد نوع الخزينة بنك" placeholder="بنك" type="text" [value]="form().folderByType.bank" (input)="setFolderByType('bank', $any($event.target).value)" />
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div>
+            <label class="field-label" for="folder-type-exchange">مجلد نوع الخزينة: صراف</label>
+            <input id="folder-type-exchange" class="field-input" title="مجلد نوع الخزينة صراف" placeholder="صراف" type="text" [value]="form().folderByType.exchange" (input)="setFolderByType('exchange', $any($event.target).value)" />
+          </div>
+          <div>
+            <label class="field-label" for="folder-type-wallet">مجلد نوع الخزينة: محفظة</label>
+            <input id="folder-type-wallet" class="field-input" title="مجلد نوع الخزينة محفظة" placeholder="محفظة" type="text" [value]="form().folderByType.e_wallet" (input)="setFolderByType('e_wallet', $any($event.target).value)" />
+          </div>
+        </div>
+
+        <div class="split-2">
+          <div>
+            <label class="field-label" for="folder-voucher-receipt">مجلد سند القبض</label>
+            <input id="folder-voucher-receipt" class="field-input" title="مجلد سند القبض" placeholder="سند قبض" type="text" [value]="form().voucherFolders.receipt" (input)="setVoucherFolder('receipt', $any($event.target).value)" />
+          </div>
+          <div>
+            <label class="field-label" for="folder-voucher-payment">مجلد سند الصرف</label>
+            <input id="folder-voucher-payment" class="field-input" title="مجلد سند الصرف" placeholder="سند صرف" type="text" [value]="form().voucherFolders.payment" (input)="setVoucherFolder('payment', $any($event.target).value)" />
+          </div>
+        </div>
+
+        <label class="field-label" for="importance-levels">تصنيف الأهمية (مفصولة بفاصلة)</label>
+        <input
+          id="importance-levels"
+          class="field-input"
+          type="text"
+          title="تصنيف الأهمية"
+          [value]="form().importanceLevels.join(', ')"
+          placeholder="عاجل, مهم, عادي"
+          (input)="setImportanceLevels($any($event.target).value)"
+        />
+        <p class="hint">أماكن التخزين تبقى حسب الشجرة المحددة: نوع خزينة → خزينة → سند قبض/صرف.</p>
+      </section>
+
+      <section class="card">
+        <h3>لوحة المتابعة</h3>
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-icon"><span class="material-icons-round">attach_file</span></div>
+            <div class="stat-label">إجمالي المرفقات</div>
+            <div class="stat-value">{{ stats().total }}</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon"><span class="material-icons-round">call_received</span></div>
+            <div class="stat-label">سندات قبض</div>
+            <div class="stat-value">{{ stats().receipts }}</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-icon"><span class="material-icons-round">call_made</span></div>
+            <div class="stat-label">سندات صرف</div>
+            <div class="stat-value">{{ stats().payments }}</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon"><span class="material-icons-round">priority_high</span></div>
+            <div class="stat-label">مرفقات عاجلة</div>
+            <div class="stat-value">{{ stats().urgent }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-wide">
+        <div class="card-head">
+          <h3>مستكشف الأرشيف</h3>
+          <div class="head-actions">
+            <button class="btn-primary btn-sm" [disabled]="refreshingItems()" (click)="applyFilters()">
+              {{ refreshingItems() ? 'جاري التحديث...' : 'تحديث' }}
+            </button>
+            <button class="btn-ghost btn-sm" [disabled]="refreshingItems()" (click)="clearFilters()">تفريغ الفلاتر</button>
+          </div>
+        </div>
+
+        <div class="filters-grid">
+          <input id="archive-filter-search" class="field-input" type="text" title="بحث في مرفقات الأرشيف" placeholder="بحث: اسم الملف / رقم السند / الخزينة"
+            [value]="filters().search" (input)="setFilter('search', $any($event.target).value)" />
+          <select id="archive-filter-voucher-type" class="field-input" title="فلتر نوع السند" [value]="filters().voucherType" (change)="setFilter('voucherType', $any($event.target).value)">
+            <option value="">كل أنواع السندات</option>
+            <option value="receipt">سند قبض</option>
+            <option value="payment">سند صرف</option>
+          </select>
+          <select id="archive-filter-treasury-type" class="field-input" title="فلتر نوع الخزينة" [value]="filters().treasuryType" (change)="setFilter('treasuryType', $any($event.target).value)">
+            <option value="">كل أنواع الخزائن</option>
+            <option value="fund">صندوق</option>
+            <option value="bank">بنك</option>
+            <option value="exchange">صراف</option>
+            <option value="e_wallet">محفظة</option>
+          </select>
+          <select id="archive-filter-importance" class="field-input" title="فلتر درجة الأهمية" [value]="filters().importance" (change)="setFilter('importance', $any($event.target).value)">
+            <option value="">كل درجات الأهمية</option>
+            @for (lvl of form().importanceLevels; track lvl) {
+              <option [value]="lvl">{{ lvl }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table archive-table">
+            <thead>
+              <tr>
+                <th>الملف</th>
+                <th>السند</th>
+                <th>نوع/اسم الخزينة</th>
+                <th>الأهمية</th>
+                <th>المسار</th>
+                <th>إجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (archiveItems().length === 0) {
+                <tr>
+                  <td colspan="6" class="empty-row">لا توجد مرفقات مطابقة للفلاتر.</td>
+                </tr>
+              } @else {
+                @for (row of archiveItems(); track row.id) {
+                  <tr>
+                    <td>{{ row.fileName }}</td>
+                    <td>{{ row.voucherNumber || '-' }} / {{ row.voucherType === 'receipt' ? 'قبض' : 'صرف' }}</td>
+                    <td>{{ row.treasuryType }} / {{ row.treasuryName }}</td>
+                    <td>{{ row.importance }}</td>
+                    <td class="path-cell" [title]="row.filePath">{{ row.filePath || '-' }}</td>
+                    <td>
+                      <button class="btn-primary btn-sm" (click)="rebuildAttachmentPath(row)">إعادة توليد المسار</button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card card-wide">
+        <h3>معاينة الشجرة</h3>
+        @for (section of treePreview(); track section.type) {
+          <div class="tree-section">
+            <div class="tree-type">📁 {{ section.label }}</div>
+            @if (section.items.length === 0) {
+              <div class="tree-empty">لا توجد خزائن في هذا النوع حالياً.</div>
+            } @else {
+              @for (item of section.items; track item.id) {
+                <div class="tree-item">
+                  <div class="tree-vault">📁 {{ item.name }}</div>
+                  <div class="tree-doc">📂 {{ item.receiptFolder }}</div>
+                  <div class="tree-doc">📂 {{ item.paymentFolder }}</div>
+                </div>
+              }
+            }
+          </div>
+        }
+      </section>
+    </div>
+  }
+</div>
+
+@if (showPathPicker()) {
+  <div class="modal-overlay path-picker-overlay">
+    <div class="modal-card path-picker-card">
+      <div class="path-picker-head">
+        <h3>اختيار مجلد من الجهاز</h3>
+        <button class="btn-ghost btn-sm" type="button" (click)="closePathPicker()">إغلاق</button>
+      </div>
+      <div class="path-picker-current">{{ pathPickerCurrentPath() || 'اختر قرصًا' }}</div>
+      <div class="path-picker-actions">
+        <button class="btn-ghost btn-sm" type="button" [disabled]="!pathPickerParentPath() || pathPickerLoading()" (click)="goToParentPath()">⬆ رجوع</button>
+        <button class="btn-primary btn-sm" type="button" [disabled]="!pathPickerCurrentPath() || pathPickerLoading()" (click)="chooseCurrentPathFromPicker()">اختيار هذا المجلد</button>
+      </div>
+      <div class="path-picker-create">
+        <input
+          class="field-input"
+          type="text"
+          title="اسم المجلد الجديد"
+          placeholder="اسم مجلد جديد"
+          [value]="newFolderName()"
+          (input)="setNewFolderName($any($event.target).value)"
+        />
+        <button class="btn-primary btn-sm" type="button" [disabled]="creatingFolder() || pathPickerLoading()" (click)="createFolderInPicker()">
+          {{ creatingFolder() ? 'جاري الإنشاء...' : 'إنشاء مجلد جديد' }}
+        </button>
+      </div>
+      <div class="path-picker-list">
+        @if (pathPickerLoading()) {
+          <div class="picker-empty">جاري التحميل...</div>
+        } @else if (pathPickerEntries().length === 0) {
+          <div class="picker-empty">لا توجد مجلدات.</div>
+        } @else {
+          @for (entry of pathPickerEntries(); track entry.fullPath) {
+            <button class="path-entry btn-ghost btn-sm" type="button" (click)="openPathEntry(entry)">📁 {{ entry.name }}</button>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}

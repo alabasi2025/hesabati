@@ -16,10 +16,36 @@
 
   <!-- Navigation -->
   <nav class="sidebar-nav">
-    @for (section of menuSections(); track section.sectionId ?? section.title) {
+    @if (!isCollapsed()) {
+      <div class="sidebar-search">
+        <div class="search-input-wrap">
+          <span class="material-icons-round search-icon">search</span>
+          <input
+            id="sidebar-search-input"
+            class="sidebar-search-input"
+            type="text"
+            placeholder="ابحث في عناصر التبويب... (/)"
+            title="بحث عناصر التبويب الجانبي"
+            [value]="sidebarSearchQuery()"
+            (input)="setSidebarSearchQuery($any($event.target).value)"
+            (keydown)="onSidebarSearchKeydown($event)"
+          />
+          @if (sidebarSearchQuery().trim()) {
+            <button class="search-clear-btn" type="button" title="مسح البحث" (click)="clearSidebarSearch()">
+              <span class="material-icons-round">close</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    @for (section of filteredMenuSections(); track section.sectionId ?? section.title) {
       <div class="nav-section">
         @if (!isCollapsed()) {
-          <div class="section-title">{{ section.title }}</div>
+          <div class="section-title">
+            @let parts = getSidebarHighlightParts(section.title);
+            {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
+          </div>
         }
         @for (item of section.items; track item.label) {
           @if (item.children) {
@@ -30,7 +56,10 @@
                   <span class="material-icons-round">{{ item.icon }}</span>
                 </div>
                 @if (!isCollapsed()) {
-                  <span class="nav-label">{{ item.label }}</span>
+                  <span class="nav-label">
+                    @let parts = getSidebarHighlightParts(item.label);
+                    {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
+                  </span>
                   <span class="material-icons-round expand-arrow">{{ isExpanded(item.label) ? 'expand_less' : 'expand_more' }}</span>
                 }
               </button>
@@ -40,7 +69,10 @@
                     <a class="nav-child-item" [routerLink]="child.route" routerLinkActive="active"
                       [attr.data-icon]="child.icon">
                       <span class="material-icons-round child-icon" [style.color]="getIconColor(child.icon)">{{ child.icon }}</span>
-                      <span class="child-label">{{ child.label }}</span>
+                      <span class="child-label">
+                        @let parts = getSidebarHighlightParts(child.label);
+                        {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
+                      </span>
                     </a>
                   }
                 </div>
@@ -65,7 +97,10 @@
                   }
                 </div>
                 @if (!isCollapsed()) {
-                  <span class="nav-label">{{ item.label }}</span>
+                  <span class="nav-label">
+                    @let parts = getSidebarHighlightParts(item.label);
+                    {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
+                  </span>
                   @if (item.badge) {
                     <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{ item.badge }}</span>
                   }
@@ -89,7 +124,10 @@
                   }
                 </div>
                 @if (!isCollapsed()) {
-                  <span class="nav-label">{{ item.label }}</span>
+                  <span class="nav-label">
+                    @let parts = getSidebarHighlightParts(item.label);
+                    {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
+                  </span>
                   @if (item.badge) {
                     <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{ item.badge }}</span>
                   }
@@ -98,6 +136,12 @@
             }
           }
         }
+      </div>
+    }
+    @if (!isCollapsed() && sidebarSearchQuery().trim() && !hasSidebarSearchResults()) {
+      <div class="sidebar-empty-search">
+        <span class="material-icons-round">search_off</span>
+        <span>لا توجد عناصر مطابقة</span>
       </div>
     }
   </nav>

@@ -129,3 +129,105 @@ export function getStatusClass(statusMap: Record<string, any>, status: string): 
   if (!entry) return status;
   return entry.cls || status;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// § 5. Unified Search/Filter Engine
+// ═══════════════════════════════════════════════════════════════
+
+export interface HighlightParts {
+  before: string;
+  match: string;
+  after: string;
+}
+
+export type SearchMatchMode = 'contains' | 'startsWith' | 'equals';
+
+export interface SearchFieldSpec<T> {
+  candidates: readonly T[] | (() => readonly T[]);
+  getPrimaryText: (item: T) => unknown;
+  getAltTexts?: (item: T) => unknown[];
+  matchMode?: SearchMatchMode;
+}
+
+export interface SearchSelectionResult<T> {
+  matchedItem: T | null;
+  normalizedInput: string;
+}
+
+function toSearchableString(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return '';
+}
+
+/** Normalize user text for robust Arabic/Latin matching */
+export function normalizeSearchText(value: unknown): string {
+  return toSearchableString(value)
+    .toLowerCase()
+    .normalize('NFKC')
+    .replaceAll('\u0640', '')
+    .replaceAll(/[\u064B-\u065F]/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
+}
+
+/** Check if any candidate string matches the query */
+export function matchesSearchQuery(query: unknown, ...candidates: unknown[]): boolean {
+  const needle = normalizeSearchText(query);
+  if (!needle) return true;
+  return candidates.some((candidate) => normalizeSearchText(candidate).includes(needle));
+}
+
+/** Split text into 3 parts for highlighting matched substring */
+export function getSearchHighlightParts(text: unknown, query: unknown): HighlightParts {
+  const value = toSearchableString(text);
+  const rawNeedle = toSearchableString(query).trim();
+  if (!rawNeedle) return { before: value, match: '', after: '' };
+  const idx = value.toLocaleLowerCase().indexOf(rawNeedle.toLocaleLowerCase());
+  if (idx < 0) return { before: value, match: '', after: '' };
+  return {
+    before: value.slice(0, idx),
+    match: value.slice(idx, idx + rawNeedle.length),
+    after: value.slice(idx + rawNeedle.length),
+  };
+}
+
+/** Generic field-level matching with configurable mode */
+export function searchMatchByMode(value: unknown, query: unknown, mode: SearchMatchMode = 'contains'): boolean {
+  const hay = normalizeSearchText(value);
+  const needle = normalizeSearchText(query);
+  if (!needle) return true;
+  if (!hay) return false;
+  if (mode === 'equals') return hay === needle;
+  if (mode === 'startsWith') return hay.startsWith(needle);
+  return hay.includes(needle);
+}
+
+/** Unified search resolver to pick an item from text input */
+export function resolveSearchSelection<T>(
+  input: unknown,
+  spec: SearchFieldSpec<T>,
+): SearchSelectionResult<T> {
+  const normalizedInput = normalizeSearchText(input);
+  if (!normalizedInput) {
+    return { matchedItem: null, normalizedInput };
+  }
+
+  const mode = spec.matchMode || 'contains';
+  const source = typeof spec.candidates === 'function' ? spec.candidates() : spec.candidates;
+
+  for (const item of source) {
+    const primary = spec.getPrimaryText(item);
+    if (searchMatchByMode(primary, normalizedInput, mode)) {
+      return { matchedItem: item, normalizedInput };
+    }
+    const altTexts = spec.getAltTexts ? spec.getAltTexts(item) : [];
+    if (altTexts.some((alt) => searchMatchByMode(alt, normalizedInput, mode))) {
+      return { matchedItem: item, normalizedInput };
+    }
+  }
+
+  return { matchedItem: null, normalizedInput };
+}

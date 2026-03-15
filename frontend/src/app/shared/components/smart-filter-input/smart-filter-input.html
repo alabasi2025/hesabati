@@ -1,0 +1,45 @@
+<div class="smart-filter-field">
+  @if (label) {
+    <label class="form-label" [attr.for]="inputId || null">{{ label }}</label>
+  }
+
+  <div class="input-wrap">
+    <input
+      class="form-input"
+      [id]="inputId || null"
+      type="text"
+      title="بحث"
+      placeholder="بحث..."
+      [attr.title]="title || label || 'بحث'"
+      [placeholder]="placeholder || 'بحث...'"
+      [value]="value"
+      (input)="onInput($any($event.target).value)"
+      (change)="onCommit($any($event.target).value)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      (keydown)="onKeydown($event)"
+      (keydown.enter)="onCommit($any($event.target).value)"
+    />
+    @if (allowClear && value.trim()) {
+      <button class="clear-btn" type="button" title="مسح" (click)="clear()">
+        <span class="material-icons-round">close</span>
+      </button>
+    }
+  </div>
+
+  @if (showSuggestions() && getFilteredSuggestions().length > 0) {
+    <div class="suggestions-list">
+      @for (item of getFilteredSuggestions(); track item; let i = $index) {
+        <button
+          type="button"
+          class="suggestion-item"
+          [class.active]="i === activeSuggestionIndex()"
+          (mousedown)="$event.preventDefault()"
+          (click)="selectSuggestion(item)"
+        >
+          {{ item }}
+        </button>
+      }
+    </div>
+  }
+</div>

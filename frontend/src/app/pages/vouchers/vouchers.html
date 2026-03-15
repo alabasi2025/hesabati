@@ -73,10 +73,105 @@
     @for (tab of tabs; track tab.value) {
       <button class="tab-btn" [class.active]="activeTab() === tab.value"
               [style.--tab-color]="tab.color"
-              (click)="activeTab.set(tab.value)">
+              (click)="switchTab(tab.value)">
         <span class="material-icons-round">{{ tab.icon }}</span>
         {{ tab.label }}
       </button>
+    }
+  </div>
+
+  <div class="filters-card">
+    <div class="filters-row">
+      <app-smart-filter-input
+        inputId="voucher-filter-number"
+        label="رقم السند"
+        title="فلترة حسب رقم السند"
+        placeholder="اكتب رقم السند..."
+        [value]="filterVoucherNumberQuery()"
+        [suggestions]="filterVoucherNumberSuggestions()"
+        (valueChange)="setFilterVoucherNumberQuery($event)"
+        (committed)="onFilterVoucherNumberCommitted($event)"
+      />
+      <app-smart-filter-input
+        inputId="voucher-filter-treasury-type"
+        label="نوع الخزينة"
+        title="فلترة حسب نوع الخزينة"
+        placeholder="الكل / صندوق / بنك / صراف / محفظة"
+        [value]="filterTreasuryTypeQuery()"
+        [suggestions]="filterTreasuryTypeSuggestionLabels()"
+        (valueChange)="setFilterTreasuryTypeQuery($event)"
+        (committed)="onFilterTreasuryTypeCommitted($event)"
+      />
+      <app-smart-filter-input
+        inputId="voucher-filter-treasury"
+        label="الخزينة"
+        title="فلترة حسب الخزينة"
+        placeholder="اكتب اسم الخزينة..."
+        [value]="filterTreasuryQuery()"
+        [suggestions]="filterTreasurySuggestionLabels()"
+        (valueChange)="setFilterTreasuryQuery($event)"
+        (committed)="onFilterTreasuryCommitted($event)"
+      />
+      <app-smart-filter-input
+        inputId="voucher-filter-status-main"
+        label="حالة السند"
+        title="فلترة حسب حالة السند"
+        placeholder="الكل / مسودة / معتمد / ملغي"
+        [value]="filterStatusQuery()"
+        [suggestions]="filterStatusSuggestionLabels()"
+        (valueChange)="setFilterStatusQuery($event)"
+        (committed)="onFilterStatusCommitted($event)"
+      />
+      <div class="filters-actions">
+        <button class="btn-3d btn-primary" (click)="applyFilters()">
+          <span class="material-icons-round">filter_alt</span>
+          تطبيق
+        </button>
+        <button class="btn-3d btn-ghost" (click)="clearFilters()">
+          <span class="material-icons-round">restart_alt</span>
+          مسح
+        </button>
+        <button class="btn-3d btn-ghost" (click)="showAdvancedFilters.set(!showAdvancedFilters())">
+          <span class="material-icons-round">{{ showAdvancedFilters() ? 'expand_less' : 'expand_more' }}</span>
+          متقدم
+        </button>
+      </div>
+    </div>
+    @if (showAdvancedFilters()) {
+      <div class="filters-row advanced">
+        <div class="form-group">
+          <label class="form-label" for="voucher-filter-date-from">من تاريخ</label>
+          <input id="voucher-filter-date-from" class="form-input" type="date" title="من تاريخ" [value]="filterDateFrom()"
+                 (change)="onAdvancedDateFromChange($any($event.target).value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="voucher-filter-date-to">إلى تاريخ</label>
+          <input id="voucher-filter-date-to" class="form-input" type="date" title="إلى تاريخ" [value]="filterDateTo()"
+                 (change)="onAdvancedDateToChange($any($event.target).value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="voucher-filter-status">الحالة</label>
+          <select id="voucher-filter-status" class="form-select" title="الحالة" [value]="filterStatus()"
+                  (change)="onAdvancedStatusChange($any($event.target).value)">
+            <option value="">الكل</option>
+            @for (status of statusOptions; track status.value) {
+              <option [value]="status.value">{{ status.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">أقل مبلغ</label>
+          <input class="form-input" type="number" placeholder="0"
+                 [value]="filterMinAmount()"
+                 (change)="onAdvancedMinAmountChange($any($event.target).value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">أعلى مبلغ</label>
+          <input class="form-input" type="number" placeholder="0"
+                 [value]="filterMaxAmount()"
+                 (change)="onAdvancedMaxAmountChange($any($event.target).value)">
+        </div>
+      </div>
     }
   </div>
 
@@ -102,7 +197,13 @@
     } @else {
       <div class="vouchers-list">
         @for (v of filteredVouchers(); track v.id) {
-          <div class="voucher-row-3d" [style.--v-color]="getTypeColor(v.voucherType)">
+          <div
+            class="voucher-row-3d"
+            [style.--v-color]="getTypeColor(v.voucherType)"
+            role="button"
+            tabindex="0"
+            (click)="openDetails(v)"
+            (keydown)="onVoucherRowKeydown($event, v)">
             <div class="vr-type-indicator"></div>
             <div class="vr-icon">
               <span class="material-icons-round">{{ getTypeIcon(v.voucherType) }}</span>
@@ -124,20 +225,16 @@
                 </span>
                 <span class="vr-number">
                   <span class="material-icons-round">tag</span>
-                  {{ v.voucherNumber }}
+                  {{ v.voucherNumber || '-' }}
                 </span>
-                @if (v.fromAccountId) {
-                  <span class="vr-account">
-                    <span class="material-icons-round">arrow_forward</span>
-                    {{ v.fromAccountName || getAccountName(v.fromAccountId) }}
-                  </span>
-                }
-                @if (v.toAccountId) {
-                  <span class="vr-account">
-                    <span class="material-icons-round">arrow_back</span>
-                    {{ v.toAccountName || getAccountName(v.toAccountId) }}
-                  </span>
-                }
+                <span class="vr-account">
+                  <span class="material-icons-round">account_balance_wallet</span>
+                  {{ getVoucherTreasuryLabel(v) }}
+                </span>
+                <span class="vr-account">
+                  <span class="material-icons-round">compare_arrows</span>
+                  {{ getVoucherCounterpartySummary(v) }}
+                </span>
               </div>
             </div>
             <div class="vr-right">
@@ -148,31 +245,6 @@
                     [style.color]="getTypeColor(v.voucherType)">
                 {{ getTypeLabel(v.voucherType) }}
               </span>
-            </div>
-            <div class="vr-actions">
-              @if (!v.isReversed && !v.reversedByVoucherId) {
-                <button class="icon-btn" style="color:#f59e0b" title="عكس العملية" (click)="openReverse(v.id)">
-                  <span class="material-icons-round">undo</span>
-                </button>
-              }
-              @if (v.isReversed) {
-                <span style="color:#ef4444;font-size:11px;padding:2px 6px;background:#fef2f2;border-radius:4px">معكوس</span>
-              }
-              @if (v.reversedByVoucherId) {
-                <span style="color:#f59e0b;font-size:11px;padding:2px 6px;background:#fffbeb;border-radius:4px">سند عكس</span>
-              }
-              <button class="icon-btn" style="color:#3b82f6" title="المرفقات" (click)="openAttachments(v.id)">
-                <span class="material-icons-round">attach_file</span>
-              </button>
-              <button class="icon-btn" style="color:#6366f1" title="تفاصيل" (click)="openDetails(v)">
-                <span class="material-icons-round">visibility</span>
-              </button>
-              <button class="icon-btn" style="color:#06b6d4" title="طباعة" (click)="printVoucher(v)">
-                <span class="material-icons-round">print</span>
-              </button>
-              <button class="icon-btn delete-btn" (click)="deleteVoucher(v.id)">
-                <span class="material-icons-round">delete</span>
-              </button>
             </div>
           </div>
         }
@@ -219,10 +291,10 @@
           <div class="hiw-section">
             <h3><span class="material-icons-round">tag</span> ترقيم السند</h3>
             <p>
-              رقم السند يُولّد حسب <strong>نوع الخزينة + رقم التصنيف + رقم الخزينة + السنة + تسلسل يبدأ من 1</strong>.
+              رقم السند يُولّد حسب <strong>نوع السند + كود الخزينة + السنة + التسلسل</strong>.
             </p>
             <p dir="ltr" style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
-              QBD/SRF-(FND/BNK/EXC/WLT)-CategoryNo-VaultNo-YYYY-Serial
+              PAY/REC-FND/BNK/EXC/WLT-XX-YYYY-Serial
             </p>
             <p>
               <small>التسلسل يبدأ من <strong>1</strong> لكل خزينة ولكل سنة (وكل عمل منفصل).</small>
@@ -250,8 +322,8 @@
             <span class="material-icons-round">{{ voucherType() === 'receipt' ? 'call_received' : 'call_made' }}</span>
           </div>
           <div>
-            <h2>{{ voucherType() === 'receipt' ? 'سند قبض جديد' : 'سند صرف جديد' }}</h2>
-            <p class="modal-subtitle">{{ voucherType() === 'receipt' ? 'استلام مبلغ من حساب' : 'دفع مبلغ لحساب' }}</p>
+            <h2>{{ isEditing() ? (voucherType() === 'receipt' ? 'تعديل سند قبض' : 'تعديل سند صرف') : (voucherType() === 'receipt' ? 'سند قبض جديد' : 'سند صرف جديد') }}</h2>
+            <p class="modal-subtitle">{{ isEditing() ? 'تعديل بيانات السند الأساسية' : (voucherType() === 'receipt' ? 'استلام مبلغ من حساب' : 'دفع مبلغ لحساب') }}</p>
           </div>
           <button class="modal-close" (click)="showForm.set(false)">
             <span class="material-icons-round">close</span>
@@ -278,33 +350,70 @@
               </div>
               <div class="form-group">
                 <label class="form-label">
-                  {{ voucherType() === 'payment' ? 'الخزينة المصروف منها' : 'الخزينة المستلمة' }}
+                  {{ getTreasuryFieldLabel() }}
                   <span class="required">*</span>
                 </label>
-                <select class="form-select" title="الخزينة" [value]="selectedTreasuryId()"
-                        (change)="setSelectedTreasury(+$any($event.target).value || null)">
-                  <option [value]="null">اختر الخزينة...</option>
-                  @for (item of treasuryOptions(); track item.id) {
-                    <option [value]="item.id">
-                      {{ item.label || item.name }}
-                      @if (item.code) { ({{ item.code }}) }
-                      @else if (item.sequenceNumber) { (#{{ item.sequenceNumber }}) }
-                    </option>
-                  }
-                </select>
+                <div class="treasury-picker">
+                  <div class="treasury-autocomplete">
+                    <input
+                      class="form-input"
+                      type="text"
+                      [placeholder]="getTreasuryFieldPlaceholder()"
+                      title="الخزينة"
+                      autocomplete="off"
+                      [value]="treasurySearchQuery()"
+                      (input)="onTreasuryTyping($any($event.target).value)"
+                      (change)="onTreasuryInputCommit($any($event.target).value)"
+                      (focus)="onTreasuryInputFocus()"
+                      (blur)="onTreasuryInputBlur()"
+                      (keydown)="onTreasuryInputKeydown($event)"
+                    />
+                    @if (showTreasurySuggestions() && filteredTreasuryOptions().length > 0) {
+                      <div class="treasury-suggestions">
+                        @for (item of filteredTreasuryOptions(); track item.id; let i = $index) {
+                          <button
+                            type="button"
+                            class="treasury-suggestion-item"
+                            [class.active]="i === activeTreasurySuggestionIndex()"
+                            (mousedown)="$event.preventDefault()"
+                            (click)="selectTreasurySuggestion(item)"
+                          >
+                            <span class="name">
+                              @let nameParts = getTreasurySuggestionNameParts(item);
+                              {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
+                            </span>
+                            @if (item.code) {
+                              <span class="code">
+                                @let codeParts = getTreasurySuggestionCodeParts(item);
+                                ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
+                              </span>
+                            }
+                          </button>
+                        }
+                      </div>
+                    }
+                    @if (shouldShowTreasurySearchSummary()) {
+                      <small class="treasury-search-summary">{{ getTreasurySearchSummary() }}</small>
+                    }
+                  </div>
+                  <input
+                    class="form-input treasury-number-input"
+                    type="number"
+                    min="1"
+                    placeholder="رقم"
+                    title="فلترة برقم الخزينة"
+                    [value]="treasuryNumberFilter()"
+                    (input)="setTreasuryNumberFilter($any($event.target).value)"
+                    (keydown.enter)="applyTreasuryNumberQuickPick()"
+                  />
+                </div>
               </div>
             </div>
-            <div class="form-row">
+            <div class="form-row single-col">
               <div class="form-group">
                 <label class="form-label">رقم السند</label>
                 <input class="form-input" type="text" title="رقم السند"
                        [value]="previewLoading() ? 'جاري توليد الرقم...' : (voucherNumberPreview() || 'سيظهر بعد اختيار الخزينة')"
-                       readonly>
-              </div>
-              <div class="form-group">
-                <label class="form-label">الخزينة المختارة</label>
-                <input class="form-input" type="text" title="الخزينة المختارة"
-                       [value]="getTreasuryTypeLabel(treasuryType()) + ' - ' + getSelectedTreasuryLabel()"
                        readonly>
               </div>
             </div>
@@ -332,6 +441,19 @@
                 </select>
               </div>
             </div>
+            @if (!isEditing()) {
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">حالة السند</label>
+                  <select class="form-select" title="حالة السند" [value]="form().status || 'draft'"
+                          (change)="setFormField('status', $any($event.target).value)">
+                    <option value="draft">مسودة (افتراضي)</option>
+                    <option value="confirmed">معتمد مباشرة</option>
+                  </select>
+                </div>
+                <div class="form-group"></div>
+              </div>
+            }
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">مبلغ السند <span class="required">*</span></label>
@@ -355,6 +477,7 @@
                      [value]="form().description"
                      (input)="setFormField('description', $any($event.target).value)">
             </div>
+
           </div>
 
           <!-- Step 3: Voucher Lines -->
@@ -364,45 +487,115 @@
               <span>سطور السند</span>
             </div>
             <div class="voucher-lines-list">
-              @for (line of voucherLines(); track $index) {
+              @for (line of voucherLines(); track $index; let lineIndex = $index) {
                 <div class="voucher-line-row">
+                  <div class="line-index-badge" title="رقم السطر">
+                    {{ lineIndex + 1 }}
+                  </div>
                   <div class="form-group">
                     <label class="form-label">نوع الحساب الفرعي</label>
-                    <select class="form-select" title="نوع الحساب الفرعي" [value]="line.accountSubNatureId"
-                            (change)="updateVoucherLine($index, 'accountSubNatureId', +$any($event.target).value || null)">
-                      <option [value]="null">اختر النوع...</option>
-                      @for (nature of counterpartySubNatures(); track nature.id) {
-                        <option [value]="nature.id">{{ nature.name }}</option>
+                    <div class="line-autocomplete">
+                      <input
+                        class="form-input"
+                        type="text"
+                        placeholder="اكتب نوع الحساب..."
+                        title="نوع الحساب الفرعي"
+                        autocomplete="off"
+                        [value]="line.subNatureQuery || ''"
+                        (input)="onLineSubNatureTyping(lineIndex, $any($event.target).value)"
+                        (focus)="onLineSubNatureFocus(lineIndex)"
+                        (blur)="onLineSubNatureBlur(lineIndex)"
+                        (keydown)="onLineSubNatureKeydown(lineIndex, $event)"
+                      />
+                      @if (line.showSubNatureSuggestions && getLineSubNatureOptions(line).length > 0) {
+                        <div class="line-suggestions">
+                          @for (nature of getLineSubNatureOptions(line); track nature.id; let i = $index) {
+                            <button
+                              type="button"
+                              class="line-suggestion-item"
+                              [class.active]="i === (line.activeSubNatureSuggestionIndex || -1)"
+                              (mousedown)="$event.preventDefault()"
+                              (click)="selectLineSubNatureSuggestion(lineIndex, nature)"
+                            >
+                              <span class="name">
+                                @let nameParts = getLineSubNatureNameParts(line, nature);
+                                {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
+                              </span>
+                            </button>
+                          }
+                        </div>
                       }
-                    </select>
+                    </div>
                   </div>
                   <div class="form-group">
                     <label class="form-label">الحساب الفرعي</label>
-                    <select class="form-select" title="الحساب الفرعي" [value]="line.accountId"
-                            (change)="updateVoucherLine($index, 'accountId', +$any($event.target).value || null)">
-                      <option [value]="null">اختر الحساب...</option>
-                      @for (account of getLineAccounts(line); track account.id) {
-                        <option [value]="account.id">
-                          {{ account.name }}
-                          @if (account.code) { ({{ account.code }}) }
-                        </option>
-                      }
-                    </select>
+                    <div class="line-account-picker">
+                      <div class="line-autocomplete">
+                        <input
+                          class="form-input"
+                          type="text"
+                          placeholder="اكتب اسم الحساب..."
+                          title="الحساب الفرعي"
+                          autocomplete="off"
+                          [value]="line.accountQuery || ''"
+                          (input)="onLineAccountTyping(lineIndex, $any($event.target).value)"
+                          (focus)="onLineAccountFocus(lineIndex)"
+                          (blur)="onLineAccountBlur(lineIndex)"
+                          (keydown)="onLineAccountKeydown(lineIndex, $event)"
+                        />
+                        @if (line.showAccountSuggestions && getLineAccountOptions(line).length > 0) {
+                          <div class="line-suggestions">
+                            @for (account of getLineAccountOptions(line); track account.id; let i = $index) {
+                              <button
+                                type="button"
+                                class="line-suggestion-item"
+                                [class.active]="i === (line.activeAccountSuggestionIndex || -1)"
+                                (mousedown)="$event.preventDefault()"
+                                (click)="selectLineAccountSuggestion(lineIndex, account)"
+                              >
+                                <span class="name">
+                                  @let nameParts = getLineAccountNameParts(line, account);
+                                  {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
+                                </span>
+                                @if (account.code) {
+                                  <span class="code">
+                                    @let codeParts = getLineAccountCodeParts(line, account);
+                                    ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
+                                  </span>
+                                }
+                              </button>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <input
+                        class="form-input line-account-number-input"
+                        type="number"
+                        min="1"
+                        placeholder="رقم"
+                        title="رقم الحساب"
+                        [value]="line.accountNumberFilter || ''"
+                        (input)="setLineAccountNumberFilter(lineIndex, $any($event.target).value)"
+                        (keydown)="onVoucherLineFieldKeydown(lineIndex, 'accountNumber', $event)"
+                      />
+                    </div>
                   </div>
-                  <div class="form-group">
+                  <div class="form-group line-amount-group">
                     <label class="form-label">المبلغ</label>
                     <input class="form-input" type="number" placeholder="0"
                            [value]="line.amount"
-                           (input)="updateVoucherLine($index, 'amount', $any($event.target).value)">
+                           (input)="updateVoucherLine(lineIndex, 'amount', $any($event.target).value)"
+                           (keydown)="onVoucherLineFieldKeydown(lineIndex, 'amount', $event)">
                   </div>
-                  <div class="form-group">
+                  <div class="form-group line-notes-group">
                     <label class="form-label">البيان</label>
                     <input class="form-input" type="text" placeholder="بيان السطر"
                            [value]="line.notes"
-                           (input)="updateVoucherLine($index, 'notes', $any($event.target).value)">
+                           (input)="updateVoucherLine(lineIndex, 'notes', $any($event.target).value)"
+                           (keydown)="onVoucherLineFieldKeydown(lineIndex, 'notes', $event)">
                   </div>
                   <div class="line-actions">
-                    <button class="icon-btn delete-btn" type="button" title="حذف السطر" (click)="removeVoucherLine($index)">
+                    <button class="icon-btn delete-btn" type="button" title="حذف السطر" (click)="removeVoucherLine(lineIndex)">
                       <span class="material-icons-round">delete</span>
                     </button>
                   </div>
@@ -428,7 +621,7 @@
                   [class.btn-payment]="voucherType() === 'payment'"
                   [disabled]="saving()" (click)="saveVoucher()">
             <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-            {{ saving() ? 'جاري الحفظ...' : 'حفظ السند' }}
+            {{ saving() ? (isEditing() ? 'جاري التحديث...' : 'جاري الحفظ...') : (isEditing() ? 'تحديث السند' : 'حفظ السند') }}
           </button>
         </div>
       </div>
@@ -470,7 +663,7 @@
   <!-- ===== Voucher Details Modal ===== -->
   @if (showDetailsModal()) {
     <div class="modal-overlay" (click)="closeDetails()">
-      <div class="modal-3d" style="max-width:580px" (click)="$event.stopPropagation()">
+      <div class="modal-3d details-modal" (click)="$event.stopPropagation()">
         <div class="modal-header" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
           <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
             <span class="material-icons-round">receipt_long</span>
@@ -511,6 +704,14 @@
                   <span class="detail-label">الصيغة المختصرة</span>
                   <span class="detail-value" dir="ltr">
                     {{ detailsVoucherNumberParts()?.treasuryCode }}-{{ detailsVoucherNumberParts()?.year }}-{{ detailsVoucherNumberParts()?.serial }}
+                  </span>
+                </div>
+              }
+              @if (!detailsVoucherNumberParts()) {
+                <div class="detail-row">
+                  <span class="detail-label">الخزينة</span>
+                  <span class="detail-value">
+                    {{ getVoucherTreasuryLabel(detailsVoucher()) }}
                   </span>
                 </div>
               }
@@ -555,18 +756,22 @@
                   </span>
                 </span>
               </div>
-              @if (detailsVoucher().fromAccountId) {
+              @if (detailsVoucher().fromAccountId && !isSystemCashAccount(detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId))) {
                 <div class="detail-row">
                   <span class="detail-label">من حساب</span>
                   <span class="detail-value">{{ detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId) }}</span>
                 </div>
               }
-              @if (detailsVoucher().toAccountId) {
+              @if (detailsVoucher().toAccountId && !isSystemCashAccount(detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId))) {
                 <div class="detail-row">
                   <span class="detail-label">إلى حساب</span>
                   <span class="detail-value">{{ detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId) }}</span>
                 </div>
               }
+              <div class="detail-row">
+                <span class="detail-label">الأطراف المقابلة</span>
+                <span class="detail-value">{{ getVoucherCounterpartySummary(detailsVoucher()) }}</span>
+              </div>
               @if (detailsVoucher().reference) {
                 <div class="detail-row">
                   <span class="detail-label">المرجع</span>
@@ -579,70 +784,177 @@
                   <span class="detail-value">{{ getOpTypeName(detailsVoucher().operationTypeId) }}</span>
                 </div>
               }
+
+              @if (getVoucherJournalLines(detailsVoucher()).length > 0) {
+                <div class="journal-lines-block">
+                  <div class="journal-lines-title">سطور القيد المرتبط</div>
+                  <div class="journal-lines-table">
+                    <div class="jl-head">الحساب</div>
+                    <div class="jl-head">الطرف</div>
+                    <div class="jl-head">المبلغ</div>
+                    @for (line of getVoucherJournalLines(detailsVoucher()); track $index) {
+                      <div class="jl-cell">{{ line.accountName || '-' }}</div>
+                      <div class="jl-cell">{{ line.lineType === 'debit' ? 'مدين' : (line.lineType === 'credit' ? 'دائن' : line.lineType) }}</div>
+                      <div class="jl-cell amount">{{ formatAmount(line.amount) }}</div>
+                    }
+                  </div>
+                </div>
+              }
             </div>
           }
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="closeDetails()">إغلاق</button>
+        <div class="modal-footer details-footer">
           @if (detailsVoucher()) {
+            <div class="details-status-switch">
+              <span class="details-status-label">حالة السند</span>
+              <select
+                class="details-status-select"
+                title="تغيير حالة السند"
+                [value]="detailsVoucher().status || 'draft'"
+                [disabled]="saving() || detailsVoucher().status === 'cancelled'"
+                (change)="onDetailsStatusSelection($any($event.target).value)"
+              >
+                <option value="draft">مسودة</option>
+                <option value="confirmed">معتمد</option>
+                <option value="cancelled">ملغي</option>
+              </select>
+            </div>
+            <button class="btn-3d" style="background:#6366f1;color:white" (click)="openEditFromDetails()">
+              <span class="material-icons-round">edit</span>
+              تعديل
+            </button>
+            @if (!detailsVoucher().isReversed && !detailsVoucher().reversedByVoucherId) {
+              <button class="btn-3d" style="background:#f59e0b;color:white" (click)="openReverseFromDetails()">
+                <span class="material-icons-round">undo</span>
+                عكس
+              </button>
+            }
+            <button class="btn-3d" style="background:#3b82f6;color:white" (click)="openAttachmentsFromDetails()">
+              <span class="material-icons-round">attach_file</span>
+              المرفقات
+            </button>
             <button class="btn-3d" style="background:#06b6d4;color:white" (click)="printVoucher(detailsVoucher())">
               <span class="material-icons-round">print</span>
               طباعة
             </button>
+            <button class="btn-3d" style="background:#ef4444;color:white" (click)="deleteDetailsVoucher()">
+              <span class="material-icons-round">delete</span>
+              حذف
+            </button>
           }
+          <button class="btn-3d btn-ghost" (click)="closeDetails()">إغلاق</button>
         </div>
       </div>
     </div>
   }
 
-  <!-- ===== Print Area (Hidden) ===== -->
-  @if (printingVoucher()) {
-    <div id="voucher-print-area" style="display:none">
-      <div class="print-header">
-        <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
-        <h3>{{ getTypeLabel(printingVoucher().voucherType) }}</h3>
-        @if (printingVoucher().fullSequenceNumber) {
-          <p style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:1px">الرقم التسلسلي: {{ printingVoucher().fullSequenceNumber }}</p>
-        }
-        <p>رقم السند: {{ printingVoucher().voucherNumber || '-' }}</p>
-      </div>
-      <div class="print-row">
-        <span class="print-label">التاريخ:</span>
-        <span>{{ formatDate(printingVoucher().voucherDate || printingVoucher().createdAt) }}</span>
-      </div>
-      <div class="print-row">
-        <span class="print-label">الحالة:</span>
-        <span>{{ getStatusLabel(printingVoucher().status) }}</span>
-      </div>
-      @if (printingVoucher().fromAccountId) {
-        <div class="print-row">
-          <span class="print-label">من حساب:</span>
-          <span>{{ printingVoucher().fromAccountName || getAccountName(printingVoucher().fromAccountId) }}</span>
+  <!-- ===== Print Report Preview (No Popups) ===== -->
+  @if (showPrintReport() && printingVoucher()) {
+    <div class="modal-overlay print-preview-overlay" (click)="closePrintReport()">
+      <div class="modal-3d print-preview-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header" style="background:linear-gradient(135deg,#0f172a,#1e293b)">
+          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
+            <span class="material-icons-round">description</span>
+          </div>
+          <h2 style="color:white">تقرير {{ getVoucherDocumentTitle(printingVoucher()) }}</h2>
+          <button class="modal-close" (click)="closePrintReport()">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-      }
-      @if (printingVoucher().toAccountId) {
-        <div class="print-row">
-          <span class="print-label">إلى حساب:</span>
-          <span>{{ printingVoucher().toAccountName || getAccountName(printingVoucher().toAccountId) }}</span>
+        <div class="modal-body">
+          <div id="voucher-print-area" class="print-report-card">
+            <div class="print-header gradient">
+              <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
+              <h3 class="document-title">{{ getVoucherDocumentTitle(printingVoucher()) }}</h3>
+              @if (printingVoucher().fullSequenceNumber) {
+                <p style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:1px">الرقم التسلسلي: {{ printingVoucher().fullSequenceNumber }}</p>
+              }
+              <p>رقم السند: {{ printingVoucher().voucherNumber || '-' }}</p>
+            </div>
+            <div class="print-badges">
+              <span class="print-badge document">{{ getVoucherDirectionLabel(printingVoucher()) }}</span>
+              <span class="print-badge treasury">الخزينة: {{ getVoucherTreasuryLabel(printingVoucher()) }}</span>
+              <span class="print-badge counterpart">الأطراف: {{ getVoucherCounterpartySummary(printingVoucher()) }}</span>
+              <span class="print-badge status">{{ getStatusLabel(printingVoucher().status) }}</span>
+            </div>
+            <div class="print-row">
+              <span class="print-label">نوع المستند:</span>
+              <span>{{ getVoucherDocumentTitle(printingVoucher()) }}</span>
+            </div>
+            <div class="print-row">
+              <span class="print-label">التاريخ:</span>
+              <span>{{ formatDate(printingVoucher().voucherDate || printingVoucher().createdAt) }}</span>
+            </div>
+            <div class="print-row">
+              <span class="print-label">الحالة:</span>
+              <span>{{ getStatusLabel(printingVoucher().status) }}</span>
+            </div>
+            <div class="print-row">
+              <span class="print-label">الخزينة:</span>
+              <span>{{ getVoucherTreasuryLabel(printingVoucher()) }}</span>
+            </div>
+            @if (printingVoucher().fromAccountId && !isSystemCashAccount(printingVoucher().fromAccountName || getAccountName(printingVoucher().fromAccountId))) {
+              <div class="print-row">
+                <span class="print-label">من حساب:</span>
+                <span>{{ printingVoucher().fromAccountName || getAccountName(printingVoucher().fromAccountId) }}</span>
+              </div>
+            }
+            @if (printingVoucher().toAccountId && !isSystemCashAccount(printingVoucher().toAccountName || getAccountName(printingVoucher().toAccountId))) {
+              <div class="print-row">
+                <span class="print-label">إلى حساب:</span>
+                <span>{{ printingVoucher().toAccountName || getAccountName(printingVoucher().toAccountId) }}</span>
+              </div>
+            }
+            <div class="print-amount">
+              {{ formatAmount(printingVoucher().amount) }} ر.ي
+            </div>
+            <div class="print-row">
+              <span class="print-label">البيان:</span>
+              <span>{{ printingVoucher().description || '-' }}</span>
+            </div>
+            @if (printingVoucher().reference) {
+              <div class="print-row">
+                <span class="print-label">المرجع:</span>
+                <span>{{ printingVoucher().reference }}</span>
+              </div>
+            }
+            @if (getVoucherJournalLines(printingVoucher()).length > 0) {
+              <div class="print-lines-block">
+                <div class="print-lines-title">سطور الحركة</div>
+                <table class="print-lines-table">
+                  <thead>
+                    <tr>
+                      <th>الحساب</th>
+                      <th>الطرف</th>
+                      <th>المبلغ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of getVoucherJournalLines(printingVoucher()); track $index) {
+                      <tr>
+                        <td>{{ line.accountName || '-' }}</td>
+                        <td>{{ line.lineType === 'debit' ? 'مدين' : (line.lineType === 'credit' ? 'دائن' : line.lineType) }}</td>
+                        <td>{{ formatAmount(line.amount) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+            <div class="print-footer">
+              <div class="print-sig">المحاسب</div>
+              <div class="print-sig">المدير</div>
+              <div class="print-sig">المستلم</div>
+            </div>
+          </div>
         </div>
-      }
-      <div class="print-amount">
-        {{ formatAmount(printingVoucher().amount) }} ر.ي
-      </div>
-      <div class="print-row">
-        <span class="print-label">البيان:</span>
-        <span>{{ printingVoucher().description || '-' }}</span>
-      </div>
-      @if (printingVoucher().reference) {
-        <div class="print-row">
-          <span class="print-label">المرجع:</span>
-          <span>{{ printingVoucher().reference }}</span>
+        <div class="modal-footer">
+          <button class="btn-3d btn-ghost" (click)="closePrintReport()">إغلاق</button>
+          <button class="btn-3d" style="background:#06b6d4;color:white" (click)="printCurrentReport()">
+            <span class="material-icons-round">print</span>
+            طباعة
+          </button>
         </div>
-      }
-      <div class="print-footer">
-        <div class="print-sig">المحاسب</div>
-        <div class="print-sig">المدير</div>
-        <div class="print-sig">المستلم</div>
       </div>
     </div>
   }
@@ -685,7 +997,15 @@
             <h4 style="font-size:14px;margin-bottom:8px">إضافة مرفق</h4>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <input class="form-input" type="text" placeholder="اسم الملف" [value]="attachmentForm().fileName" (input)="attachmentForm.update(f => ({...f, fileName: $any($event.target).value}))">
-              <input class="form-input" type="text" placeholder="مسار الملف" [value]="attachmentForm().filePath" (input)="attachmentForm.update(f => ({...f, filePath: $any($event.target).value}))">
+              <input class="form-input" type="text" placeholder="مسار الملف (اختياري - يولد تلقائياً)" [value]="attachmentForm().filePath" (input)="attachmentForm.update(f => ({...f, filePath: $any($event.target).value}))">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+              <select class="form-select" [value]="attachmentForm().importance || 'عادي'" title="درجة الأهمية" (change)="attachmentForm.update(f => ({...f, importance: $any($event.target).value}))">
+                <option value="عاجل">عاجل</option>
+                <option value="مهم">مهم</option>
+                <option value="عادي">عادي</option>
+              </select>
+              <div></div>
             </div>
             <input class="form-input" style="margin-top:8px" type="text" placeholder="وصف (اختياري)" [value]="attachmentForm().description" (input)="attachmentForm.update(f => ({...f, description: $any($event.target).value}))">
             <button class="btn-3d" style="margin-top:8px;background:#3b82f6;color:white;width:100%" (click)="addAttachment()">

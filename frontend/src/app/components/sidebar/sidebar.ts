@@ -1,8 +1,9 @@
-import { Component, signal, inject, effect } from '@angular/core';
+import { Component, signal, inject, effect, computed, HostListener } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { BusinessService, BusinessType } from '../../services/business.service';
+import { getSearchHighlightParts, matchesSearchQuery, normalizeSearchText } from '../../shared/helpers';
 
 interface MenuItem {
   icon: string;
@@ -71,6 +72,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     title: '4. العمليات المالية',
     items: [
       { icon: 'receipt_long', label: 'سندات الصرف والقبض', path: 'vouchers', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'folder_open', label: 'الأرشفة الإلكترونية', path: 'attachments-archive', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'menu_book', label: 'القيود المحاسبية', path: 'journal', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'label', label: 'تصنيفات القيود', path: 'journal-categories', showFor: ['stations', 'single_station', 'personal'] },
     ],
@@ -162,6 +164,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
   }
 })
 export class SidebarComponent {
+  private readonly sidebarSearchInputId = 'sidebar-search-input';
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
@@ -171,8 +174,37 @@ export class SidebarComponent {
   expandedItems = signal<Set<string>>(new Set());
   menuSections = signal<MenuSection[]>([]);
   isLoading = signal(false);
+  sidebarSearchQuery = signal('');
 
   user = this.auth.user;
+
+  filteredMenuSections = computed(() => {
+    const query = normalizeSearchText(this.sidebarSearchQuery());
+    const sections = this.menuSections();
+    if (!query) return sections;
+
+    return sections
+      .map((section) => {
+        const sectionMatch = normalizeSearchText(section.title).includes(query);
+        if (sectionMatch) return section;
+
+        const items = (section.items || [])
+          .map((item) => {
+            const itemMatch = this.isMenuItemMatch(item, query);
+            if (itemMatch) return item;
+
+            if (!item.children?.length) return null;
+            const matchedChildren = item.children.filter((child) => this.isMenuItemMatch(child, query));
+            return matchedChildren.length ? { ...item, children: matchedChildren } : null;
+          })
+          .filter((item): item is MenuItem => item !== null);
+
+        return items.length ? { ...section, items } : null;
+      })
+      .filter((section): section is MenuSection => section !== null);
+  });
+
+  hasSidebarSearchResults = computed(() => this.filteredMenuSections().length > 0);
 
   constructor() {
     effect(() => {
@@ -259,7 +291,7 @@ export class SidebarComponent {
         });
       }
 
-      this.menuSections.set(sections);
+      this.menuSections.set(this.appendArchiveMenuItem(sections, bizId));
     } catch (err: unknown) {
       console.error('Error loading sidebar config:', err);
       this.buildFallbackMenu(bizId, type);
@@ -369,6 +401,7 @@ export class SidebarComponent {
       ]},
       { title: '4. العمليات المالية', items: [
         { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
+        { icon: 'folder_open', label: 'الأرشفة الإلكترونية', route: `${b}/attachments-archive` },
         { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
         { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
       ]},
@@ -430,6 +463,7 @@ export class SidebarComponent {
       ]},
       { title: '4. العمليات المالية', items: [
         { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
+        { icon: 'folder_open', label: 'الأرشفة الإلكترونية', route: `${b}/attachments-archive` },
         { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
         { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
       ]},
@@ -482,6 +516,7 @@ export class SidebarComponent {
       ]},
       { title: '4. العمليات المالية', items: [
         { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
+        { icon: 'folder_open', label: 'الأرشفة الإلكترونية', route: `${b}/attachments-archive` },
         { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
         { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
       ]},
@@ -529,6 +564,26 @@ export class SidebarComponent {
 
   toggleCollapse() {
     this.isCollapsed.set(!this.isCollapsed());
+  }
+
+  setSidebarSearchQuery(value: string) {
+    this.sidebarSearchQuery.set(String(value || ''));
+  }
+
+  clearSidebarSearch() {
+    this.sidebarSearchQuery.set('');
+  }
+
+  onSidebarSearchKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Escape') return;
+    if (this.sidebarSearchQuery().trim()) {
+      event.preventDefault();
+      this.clearSidebarSearch();
+    }
+  }
+
+  getSidebarHighlightParts(text: string): { before: string; match: string; after: string } {
+    return getSearchHighlightParts(text, this.sidebarSearchQuery());
   }
 
   toggleItem(label: string) {
@@ -612,5 +667,61 @@ export class SidebarComponent {
   logout() {
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeydown(event: KeyboardEvent) {
+    if (event.key !== '/') return;
+    if (this.isCollapsed()) return;
+
+    const target = event.target as HTMLElement | null;
+    const tag = String(target?.tagName || '').toLowerCase();
+    const isTypingContext = tag === 'input' || tag === 'textarea' || target?.isContentEditable;
+    if (isTypingContext) return;
+
+    event.preventDefault();
+    this.focusSidebarSearchInput();
+  }
+
+  private isMenuItemMatch(item: MenuItem, query: string): boolean {
+    return matchesSearchQuery(query, item?.label, item?.route);
+  }
+
+  private focusSidebarSearchInput() {
+    const input = globalThis.document?.getElementById(this.sidebarSearchInputId) as HTMLInputElement | null;
+    if (!input) return;
+    input.focus();
+    input.select();
+  }
+
+  private appendArchiveMenuItem(sections: MenuSection[], bizId: number): MenuSection[] {
+    const archiveRoute = `/biz/${bizId}/attachments-archive`;
+    const alreadyExists = sections.some((section) => (section.items || []).some((item) => item.route === archiveRoute));
+    if (alreadyExists) return sections;
+
+    const archiveItem: MenuItem = {
+      icon: 'folder_open',
+      label: 'الأرشفة الإلكترونية',
+      route: archiveRoute,
+      screenKey: 'attachments_archive',
+    };
+
+    const targetSection = sections.find((section) => (section.items || []).some((item) => item.route?.includes('/vouchers')));
+    if (targetSection) {
+      return sections.map((section) => (
+        section === targetSection
+          ? { ...section, items: [...section.items, archiveItem] }
+          : section
+      ));
+    }
+
+    if (sections.length === 0) {
+      return [{ title: 'الأرشفة', items: [archiveItem] }];
+    }
+
+    const cloned = [...sections];
+    const last = cloned[cloned.length - 1];
+    cloned[cloned.length - 1] = { ...last, items: [...(last.items || []), archiveItem] };
+    return cloned;
   }
 }

@@ -125,9 +125,13 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
   const search = c.req.query('search');
+  const voucherNumber = c.req.query('voucherNumber');
   const minAmount = c.req.query('minAmount');
   const maxAmount = c.req.query('maxAmount');
   const operationTypeId = c.req.query('operationTypeId');
+  const treasuryType = c.req.query('treasuryType');
+  const treasuryIdRaw = c.req.query('treasuryId');
+  const treasuryId = treasuryIdRaw ? Number.parseInt(treasuryIdRaw, 10) : null;
   const limit = parseInt(c.req.query('limit') || '20');
   const offset = parseInt(c.req.query('offset') || '0');
   const sortBy = c.req.query('sortBy') || 'created_at';
@@ -139,9 +143,52 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
   if (dateFrom) conditions = sql`${conditions} AND v.voucher_date >= ${dateFrom}::date`;
   if (dateTo) conditions = sql`${conditions} AND v.voucher_date <= ${dateTo}::date`;
   if (search) conditions = sql`${conditions} AND (v.description ILIKE ${'%' + search + '%'} OR v.voucher_number ILIKE ${'%' + search + '%'} OR v.reference ILIKE ${'%' + search + '%'})`;
+  if (voucherNumber) conditions = sql`${conditions} AND v.voucher_number ILIKE ${'%' + voucherNumber + '%'}`;
   if (minAmount) conditions = sql`${conditions} AND CAST(v.amount AS NUMERIC) >= ${parseFloat(minAmount)}`;
   if (maxAmount) conditions = sql`${conditions} AND CAST(v.amount AS NUMERIC) <= ${parseFloat(maxAmount)}`;
   if (operationTypeId) conditions = sql`${conditions} AND v.operation_type_id = ${parseInt(operationTypeId)}`;
+  if (treasuryType === 'fund') {
+    conditions = sql`${conditions} AND (v.from_fund_id IS NOT NULL OR v.to_fund_id IS NOT NULL)`;
+  } else if (treasuryType && ['bank', 'exchange', 'e_wallet'].includes(treasuryType)) {
+    conditions = sql`${conditions} AND (
+      v.from_account_id IN (
+        SELECT a.id FROM accounts a WHERE a.business_id = ${bizId} AND a.account_type = ${treasuryType}
+      )
+      OR v.to_account_id IN (
+        SELECT a.id FROM accounts a WHERE a.business_id = ${bizId} AND a.account_type = ${treasuryType}
+      )
+    )`;
+  }
+  if (Number.isInteger(treasuryId) && (treasuryId as number) > 0) {
+    if (treasuryType === 'fund') {
+      conditions = sql`${conditions} AND (v.from_fund_id = ${treasuryId} OR v.to_fund_id = ${treasuryId})`;
+    } else if (treasuryType && ['bank', 'exchange', 'e_wallet'].includes(treasuryType)) {
+      conditions = sql`${conditions} AND (v.from_account_id = ${treasuryId} OR v.to_account_id = ${treasuryId})`;
+    } else {
+      conditions = sql`${conditions} AND (
+        v.from_fund_id = ${treasuryId}
+        OR v.to_fund_id = ${treasuryId}
+        OR v.from_account_id = ${treasuryId}
+        OR v.to_account_id = ${treasuryId}
+      )`;
+    }
+  }
+
+  // ترتيب آمن (whitelist) لمنع حقن SQL عبر sortBy/sortDir
+  const normalizedSortDir = String(sortDir).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  let orderBySql = sql`v.created_at DESC`;
+  if (sortBy === 'voucher_date') {
+    orderBySql = normalizedSortDir === 'asc' ? sql`v.voucher_date ASC, v.id ASC` : sql`v.voucher_date DESC, v.id DESC`;
+  } else if (sortBy === 'voucher_number') {
+    orderBySql = normalizedSortDir === 'asc' ? sql`v.voucher_number ASC, v.id ASC` : sql`v.voucher_number DESC, v.id DESC`;
+  } else if (sortBy === 'amount') {
+    orderBySql =
+      normalizedSortDir === 'asc'
+        ? sql`CAST(v.amount AS NUMERIC) ASC, v.id ASC`
+        : sql`CAST(v.amount AS NUMERIC) DESC, v.id DESC`;
+  } else {
+    orderBySql = normalizedSortDir === 'asc' ? sql`v.created_at ASC, v.id ASC` : sql`v.created_at DESC, v.id DESC`;
+  }
 
   // جلب البيانات مع الحسابات وأنواع العمليات
   const rows = await db.execute(sql`
@@ -149,16 +196,20 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
       ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category_id as operation_category,
       fa.name as from_account_name, fa.account_type as from_account_type,
       ta.name as to_account_name, ta.account_type as to_account_type,
+      ff.name as from_fund_name, ff.code as from_fund_code,
+      tf.name as to_fund_name, tf.code as to_fund_code,
       c.code as currency_code, c.symbol as currency_symbol,
       u.full_name as created_by_name
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     LEFT JOIN accounts fa ON fa.id = v.from_account_id
     LEFT JOIN accounts ta ON ta.id = v.to_account_id
+    LEFT JOIN funds ff ON ff.id = v.from_fund_id
+    LEFT JOIN funds tf ON tf.id = v.to_fund_id
     LEFT JOIN currencies c ON c.id = v.currency_id
     LEFT JOIN users u ON u.id = v.created_by
     WHERE ${conditions}
-    ORDER BY v.created_at DESC
+    ORDER BY ${orderBySql}
     LIMIT ${limit} OFFSET ${offset}
   `);
 
@@ -284,27 +335,129 @@ enhancements.post(
       description: baseDesc || null,
     });
 
+    const requestedStatus = String(data.status || 'draft').toLowerCase() === 'confirmed' ? 'confirmed' : 'draft';
+
     try {
-      const result = await postMultiTransaction(bizId, userId, {
-        voucherType: vType,
-        currencyId,
-        lines,
-        operationTypeId: data.operationTypeId,
-        operationTypeName: opType?.name || null,
-        description: baseDesc || opType?.name || '',
-        reference: data.reference || null,
-        voucherDate,
-        stationId: data.stationId || null,
-        employeeId: data.employeeId || null,
-        supplierId: data.supplierId || null,
-        // ربط الخزينة بالصندوق/الحساب حسب نوع السند
-        toFundId: vType === 'receipt' ? treasuryFundId : null,
-        fromFundId: vType === 'payment' ? treasuryFundId : null,
-        fromAccountId: vType === 'payment' ? treasuryAccountId : null,
-        toAccountId: vType === 'receipt' ? treasuryAccountId : null,
+      if (requestedStatus === 'confirmed') {
+        const result = await postMultiTransaction(bizId, userId, {
+          voucherType: vType,
+          currencyId,
+          lines,
+          operationTypeId: data.operationTypeId,
+          operationTypeName: opType?.name || null,
+          description: baseDesc || opType?.name || '',
+          reference: data.reference || null,
+          voucherDate,
+          stationId: data.stationId || null,
+          employeeId: data.employeeId || null,
+          supplierId: data.supplierId || null,
+          // ربط الخزينة بالصندوق/الحساب حسب نوع السند
+          toFundId: vType === 'receipt' ? treasuryFundId : null,
+          fromFundId: vType === 'payment' ? treasuryFundId : null,
+          fromAccountId: vType === 'payment' ? treasuryAccountId : null,
+          toAccountId: vType === 'receipt' ? treasuryAccountId : null,
+        });
+        try { wsService.notifyNewVoucher(bizId, result.voucher); } catch { /* optional */ }
+        return c.json(result.voucher, 201);
+      }
+
+      const seqYear = (voucherDate || new Date()).getFullYear();
+      const treasury = await resolveVoucherTreasuryInfo(
+        bizId,
+        vType,
+        vType === 'payment' ? treasuryFundId : null,
+        vType === 'receipt' ? treasuryFundId : null,
+        vType === 'payment' ? treasuryAccountId : null,
+        vType === 'receipt' ? treasuryAccountId : null,
+      );
+
+      let voucherNumber = '';
+      let accountSequence: string | null = null;
+      if (treasury) {
+        const seqVal = await getNextSequence(
+          bizId,
+          `treasury_${treasury.kind}_${vType}`,
+          treasury.treasuryId,
+          seqYear,
+        );
+        const voucherPrefix = TYPE_PREFIXES[vType] || 'VCH';
+        voucherNumber = `${voucherPrefix}-${treasury.treasuryCode}-${seqYear}-${seqVal}`;
+        accountSequence = `${treasury.treasuryCode}-${seqYear}-${seqVal}`;
+      } else {
+        const seqVal = await getNextSequence(bizId, `voucher_${vType}_fallback`, 0, seqYear);
+        const voucherPrefix = TYPE_PREFIXES[vType] || 'VCH';
+        voucherNumber = `${voucherPrefix}-${seqYear}-${String(seqVal).padStart(5, '0')}`;
+      }
+
+      const createdVoucher = await db.transaction(async (tx) => {
+        const [created] = await tx.insert(vouchers).values({
+          businessId: bizId,
+          voucherNumber,
+          voucherType: vType,
+          status: 'draft',
+          amount: String(total),
+          currencyId,
+          fromAccountId: vType === 'payment' ? treasuryAccountId : null,
+          toAccountId: vType === 'receipt' ? treasuryAccountId : null,
+          fromFundId: vType === 'payment' ? treasuryFundId : null,
+          toFundId: vType === 'receipt' ? treasuryFundId : null,
+          stationId: data.stationId || null,
+          employeeId: data.employeeId || null,
+          supplierId: data.supplierId || null,
+          operationTypeId: data.operationTypeId || null,
+          description: baseDesc || opType?.name || '',
+          reference: data.reference || null,
+          voucherDate: voucherDate || new Date(),
+          createdBy: userId,
+          hasMultipleLines: true,
+          accountSequence,
+          fullSequenceNumber: voucherNumber,
+        }).returning();
+
+        const entryDate = created.voucherDate
+          ? new Date(created.voucherDate).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0];
+
+        const [entry] = await tx.insert(journalEntries).values({
+          businessId: bizId,
+          entryNumber: `JE-${created.voucherNumber}`,
+          entryDate,
+          description: baseDesc || opType?.name || '',
+          reference: created.voucherNumber,
+          operationTypeId: data.operationTypeId || null,
+          totalDebit: String(total),
+          totalCredit: String(total),
+          isBalanced: true,
+          createdBy: userId,
+        }).returning({ id: journalEntries.id });
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          await tx.insert(journalEntryLines).values({
+            journalEntryId: entry.id,
+            accountId: line.accountId,
+            lineType: line.lineType,
+            amount: String(line.amount),
+            description: line.description,
+            sortOrder: i,
+          });
+        }
+
+        await tx.insert(auditLog).values({
+          userId,
+          businessId: bizId,
+          action: 'create_voucher_draft',
+          tableName: 'vouchers',
+          recordId: created.id,
+          oldData: null,
+          newData: { status: 'draft', voucherType: vType, linesCount: lines.length },
+        });
+
+        return created;
       });
-      try { wsService.notifyNewVoucher(bizId, result.voucher); } catch { /* optional */ }
-      return c.json(result.voucher, 201);
+
+      try { wsService.notifyNewVoucher(bizId, createdVoucher); } catch { /* optional */ }
+      return c.json(createdVoucher, 201);
     } catch (err: unknown) {
       return c.json({ error: toErrorMessage(err) || 'فشل في تنفيذ المعاملة' }, 400);
     }
@@ -360,27 +513,296 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
 
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
   if (!existing) return c.json({ error: 'السند غير موجود' }, 404);
-  if (existing.status === 'confirmed') return c.json({ error: 'لا يمكن تعديل سند معتمد. يمكنك عكسه فقط.' }, 400);
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تعديل سند ملغي' }, 400);
 
-  const body = await getBody(c);
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.description !== undefined) updateData.description = body.description;
-  if (body.reference !== undefined) updateData.reference = body.reference;
-  if (body.amount !== undefined) updateData.amount = String(body.amount);
-  if (body.voucherDate !== undefined) updateData.voucherDate = new Date(body.voucherDate);
+  const body = normalizeBody(await c.req.json());
+  const parseOptionalId = (value: unknown): number | null => {
+    const n = Number.parseInt(String(value ?? ''), 10);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  };
+  const parseOptionalAmount = (value: unknown): number | null => {
+    const n = Number.parseFloat(String(value ?? ''));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const addMapDelta = (map: Map<number, number>, idValue: number | null | undefined, amount: number) => {
+    if (!idValue || !Number.isFinite(amount) || Math.abs(amount) < 0.000001) return;
+    map.set(idValue, (map.get(idValue) || 0) + amount);
+  };
 
-  const [updated] = await db.update(vouchers).set(updateData).where(eq(vouchers.id, id)).returning();
+  const wantsStructuralUpdate =
+    Array.isArray(body.entries) ||
+    body.voucherType !== undefined ||
+    body.fromFundId !== undefined ||
+    body.toFundId !== undefined ||
+    body.fromAccountId !== undefined ||
+    body.toAccountId !== undefined;
 
-  // سجل التدقيق
-  await db.insert(auditLog).values({
-    userId, businessId: bizId, action: 'update_voucher',
-    tableName: 'vouchers', recordId: id,
-    oldData: { description: existing.description, amount: existing.amount },
-    newData: updateData,
+  // تحديث بسيط (بيانات الرأس فقط)
+  if (!wantsStructuralUpdate) {
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.reference !== undefined) updateData.reference = body.reference;
+    if (body.amount !== undefined) updateData.amount = String(body.amount);
+    if (body.voucherDate !== undefined) updateData.voucherDate = new Date(body.voucherDate);
+    if (body.currencyId !== undefined) updateData.currencyId = parseOptionalId(body.currencyId) || existing.currencyId;
+
+    const [updated] = await db.update(vouchers).set(updateData).where(eq(vouchers.id, id)).returning();
+    await db.insert(auditLog).values({
+      userId, businessId: bizId, action: 'update_voucher',
+      tableName: 'vouchers', recordId: id,
+      oldData: { description: existing.description, amount: existing.amount },
+      newData: updateData,
+    });
+    return c.json(updated);
+  }
+
+  const voucherType = String(body.voucherType || existing.voucherType || '').toLowerCase();
+  if (voucherType !== 'receipt' && voucherType !== 'payment') {
+    return c.json({ error: 'نوع السند غير مدعوم للتعديل الهيكلي' }, 400);
+  }
+
+  const baseDescription = String(body.description ?? existing.description ?? '').trim();
+  const reference = body.reference !== undefined ? (String(body.reference || '').trim() || null) : (existing.reference ?? null);
+  const voucherDate = body.voucherDate ? new Date(String(body.voucherDate)) : new Date(existing.voucherDate || new Date());
+  if (Number.isNaN(voucherDate.getTime())) return c.json({ error: 'تاريخ السند غير صالح' }, 400);
+  const currencyId = parseOptionalId(body.currencyId) || existing.currencyId || 1;
+
+  const providedEntries = Array.isArray(body.entries) ? body.entries : [];
+  const counterpartEntries = providedEntries
+    .map((entry: any) => ({
+      accountId: parseOptionalId(entry?.accountId ?? entry?.toAccountId),
+      amount: parseOptionalAmount(entry?.amount),
+      notes: String(entry?.notes || '').trim() || null,
+    }))
+    .filter((entry: any) => Number.isInteger(entry.accountId) && Number.isFinite(entry.amount) && entry.amount > 0);
+  if (counterpartEntries.length === 0) {
+    return c.json({ error: 'أدخل سطراً واحداً على الأقل في بنود السند' }, 400);
+  }
+  const totalAmount = counterpartEntries.reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    return c.json({ error: 'مجموع البنود غير صالح' }, 400);
+  }
+  const requestedAmount = parseOptionalAmount(body.amount);
+  if (requestedAmount && Math.abs(requestedAmount - totalAmount) > 0.001) {
+    return c.json({ error: 'مجموع البنود يجب أن يساوي مبلغ السند' }, 400);
+  }
+
+  const fundTreasuryId = voucherType === 'payment'
+    ? parseOptionalId(body.fromFundId) ?? (existing.fromFundId ?? null)
+    : parseOptionalId(body.toFundId) ?? (existing.toFundId ?? null);
+  let accountTreasuryId = voucherType === 'payment'
+    ? parseOptionalId(body.fromAccountId) ?? (existing.fromAccountId ?? null)
+    : parseOptionalId(body.toAccountId) ?? (existing.toAccountId ?? null);
+
+  const [systemFundAccount] = fundTreasuryId && !accountTreasuryId
+    ? await db.select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.accountType, 'fund'), eq(accounts.notes, 'system_cash_treasury')))
+      .limit(1)
+    : [null];
+  if (fundTreasuryId && !accountTreasuryId) {
+    if (systemFundAccount?.id) {
+      accountTreasuryId = systemFundAccount.id;
+    } else {
+      const [createdSystemAccount] = await db.insert(accounts).values({
+        businessId: bizId,
+        name: 'حساب الصناديق (آلي)',
+        accountType: 'fund',
+        canCreateVoucher: false,
+        canApproveVoucher: false,
+        isLeafAccount: true,
+        notes: 'system_cash_treasury',
+      }).returning({ id: accounts.id });
+      accountTreasuryId = createdSystemAccount?.id ?? null;
+    }
+  }
+  if (!accountTreasuryId) {
+    return c.json({ error: 'الخزينة مطلوبة للتعديل' }, 400);
+  }
+
+  const accountIdsToValidate = Array.from(new Set<number>([
+    accountTreasuryId,
+    ...counterpartEntries.map((entry: any) => entry.accountId),
+  ]));
+  const validAccounts = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.businessId, bizId), inArray(accounts.id, accountIdsToValidate)));
+  if (validAccounts.length !== accountIdsToValidate.length) {
+    return c.json({ error: 'أحد الحسابات المختارة لا ينتمي لنفس العمل' }, 400);
+  }
+  if (fundTreasuryId) {
+    const [fundRow] = await db
+      .select({ id: funds.id })
+      .from(funds)
+      .where(and(eq(funds.businessId, bizId), eq(funds.id, fundTreasuryId)))
+      .limit(1);
+    if (!fundRow) return c.json({ error: 'الخزينة المختارة غير صالحة' }, 400);
+  }
+
+  const counterpartLineType: 'debit' | 'credit' = voucherType === 'payment' ? 'debit' : 'credit';
+  const treasuryLineType: 'debit' | 'credit' = voucherType === 'payment' ? 'credit' : 'debit';
+  const newLines = [
+    ...counterpartEntries.map((entry: any, index: number) => ({
+      accountId: entry.accountId as number,
+      lineType: counterpartLineType,
+      amount: Number(entry.amount),
+      description: [baseDescription, entry.notes].filter(Boolean).join(' - ') || null,
+      sortOrder: index,
+    })),
+    {
+      accountId: accountTreasuryId,
+      lineType: treasuryLineType,
+      amount: totalAmount,
+      description: baseDescription || null,
+      sortOrder: counterpartEntries.length,
+    },
+  ];
+
+  const [existingEntry] = await db
+    .select({ id: journalEntries.id })
+    .from(journalEntries)
+    .where(and(eq(journalEntries.businessId, bizId), eq(journalEntries.reference, existing.voucherNumber)))
+    .limit(1);
+  const oldLines = existingEntry?.id
+    ? await db
+      .select({
+        accountId: journalEntryLines.accountId,
+        lineType: journalEntryLines.lineType,
+        amount: journalEntryLines.amount,
+      })
+      .from(journalEntryLines)
+      .where(eq(journalEntryLines.journalEntryId, existingEntry.id))
+    : [];
+  const oldTotal = Number.parseFloat(String(existing.amount || 0));
+
+  const result = await db.transaction(async (tx) => {
+    const accountDelta = new Map<number, number>();
+    for (const line of oldLines) {
+      const amount = Number.parseFloat(String(line.amount || 0));
+      const signed = line.lineType === 'debit' ? amount : -amount;
+      addMapDelta(accountDelta, line.accountId, -signed);
+    }
+    if (oldLines.length === 0) {
+      if (existing.toAccountId) addMapDelta(accountDelta, existing.toAccountId, -oldTotal);
+      if (existing.fromAccountId) addMapDelta(accountDelta, existing.fromAccountId, oldTotal);
+    }
+    for (const line of newLines) {
+      const signed = line.lineType === 'debit' ? line.amount : -line.amount;
+      addMapDelta(accountDelta, line.accountId, signed);
+    }
+
+    const fundDelta = new Map<number, number>();
+    if (existing.toFundId) addMapDelta(fundDelta, existing.toFundId, -oldTotal);
+    if (existing.fromFundId) addMapDelta(fundDelta, existing.fromFundId, oldTotal);
+    if (voucherType === 'receipt' && fundTreasuryId) addMapDelta(fundDelta, fundTreasuryId, totalAmount);
+    if (voucherType === 'payment' && fundTreasuryId) addMapDelta(fundDelta, fundTreasuryId, -totalAmount);
+
+    for (const [accountId, delta] of accountDelta.entries()) {
+      if (Math.abs(delta) < 0.000001) continue;
+      await tx.execute(sql`
+        INSERT INTO account_balances (account_id, currency_id, balance)
+        VALUES (${accountId}, ${currencyId}, ${delta})
+        ON CONFLICT (account_id, currency_id) DO UPDATE SET
+          balance = account_balances.balance + ${delta},
+          updated_at = NOW()
+      `);
+    }
+    for (const [fundId, delta] of fundDelta.entries()) {
+      if (Math.abs(delta) < 0.000001) continue;
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${fundId}, ${currencyId}, ${delta})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance + ${delta},
+          updated_at = NOW()
+      `);
+    }
+
+    const voucherUpdateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+      voucherType,
+      amount: String(totalAmount),
+      currencyId,
+      description: baseDescription,
+      reference,
+      voucherDate,
+      fromAccountId: voucherType === 'payment' ? accountTreasuryId : null,
+      toAccountId: voucherType === 'receipt' ? accountTreasuryId : null,
+      fromFundId: voucherType === 'payment' ? fundTreasuryId : null,
+      toFundId: voucherType === 'receipt' ? fundTreasuryId : null,
+      hasMultipleLines: true,
+    };
+    const [updatedVoucher] = await tx.update(vouchers).set(voucherUpdateData).where(eq(vouchers.id, id)).returning();
+
+    const entryDate = voucherDate.toISOString().slice(0, 10);
+    let entryId = existingEntry?.id ?? null;
+    if (entryId) {
+      await tx.update(journalEntries).set({
+        entryDate,
+        description: baseDescription || existing.description || '',
+        totalDebit: String(totalAmount),
+        totalCredit: String(totalAmount),
+        updatedAt: new Date(),
+      }).where(eq(journalEntries.id, entryId));
+      await tx.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, entryId));
+    } else {
+      const [createdEntry] = await tx.insert(journalEntries).values({
+        businessId: bizId,
+        entryNumber: `JE-${existing.voucherNumber}`,
+        entryDate,
+        description: baseDescription || '',
+        reference: existing.voucherNumber,
+        operationTypeId: updatedVoucher.operationTypeId || null,
+        totalDebit: String(totalAmount),
+        totalCredit: String(totalAmount),
+        isBalanced: true,
+        createdBy: userId,
+      }).returning({ id: journalEntries.id });
+      entryId = createdEntry?.id ?? null;
+    }
+    if (entryId) {
+      for (const line of newLines) {
+        await tx.insert(journalEntryLines).values({
+          journalEntryId: entryId,
+          accountId: line.accountId,
+          lineType: line.lineType,
+          amount: String(line.amount),
+          description: line.description,
+          sortOrder: line.sortOrder,
+        });
+      }
+    }
+
+    await tx.insert(auditLog).values({
+      userId,
+      businessId: bizId,
+      action: 'update_voucher',
+      tableName: 'vouchers',
+      recordId: id,
+      oldData: {
+        amount: String(existing.amount),
+        voucherType: existing.voucherType,
+        fromAccountId: existing.fromAccountId,
+        toAccountId: existing.toAccountId,
+        fromFundId: existing.fromFundId,
+        toFundId: existing.toFundId,
+      },
+      newData: {
+        amount: String(totalAmount),
+        voucherType,
+        fromAccountId: voucherUpdateData.fromAccountId,
+        toAccountId: voucherUpdateData.toAccountId,
+        fromFundId: voucherUpdateData.fromFundId,
+        toFundId: voucherUpdateData.toFundId,
+        entriesCount: counterpartEntries.length,
+      },
+    });
+
+    return updatedVoucher;
   });
 
-  return c.json(updated);
+  return c.json(result);
 }));
 
 // 3. تغيير حالة السند (مسودة → معتمد → ملغي)
@@ -401,59 +823,181 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
 
   // التحقق من صحة التحول
   if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تغيير حالة سند ملغي' }, 400);
-  if (existing.status === 'confirmed' && newStatus === 'draft') return c.json({ error: 'لا يمكن إرجاع سند معتمد إلى مسودة' }, 400);
 
   try {
-    // إذا تم اعتماد السند من مسودة → نستخدم محرك المعاملات لتنفيذ القيود المحاسبية
+    // إذا تم اعتماد السند من مسودة → نحدّث الأرصدة وفق سطور القيد (إن وجدت)
     if (existing.status === 'draft' && newStatus === 'confirmed') {
-      const amount = parseFloat(String(existing.amount));
+      const amount = Number.parseFloat(String(existing.amount || 0));
       const currencyId = existing.currencyId || 1;
-      const debitAccountId = existing.toAccountId;
-      const creditAccountId = existing.fromAccountId;
 
-      // تنفيذ القيود عبر محرك المعاملات المركزي
       await db.transaction(async (tx) => {
-        // تحديث حالة السند
+        const [entry] = await tx
+          .select({ id: journalEntries.id })
+          .from(journalEntries)
+          .where(and(eq(journalEntries.businessId, bizId), eq(journalEntries.reference, existing.voucherNumber)))
+          .limit(1);
+
+        if (entry?.id) {
+          const lines = await tx
+            .select({
+              accountId: journalEntryLines.accountId,
+              lineType: journalEntryLines.lineType,
+              amount: journalEntryLines.amount,
+            })
+            .from(journalEntryLines)
+            .where(eq(journalEntryLines.journalEntryId, entry.id));
+
+          for (const line of lines) {
+            const lineAmount = Number.parseFloat(String(line.amount || 0));
+            const delta = line.lineType === 'debit' ? lineAmount : -lineAmount;
+            await tx.execute(sql`
+              INSERT INTO account_balances (account_id, currency_id, balance)
+              VALUES (${line.accountId}, ${currencyId}, ${delta})
+              ON CONFLICT (account_id, currency_id) DO UPDATE SET
+                balance = account_balances.balance + ${delta},
+                updated_at = NOW()
+            `);
+          }
+        } else {
+          // fallback للسندات القديمة التي لا تحتوي على سطور قيد
+          if (existing.toAccountId) {
+            await tx.execute(sql`
+              INSERT INTO account_balances (account_id, currency_id, balance)
+              VALUES (${existing.toAccountId}, ${currencyId}, ${amount})
+              ON CONFLICT (account_id, currency_id) DO UPDATE SET
+                balance = account_balances.balance + ${amount},
+                updated_at = NOW()
+            `);
+          }
+          if (existing.fromAccountId) {
+            await tx.execute(sql`
+              INSERT INTO account_balances (account_id, currency_id, balance)
+              VALUES (${existing.fromAccountId}, ${currencyId}, ${-amount})
+              ON CONFLICT (account_id, currency_id) DO UPDATE SET
+                balance = account_balances.balance - ${amount},
+                updated_at = NOW()
+            `);
+          }
+        }
+
+        if (existing.toFundId) {
+          await tx.execute(sql`
+            INSERT INTO fund_balances (fund_id, currency_id, balance)
+            VALUES (${existing.toFundId}, ${currencyId}, ${amount})
+            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+              balance = fund_balances.balance + ${amount},
+              updated_at = NOW()
+          `);
+        }
+        if (existing.fromFundId) {
+          await tx.execute(sql`
+            INSERT INTO fund_balances (fund_id, currency_id, balance)
+            VALUES (${existing.fromFundId}, ${currencyId}, ${-amount})
+            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+              balance = fund_balances.balance - ${amount},
+              updated_at = NOW()
+          `);
+        }
+
         await tx.update(vouchers).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(vouchers.id, id));
 
-        // إنشاء القيد المحاسبي
-        const entryDate = existing.voucherDate ? new Date(existing.voucherDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        const [entry] = await tx.insert(journalEntries).values({
-          businessId: bizId, entryNumber: `JE-${existing.voucherNumber}`,
-          entryDate, description: existing.description || '',
-          reference: existing.voucherNumber, operationTypeId: existing.operationTypeId || null,
-          totalDebit: String(amount), totalCredit: String(amount),
-          isBalanced: true, createdBy: userId,
-        }).returning();
-
-        if (debitAccountId) {
-          await tx.insert(journalEntryLines).values({
-            journalEntryId: entry.id, accountId: debitAccountId,
-            lineType: 'debit', amount: String(amount), description: existing.description || '', sortOrder: 0,
-          });
-          await tx.execute(sql`
-            INSERT INTO account_balances (account_id, currency_id, balance)
-            VALUES (${debitAccountId}, ${currencyId}, ${amount})
-            ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance + ${amount}, updated_at = NOW()
-          `);
-        }
-        if (creditAccountId) {
-          await tx.insert(journalEntryLines).values({
-            journalEntryId: entry.id, accountId: creditAccountId,
-            lineType: 'credit', amount: String(amount), description: existing.description || '', sortOrder: 1,
-          });
-          await tx.execute(sql`
-            INSERT INTO account_balances (account_id, currency_id, balance)
-            VALUES (${creditAccountId}, ${currencyId}, ${-amount})
-            ON CONFLICT (account_id, currency_id) DO UPDATE SET balance = account_balances.balance - ${amount}, updated_at = NOW()
-          `);
-        }
-
-        // سجل التدقيق
         await tx.insert(auditLog).values({
           userId, businessId: bizId, action: 'change_voucher_status',
           tableName: 'vouchers', recordId: id,
           oldData: { status: 'draft' }, newData: { status: 'confirmed' },
+        });
+      });
+
+      const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
+      return c.json(updated);
+    }
+
+    // إرجاع السند من "معتمد" إلى "مسودة" مع عكس الأثر المحاسبي
+    if (existing.status === 'confirmed' && newStatus === 'draft') {
+      const amount = Number.parseFloat(String(existing.amount || 0));
+      const currencyId = existing.currencyId || 1;
+
+      await db.transaction(async (tx) => {
+        const [entry] = await tx
+          .select({ id: journalEntries.id })
+          .from(journalEntries)
+          .where(and(eq(journalEntries.businessId, bizId), eq(journalEntries.reference, existing.voucherNumber)))
+          .limit(1);
+
+        if (entry?.id) {
+          const lines = await tx
+            .select({
+              accountId: journalEntryLines.accountId,
+              lineType: journalEntryLines.lineType,
+              amount: journalEntryLines.amount,
+            })
+            .from(journalEntryLines)
+            .where(eq(journalEntryLines.journalEntryId, entry.id));
+
+          for (const line of lines) {
+            const lineAmount = Number.parseFloat(String(line.amount || 0));
+            const delta = line.lineType === 'debit' ? -lineAmount : lineAmount;
+            await tx.execute(sql`
+              INSERT INTO account_balances (account_id, currency_id, balance)
+              VALUES (${line.accountId}, ${currencyId}, ${delta})
+              ON CONFLICT (account_id, currency_id) DO UPDATE SET
+                balance = account_balances.balance + ${delta},
+                updated_at = NOW()
+            `);
+          }
+
+          await tx.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, entry.id));
+          await tx.delete(journalEntries).where(eq(journalEntries.id, entry.id));
+        } else {
+          // fallback للسندات القديمة التي لا تحتوي على قيد واضح
+          if (existing.toAccountId) {
+            await tx.execute(sql`
+              INSERT INTO account_balances (account_id, currency_id, balance)
+              VALUES (${existing.toAccountId}, ${currencyId}, ${-amount})
+              ON CONFLICT (account_id, currency_id) DO UPDATE SET
+                balance = account_balances.balance - ${amount},
+                updated_at = NOW()
+            `);
+          }
+          if (existing.fromAccountId) {
+            await tx.execute(sql`
+              INSERT INTO account_balances (account_id, currency_id, balance)
+              VALUES (${existing.fromAccountId}, ${currencyId}, ${amount})
+              ON CONFLICT (account_id, currency_id) DO UPDATE SET
+                balance = account_balances.balance + ${amount},
+                updated_at = NOW()
+            `);
+          }
+        }
+
+        if (existing.toFundId) {
+          await tx.execute(sql`
+            INSERT INTO fund_balances (fund_id, currency_id, balance)
+            VALUES (${existing.toFundId}, ${currencyId}, ${-amount})
+            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+              balance = fund_balances.balance - ${amount},
+              updated_at = NOW()
+          `);
+        }
+        if (existing.fromFundId) {
+          await tx.execute(sql`
+            INSERT INTO fund_balances (fund_id, currency_id, balance)
+            VALUES (${existing.fromFundId}, ${currencyId}, ${amount})
+            ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+              balance = fund_balances.balance + ${amount},
+              updated_at = NOW()
+          `);
+        }
+
+        await tx.update(vouchers).set({
+          status: 'draft',
+          updatedAt: new Date(),
+        }).where(eq(vouchers.id, id));
+
+        await tx.insert(auditLog).values({
+          userId, businessId: bizId, action: 'change_voucher_status',
+          tableName: 'vouchers', recordId: id,
+          oldData: { status: 'confirmed' }, newData: { status: 'draft' },
         });
       });
 

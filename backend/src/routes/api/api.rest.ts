@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { wsService } from '../../services/websocket.service.ts';
+import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { eq, desc, sql, and, inArray, count } from 'drizzle-orm';
 import {
   stations, employees, accounts, accountBalances,
@@ -36,6 +40,223 @@ import { normalizeDbResult, getFirstRow } from './_shared/db-helpers.ts';
 import { verifyAccountOwnership, requireResourceOwnership } from './_shared/ownership.ts';
 
 const api = new Hono();
+const execFileAsync = promisify(execFile);
+
+type ArchiveSettingsPayload = {
+  basePath: string;
+  folderByType: { fund: string; bank: string; exchange: string; e_wallet: string };
+  voucherFolders: { receipt: string; payment: string };
+  importanceLevels: string[];
+};
+
+function getArchiveSettingsDefaults(): ArchiveSettingsPayload {
+  return {
+    basePath: 'D:\\Archive\\Attachments',
+    folderByType: {
+      fund: 'صندوق',
+      bank: 'بنك',
+      exchange: 'صراف',
+      e_wallet: 'محفظة',
+    },
+    voucherFolders: {
+      receipt: 'سند قبض',
+      payment: 'سند صرف',
+    },
+    importanceLevels: ['عاجل', 'مهم', 'عادي'],
+  };
+}
+
+function getArchiveSettingsFilePath(bizId: number): string {
+  return path.join(process.cwd(), 'storage', 'attachments-archive', `${bizId}.json`);
+}
+
+function normalizeArchiveSettings(raw: any): ArchiveSettingsPayload {
+  const defaults = getArchiveSettingsDefaults();
+  const importance = Array.isArray(raw?.importanceLevels)
+    ? raw.importanceLevels.map((v: any) => String(v || '').trim()).filter(Boolean)
+    : [];
+  return {
+    basePath: String(raw?.basePath || defaults.basePath),
+    folderByType: {
+      fund: String(raw?.folderByType?.fund || defaults.folderByType.fund),
+      bank: String(raw?.folderByType?.bank || defaults.folderByType.bank),
+      exchange: String(raw?.folderByType?.exchange || defaults.folderByType.exchange),
+      e_wallet: String(raw?.folderByType?.e_wallet || defaults.folderByType.e_wallet),
+    },
+    voucherFolders: {
+      receipt: String(raw?.voucherFolders?.receipt || defaults.voucherFolders.receipt),
+      payment: String(raw?.voucherFolders?.payment || defaults.voucherFolders.payment),
+    },
+    importanceLevels: importance.length ? importance : defaults.importanceLevels,
+  };
+}
+
+async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayload> {
+  const filePath = getArchiveSettingsFilePath(bizId);
+  try {
+    const raw = await readFile(filePath, 'utf8');
+    return normalizeArchiveSettings(JSON.parse(raw));
+  } catch {
+    return getArchiveSettingsDefaults();
+  }
+}
+
+function sanitizePathSegment(value: unknown): string {
+  const s = typeof value === 'string' ? value.trim() : '';
+  if (!s) return 'غير-محدد';
+  return s.replaceAll(/[\\/:*?"<>|]/g, '-');
+}
+
+function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
+  const normalized = typeof filePath === 'string' ? filePath : '';
+  const parts = new Set(normalized.split(/[\\/]/).map((p) => p.trim()).filter(Boolean));
+  for (const level of levels) {
+    if (parts.has(level)) return level;
+  }
+  return levels.at(-1) || 'عادي';
+}
+
+async function resolveVoucherArchivePath(
+  bizId: number,
+  voucherId: number,
+  importance: string | null | undefined,
+): Promise<string | null> {
+  const [voucher] = await db
+    .select({
+      id: vouchers.id,
+      voucherType: vouchers.voucherType,
+      fromFundId: vouchers.fromFundId,
+      toFundId: vouchers.toFundId,
+      fromAccountId: vouchers.fromAccountId,
+      toAccountId: vouchers.toAccountId,
+    })
+    .from(vouchers)
+    .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)))
+    .limit(1);
+
+  if (!voucher) return null;
+
+  const type = String(voucher.voucherType || '').toLowerCase();
+  const isPayment = type === 'payment';
+  const fundId = isPayment ? (voucher.fromFundId ?? null) : (voucher.toFundId ?? null);
+  const accountId = isPayment ? (voucher.fromAccountId ?? null) : (voucher.toAccountId ?? null);
+
+  let treasuryType: 'fund' | 'bank' | 'exchange' | 'e_wallet' | null = null;
+  let treasuryName = '';
+
+  if (fundId) {
+    treasuryType = 'fund';
+    const [fund] = await db
+      .select({ name: funds.name })
+      .from(funds)
+      .where(and(eq(funds.id, fundId), eq(funds.businessId, bizId)))
+      .limit(1);
+    treasuryName = String(fund?.name || '');
+  } else if (accountId) {
+    const [account] = await db
+      .select({ name: accounts.name, accountType: accounts.accountType })
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)))
+      .limit(1);
+    const t = String(account?.accountType || '').toLowerCase();
+    if (t === 'bank' || t === 'exchange' || t === 'e_wallet' || t === 'fund') {
+      treasuryType = t;
+    }
+    treasuryName = String(account?.name || '');
+  }
+
+  if (!treasuryType) treasuryType = 'fund';
+  if (!treasuryName) treasuryName = 'خزينة-غير-محددة';
+
+  const settings = await readArchiveSettings(bizId);
+  const typeFolder = settings.folderByType[treasuryType] || treasuryType;
+  const voucherFolder = type === 'payment' ? settings.voucherFolders.payment : settings.voucherFolders.receipt;
+  const normalizedImportance = sanitizePathSegment(importance || settings.importanceLevels[2] || 'عادي');
+
+  return path.join(
+    settings.basePath,
+    sanitizePathSegment(typeFolder),
+    sanitizePathSegment(treasuryName),
+    sanitizePathSegment(voucherFolder),
+    normalizedImportance,
+  );
+}
+
+async function ensureArchiveTreeForBusiness(
+  bizId: number,
+  settings: ArchiveSettingsPayload,
+): Promise<{ directories: number }> {
+  const [fundRows, accountRows] = await Promise.all([
+    db
+      .select({ name: funds.name })
+      .from(funds)
+      .where(eq(funds.businessId, bizId)),
+    db
+      .select({ name: accounts.name, accountType: accounts.accountType })
+      .from(accounts)
+      .where(eq(accounts.businessId, bizId)),
+  ]);
+
+  const byType: Record<'fund' | 'bank' | 'exchange' | 'e_wallet', string[]> = {
+    fund: fundRows.map((f: any) => String(f?.name || '')).filter(Boolean),
+    bank: [],
+    exchange: [],
+    e_wallet: [],
+  };
+
+  for (const acc of accountRows) {
+    const type = String(acc?.accountType || '').toLowerCase();
+    if (type === 'bank' || type === 'exchange' || type === 'e_wallet' || type === 'fund') {
+      byType[type].push(String(acc?.name || '').trim());
+    }
+  }
+
+  const uniqueDirs = new Set<string>();
+  const voucherFolders = [
+    settings.voucherFolders.receipt || 'سند قبض',
+    settings.voucherFolders.payment || 'سند صرف',
+  ];
+  const levels = (settings.importanceLevels || []).length ? settings.importanceLevels : ['عادي'];
+
+  for (const treasuryType of ['fund', 'bank', 'exchange', 'e_wallet'] as const) {
+    const typeFolder = sanitizePathSegment(settings.folderByType[treasuryType] || treasuryType);
+    const names = byType[treasuryType].length ? byType[treasuryType] : ['خزينة-افتراضية'];
+    for (const name of names) {
+      for (const voucherFolder of voucherFolders) {
+        for (const level of levels) {
+          uniqueDirs.add(path.join(
+            settings.basePath,
+            typeFolder,
+            sanitizePathSegment(name),
+            sanitizePathSegment(voucherFolder),
+            sanitizePathSegment(level),
+          ));
+        }
+      }
+    }
+  }
+
+  for (const dirPath of uniqueDirs) {
+    await mkdir(dirPath, { recursive: true });
+  }
+
+  return { directories: uniqueDirs.size };
+}
+
+async function listWindowsDrives(): Promise<string[]> {
+  const drives: string[] = [];
+  for (let code = 67; code <= 90; code += 1) {
+    const letter = String.fromCharCode(code);
+    const drivePath = `${letter}:\\`;
+    try {
+      const s = await stat(drivePath);
+      if (s.isDirectory()) drives.push(drivePath);
+    } catch {
+      // ignore unavailable drives
+    }
+  }
+  return drives;
+}
 
 // ===================== حسابات الموظفين في أنظمة الفوترة =====================
 api.get('/businesses/:bizId/employee-billing-accounts', bizAuthMiddleware(), safeHandler('جلب حسابات الفوترة', async (c) => {
@@ -1361,7 +1582,7 @@ api.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('ج�
     AND EXISTS (
       SELECT 1 FROM operation_types ot
       WHERE ot.id = journal_entries.operation_type_id
-      AND (ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%')
+      AND (ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%')
     )
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
@@ -1375,7 +1596,7 @@ api.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('ج�
     AND EXISTS (
       SELECT 1 FROM operation_types ot
       WHERE ot.id = journal_entries.operation_type_id
-      AND (ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' OR ot.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%')
+      AND (ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%')
     )
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
@@ -1439,7 +1660,7 @@ api.get('/businesses/:bizId/widget-log', bizAuthMiddleware(), safeHandler('جل�
       ot.icon as operation_type_icon,
       ot.color as operation_type_color,
       ot.voucher_type,
-      ot.category as operation_category
+      je.category as operation_category
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
     WHERE ${conditions}
@@ -1521,8 +1742,8 @@ api.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeHandler('ج�
       TO_CHAR(je.entry_date, 'YYYY-MM') as period,
       TO_CHAR(je.entry_date, 'Mon') as period_label,
       EXTRACT(MONTH FROM je.entry_date) as month_num,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' OR ot.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -1572,8 +1793,8 @@ api.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware(), safeHan
 
   const result = await db.execute(sql`
     SELECT
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' OR ot.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -1646,7 +1867,7 @@ api.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), safeHandl
       je.id, je.entry_number, je.description, je.entry_date, je.reference,
       je.total_debit, je.total_credit, je.status, je.created_at,
       ot.name as operation_type_name, ot.icon as operation_type_icon,
-      ot.color as operation_type_color, ot.voucher_type, ot.category as operation_category
+      ot.color as operation_type_color, ot.voucher_type, je.category as operation_category
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
     WHERE ${conditions}
@@ -1705,8 +1926,8 @@ api.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware(), safeHan
     SELECT
       ${periodExpr} as period,
       ${periodLabel} as period_label,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR ot.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR ot.category ILIKE '%صرف%' OR ot.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -2011,9 +2232,27 @@ api.post('/businesses/:bizId/attachments', bizAuthMiddleware(), safeHandler('ر�
   if (!body.entityType || !body.entityId || !body.fileName) {
     return c.json({ error: 'entityType, entityId, fileName مطلوبة' }, 400);
   }
+
+  const entityType = String(body.entityType || '').trim();
+  const entityId = Number.parseInt(String(body.entityId || ''), 10);
+  if (!entityType || !Number.isInteger(entityId) || entityId <= 0) {
+    return c.json({ error: 'entityType أو entityId غير صالح' }, 400);
+  }
+
+  const providedPath = String(body.filePath || body.fileUrl || '').trim();
+  let finalPath = providedPath;
+  if (!finalPath && entityType === 'voucher') {
+    finalPath = (await resolveVoucherArchivePath(bizId, entityId, body.importance)) || '';
+  }
+  if (finalPath) {
+    await mkdir(finalPath, { recursive: true });
+  }
+
   const [created] = await db.insert(attachments).values({
-    entityType: body.entityType, entityId: body.entityId,
-    fileName: body.fileName, filePath: body.filePath || body.fileUrl || '',
+    entityType,
+    entityId,
+    fileName: body.fileName,
+    filePath: finalPath,
     fileSize: body.fileSize || 0, fileType: body.fileType || body.mimeType || 'application/octet-stream',
     description: body.description || null,
     uploadedBy: userId,
@@ -2022,7 +2261,7 @@ api.post('/businesses/:bizId/attachments', bizAuthMiddleware(), safeHandler('ر�
   await db.insert(auditLog).values({
     userId, businessId: bizId, action: 'upload_attachment',
     tableName: 'attachments', recordId: created.id,
-    newData: { entityType: body.entityType, entityId: body.entityId, fileName: body.fileName },
+    newData: { entityType, entityId, fileName: body.fileName, filePath: finalPath, importance: body.importance || null },
   });
   return c.json(created, 201);
 }));
@@ -2034,6 +2273,250 @@ api.delete('/businesses/:bizId/attachments/:id', bizAuthMiddleware(), safeHandle
   if (!existing) return c.json({ error: 'مرفق غير موجود' }, 404);
   await db.delete(attachments).where(eq(attachments.id, id));
   return c.json({ success: true });
+}));
+
+api.get('/businesses/:bizId/attachments-archive-settings', bizAuthMiddleware(), safeHandler('جلب إعدادات الأرشفة الإلكترونية', async (c) => {
+  const bizId = getBizId(c);
+  const filePath = getArchiveSettingsFilePath(bizId);
+  try {
+    const raw = await readFile(filePath, 'utf8');
+    return c.json(normalizeArchiveSettings(JSON.parse(raw)));
+  } catch {
+    return c.json(getArchiveSettingsDefaults());
+  }
+}));
+
+api.put('/businesses/:bizId/attachments-archive-settings', bizAuthMiddleware(), safeHandler('حفظ إعدادات الأرشفة الإلكترونية', async (c) => {
+  const bizId = getBizId(c);
+  const userId = getUserId(c);
+  const body = normalizeBody(await c.req.json());
+  const normalized = normalizeArchiveSettings(body);
+  const filePath = getArchiveSettingsFilePath(bizId);
+  const dir = path.dirname(filePath);
+  await mkdir(dir, { recursive: true });
+  await writeFile(filePath, JSON.stringify(normalized, null, 2), 'utf8');
+  const treeResult = await ensureArchiveTreeForBusiness(bizId, normalized);
+  await db.insert(auditLog).values({
+    userId,
+    businessId: bizId,
+    action: 'update_attachment_archive_settings',
+    tableName: 'businesses',
+    recordId: bizId,
+    oldData: null,
+    newData: { ...normalized, treeResult } as any,
+  });
+  return c.json({ ...normalized, treeResult });
+}));
+
+api.post('/businesses/:bizId/attachments-archive-build', bizAuthMiddleware(), safeHandler('إنشاء شجرة الأرشفة تلقائياً', async (c) => {
+  const bizId = getBizId(c);
+  const settings = await readArchiveSettings(bizId);
+  const treeResult = await ensureArchiveTreeForBusiness(bizId, settings);
+  return c.json({ success: true, treeResult });
+}));
+
+api.post('/businesses/:bizId/attachments-archive-pick-folder', bizAuthMiddleware(), safeHandler('اختيار مجلد الأرشفة من الجهاز', async (c) => {
+  const platform = process.platform;
+  if (platform !== 'win32') {
+    return c.json({ error: 'اختيار المجلد من النظام مدعوم حالياً على ويندوز فقط' }, 400);
+  }
+
+  const script = [
+    "Add-Type -AssemblyName System.Windows.Forms",
+    "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
+    "$dialog.Description = 'اختر مجلد الأرشفة'",
+    "$dialog.UseDescriptionForTitle = $true",
+    "$dialog.ShowNewFolderButton = $true",
+    "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {",
+    "  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "  Write-Output $dialog.SelectedPath",
+    "}",
+  ].join('; ');
+
+  let stdout = '';
+  let stderr = '';
+  try {
+    const out = await execFileAsync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-STA',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        script,
+      ],
+      { windowsHide: false, timeout: 120000 }
+    );
+    stdout = out.stdout || '';
+    stderr = out.stderr || '';
+  } catch (err: any) {
+    const msg = String(err?.stderr || err?.message || 'تعذر فتح نافذة اختيار المجلد');
+    return c.json({ error: msg }, 500);
+  }
+
+  const selectedPath = String(stdout || '').trim();
+  if (!selectedPath && String(stderr || '').trim()) {
+    return c.json({ error: String(stderr).trim() }, 500);
+  }
+  return c.json({ selectedPath, cancelled: !selectedPath });
+}));
+
+api.get('/businesses/:bizId/attachments-archive-fs', bizAuthMiddleware(), safeHandler('استعراض مجلدات الجهاز للأرشفة', async (c) => {
+  if (process.platform !== 'win32') {
+    return c.json({ error: 'استعراض ملفات النظام مدعوم حالياً على ويندوز فقط' }, 400);
+  }
+
+  const requestedPath = String(c.req.query('path') || '').trim();
+  if (!requestedPath) {
+    const drives = await listWindowsDrives();
+    return c.json({
+      currentPath: '',
+      parentPath: null,
+      entries: drives.map((d) => ({ name: d, fullPath: d, isDirectory: true })),
+    });
+  }
+
+  const currentPath = path.normalize(requestedPath);
+  let s: Awaited<ReturnType<typeof stat>>;
+  try {
+    s = await stat(currentPath);
+  } catch {
+    return c.json({ error: 'المسار غير موجود' }, 404);
+  }
+  if (!s.isDirectory()) return c.json({ error: 'المسار ليس مجلدًا' }, 400);
+
+  const rows = await readdir(currentPath, { withFileTypes: true });
+  const entries = rows
+    .filter((r) => r.isDirectory())
+    .map((r) => ({
+      name: r.name,
+      fullPath: path.join(currentPath, r.name),
+      isDirectory: true,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+
+  const parentPath = path.dirname(currentPath);
+  const normalizedParent = parentPath === currentPath ? null : parentPath;
+  return c.json({ currentPath, parentPath: normalizedParent, entries });
+}));
+
+api.post('/businesses/:bizId/attachments-archive-fs/mkdir', bizAuthMiddleware(), safeHandler('إنشاء مجلد داخل مستكشف الأرشفة', async (c) => {
+  if (process.platform !== 'win32') {
+    return c.json({ error: 'إنشاء المجلد مدعوم حالياً على ويندوز فقط' }, 400);
+  }
+
+  const body = normalizeBody(await c.req.json());
+  const parentPath = String(body.path || '').trim();
+  const folderName = String(body.name || '').trim();
+  if (!parentPath || !folderName) {
+    return c.json({ error: 'path و name مطلوبان' }, 400);
+  }
+
+  if (folderName.includes('\\') || folderName.includes('/') || folderName.includes('..')) {
+    return c.json({ error: 'اسم المجلد غير صالح' }, 400);
+  }
+
+  const normalizedParent = path.normalize(parentPath);
+  let parentStat: Awaited<ReturnType<typeof stat>>;
+  try {
+    parentStat = await stat(normalizedParent);
+  } catch {
+    return c.json({ error: 'المسار الأب غير موجود' }, 404);
+  }
+  if (!parentStat.isDirectory()) return c.json({ error: 'المسار الأب ليس مجلدًا' }, 400);
+
+  const targetPath = path.join(normalizedParent, folderName);
+  await mkdir(targetPath, { recursive: true });
+  return c.json({ success: true, createdPath: targetPath });
+}));
+
+api.get('/businesses/:bizId/attachments-archive-items', bizAuthMiddleware(), safeHandler('جلب عناصر أرشفة المرفقات', async (c) => {
+  const bizId = getBizId(c);
+  const qSearch = String(c.req.query('search') || '').trim().toLowerCase();
+  const qVoucherType = String(c.req.query('voucherType') || '').trim().toLowerCase();
+  const qTreasuryType = String(c.req.query('treasuryType') || '').trim().toLowerCase();
+  const qImportance = String(c.req.query('importance') || '').trim();
+  const settings = await readArchiveSettings(bizId);
+
+  const result = await db.execute(sql`
+    SELECT
+      a.id, a.entity_type, a.entity_id, a.file_name, a.file_path, a.file_type, a.description, a.created_at,
+      v.voucher_number, v.voucher_type, v.from_fund_id, v.to_fund_id, v.from_account_id, v.to_account_id,
+      ff.name AS from_fund_name, tf.name AS to_fund_name,
+      fa.name AS from_account_name, fa.account_type AS from_account_type,
+      ta.name AS to_account_name, ta.account_type AS to_account_type
+    FROM attachments a
+    LEFT JOIN vouchers v ON a.entity_type = 'voucher' AND v.id = a.entity_id
+    LEFT JOIN funds ff ON ff.id = v.from_fund_id
+    LEFT JOIN funds tf ON tf.id = v.to_fund_id
+    LEFT JOIN accounts fa ON fa.id = v.from_account_id
+    LEFT JOIN accounts ta ON ta.id = v.to_account_id
+    WHERE a.entity_type = 'voucher' AND v.business_id = ${bizId}
+    ORDER BY a.created_at DESC
+  `);
+
+  const rows = normalizeDbResult(result).map((row: any) => {
+    const voucherType = String(row.voucher_type || '').toLowerCase();
+    let treasuryType = String(row.to_account_type || row.from_account_type || '').toLowerCase();
+    if (row.to_fund_id || row.from_fund_id) {
+      treasuryType = 'fund';
+    }
+    const treasuryName = String(
+      row.to_fund_name ||
+      row.from_fund_name ||
+      row.to_account_name ||
+      row.from_account_name ||
+      '-'
+    );
+    const importance = detectImportanceFromPath(row.file_path, settings.importanceLevels);
+    return {
+      id: row.id,
+      fileName: row.file_name,
+      filePath: row.file_path,
+      fileType: row.file_type,
+      description: row.description,
+      createdAt: row.created_at,
+      voucherNumber: row.voucher_number,
+      voucherType,
+      treasuryType,
+      treasuryName,
+      importance,
+    };
+  }).filter((row: any) => {
+    if (qVoucherType && row.voucherType !== qVoucherType) return false;
+    if (qTreasuryType && row.treasuryType !== qTreasuryType) return false;
+    if (qImportance && row.importance !== qImportance) return false;
+    if (!qSearch) return true;
+    const hay = `${row.fileName} ${row.filePath} ${row.voucherNumber || ''} ${row.treasuryName || ''}`.toLowerCase();
+    return hay.includes(qSearch);
+  });
+
+  return c.json(rows);
+}));
+
+api.post('/businesses/:bizId/attachments/:id/rebuild-path', bizAuthMiddleware(), safeHandler('إعادة توليد مسار المرفق', async (c) => {
+  const bizId = getBizId(c);
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف المرفق غير صالح' }, 400);
+  const body = normalizeBody(await c.req.json());
+  const [existing] = await db.select().from(attachments).where(eq(attachments.id, id));
+  if (!existing) return c.json({ error: 'المرفق غير موجود' }, 404);
+  if (String(existing.entityType) !== 'voucher') return c.json({ error: 'إعادة التوليد تدعم مرفقات السندات فقط حالياً' }, 400);
+
+  const settings = await readArchiveSettings(bizId);
+  const importance = String(body.importance || detectImportanceFromPath(existing.filePath, settings.importanceLevels));
+  const nextPath = await resolveVoucherArchivePath(bizId, existing.entityId, importance);
+  if (!nextPath) return c.json({ error: 'تعذر تحديد السند المرتبط بهذا المرفق' }, 400);
+  await mkdir(nextPath, { recursive: true });
+
+  const [updated] = await db
+    .update(attachments)
+    .set({ filePath: nextPath })
+    .where(eq(attachments.id, id))
+    .returning();
+
+  return c.json({ ...updated, importance });
 }));
 
 // ===================== عكس العمليات (Void/Reverse) =====================

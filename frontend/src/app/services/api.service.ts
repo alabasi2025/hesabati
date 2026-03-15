@@ -388,6 +388,37 @@ export class ApiService {
   getAttachments(entityType: string, entityId: number) { return this.request<any[]>(`/attachments/${entityType}/${entityId}`); }
   uploadAttachment(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/attachments`, { method: 'POST', body: JSON.stringify(d) }); }
   deleteAttachment(bizId: number, id: number)          { return this.request<any>(`/businesses/${bizId}/attachments/${id}`, { method: 'DELETE' }); }
+  getAttachmentsArchiveSettings(bizId: number)         { return this.request<any>(`/businesses/${bizId}/attachments-archive-settings`); }
+  saveAttachmentsArchiveSettings(bizId: number, d: any){ return this.request<any>(`/businesses/${bizId}/attachments-archive-settings`, { method: 'PUT', body: JSON.stringify(d) }); }
+  buildAttachmentsArchiveTree(bizId: number)            { return this.request<any>(`/businesses/${bizId}/attachments-archive-build`, { method: 'POST' }); }
+  pickAttachmentsArchiveFolder(bizId: number)           { return this.request<any>(`/businesses/${bizId}/attachments-archive-pick-folder`, { method: 'POST' }); }
+  browseAttachmentsArchiveFs(bizId: number, dirPath?: string) {
+    let url = `/businesses/${bizId}/attachments-archive-fs`;
+    if (dirPath) url += `?path=${encodeURIComponent(dirPath)}`;
+    return this.request<any>(url);
+  }
+  createAttachmentsArchiveFolder(bizId: number, dirPath: string, folderName: string) {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-fs/mkdir`, {
+      method: 'POST',
+      body: JSON.stringify({ path: dirPath, name: folderName }),
+    });
+  }
+  getAttachmentsArchiveItems(bizId: number, filters?: { search?: string; voucherType?: string; treasuryType?: string; importance?: string }) {
+    let url = `/businesses/${bizId}/attachments-archive-items`;
+    const params: string[] = [];
+    if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters?.voucherType) params.push(`voucherType=${encodeURIComponent(filters.voucherType)}`);
+    if (filters?.treasuryType) params.push(`treasuryType=${encodeURIComponent(filters.treasuryType)}`);
+    if (filters?.importance) params.push(`importance=${encodeURIComponent(filters.importance)}`);
+    if (params.length) url += `?${params.join('&')}`;
+    return this.request<any[]>(url);
+  }
+  rebuildAttachmentArchivePath(bizId: number, id: number, importance?: string) {
+    return this.request<any>(`/businesses/${bizId}/attachments/${id}/rebuild-path`, {
+      method: 'POST',
+      body: JSON.stringify({ importance }),
+    });
+  }
 
   // ===================== أسعار الصرف =====================
   getExchangeRates(bizId: number, date?: string) {
@@ -458,8 +489,9 @@ export class ApiService {
   // ===================== تحسينات السندات =====================
   getVouchersEnhanced(bizId: number, filters?: {
     type?: string; status?: string; dateFrom?: string; dateTo?: string;
-    search?: string; minAmount?: number; maxAmount?: number;
-    operationTypeId?: number; limit?: number; offset?: number;
+    search?: string; voucherNumber?: string; minAmount?: number; maxAmount?: number;
+    operationTypeId?: number; treasuryType?: string; treasuryId?: number;
+    limit?: number; offset?: number;
     sortBy?: string; sortDir?: string;
   }) {
     let url = `/businesses/${bizId}/vouchers-enhanced`;
@@ -469,9 +501,12 @@ export class ApiService {
     if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
     if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
     if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
+    if (filters?.voucherNumber) params.push(`voucherNumber=${encodeURIComponent(filters.voucherNumber)}`);
     if (filters?.minAmount) params.push(`minAmount=${filters.minAmount}`);
     if (filters?.maxAmount) params.push(`maxAmount=${filters.maxAmount}`);
     if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
+    if (filters?.treasuryType) params.push(`treasuryType=${filters.treasuryType}`);
+    if (filters?.treasuryId) params.push(`treasuryId=${filters.treasuryId}`);
     if (filters?.limit) params.push(`limit=${filters.limit}`);
     if (filters?.offset !== undefined) params.push(`offset=${filters.offset}`);
     if (filters?.sortBy) params.push(`sortBy=${filters.sortBy}`);
