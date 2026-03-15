@@ -1,0 +1,18 @@
+{
+  "basePath": "D:\\المرفقات العباسي",
+  "folderByType": {
+    "fund": "صندوق",
+    "bank": "بنك",
+    "exchange": "صراف",
+    "e_wallet": "محفظة"
+  },
+  "voucherFolders": {
+    "receipt": "سند قبض",
+    "payment": "سند صرف"
+  },
+  "importanceLevels": [
+    "عاجل",
+    "مهم",
+    "عادي"
+  ]
+}
