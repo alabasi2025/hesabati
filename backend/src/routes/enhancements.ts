@@ -814,7 +814,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   const body = await getBody(c);
   const newStatus = body.status;
   if (!['unreviewed', 'reviewed'].includes(newStatus)) {
-    return c.json({ error: 'الحالة غير صالحة. القيم المسموحة: draft, confirmed, cancelled' }, 400);
+    return c.json({ error: 'الحالة غير صالحة. القيم المسموحة: unreviewed, reviewed' }, 400);
   }
 
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
@@ -834,9 +834,17 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
       return c.json(result.voucher);
     }
 
-    // لا نسمح بالرجوع من confirmed إلى draft (سياسة اتجاه واحد).
+    // السماح بالرجوع من reviewed إلى unreviewed (إلغاء المراجعة)
     if (existing.status === 'reviewed' && newStatus === 'unreviewed') {
-      return c.json({ error: 'لا يمكن إعادة السند المعتمد إلى مسودة' }, 400);
+      const [updated] = await db.update(vouchers).set({
+        status: newStatus as 'unreviewed', updatedAt: new Date(),
+      }).where(eq(vouchers.id, id)).returning();
+      await db.insert(auditLog).values({
+        userId, businessId: bizId, action: 'unreviewed_voucher',
+        tableName: 'vouchers', recordId: id,
+        oldData: { status: 'reviewed' }, newData: { status: 'unreviewed' },
+      });
+      return c.json(updated);
     }
 
     // إلغاء السند المعتمد عبر المحرك المالي (يعكس الأثر دون إنشاء سند عكسي).
