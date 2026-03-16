@@ -18,7 +18,7 @@ import { warehouseSchema, validateBody } from '../../middleware/validation.ts';
 import { checkPermission, validateConstraints } from '../../middleware/permissions.ts';
 import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
 import { getNextSequence, getNextItemInCategorySequence, generateWarehouseOpFullSequence } from '../../middleware/sequencing.ts';
-import { postTransaction } from '../../services/transaction.service.ts';
+import { postTransaction } from '../../engines/transaction.engine.ts';
 import { processStockMovement } from '../../services/inventory.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { normalizeDbResult, getFirstRow } from './_shared/db-helpers.ts';

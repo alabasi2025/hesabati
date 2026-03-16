@@ -35,6 +35,9 @@ export * as BillingEngine     from './billing.engine.ts';
 export * as AttachmentEngine  from './attachment.engine.ts';
 export * as AuditEngine       from './audit.engine.ts';
 
+// ── Phase 3: محركات جديدة ──────────────────────────────────────────────────────
+export * as WorkflowEngineV2     from './workflow.engine.ts';
+export * as NotificationEngineV2 from './notification.engine.ts';
 // ── محركات في services/ (re-exported للتوافق) ─────────────────────────────
 export * as InventoryEngine   from '../services/inventory.service.ts';
 export * as ReportingEngine   from '../services/reporting.service.ts';
@@ -102,6 +105,36 @@ export {
   validateFile,
   ensureStorageDir,
 } from './attachment.engine.ts';
+
+// Workflow (Phase 3)
+export {
+  getWorkflowConfig,
+  getAvailableTransitions,
+  canTransition,
+  executeTransition,
+  getWorkflowHistory,
+  setupDefaultWorkflow,
+  getVoucherStatus,
+  canCancelWorkflow,
+  getWorkflowStats,
+  getDetailedWorkflowHistory,
+  resetVoucherToUnreviewed,
+  getCachedTransitions,
+  clearTransitionCache,
+} from './workflow.engine.ts';
+
+// Notification (Phase 3)
+export {
+  notifyNewVoucher,
+  notifyStatusChange,
+  notifyScreenUpdate,
+  notifyLowStock,
+  notifySalaryDue,
+  notifySystem,
+  notifyUser,
+  getActiveConnections,
+  broadcastToBusinesses,
+} from './notification.engine.ts';
 
 // Currency (re-export من currency.engine)
 export {

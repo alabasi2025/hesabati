@@ -16,7 +16,7 @@ import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '..
 import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
 import { checkPermission } from '../middleware/permissions.ts';
 import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../services/transaction.service.ts';
+import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../engines/transaction.engine.ts';
 import { wsService } from '../services/websocket.service.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
 import { getBizId, getUserId } from './api/_shared/context-helpers.ts';

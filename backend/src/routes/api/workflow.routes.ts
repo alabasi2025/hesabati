@@ -15,7 +15,7 @@ import {
   addTransition,
   deleteTransition,
 } from '../../services/workflow.service.ts';
-import { isConfirmingTransition, applyAccountingForConfirmedVoucher } from '../../services/transaction.service';
+import { isConfirmingTransition, applyAccountingForConfirmedVoucher } from '../../engines/transaction.engine.ts';
 
 const workflowRoutes = new Hono();
 
