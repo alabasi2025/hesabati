@@ -46,6 +46,11 @@ import { rbacRoutes }                 from './rbac.routes.ts';
 import { attachmentsEnhancedRoutes }  from './attachments-enhanced.routes.ts';
 import { miscCategoriesRoutes }       from './misc-categories.routes.ts';
 
+// ── مسارات Phase 4 (مستخرجة من api.rest.ts) ─────────────────────────────────
+import { fundTypesRoutes }   from './fund-types.routes.ts';
+import { sidebarRoutes }     from './sidebar.routes.ts';
+import { screensRoutes }     from './screens.routes.ts';
+
 const api = new Hono();
 
 // ── تسجيل جميع المسارات ─────────────────────────────────────────────────────
@@ -83,5 +88,10 @@ api.route('/', currencyRoutes);
 api.route('/', rbacRoutes);
 api.route('/', attachmentsEnhancedRoutes);
 api.route('/', miscCategoriesRoutes);
+
+// ── Phase 4: مسارات مستخرجة من api.rest.ts ────────────────────────────────
+api.route('/', fundTypesRoutes);
+api.route('/', sidebarRoutes);
+api.route('/', screensRoutes);
 
 export default api;
