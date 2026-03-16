@@ -738,3 +738,7 @@ export async function getNextSubTypeSequence(
 ): Promise<number> {
   return getNextSequence(businessId, `category_${mainType}`, 0, 0, tx);
 }
+
+// ── Aliases للتوافق مع index.ts ─────────────────────────────────────────
+export const generateVoucherNumber = generateVoucherFullSequence;
+export const generateStockNumber = generateWarehouseOpFullSequence;

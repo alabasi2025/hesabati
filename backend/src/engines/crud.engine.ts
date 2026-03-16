@@ -273,3 +273,6 @@ export function buildListResponse<T>(result: CrudListResult<T>) {
     },
   };
 }
+
+// Alias for backward compatibility
+export const getRecord = getOne;

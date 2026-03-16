@@ -26,6 +26,9 @@ export * as TransactionEngine from './transaction.engine.ts';
 export * as SequencingEngine  from './sequencing.engine.ts';
 export * as PermissionsEngine from './permissions.engine.ts';
 
+// ── Screens (Phase 3) ──────────────────────────────────────────────────────
+export * as ScreensEngine    from './screens.engine.ts';
+
 // ── P2: الأولوية المتوسطة ─────────────────────────────────────────────────
 export * as HREngine          from './hr.engine.ts';
 export * as BillingEngine     from './billing.engine.ts';
