@@ -841,27 +841,23 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
       }).where(eq(vouchers.id, id)).returning();
       await db.insert(auditLog).values({
         userId, businessId: bizId, action: 'unreviewed_voucher',
-        tableName: 'vouchers', recordId: id,
+        tableName: 'vouchers', recordId: id!,
         oldData: { status: 'reviewed' }, newData: { status: 'unreviewed' },
       });
       return c.json(updated);
     }
 
     // إلغاء السند المعتمد عبر المحرك المالي (يعكس الأثر دون إنشاء سند عكسي).
-    if (false) { // إزالة منطق الإلغاء
-      await cancelTransaction(bizId, userId, id);
-      const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
-      return c.json(updated);
-    }
+    // منطق الإلغاء محذوف - لا يوجد حالة ثالثة
 
     // حالات لا تتطلب أثر مالي (مثل draft -> cancelled).
     const [updated] = await db.update(vouchers).set({
       status: newStatus, updatedAt: new Date(),
-    }).where(eq(vouchers.id, id)).returning();
+    }).where(eq(vouchers.id, id!)).returning();
 
     await db.insert(auditLog).values({
       userId, businessId: bizId, action: 'change_voucher_status',
-      tableName: 'vouchers', recordId: id,
+      tableName: 'vouchers', recordId: id!,
       oldData: { status: existing.status }, newData: { status: newStatus },
     });
     return c.json(updated);
@@ -1392,7 +1388,7 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
       businessId: bizId,
       voucherNumber,
       voucherType: vType,
-      status: 'draft', // مسودة - لا تؤثر على الأرصدة
+      status: 'unreviewed',
       amount: String(amount),
       currencyId: body.currencyId || 1,
       fromAccountId: body.fromAccountId || null,
@@ -1431,7 +1427,7 @@ enhancements.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safe
     businessId: bizId,
     voucherNumber,
     voucherType: vType,
-    status: 'draft', // مسودة - لا تؤثر على الأرصدة
+    status: 'unreviewed',
     amount: String(amount),
     currencyId: body.currencyId || 1,
     fromAccountId: body.fromAccountId || null,

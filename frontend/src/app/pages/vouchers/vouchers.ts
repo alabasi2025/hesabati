@@ -130,7 +130,10 @@ export class VouchersComponent extends BasePageComponent {
     voucherDate: new Date().toISOString().split('T')[0],
     reference: '',
     currencyId: 1,
-    status: 'unreviewed',  treasuryOptions = computed(() => {
+    status: 'unreviewed',
+  });
+
+  treasuryOptions = computed(() => {
     const type = this.treasuryType();
     if (!type) return [];
     if (type === 'fund') {
