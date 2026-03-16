@@ -481,3 +481,39 @@ journal (268), warehouse (241), salaries (122) ...
 
 *آخر تحديث: 2026-03-16 — بعد تنفيذ Phase 2 (محركات 10-15 مكتملة)*  
 *للتفاصيل التقنية: انظر ملفات `docs/ENGINES-REPORT.md` و `docs/ENGINES-ISSUES-REPORT.md`*
+
+
+---
+
+## 🚀 Phase 3 — اكتمل (commit b298b16)
+**التاريخ:** 2026-03-16
+
+### المحركات الجديدة:
+| المحرك | الملف | الأسطر | الوظائف |
+|--------|-------|--------|---------|
+| Workflow Engine | `engines/workflow.engine.ts` | 187 | 14 (getVoucherStatus, canCancelWorkflow, getWorkflowStats, resetVoucherToUnreviewed...) |
+| Notification Engine | `engines/notification.engine.ts` | 167 | 9 (notifyNewVoucher, notifyStatusChange, notifyLowStock, broadcastToBusinesses...) |
+
+### تفكيك api.rest.ts:
+| الملف الجديد | الأسطر | المحتوى |
+|-------------|--------|---------|
+| `currency.routes.ts` | 103 | أسعار الصرف اليومية |
+| `rbac.routes.ts` | 133 | نظام الصلاحيات RBAC |
+| `attachments-enhanced.routes.ts` | 314 | المرفقات المحسنة |
+| `misc-categories.routes.ts` | 95 | تصنيفات المخازن وقيود اليومية |
+
+### KPI — تقليص api.rest.ts:
+- **قبل Phase 3:** 2,670 سطر
+- **بعد Phase 3:** 2,037 سطر
+- **التقليص:** 633 سطر (24% ✅)
+
+### تحديث الـ imports:
+- ✅ `api.rest.ts` → يستورد من `engines/transaction.engine.ts`
+- ✅ `warehouse.routes.ts` → يستورد من `engines/transaction.engine.ts`
+- ✅ `enhancements.ts` → يستورد من `engines/transaction.engine.ts`
+- ✅ `workflow.routes.ts` → يستورد من `engines/transaction.engine.ts`
+
+### engines/index.ts — النتيجة النهائية:
+- **17 engine namespace exports**
+- **68 direct function exports**
+- **إجمالي 3,719+ سطر TypeScript في engines/**
