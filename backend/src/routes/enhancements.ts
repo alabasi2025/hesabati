@@ -228,9 +228,8 @@ enhancements.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), sa
       COALESCE(SUM(CASE WHEN v.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_payments,
       COUNT(CASE WHEN v.voucher_type = 'receipt' THEN 1 END) as receipt_count,
       COUNT(CASE WHEN v.voucher_type = 'payment' THEN 1 END) as payment_count,
-      COUNT(CASE WHEN v.status = 'draft' THEN 1 END) as draft_count,
-      COUNT(CASE WHEN v.status = 'confirmed' THEN 1 END) as confirmed_count,
-      COUNT(CASE WHEN v.status = 'cancelled' THEN 1 END) as cancelled_count
+      COUNT(CASE WHEN v.status = 'unreviewed' THEN 1 END) as unreviewed_count,
+      COUNT(CASE WHEN v.status = 'reviewed' THEN 1 END) as reviewed_count
     FROM vouchers v WHERE ${conditions}
   `);
   const statsRows = normalizeDbResult(statsResult);
@@ -335,10 +334,10 @@ enhancements.post(
       description: baseDesc || null,
     });
 
-    const requestedStatus = String(data.status || 'draft').toLowerCase() === 'confirmed' ? 'confirmed' : 'draft';
+    const requestedStatus = 'unreviewed';
 
     try {
-      if (requestedStatus === 'confirmed') {
+      if (requestedStatus === 'unreviewed') {
         const result = await postMultiTransaction(bizId, userId, {
           voucherType: vType,
           currencyId,
@@ -394,7 +393,7 @@ enhancements.post(
           businessId: bizId,
           voucherNumber,
           voucherType: vType,
-          status: 'draft',
+          status: 'unreviewed',
           amount: String(total),
           currencyId,
           fromAccountId: vType === 'payment' ? treasuryAccountId : null,
@@ -450,7 +449,7 @@ enhancements.post(
           tableName: 'vouchers',
           recordId: created.id,
           oldData: null,
-          newData: { status: 'draft', voucherType: vType, linesCount: lines.length },
+          newData: { status: 'unreviewed', voucherType: vType, linesCount: lines.length },
         });
 
         return created;
@@ -513,7 +512,7 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
 
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
   if (!existing) return c.json({ error: 'السند غير موجود' }, 404);
-  if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تعديل سند ملغي' }, 400);
+  if (existing.status === 'reviewed') return c.json({ error: 'لا يمكن تعديل سند مراجع، قم بإلغاء المراجعة أولاً' }, 400);
 
   const body = normalizeBody(await c.req.json());
   const parseOptionalId = (value: unknown): number | null => {
@@ -814,7 +813,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
 
   const body = await getBody(c);
   const newStatus = body.status;
-  if (!['draft', 'confirmed', 'cancelled'].includes(newStatus)) {
+  if (!['unreviewed', 'reviewed'].includes(newStatus)) {
     return c.json({ error: 'الحالة غير صالحة. القيم المسموحة: draft, confirmed, cancelled' }, 400);
   }
 
@@ -822,7 +821,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
   if (!existing) return c.json({ error: 'السند غير موجود' }, 404);
 
   // التحقق من صحة التحول
-  if (existing.status === 'cancelled') return c.json({ error: 'لا يمكن تغيير حالة سند ملغي' }, 400);
+  // لا قيود على تغيير الحالة بين unreviewed و reviewed
 
   try {
     if (existing.status === newStatus) {
@@ -830,18 +829,18 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
     }
 
     // نقطة الترحيل الموحدة: اعتماد المسودة فقط عبر المحرك المالي.
-    if (existing.status === 'draft' && newStatus === 'confirmed') {
+    if (existing.status === 'unreviewed' && newStatus === 'reviewed') {
       const result = await confirmDraftTransaction(bizId, userId, id);
       return c.json(result.voucher);
     }
 
     // لا نسمح بالرجوع من confirmed إلى draft (سياسة اتجاه واحد).
-    if (existing.status === 'confirmed' && newStatus === 'draft') {
+    if (existing.status === 'reviewed' && newStatus === 'unreviewed') {
       return c.json({ error: 'لا يمكن إعادة السند المعتمد إلى مسودة' }, 400);
     }
 
     // إلغاء السند المعتمد عبر المحرك المالي (يعكس الأثر دون إنشاء سند عكسي).
-    if (existing.status === 'confirmed' && newStatus === 'cancelled') {
+    if (false) { // إزالة منطق الإلغاء
       await cancelTransaction(bizId, userId, id);
       const [updated] = await db.select().from(vouchers).where(eq(vouchers.id, id));
       return c.json(updated);
@@ -1058,7 +1057,7 @@ enhancements.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware()
       COALESCE(SUM(CAST(v.amount AS NUMERIC)), 0) as total_amount,
       MAX(v.created_at) as last_used_at
     FROM operation_types ot
-    LEFT JOIN vouchers v ON v.operation_type_id = ot.id AND v.status != 'cancelled'
+    LEFT JOIN vouchers v ON v.operation_type_id = ot.id
     WHERE ot.business_id = ${bizId}
     GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.category_id, ot.voucher_type, ot.is_active
     ORDER BY usage_count DESC
@@ -1252,7 +1251,7 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
       COUNT(*) as operations_count
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId} AND v.status = 'confirmed'
+    WHERE v.business_id = ${bizId} AND v.status = 'reviewed'
     AND v.voucher_date >= ${currentFrom}::date AND v.voucher_date <= ${currentTo}::date
   `);
   const currentRows = normalizeDbResult<PeriodStatsRow>(currentResult);
@@ -1265,7 +1264,7 @@ enhancements.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware()
       COUNT(*) as operations_count
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId} AND v.status = 'confirmed'
+    WHERE v.business_id = ${bizId} AND v.status = 'reviewed'
     AND v.voucher_date >= ${prevFrom}::date AND v.voucher_date <= ${prevTo}::date
   `);
   const prevRows = normalizeDbResult<PeriodStatsRow>(prevResult);
@@ -1342,7 +1341,7 @@ enhancements.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware()
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status = 'confirmed'
+    AND v.status IN ('unreviewed', 'reviewed')
     AND v.voucher_date >= ${fromDate}::date
     AND v.voucher_date <= ${toDate}::date
     GROUP BY ${groupExpr}, ${labelExpr}

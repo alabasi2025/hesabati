@@ -19,7 +19,7 @@ export const voucherTypeEnum = pgEnum('voucher_type', [
   'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer',
 ]);
 
-export const voucherStatusEnum = pgEnum('voucher_status', ['draft', 'confirmed', 'cancelled', 'pending_approval', 'approved', 'rejected']);
+export const voucherStatusEnum = pgEnum('voucher_status', ['unreviewed', 'reviewed']);
 export const expenseTypeEnum = pgEnum('expense_type', ['fixed', 'variable', 'annual']);
 export const warehouseTypeEnum = pgEnum('warehouse_type', ['main', 'station', 'sub', 'custody']);
 export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment', 'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer']);
@@ -376,7 +376,7 @@ export const vouchers = pgTable('vouchers', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   voucherNumber: varchar('voucher_number', { length: 50 }).notNull(),
   voucherType: voucherTypeEnum('voucher_type').notNull(),
-  status: voucherStatusEnum('status').notNull().default('confirmed'),
+  status: voucherStatusEnum('status').notNull().default('unreviewed'),
   amount: decimal('amount', { precision: 20, scale: 2 }).notNull(),
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
   exchangeRate: decimal('exchange_rate', { precision: 15, scale: 4 }),

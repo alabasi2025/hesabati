@@ -130,10 +130,7 @@ export class VouchersComponent extends BasePageComponent {
     voucherDate: new Date().toISOString().split('T')[0],
     reference: '',
     currencyId: 1,
-    status: 'draft',
-  });
-
-  treasuryOptions = computed(() => {
+    status: 'unreviewed',  treasuryOptions = computed(() => {
     const type = this.treasuryType();
     if (!type) return [];
     if (type === 'fund') {
@@ -275,10 +272,9 @@ export class VouchersComponent extends BasePageComponent {
     const payments = all.filter(v => v.voucherType === 'payment');
     const totalReceipt = receipts.reduce((s, v) => s + Number.parseFloat(v.amount || 0), 0);
     const totalPayment = payments.reduce((s, v) => s + Number.parseFloat(v.amount || 0), 0);
-    const drafts = all.filter(v => v.status === 'draft').length;
-    const confirmed = all.filter(v => v.status === 'confirmed').length;
-    const cancelled = all.filter(v => v.status === 'cancelled').length;
-    return { total: all.length, receipts: receipts.length, payments: payments.length, totalReceipt, totalPayment, net: totalReceipt - totalPayment, drafts, confirmed, cancelled };
+    const drafts = all.filter(v => v.status === 'unreviewed').length;
+    const reviewed = all.filter(v => v.status === 'reviewed').length;
+    return { total: all.length, receipts: receipts.length, payments: payments.length, totalReceipt, totalPayment, net: totalReceipt - totalPayment, unreviewed: drafts, reviewed };
   });
 
   get totalPages(): number {
@@ -293,9 +289,8 @@ export class VouchersComponent extends BasePageComponent {
 
   statusOptions = [
     { value: '', label: 'الكل', icon: 'apps', color: '#64748b' },
-    { value: 'draft', label: 'مسودة', icon: 'edit_note', color: '#f59e0b' },
-    { value: 'confirmed', label: 'معتمد', icon: 'check_circle', color: '#22c55e' },
-    { value: 'cancelled', label: 'ملغي', icon: 'cancel', color: '#ef4444' },
+    { value: 'unreviewed', label: 'غير مراجع', icon: 'pending', color: '#f59e0b' },
+    { value: 'reviewed', label: 'مراجع', icon: 'check_circle', color: '#22c55e' },
   ];
 
   protected override onBizIdChange(_bizId: number): void {
@@ -656,7 +651,7 @@ export class VouchersComponent extends BasePageComponent {
       voucherDate: new Date().toISOString().split('T')[0],
       reference: '',
       currencyId: 1,
-      status: 'draft',
+      status: 'unreviewed',
     });
     this.voucherLines.set([this.createEmptyVoucherLine()]);
     this.showForm.set(true);
@@ -665,12 +660,8 @@ export class VouchersComponent extends BasePageComponent {
   openEdit(voucher: any) {
     const normalized = this.normalizeVoucher(voucher);
     const status = String(normalized?.status || '').toLowerCase();
-    if (status === 'confirmed') {
-      this.toast.warning('لا يمكن تعديل سند معتمد.');
-      return;
-    }
-    if (status === 'cancelled') {
-      this.toast.warning('لا يمكن تعديل سند ملغي.');
+    if (status === 'reviewed') {
+      this.toast.warning('لا يمكن تعديل سند مراجع، قم بإلغاء المراجعة أولاً.');
       return;
     }
 
@@ -691,7 +682,7 @@ export class VouchersComponent extends BasePageComponent {
       voucherDate: this.toDateInputValue(normalized?.voucherDate || normalized?.createdAt),
       reference: String(normalized?.reference || ''),
       currencyId: Number.parseInt(String(normalized?.currencyId || 1), 10) || 1,
-      status: String(normalized?.status || 'draft').toLowerCase() === 'confirmed' ? 'confirmed' : 'draft',
+      status: 'unreviewed',
     });
     this.voucherLines.set(this.buildEditableVoucherLines(normalized));
     this.editingVoucher.set(normalized);
@@ -1181,7 +1172,7 @@ export class VouchersComponent extends BasePageComponent {
           voucherDate: new Date().toISOString().split('T')[0],
           reference: '',
           currencyId: 1,
-          status: 'draft',
+          status: 'unreviewed',
         });
         this.toast.success('تم تحديث السند بنجاح');
         this.showForm.set(false);
@@ -1223,7 +1214,7 @@ export class VouchersComponent extends BasePageComponent {
     this.saving.set(true);
     this.error.set('');
     try {
-      const requestedStatus = String(f.status || 'draft').toLowerCase() === 'confirmed' ? 'confirmed' : 'draft';
+      const requestedStatus = 'unreviewed';
       const payload: any = {
         voucherType: this.voucherType(),
         amount: String(amount),
@@ -1260,12 +1251,12 @@ export class VouchersComponent extends BasePageComponent {
 
   // ===================== Status Management =====================
   async changeStatus(voucher: any, newStatus: string): Promise<boolean> {
-    const statusLabels: Record<string, string> = { draft: 'مسودة', confirmed: 'معتمد', cancelled: 'ملغي' };
+    const statusLabels: Record<string, string> = { unreviewed: 'غير مراجع', reviewed: 'مراجع' };
     if (!statusLabels[newStatus]) return false;
     const confirmed = await this.toast.confirm({
       title: `تغيير الحالة إلى ${statusLabels[newStatus]}`,
       message: `هل تريد تغيير حالة السند رقم ${voucher.voucherNumber} إلى "${statusLabels[newStatus]}"؟`,
-      type: newStatus === 'cancelled' ? 'danger' : 'info',
+      type: newStatus === 'reviewed' ? 'info' : 'warning',
     });
     if (!confirmed) return false;
 
@@ -1284,17 +1275,17 @@ export class VouchersComponent extends BasePageComponent {
   }
 
   getStatusLabel(status: string): string {
-    const m: Record<string, string> = { draft: 'مسودة', confirmed: 'معتمد', cancelled: 'ملغي' };
+    const m: Record<string, string> = { unreviewed: 'غير مراجع', reviewed: 'مراجع' };
     return m[status] || status;
   }
 
   getStatusIcon(status: string): string {
-    const m: Record<string, string> = { draft: 'edit_note', confirmed: 'check_circle', cancelled: 'cancel' };
+    const m: Record<string, string> = { unreviewed: 'pending', reviewed: 'check_circle' };
     return m[status] || 'help';
   }
 
   getStatusColor(status: string): string {
-    const m: Record<string, string> = { draft: '#f59e0b', confirmed: '#22c55e', cancelled: '#ef4444' };
+    const m: Record<string, string> = { unreviewed: '#f59e0b', reviewed: '#22c55e' };
     return m[status] || '#64748b';
   }
 
@@ -1353,7 +1344,7 @@ export class VouchersComponent extends BasePageComponent {
     this.openEdit(voucher);
   }
 
-  async changeDetailsStatus(newStatus: 'draft' | 'confirmed' | 'cancelled') {
+  async changeDetailsStatus(newStatus: 'unreviewed' | 'reviewed') {
     const voucher = this.detailsVoucher();
     if (!voucher) return;
     this.closeDetails();
@@ -1365,7 +1356,7 @@ export class VouchersComponent extends BasePageComponent {
     if (!voucher) return;
     const currentStatus = String(voucher.status || '').toLowerCase();
     const normalizedNext = String(newStatus || '').toLowerCase();
-    if (!['draft', 'confirmed', 'cancelled'].includes(normalizedNext) || normalizedNext === currentStatus) return;
+    if (!['unreviewed', 'reviewed'].includes(normalizedNext) || normalizedNext === currentStatus) return;
 
     const changed = await this.changeStatus(voucher, normalizedNext);
     if (!changed) return;

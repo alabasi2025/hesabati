@@ -442,17 +442,7 @@
               </div>
             </div>
             @if (!isEditing()) {
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">حالة السند</label>
-                  <select class="form-select" title="حالة السند" [value]="form().status || 'draft'"
-                          (change)="setFormField('status', $any($event.target).value)">
-                    <option value="draft">مسودة (افتراضي)</option>
-                    <option value="confirmed">معتمد مباشرة</option>
-                  </select>
-                </div>
-                <div class="form-group"></div>
-              </div>
+              <!-- السند الجديد يُنشأ دائماً بحالة "غير مراجع" تلقائياً -->
             }
             <div class="form-row">
               <div class="form-group">
@@ -778,13 +768,12 @@
               <select
                 class="details-status-select"
                 title="تغيير حالة السند"
-                [value]="detailsVoucher().status || 'draft'"
-                [disabled]="saving() || detailsVoucher().status === 'cancelled'"
+                [value]="detailsVoucher().status || 'unreviewed'"
+                [disabled]="saving()"
                 (change)="onDetailsStatusSelection($any($event.target).value)"
               >
-                <option value="draft">مسودة</option>
-                <option value="confirmed">معتمد</option>
-                <option value="cancelled">ملغي</option>
+                <option value="unreviewed">غير مراجع</option>
+                <option value="reviewed">مراجع</option>
               </select>
             </div>
             <button class="btn-3d" style="background:#6366f1;color:white" (click)="openEditFromDetails()">
