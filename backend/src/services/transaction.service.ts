@@ -524,7 +524,7 @@ export async function postTransaction(
         businessId: bizId,
         voucherNumber: voucherNumber!,
         voucherType: data.voucherType,
-        status: "confirmed",
+        status: "unreviewed",
         amount: String(data.amount),
         currencyId: data.currencyId,
         fromAccountId: data.creditAccountId || null,
@@ -726,7 +726,7 @@ export async function postMultiTransaction(
         businessId: bizId,
         voucherNumber: voucherNumber!,
         voucherType: data.voucherType,
-        status: "confirmed",
+        status: "unreviewed",
         amount: String(totals.total),
         currencyId: data.currencyId,
         fromAccountId: data.fromAccountId || null,
@@ -851,7 +851,7 @@ export async function cancelTransaction(
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
   if (!existing) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
-  if (existing.status === "cancelled") throw new Error("السند ملغي مسبقاً");
+  if (existing.status === "reviewed") throw new Error("لا يمكن إلغاء سند مراجع، قم بإلغاء المراجعة أولاً");
 
   const amount = parseFloat(String(existing.amount));
   const currencyId = existing.currencyId || 1;
@@ -860,7 +860,7 @@ export async function cancelTransaction(
     await tx
       .update(vouchers)
       .set({
-        status: "cancelled",
+        status: "unreviewed",
         updatedAt: new Date(),
       })
       .where(eq(vouchers.id, voucherId));
@@ -944,9 +944,9 @@ export async function cancelTransaction(
       oldData: {
         voucherNumber: existing.voucherNumber,
         amount: String(amount),
-        status: "confirmed",
+        status: "unreviewed",
       },
-      newData: { status: "cancelled" },
+      newData: { status: "unreviewed" },
     });
   });
 
@@ -971,7 +971,7 @@ export async function confirmDraftTransaction(
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
   if (!existing) throw new Error("سند غير موجود أو لا ينتمي لهذا العمل");
-  if (existing.status === "confirmed") {
+  if (existing.status === "reviewed") {
     const [existingEntry] = await db
       .select()
       .from(journalEntries)
@@ -984,7 +984,7 @@ export async function confirmDraftTransaction(
       .limit(1);
     return { voucher: existing, journalEntry: existingEntry ?? null };
   }
-  if (existing.status !== "draft") throw new Error("يمكن اعتماد المسودات فقط");
+  if (existing.status !== "unreviewed") throw new Error("السند ليس في حالة غير مراجع");
 
   const amount = parseFloat(String(existing.amount));
   const currencyId = existing.currencyId || 1;
@@ -995,7 +995,7 @@ export async function confirmDraftTransaction(
     const [updated] = await tx
       .update(vouchers)
       .set({
-        status: "confirmed",
+        status: "reviewed",
         updatedAt: new Date(),
       })
       .where(eq(vouchers.id, voucherId))
@@ -1079,8 +1079,8 @@ export async function confirmDraftTransaction(
       action: "confirm_draft_voucher",
       tableName: "vouchers",
       recordId: voucherId,
-      oldData: { status: "draft" },
-      newData: { status: "confirmed" },
+      oldData: { status: "unreviewed" },
+      newData: { status: "reviewed" },
     });
 
     return { voucher: updated, journalEntry: entry };
@@ -1091,7 +1091,7 @@ export async function confirmDraftTransaction(
 
 /** يُستخدم من workflow: هل الانتقال من مسودة إلى معتمد؟ */
 export function isConfirmingTransition(fromStatus: string, toStatus: string): boolean {
-  return fromStatus === "draft" && toStatus === "confirmed";
+  return fromStatus === "unreviewed" && toStatus === "reviewed";
 }
 
 /** يُستخدم من workflow: تنفيذ القيد المحاسبي بعد اعتماد السند عبر سير العمل */
