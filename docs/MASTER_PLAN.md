@@ -81,7 +81,7 @@ api.rest.ts (2,662 سطر)    →    engines/ (15 محرك منظم)
 | **التأثير** | `api.rest.ts` يتقلص من 2,662 → ~1,200 سطر |
 | **الأولوية** | P0 ⏳ الأسبوع 4 |
 
-#### 5. Transaction Engine — `services/transaction.service.ts` ⚠️ موجود لكن ناقص الربط
+#### 5. Transaction Engine — `engines/transaction.engine.ts` ✅ منقول ومكتمل
 | البند | التفصيل |
 |-------|---------|
 | **الحالة** | موجود (1,104 سطر) لكن فقط 4 من 29 route تستخدمه (14%) |
@@ -153,26 +153,26 @@ api.rest.ts (2,662 سطر)    →    engines/ (15 محرك منظم)
 | **المطلوب** | نقل إلى `engines/notification.engine.ts` + ربط بـ transaction.engine + notification queue |
 | **الأولوية** | P2 ⏳ الأسبوع 3 |
 
-#### 12. HR/Salary Engine — ❌ مفقود
+#### 12. HR/Salary Engine — ✅ مُنشأ
 | البند | التفصيل |
 |-------|---------|
-| **الحالة** | ❌ الكود موجود في `categories-expenses.routes.ts` (مكان خاطئ!) |
+| **الحالة** | ✅ تم بناؤه في Phase 2: `engines/hr.engine.ts` (314 سطر) |
 | **المشكلة** | 18 DB call مباشر لـ `salaryRecords` داخل ملف المصاريف |
 | **المطلوب** | إنشاء `engines/hr.engine.ts` + `routes/api/salaries.routes.ts` مستقل + `calculateNetSalary()` |
 | **الأولوية** | P2 ⏳ الأسبوع 4 |
 
-#### 13. Billing Engine — ❌ مفقود
+#### 13. Billing Engine — ✅ مُنشأ
 | البند | التفصيل |
 |-------|---------|
-| **الحالة** | ❌ `billing-config.routes.ts` يحتوي 15 DB call مباشر و 0 engine |
+| **الحالة** | ✅ تم بناؤه في Phase 2: `engines/billing.engine.ts` (261 سطر) |
 | **الجداول** | `billingSystemsConfig`, `billingAccountTypes`, `employeeBillingAccounts` |
 | **المطلوب** | إنشاء `engines/billing.engine.ts` + `calculateBillingPeriod()` + `generateBillingInvoice()` |
 | **الأولوية** | P2 ⏳ الأسبوع 5 |
 
-#### 14. Attachment Engine — ❌ مفقود
+#### 14. Attachment Engine — ✅ مُنشأ
 | البند | التفصيل |
 |-------|---------|
-| **الحالة** | ❌ 9 endpoints في `api.rest.ts` (سطور 576-2320) |
+| **الحالة** | ✅ تم بناؤه في Phase 2: `engines/attachment.engine.ts` (249 سطر) |
 | **الخطر** | مسار التخزين hardcoded: `'D:\\Archive\\Attachments'` — خطر في production! |
 | **المطلوب** | إنشاء `engines/attachment.engine.ts` + `uploadFile()` + إصلاح hardcoded path |
 | **الأولوية** | P2 ⏳ الأسبوع 5 |
@@ -181,10 +181,10 @@ api.rest.ts (2,662 سطر)    →    engines/ (15 محرك منظم)
 
 ### المجموعة 4: P3 — منخفض
 
-#### 15. Audit Engine — ❌ مفقود
+#### 15. Audit Engine — ✅ مُنشأ
 | البند | التفصيل |
 |-------|---------|
-| **الحالة** | ❌ جدول `auditLog` موجود لكن بدون محرك قراءة/استعلام |
+| **الحالة** | ✅ تم بناؤه في Phase 2: `engines/audit.engine.ts` (204 سطر) |
 | **المشكلة** | الكتابة في DB مباشرة عبر `db.insert(auditLog)` دون engine |
 | **المطلوب** | `engines/audit.engine.ts` + `logAction()` موحد + `getAuditLog()` + `exportAuditReport()` |
 | **الأولوية** | P3 ⏳ الأسبوع 5 |
@@ -418,7 +418,18 @@ journal (268), warehouse (241), salaries (122) ...
 
 ---
 
-## ✅ ما تم إنجازه (Phase 1 — Commit: 3be8845)
+## ✅ ما تم إنجازه
+
+### Phase 2 ✅ (Commit pending):
+- [x] بناء `transaction.engine.ts` (221 سطر — re-exports + createVoucher, getVoucherSummary, bulkCancelVouchers, canCancelVoucher)
+- [x] بناء `hr.engine.ts` (314 سطر — getSalaryRecords, createSalaryRecord, calculateNetSalary, getMonthlySalarySummary...)
+- [x] بناء `billing.engine.ts` (261 سطر — getBillingSystems, createBillingSystem, calculateBillingPeriod...)
+- [x] بناء `audit.engine.ts` (204 سطر — logAction, getAuditLog, exportAuditReport, getAuditStats...)
+- [x] بناء `attachment.engine.ts` (249 سطر — إصلاح hardcoded path + getAttachments, saveAttachment, validateFile...)
+- [x] **إضافة** `getUserMaxAmounts()` + `checkResourceLimit()` إلى `permissions.engine.ts`
+- [x] **إصلاح أمني**: SQL Injection في `ui-builder` — إضافة whitelist 29 جدول + حماية متعددة الطبقات
+- [x] تحديث `engines/index.ts` — 15 محرك + 55 دالة مُصدَّرة مباشرة
+
 
 - [x] إنشاء `backend/src/engines/` directory
 - [x] بناء `crud.engine.ts` (getAll, getOne, createRecord, updateRecord, deleteRecord, checkDuplicate + hooks)
@@ -468,5 +479,5 @@ journal (268), warehouse (241), salaries (122) ...
 
 ---
 
-*آخر تحديث: 2026-03-16 — بعد تنفيذ Phase 1 (Commit: 3be8845)*  
+*آخر تحديث: 2026-03-16 — بعد تنفيذ Phase 2 (محركات 10-15 مكتملة)*  
 *للتفاصيل التقنية: انظر ملفات `docs/ENGINES-REPORT.md` و `docs/ENGINES-ISSUES-REPORT.md`*

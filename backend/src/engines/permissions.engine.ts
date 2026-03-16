@@ -247,3 +247,83 @@ export function validateConstraints(
 
   return { valid: true };
 }
+
+// ── دوال إضافية (Phase 2) ─────────────────────────────────────────────────
+
+/**
+ * جلب حدود المبالغ لمستخدم معين في عمل معين
+ * تُستدعى قبل إنشاء سند للتحقق من الحدود
+ */
+export async function getUserMaxAmounts(
+  userId: number,
+  bizId: number,
+): Promise<{
+  maxVoucherAmount: number | null;
+  maxDailyAmount: number | null;
+  hasAnyRole: boolean;
+}> {
+  const userRolesList = await db.select({
+    maxVoucherAmount: roles.maxVoucherAmount,
+    maxDailyAmount: roles.maxDailyAmount,
+    isAdmin: roles.isAdmin,
+  })
+    .from(userRoles)
+    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(and(
+      eq(userRoles.userId, userId),
+      eq(userRoles.businessId, bizId),
+      eq(roles.isActive, true),
+    ));
+
+  if (userRolesList.length === 0) {
+    return { maxVoucherAmount: null, maxDailyAmount: null, hasAnyRole: false };
+  }
+
+  // إذا كان أي دور admin → لا حدود
+  if (userRolesList.some((r) => r.isAdmin)) {
+    return { maxVoucherAmount: null, maxDailyAmount: null, hasAnyRole: true };
+  }
+
+  // دمج الحدود (الأعلى قيمة = الأوسع صلاحية)
+  let maxVoucher: number | null = null;
+  let maxDaily: number | null = null;
+
+  for (const r of userRolesList) {
+    if (r.maxVoucherAmount) {
+      maxVoucher = maxVoucher === null
+        ? Number(r.maxVoucherAmount)
+        : Math.max(maxVoucher, Number(r.maxVoucherAmount));
+    }
+    if (r.maxDailyAmount) {
+      maxDaily = maxDaily === null
+        ? Number(r.maxDailyAmount)
+        : Math.max(maxDaily, Number(r.maxDailyAmount));
+    }
+  }
+
+  return { maxVoucherAmount: maxVoucher, maxDailyAmount: maxDaily, hasAnyRole: true };
+}
+
+/**
+ * التحقق من أن مبلغ السند لا يتجاوز حد المستخدم
+ */
+export async function checkResourceLimit(
+  userId: number,
+  bizId: number,
+  amount: number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  const limits = await getUserMaxAmounts(userId, bizId);
+
+  if (!limits.hasAnyRole) {
+    return { allowed: false, reason: 'المستخدم ليس لديه أي دور في هذا العمل' };
+  }
+
+  if (limits.maxVoucherAmount !== null && amount > limits.maxVoucherAmount) {
+    return {
+      allowed: false,
+      reason: `المبلغ ${amount} يتجاوز الحد المسموح للسند (${limits.maxVoucherAmount})`,
+    };
+  }
+
+  return { allowed: true };
+}

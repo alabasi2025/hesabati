@@ -258,24 +258,58 @@ export async function executeDataSource(bizId: number, dataSourceId: number, par
   }
 
   if (ds.sourceType === 'query' && ds.queryTemplate) {
-    // تنفيذ query مخصص مع حماية من SQL Injection
-    // السماح فقط باستعلامات SELECT ورفض أي عمليات تعديل
+    // ── حماية SQL Injection المعززة (Phase 2) ──────────────────────────
+    
+    // قائمة الجداول المسموح بالاستعلام منها فقط (whitelist)
+    const ALLOWED_TABLES = new Set([
+      'vouchers', 'voucher_lines', 'accounts', 'account_balances',
+      'funds', 'fund_balances', 'employees', 'salary_records',
+      'inventory_items', 'inventory_stock', 'inventory_movements',
+      'warehouse_operations', 'warehouse_operation_items', 'warehouses',
+      'purchase_invoices', 'purchase_invoice_items',
+      'journal_entries', 'journal_entry_lines',
+      'operation_types', 'operation_categories',
+      'currencies', 'exchange_rates',
+      'suppliers', 'supplier_balances',
+      'expense_categories', 'expense_budget',
+      'reconciliations', 'reconciliation_items',
+      'audit_log', 'analytics_snapshots',
+      'departments', 'job_titles',
+    ]);
+
     const template = ds.queryTemplate.trim();
-    // تحقق أن الاستعلام يبدأ بـ SELECT فقط
-    if (!/^SELECT\b/i.test(template)) {
+
+    // 1. يجب أن يبدأ بـ SELECT فقط
+    if (!/^SELECT/i.test(template)) {
       throw new Error('يُسمح فقط باستعلامات SELECT');
     }
-    const forbidden = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|GRANT|REVOKE|COPY|LOAD|INTO\s+OUTFILE)\b/i;
+
+    // 2. رفض الكلمات المحظورة
+    const forbidden = /(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|EXECUTE|GRANT|REVOKE|COPY|LOAD|INTO\s+OUTFILE|ATTACH|DETACH|PRAGMA)/i;
     if (forbidden.test(template)) {
       throw new Error('الاستعلام يحتوي على عمليات غير مسموح بها');
     }
-    // رفض التعليقات والفاصلة المنقوطة (منع تنفيذ استعلامات متعددة)
-    if (/--|;|\bUNION\b.*\bSELECT\b/i.test(template)) {
+
+    // 3. رفض التعليقات والاستعلامات المتعددة
+    if (/--|\/\*|;|UNION.*SELECT/i.test(template)) {
       throw new Error('الاستعلام يحتوي على أنماط غير مسموح بها');
     }
-    // ملاحظة: sql.raw مطلوب هنا لأن القالب مخزن كنص في قاعدة البيانات
-    // الحماية تتم عبر التحققات أعلاه + فلتر business_id الإلزامي
-    const result = await db.execute(sql`SELECT * FROM (${sql.raw(template)}) AS q WHERE q.business_id = ${bizId}`);
+
+    // 4. التحقق أن الاستعلام يستخدم جداول من القائمة المسموحة فقط
+    const fromMatches = template.matchAll(/FROM\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi);
+    const joinMatches = template.matchAll(/JOIN\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi);
+    const allTables = [
+      ...[...fromMatches].map(m => m[1].toLowerCase()),
+      ...[...joinMatches].map(m => m[1].toLowerCase()),
+    ];
+    for (const tbl of allTables) {
+      if (!ALLOWED_TABLES.has(tbl)) {
+        throw new Error(`الجدول '${tbl}' غير مسموح بالاستعلام منه`);
+      }
+    }
+
+    // 5. تنفيذ الاستعلام مع إلزامية business_id
+    const result = await db.execute(sql`SELECT * FROM (${sql.raw(template)}) AS q WHERE q.business_id = ${bizId} LIMIT 1000`);
     const rows = normalizeDbResult(result);
     return { data: rows, total: rows.length };
   }
