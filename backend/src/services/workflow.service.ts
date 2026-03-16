@@ -51,13 +51,11 @@ export interface TransitionResult {
 
 // ===================== الحالات الافتراضية =====================
 
-const DEFAULT_STATUSES = ['draft', 'confirmed', 'pending_approval', 'approved', 'rejected', 'cancelled'];
+const DEFAULT_STATUSES = ['unreviewed', 'reviewed'];
 
 const DEFAULT_TRANSITIONS = [
-  { fromStatus: 'draft', toStatus: 'confirmed', actionName: 'تأكيد', actionIcon: 'check_circle', actionColor: '#22c55e' },
-  { fromStatus: 'draft', toStatus: 'cancelled', actionName: 'إلغاء', actionIcon: 'cancel', actionColor: '#ef4444' },
-  { fromStatus: 'confirmed', toStatus: 'pending_approval', actionName: 'طلب اعتماد', actionIcon: 'pending', actionColor: '#f59e0b' },
-  { fromStatus: 'confirmed', toStatus: 'cancelled', actionName: 'إلغاء', actionIcon: 'cancel', actionColor: '#ef4444' },
+  { fromStatus: 'unreviewed', toStatus: 'reviewed', actionName: 'مراجعة', actionIcon: 'check_circle', actionColor: '#22c55e' },
+  { fromStatus: 'reviewed', toStatus: 'unreviewed', actionName: 'إلغاء المراجعة', actionIcon: 'undo', actionColor: '#f59e0b' },
   { fromStatus: 'pending_approval', toStatus: 'approved', actionName: 'اعتماد', actionIcon: 'verified', actionColor: '#22c55e' },
   { fromStatus: 'pending_approval', toStatus: 'rejected', actionName: 'رفض', actionIcon: 'block', actionColor: '#ef4444' },
 ];
@@ -211,7 +209,7 @@ export async function setupDefaultWorkflow(bizId: number, operationTypeId: numbe
     .set({
       workflowConfig: {
         enabled: true,
-        initialStatus: 'draft',
+        initialStatus: 'unreviewed',
         statuses: DEFAULT_STATUSES,
       } as any,
       updatedAt: new Date(),

@@ -294,7 +294,7 @@
                   <td><span class="type-badge" [class]="v.voucherType === 'receipt' ? 'receipt' : 'payment'">{{ v.voucherType === 'receipt' ? 'قبض' : 'صرف' }}</span></td>
                   <td class="amount-cell">{{ v.amount | number:'1.0-0' }} ر.ي</td>
                   <td>{{ v.description || '-' }}</td>
-                  <td><span class="status-badge" [class]="v.status || 'draft'">{{ v.status === 'confirmed' ? 'مؤكد' : v.status === 'cancelled' ? 'ملغي' : 'مسودة' }}</span></td>
+                  <td><span class="status-badge" [class]="v.status || 'unreviewed'">{{ v.status === 'reviewed' ? 'مراجع' : 'غير مراجع' }}</span></td>
                   <td class="date-cell">{{ v.voucherDate || v.createdAt | date:'yyyy/MM/dd' }}</td>
                 </tr>
               }
