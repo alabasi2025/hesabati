@@ -27,6 +27,7 @@ import {
 import {
   getNextPurchaseInvoiceSequence,
 } from "../../middleware/sequencing.ts";
+import { processStockMovement } from "../../services/inventory.service.ts";
 import { getBizId, getUserId } from "./_shared/context-helpers.ts";
 import type { AppContext } from "./_shared/types.ts";
 
@@ -425,6 +426,7 @@ purchaseInvoicesRoutes.post(
   checkPermission("purchase_invoices", "update"),
   safeHandler("تأكيد فاتورة مشتريات", async (c: AppContext) => {
     const bizId = getBizId(c);
+    const userId = getUserId(c);
     const id = parseId(c.req.param("id"));
     if (!id) return c.json({ error: "معرّف الفاتورة غير صالح" }, 400);
 
@@ -446,16 +448,46 @@ purchaseInvoicesRoutes.post(
       return c.json({ error: "يمكن تأكيد الفواتير المسودة فقط" }, 400);
     }
 
-    const [updated] = await db
-      .update(purchaseInvoices)
-      .set({
-        status: "confirmed",
-        updatedAt: new Date(),
-      })
-      .where(eq(purchaseInvoices.id, id))
-      .returning();
+    // جلب بنود الفاتورة لتحديث المخزون
+    const invoiceItems = await db
+      .select()
+      .from(purchaseInvoiceItems)
+      .where(eq(purchaseInvoiceItems.invoiceId, id));
 
-    return c.json(updated);
+    const result = await db.transaction(async (tx) => {
+      // تحديث حالة الفاتورة
+      const [updated] = await tx
+        .update(purchaseInvoices)
+        .set({
+          status: "confirmed",
+          updatedAt: new Date(),
+        })
+        .where(eq(purchaseInvoices.id, id))
+        .returning();
+
+      // تحديث المخزون لكل بند إن وُجد مستودع
+      if (existing.warehouseId && invoiceItems.length > 0) {
+        for (const item of invoiceItems) {
+          if (item.inventoryItemId) {
+            await processStockMovement(bizId, {
+              warehouseId: existing.warehouseId,
+              inventoryItemId: item.inventoryItemId,
+              movementType: "in",
+              quantity: parseFloat(String(item.quantity)),
+              unitCost: parseFloat(String(item.unitCost)),
+              referenceType: "purchase_invoice",
+              referenceId: id,
+              notes: `تأكيد فاتورة مشتريات #${existing.invoiceNumber}`,
+              createdBy: userId,
+            }, tx as any);
+          }
+        }
+      }
+
+      return updated;
+    });
+
+    return c.json(result);
   })
 );
 
@@ -524,6 +556,21 @@ purchaseInvoicesRoutes.post(
 
             if (newReceivedQty < parseFloat(invoiceItem.quantity)) {
               allItemsFullyReceived = false;
+            }
+
+            // تحديث المخزون عند الاستلام الفعلي
+            if (existing.warehouseId && invoiceItem.inventoryItemId) {
+              await processStockMovement(bizId, {
+                warehouseId: existing.warehouseId,
+                inventoryItemId: invoiceItem.inventoryItemId,
+                movementType: "in",
+                quantity: receivedQty,
+                unitCost: parseFloat(String(invoiceItem.unitCost)),
+                referenceType: "purchase_invoice_receive",
+                referenceId: id,
+                notes: `استلام فاتورة مشتريات #${existing.invoiceNumber}`,
+                createdBy: undefined,
+              }, tx as any);
             }
           }
         }

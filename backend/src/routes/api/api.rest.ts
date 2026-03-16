@@ -35,6 +35,13 @@ import { safeHandler, normalizeBody, parseId, validateRequired, toErrorMessage }
 import { getNextSequence, getNextCategorySequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
 import { postTransaction, cancelTransaction } from '../../services/transaction.service.ts';
 import { checkPermission, validateConstraints } from '../../middleware/permissions.ts';
+import {
+  getExchangeRate,
+  addExchangeRate,
+  getExchangeRateHistory,
+  getUnifiedBalances,
+  clearRateCache,
+} from '../../engines/currency.engine.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { normalizeDbResult, getFirstRow } from './_shared/db-helpers.ts';
 import { verifyAccountOwnership, requireResourceOwnership } from './_shared/ownership.ts';
@@ -2023,27 +2030,20 @@ api.get('/businesses/:bizId/widget-operation-types', bizAuthMiddleware(), safeHa
   return c.json(rows.map(r => ({ ...r, accounts: accMap[r.id] || [] })));
 }));
 
-// ===================== أسعار الصرف اليومية =====================
+// ===================== أسعار الصرف اليومية (مُحوَّل إلى currency.engine) =====================
 api.get('/businesses/:bizId/exchange-rates', bizAuthMiddleware(), safeHandler('جلب أسعار الصرف', async (c) => {
   const bizId = getBizId(c);
   const dateParam = c.req.query('date');
-  const conditions = [eq(exchangeRates.businessId, bizId)];
-  if (dateParam) conditions.push(eq(exchangeRates.effectiveDate, dateParam));
-  const rows = await db.select({
-    id: exchangeRates.id, fromCurrencyId: exchangeRates.fromCurrencyId,
-    toCurrencyId: exchangeRates.toCurrencyId, rate: exchangeRates.rate,
-    effectiveDate: exchangeRates.effectiveDate, source: exchangeRates.source,
-    notes: exchangeRates.notes, createdAt: exchangeRates.createdAt,
-    fromCurrencyCode: sql`fc.code`.as('from_currency_code'),
-    fromCurrencyName: sql`fc.name_ar`.as('from_currency_name'),
-    toCurrencyCode: sql`tc.code`.as('to_currency_code'),
-    toCurrencyName: sql`tc.name_ar`.as('to_currency_name'),
-  }).from(exchangeRates)
-    .leftJoin(sql`currencies fc`, sql`fc.id = ${exchangeRates.fromCurrencyId}`)
-    .leftJoin(sql`currencies tc`, sql`tc.id = ${exchangeRates.toCurrencyId}`)
-    .where(and(...conditions))
-    .orderBy(desc(exchangeRates.effectiveDate));
-  return c.json(rows);
+  // استخدام currency engine لجلب السجل
+  const rows = await getExchangeRateHistory(bizId, undefined, undefined, 200);
+  // فلترة بالتاريخ إذا طُلب
+  const result = dateParam
+    ? rows.filter(r => {
+        const d = r.effectiveDate instanceof Date ? r.effectiveDate.toISOString().split('T')[0] : String(r.effectiveDate).split('T')[0];
+        return d === dateParam;
+      })
+    : rows;
+  return c.json(result);
 }));
 
 api.post('/businesses/:bizId/exchange-rates', bizAuthMiddleware(), safeHandler('إضافة سعر صرف', async (c) => {
@@ -2053,11 +2053,14 @@ api.post('/businesses/:bizId/exchange-rates', bizAuthMiddleware(), safeHandler('
   if (!body.fromCurrencyId || !body.toCurrencyId || !body.rate || !body.effectiveDate) {
     return c.json({ error: 'جميع الحقول مطلوبة: fromCurrencyId, toCurrencyId, rate, effectiveDate' }, 400);
   }
-  const [created] = await db.insert(exchangeRates).values({
-    businessId: bizId, fromCurrencyId: body.fromCurrencyId, toCurrencyId: body.toCurrencyId,
-    rate: String(body.rate), effectiveDate: body.effectiveDate,
-    source: body.source || 'manual', notes: body.notes || null, createdBy: userId,
-  }).returning();
+  // استخدام currency engine لإضافة سعر الصرف مع مسح الـ cache تلقائياً
+  const created = await addExchangeRate(bizId, {
+    fromCurrencyId: Number(body.fromCurrencyId),
+    toCurrencyId: Number(body.toCurrencyId),
+    rate: Number(body.rate),
+    effectiveDate: new Date(String(body.effectiveDate)),
+    createdBy: userId,
+  });
   return c.json(created, 201);
 }));
 
@@ -2066,6 +2069,8 @@ api.put('/businesses/:bizId/exchange-rates/:id', bizAuthMiddleware(), safeHandle
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف غير صالح' }, 400);
   const body = normalizeBody(await c.req.json());
+  // مسح cache عند التعديل
+  clearRateCache();
   const [updated] = await db.update(exchangeRates).set({
     rate: body.rate ? String(body.rate) : undefined,
     effectiveDate: body.effectiveDate, source: body.source, notes: body.notes,
@@ -2078,33 +2083,36 @@ api.delete('/businesses/:bizId/exchange-rates/:id', bizAuthMiddleware(), safeHan
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف غير صالح' }, 400);
+  // مسح cache عند الحذف
+  clearRateCache();
   await db.delete(exchangeRates).where(and(eq(exchangeRates.id, id), eq(exchangeRates.businessId, bizId)));
   return c.json({ success: true });
 }));
 
-// Helper: جلب سعر الصرف الحالي بين عملتين
+// Helper: تحويل عملة عبر currency.engine
 api.get('/businesses/:bizId/exchange-rates/convert', bizAuthMiddleware(), safeHandler('تحويل عملة', async (c) => {
   const bizId = getBizId(c);
   const fromId = Number.parseInt(c.req.query('from') || '0');
   const toId = Number.parseInt(c.req.query('to') || '0');
   const amountStr = c.req.query('amount') || '1';
   if (!fromId || !toId) return c.json({ error: 'from و to مطلوبان' }, 400);
-  if (fromId === toId) return c.json({ rate: 1, convertedAmount: Number.parseFloat(amountStr), fromCurrencyId: fromId, toCurrencyId: toId });
-  // جلب أحدث سعر صرف
-  const [latestRate] = await db.select().from(exchangeRates)
-    .where(and(eq(exchangeRates.businessId, bizId), eq(exchangeRates.fromCurrencyId, fromId), eq(exchangeRates.toCurrencyId, toId)))
-    .orderBy(desc(exchangeRates.effectiveDate)).limit(1);
-  if (!latestRate) {
-    // محاولة عكسية
-    const [reverseRate] = await db.select().from(exchangeRates)
-      .where(and(eq(exchangeRates.businessId, bizId), eq(exchangeRates.fromCurrencyId, toId), eq(exchangeRates.toCurrencyId, fromId)))
-      .orderBy(desc(exchangeRates.effectiveDate)).limit(1);
-    if (!reverseRate) return c.json({ error: 'لا يوجد سعر صرف بين هاتين العملتين' }, 404);
-    const rate = 1 / Number.parseFloat(String(reverseRate.rate));
-    return c.json({ rate, convertedAmount: Number.parseFloat(amountStr) * rate, fromCurrencyId: fromId, toCurrencyId: toId });
-  }
-  const rate = Number.parseFloat(String(latestRate.rate));
-  return c.json({ rate, convertedAmount: Number.parseFloat(amountStr) * rate, fromCurrencyId: fromId, toCurrencyId: toId });
+  const amount = Number.parseFloat(amountStr);
+  const rate = await getExchangeRate(bizId, fromId, toId);
+  return c.json({
+    rate,
+    convertedAmount: amount * rate,
+    fromCurrencyId: fromId,
+    toCurrencyId: toId,
+  });
+}));
+
+// [جديد] جلب الأرصدة الموحدة بعملة واحدة عبر currency.engine
+api.get('/businesses/:bizId/unified-balances', bizAuthMiddleware(), safeHandler('الأرصدة الموحدة', async (c) => {
+  const bizId = getBizId(c);
+  const targetCurrencyId = Number.parseInt(c.req.query('currencyId') || '0');
+  if (!targetCurrencyId) return c.json({ error: 'currencyId مطلوب' }, 400);
+  const balances = await getUnifiedBalances(bizId, targetCurrencyId);
+  return c.json(balances);
 }));
 
 // ===================== نظام الصلاحيات RBAC =====================
