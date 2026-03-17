@@ -6,6 +6,10 @@ import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { SmartFilterInputComponent } from '../../shared/components/smart-filter-input/smart-filter-input';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { AmountDisplayComponent } from '../../shared/components/amount-display/amount-display.component';
 import {
   formatAmount as formatAmountShared,
   formatDate as formatDateShared,
@@ -44,7 +48,8 @@ interface VoucherLine {
 @Component({
   selector: 'app-vouchers',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SmartFilterInputComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SmartFilterInputComponent,
+    LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent, AmountDisplayComponent],
   templateUrl: './vouchers.html',
   styleUrl: './vouchers.scss',
 })

@@ -3,6 +3,9 @@ import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 interface SidebarSection {
   id: number;

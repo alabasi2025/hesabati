@@ -5,6 +5,9 @@ import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { formatAmount as formatAmountShared } from '../../shared/helpers';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 type TreasuryKind = 'fund' | 'bank' | 'exchange' | 'e_wallet' | 'warehouse';
 type VoucherTypeTreasury = 'receipt' | 'payment';
@@ -12,7 +15,7 @@ type VoucherTypeTreasury = 'receipt' | 'payment';
 @Component({
   selector: 'app-register-operation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
   templateUrl: './register-operation.html',
   styleUrl: './register-operation.scss',
 })

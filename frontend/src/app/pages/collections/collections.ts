@@ -6,11 +6,14 @@ import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { formatAmount as formatAmountShared, formatDate as formatDateShared } from '../../shared/helpers';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 @Component({
   selector: 'app-collections',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
   templateUrl: './collections.html',
   styleUrl: './collections.scss',
 })

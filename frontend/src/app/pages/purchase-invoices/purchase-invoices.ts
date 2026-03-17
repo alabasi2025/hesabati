@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 interface PurchaseInvoiceItem {
   inventoryItemId: number;
@@ -45,7 +48,7 @@ interface PurchaseInvoice {
 @Component({
   selector: 'app-purchase-invoices',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
   templateUrl: './purchase-invoices.html',
   styleUrl: './purchase-invoices.scss',
 })

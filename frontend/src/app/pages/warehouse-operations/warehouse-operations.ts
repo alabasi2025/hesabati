@@ -5,6 +5,9 @@ import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { formatDate as formatDateShared } from '../../shared/helpers';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 interface OperationItem {
   itemName: string;
@@ -27,7 +30,7 @@ const OPERATION_TYPE_META: Record<string, { label: string; icon: string; color: 
 @Component({
   selector: 'app-warehouse-operations',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
   templateUrl: './warehouse-operations.html',
   styleUrl: './warehouse-operations.scss',
 })

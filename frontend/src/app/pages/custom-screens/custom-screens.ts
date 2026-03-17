@@ -12,6 +12,8 @@ import { WebSocketService } from '../../services/websocket.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { ACCOUNT_TYPE_META, getAccTypeMeta } from '../../shared/constants/account-types';
 import { formatAmount as formatAmountShared, formatAmountPrecise, formatDate as formatDateShared } from '../../shared/helpers';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { takeUntil } from 'rxjs';
 
 // ===== Tab Type Definitions =====
@@ -83,7 +85,8 @@ const TAB_TYPE_OPTIONS = [
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective, ColorPickerDirective, CdkDrag, CdkDropList],
+  imports: [CommonModule, FormsModule, BaseChartDirective, ColorPickerDirective, CdkDrag, CdkDropList,
+    LoadingStateComponent, StatusBadgeComponent],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
 })

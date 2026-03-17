@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
 interface UiPage {
   id: number;
@@ -65,7 +68,7 @@ const SOURCE_TYPES = [
 @Component({
   selector: 'app-ui-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule, JsonPipe],
+  imports: [CommonModule, FormsModule, JsonPipe, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
   templateUrl: './ui-builder.html',
   styleUrl: './ui-builder.scss',
 })
