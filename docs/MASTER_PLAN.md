@@ -971,3 +971,60 @@ backend/src/routes/api/
 - ملفات TypeScript: ~30 -> 139 (x4.6)
 - اختبارات الوحدة: 0 -> 169 (100%)
 - SECURITY.md: انشئ
+
+---
+
+## Phase 13 — تقسيم vouchers-write + legacy-compat + purchase-invoices-write ✅
+
+### الهدف
+تقليص آخر ملفات المسارات الكبيرة (>400 سطر) إلى وحدات مركّزة ≤300 سطر.
+
+### الملفات المقسّمة
+
+#### 1. `vouchers-write.routes.ts` (691 → 13 سطر | −98%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `vouchers-write.routes.ts` | 13 | Wrapper رفيع |
+| `vouchers-create.routes.ts` | 265 | POST /vouchers-multi |
+| `vouchers-update.routes.ts` | 384 | PUT /vouchers/:id + POST /status |
+| `_vouchers-helpers.ts` | 101 | normalizeTreasuryCode + resolveVoucherTreasuryInfo |
+
+#### 2. `legacy-compat.routes.ts` (537 → 27 سطر | −95%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `legacy-compat.routes.ts` | 27 | Wrapper رفيع |
+| `legacy-compat-vouchers.routes.ts` | 185 | مسارات السندات القديمة |
+| `legacy-compat-misc.routes.ts` | 124 | Collections + Currencies + Attachments + Legacy |
+
+#### 3. `purchase-invoices-write.routes.ts` (507 → 13 سطر | −97%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `purchase-invoices-write.routes.ts` | 13 | Wrapper رفيع |
+| `purchase-invoices-create.routes.ts` | 138 | POST (إنشاء فاتورة) |
+| `purchase-invoices-actions.routes.ts` | 381 | PUT + POST items/receive + DELETE |
+
+### إحصائيات المشروع بعد Phase 13
+- **ملفات TypeScript:** 146 ملف (+7 عن Phase 12)
+- **ملفات المسارات:** 61+ ملف
+- **اختبارات الوحدة:** 186/186 (100%) ✅
+- **أكبر ملف متبقٍّ:** `check-schema-tables.ts` (979 سطر — بيانات فقط، لا منطق)
+
+### الملفات المضافة في Phase 13
+```
+backend/src/routes/api/
+├─ vouchers-write.routes.ts (13 lines – wrapper)
+├─ vouchers-create.routes.ts (265 lines)
+├─ vouchers-update.routes.ts (384 lines)
+├─ _vouchers-helpers.ts (101 lines)
+├─ legacy-compat.routes.ts (27 lines – wrapper)
+├─ legacy-compat-vouchers.routes.ts (185 lines)
+├─ legacy-compat-misc.routes.ts (124 lines)
+├─ purchase-invoices-write.routes.ts (13 lines – wrapper)
+├─ purchase-invoices-create.routes.ts (138 lines)
+└─ purchase-invoices-actions.routes.ts (381 lines)
+```
+
+### Git
+- **Commit:** `fb636ff`
+- **Branch:** `main`
+- **Files changed:** 11 files, 1,714 insertions, 1,709 deletions
