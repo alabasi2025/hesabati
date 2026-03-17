@@ -1104,3 +1104,67 @@ backend/src/routes/api/
 - ✅ **محوصًا** — Docker multi-stage image
 - ✅ **مستمرًا** — GitHub Actions CI/CD (4 jobs)
 - ✅ **مبرمجًا للإنتاج** — v1.0.0 جاهز للنشر
+
+---
+
+## Phase 15 — تقسيم الخدمات + مسارات المخازن + بيانات العناصر + الفوترة ✅
+
+### الهدف
+الاستمرار في تطبيق مبدأ المسؤولية الفردية على الملفات المتبقية (>400 سطر).
+
+### الملفات المقسّمة
+
+#### 1. `transaction-post.service.ts` (424 → 6 أسطر | −99%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `transaction-post.service.ts` | 6 | Wrapper رفيع |
+| `transaction-single.service.ts` | 254 | `postTransaction` — تنفيذ معاملة مالية واحدة |
+| `transaction-multi.service.ts` | 236 | `postMultiTransaction` — تنفيذ متعدد الأطراف |
+
+#### 2. `warehouse-ops.routes.ts` (459 → 13 سطراً | −97%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `warehouse-ops.routes.ts` | 13 | Wrapper رفيع |
+| `warehouse-ops-write.routes.ts` | 258 | POST إنشاء عملية مخزنية |
+| `warehouse-ops-read.routes.ts` | 209 | GET مخزون + عمليات + ملخصات |
+
+#### 3. `screens-widget-data.routes.ts` (487 → 14 سطراً | −97%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `screens-widget-data.routes.ts` | 14 | Wrapper رفيع |
+| `screens-widget-basic.routes.ts` | 220 | stats, log, accounts, chart |
+| `screens-widget-enhanced.routes.ts` | 282 | enhanced stats + notes + operation-types |
+
+#### 4. `billing-employees.routes.ts` (376 → 243 سطراً | −35%)
+| الملف | الأسطر | المحتوى |
+|---|---|---|
+| `billing-employees.routes.ts` | 243 | إعدادات الفوترة |
+| `billing-accounts.routes.ts` | 121 | CRUD حسابات الفوترة للموظفين |
+
+### إحصائيات Phase 15
+- **ملفات TypeScript:** 153 ملف (+7 جديد)
+- **ملفات المسارات:** 66 ملف
+- **اختبارات الوحدة:** 229/229 (100%) ✅
+- **أكبر ملف خدمة:** `inventory.service.ts` (365 سطر)
+- **أكبر ملف مسار:** `screens-manage.routes.ts` (466 سطر)
+
+### الملفات الجديدة في Phase 15
+```
+backend/src/services/
+├─ transaction-post.service.ts (6 lines – wrapper)
+├─ transaction-single.service.ts (254 lines)
+└─ transaction-multi.service.ts (236 lines)
+
+backend/src/routes/api/
+├─ warehouse-ops.routes.ts (13 lines – wrapper)
+├─ warehouse-ops-write.routes.ts (258 lines)
+├─ warehouse-ops-read.routes.ts (209 lines)
+├─ screens-widget-data.routes.ts (14 lines – wrapper)
+├─ screens-widget-basic.routes.ts (220 lines)
+├─ screens-widget-enhanced.routes.ts (282 lines)
+└─ billing-accounts.routes.ts (121 lines)
+```
+
+### Git
+- **Commit:** `b16afe5`
+- **Files:** 12 files changed, 1,750 insertions, 1,504 deletions
