@@ -931,3 +931,43 @@ backend/src/routes/api/
 ├── accounts-read.routes.ts       (140 سطر)
 └── accounts-write.routes.ts      (330 سطر)
 ```
+
+
+---
+
+## Phase 12 — تقسيم طبقة قاعدة البيانات (DB Layer)
+**تاريخ الاكتمال:** 2026-03-17
+
+### الملخص
+المرحلة الثانية عشرة تفكك طبقة قاعدة البيانات، وتحول core.ts (1,459 سطر) الى 6 ملفات نطاق منفصلة، وتنشئ سياسة امان رسمية.
+
+### المهام المنجزة
+
+#### 1. تقسيم schema/core.ts (1,459 سطر -> 8 أسطر، -99%)
+- schema-base.ts (50 سطر): ENUMS
+- schema-users.ts (82 سطر): USERS + CURRENCIES + EXCHANGE_RATES + ROLES
+- schema-business.ts (232 سطر): BUSINESSES + PARTNERS + STATIONS + EMPLOYEES + ACCOUNTS + BILLING
+- schema-finance.ts (338 سطر): FUNDS + SUPPLIERS + VOUCHERS + ATTACHMENTS + SALARY + RECONCILIATION
+- schema-warehouse.ts (341 سطر): WAREHOUSES + INVENTORY + OPERATIONS + JOURNAL + SIDEBAR
+- schema-lookups.ts (465 سطر): SCREENS + SEQUENCE_COUNTERS + TYPES + LOOKUP TABLES + UI
+- core.ts (8 سطر): غلاف re-export
+
+#### 2. تقسيم check-schema-match.ts (1,074 -> 8 أسطر، -99%)
+- check-schema-tables.ts (979 سطر): تعريف الجداول والاعمدة المتوقعة
+- check-schema-runner.ts (118 سطر): دوال المقارنة + التحقق + main()
+
+#### 3. انشاء SECURITY.md
+- سياسة الابلاغ عن الثغرات (72 ساعة استجابة / 14 يوم اصلاح)
+- توثيق 15+ ميزة امان مطبقة (JWT، IDOR، XSS، CSP، Docker)
+
+### نتائج الاختبارات
+- 169/169 اختبار نجح (100%)
+- اختبارات جديدة Phase 12: 19 اختبار
+
+### مقاييس المشروع بعد Phase 12
+- schema/core.ts: 1,459 سطر -> 8 سطر (-99%)
+- check-schema-match.ts: 1,074 سطر -> 8 سطر (-99%)
+- ملفات Schema: 2 -> 8 ملفات (x4)
+- ملفات TypeScript: ~30 -> 139 (x4.6)
+- اختبارات الوحدة: 0 -> 169 (100%)
+- SECURITY.md: انشئ
