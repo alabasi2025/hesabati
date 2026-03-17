@@ -14,7 +14,7 @@ import { Hono } from 'hono';
 import businessesRoutes         from './businesses.routes.ts';
 import stationsRoutes           from './stations.routes.ts';
 import employeesRoutes          from './employees.routes.ts';
-import fundsRoutes              from './funds.routes.ts';
+import { fundsReadRoutes, fundsWriteRoutes } from './funds.routes.ts';
 import reportingRoutes          from './reporting.routes.ts';
 import workflowRoutes           from './workflow.routes.ts';
 import inventoryRoutes          from './inventory.routes.ts';
@@ -28,7 +28,7 @@ import journalEntriesRoutes     from './journal-entries.routes.ts';
 import billingConfigRoutes      from './billing-config.routes.ts';
 import { warehouseCrudRoutes, warehouseOpsRoutes } from './warehouse.routes.ts';
 import reportsRoutes            from './reports.routes.ts';
-import restRoutes               from './api.rest.ts';
+import { api as restRoutes }    from './api.rest.ts';
 import { purchaseInvoicesReadRoutes, purchaseInvoicesWriteRoutes } from './purchase-invoices.routes.ts';
 import operationCategoriesRoutes from './operation-categories.routes.ts';
 import supplierTypesRoutes      from './supplier-types.routes.ts';
@@ -49,7 +49,9 @@ import { miscCategoriesRoutes }       from './misc-categories.routes.ts';
 // ── مسارات Phase 4 (مستخرجة من api.rest.ts) ─────────────────────────────────
 import { fundTypesRoutes }   from './fund-types.routes.ts';
 import { sidebarRoutes }     from './sidebar.routes.ts';
-import { screensRoutes }     from './screens.routes.ts';
+import { screensManageRoutes, screensPermRoutes } from './screens.routes.ts';
+import { billingEmployeesRoutes } from './billing-employees.routes.ts';
+import { legacyCompatRoutes }     from './legacy-compat.routes.ts';
 
 const api = new Hono();
 
@@ -57,7 +59,8 @@ const api = new Hono();
 api.route('/', businessesRoutes);
 api.route('/', stationsRoutes);
 api.route('/', employeesRoutes);
-api.route('/', fundsRoutes);
+api.route('/', fundsReadRoutes);
+api.route('/', fundsWriteRoutes);
 api.route('/', reportingRoutes);
 api.route('/', workflowRoutes);
 api.route('/', inventoryRoutes);
@@ -94,6 +97,9 @@ api.route('/', miscCategoriesRoutes);
 // ── Phase 4: مسارات مستخرجة من api.rest.ts ────────────────────────────────
 api.route('/', fundTypesRoutes);
 api.route('/', sidebarRoutes);
-api.route('/', screensRoutes);
+api.route('/', screensManageRoutes);
+api.route('/', screensPermRoutes);
+api.route('/', billingEmployeesRoutes);
+api.route('/', legacyCompatRoutes);
 
 export default api;

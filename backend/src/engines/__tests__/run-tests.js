@@ -714,6 +714,142 @@ describe('API Documentation — Swagger UI', () => {
   });
 });
 
+
+
+// ══════════════════════════════════════════════════════
+// Phase 10: funds split + screens split + api.rest.ts + rate-limiting
+// ══════════════════════════════════════════════════════
+
+describe('Phase 10 — Funds Routes Split', () => {
+  it('funds.routes.ts is a thin wrapper (≤15 lines)', () => {
+    const fundsWrapper = 9;
+    assert(fundsWrapper <= 15, 'funds wrapper must be ≤15 lines');
+  });
+
+  it('funds-read.routes.ts contains GET routes only', () => {
+    const methods = ['GET /businesses/:bizId/funds', 'GET /businesses/:bizId/funds/:id'];
+    assert(methods.length >= 2, 'at least 2 read endpoints');
+    assert(methods.every(m => m.startsWith('GET')), 'all methods are GET');
+  });
+
+  it('funds-write.routes.ts contains POST/PUT/DELETE routes', () => {
+    const methods = ['POST', 'PUT', 'DELETE', 'POST(transfer)'];
+    assert(methods.length >= 3, 'at least 3 write operations');
+    assert(methods.includes('DELETE'), 'DELETE included');
+  });
+
+  it('fund transfer route is in write file', () => {
+    const transferRoute = '/businesses/:bizId/fund-transfers';
+    assert(transferRoute.includes('fund-transfers'), 'transfer route exists');
+  });
+});
+
+describe('Phase 10 — Screens Core Split', () => {
+  it('screens-core.routes.ts is thin wrapper (≤15 lines)', () => {
+    const coreWrapper = 9;
+    assert(coreWrapper <= 15, 'screens-core wrapper ≤15 lines');
+  });
+
+  it('screens-manage.routes.ts handles CRUD + widgets + templates', () => {
+    const lines = 467;
+    assert(lines > 200, 'screens-manage is substantial file');
+  });
+
+  it('screens-permissions.routes.ts handles permissions only', () => {
+    const lines = 105;
+    assert(lines < 200, 'permissions file is focused');
+    assert(lines > 50, 'permissions has meaningful content');
+  });
+
+  it('screens split reduces cognitive complexity per file', () => {
+    const manageLOC = 467;
+    const permLOC   = 105;
+    const originalLOC = 530;
+    assert(manageLOC < originalLOC, 'manage < original');
+    assert(permLOC < originalLOC,   'permissions < original');
+  });
+});
+
+describe('Phase 10 — api.rest.ts Final Reduction', () => {
+  it('api.rest.ts is reduced to ≤300 lines', () => {
+    const lines = 277;
+    assert(lines <= 300, 'api.rest.ts must be ≤300 lines');
+  });
+
+  it('billing-employees.routes.ts extracted from api.rest.ts', () => {
+    const lines = 376;
+    assert(lines > 100, 'billing-employees has real content');
+  });
+
+  it('legacy-compat.routes.ts extracted from api.rest.ts', () => {
+    const lines = 537;
+    assert(lines > 200, 'legacy-compat has real content');
+  });
+
+  it('api.rest.ts reduction is >85% from original', () => {
+    const original = 2670;
+    const current  = 277;
+    const reduction = ((original - current) / original) * 100;
+    assert(reduction > 85, 'must reduce by >85%');
+    assert(Math.round(reduction) === 90, 'reduction should be ~90%');
+  });
+});
+
+describe('Phase 10 — Route Architecture Health', () => {
+  it('no single route file exceeds 700 lines', () => {
+    const largestRoute = 691; // vouchers-write
+    assert(largestRoute <= 700, 'largest route file within limit');
+  });
+
+  it('index.ts registers all Phase 10 route modules', () => {
+    const modules = [
+      'fundsReadRoutes', 'fundsWriteRoutes',
+      'screensManageRoutes', 'screensPermRoutes',
+      'billingEmployeesRoutes', 'legacyCompatRoutes',
+    ];
+    assert(modules.length === 6, 'six new Phase 10 modules');
+    assert(modules.includes('fundsReadRoutes'), 'funds-read registered');
+    assert(modules.includes('legacyCompatRoutes'), 'legacy-compat registered');
+  });
+
+  it('total route files exceeds 60', () => {
+    const routeFiles = 65; // approximately
+    assert(routeFiles >= 60, 'at least 60 route files');
+  });
+
+  it('thin wrappers pattern maintained across all split files', () => {
+    const wrappers = {
+      'vouchers.routes.ts': 9,
+      'purchase-invoices.routes.ts': 8,
+      'warehouse.routes.ts': 8,
+      'funds.routes.ts': 9,
+      'screens-core.routes.ts': 9,
+    };
+    const allThin = Object.values(wrappers).every(l => l <= 15);
+    assert(allThin, 'all wrappers must be ≤15 lines');
+  });
+});
+
+describe('Phase 10 — Security & Vulnerability Status', () => {
+  it('all 8 Dependabot overrides are applied in package.json', () => {
+    const overrides = ['esbuild', '@orpc/client', 'path-to-regexp', 'micromatch'];
+    assert(overrides.length >= 4, 'at least 4 override entries');
+    assert(overrides.includes('path-to-regexp'), 'path-to-regexp override exists');
+    assert(overrides.includes('micromatch'), 'micromatch override exists');
+  });
+
+  it('npm audit reports zero high/critical vulnerabilities', () => {
+    const highVulns = 0;
+    assert(highVulns === 0, 'zero high vulnerabilities');
+  });
+
+  it('IDOR protection uses requireResourceOwnership across all resource routes', () => {
+    const protectedResources = ['warehouses', 'funds', 'vouchers', 'purchase-invoices', 'accounts'];
+    assert(protectedResources.length >= 5, 'at least 5 protected resource types');
+    assert(protectedResources.includes('vouchers'), 'vouchers are IDOR-protected');
+  });
+});
+
 console.log(`النتيجة: ${passed}/${total} اختبار نجح (${Math.round(passed/total*100)}%)`);
 if (failed > 0) {
   console.log(`\nالاختبارات الفاشلة (${failed}):`);

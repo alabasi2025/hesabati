@@ -2,120 +2,181 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Hesabati API",
-    "description": "نظام محاسبة متكامل - Comprehensive Accounting System API",
-    "version": "1.0.0",
+    "description": "نظام المحاسبة — واجهة برمجية شاملة لإدارة المعاملات المالية والمخازن والتقارير",
+    "version": "10.0.0",
     "contact": {
       "name": "Hesabati Support",
-      "email": "support@hesabati.com"
-    },
-    "license": {
-      "name": "Private"
+      "url": "https://github.com/alabasi2025/hesabati"
     }
   },
   "servers": [
     {
       "url": "http://localhost:3000/api",
-      "description": "Development server"
+      "description": "Development"
     },
     {
       "url": "https://api.hesabati.com/api",
-      "description": "Production server"
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
     }
   ],
   "components": {
     "securitySchemes": {
-      "BearerAuth": {
+      "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "JWT token using HS256 algorithm. Expires in 7 days."
+        "bearerFormat": "JWT (HS256)"
       }
     },
     "schemas": {
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "example": "غير مصرح"
-          },
-          "code": {
-            "type": "string",
-            "example": "UNAUTHORIZED"
-          }
-        }
-      },
-      "Pagination": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "example": 1
-          },
-          "limit": {
-            "type": "integer",
-            "example": 20
-          },
-          "total": {
-            "type": "integer",
-            "example": 100
-          }
-        }
-      },
       "Voucher": {
         "type": "object",
+        "required": [
+          "bizId",
+          "voucherType",
+          "amount",
+          "currency"
+        ],
         "properties": {
           "id": {
-            "type": "integer",
-            "example": 1
+            "type": "integer"
           },
-          "businessId": {
-            "type": "integer",
-            "example": 1
+          "bizId": {
+            "type": "integer"
           },
           "voucherType": {
             "type": "string",
             "enum": [
               "receipt",
-              "payment",
-              "transfer",
-              "journal"
+              "payment"
             ]
           },
           "amount": {
             "type": "number",
-            "example": 1500
+            "minimum": 0.01
           },
-          "date": {
+          "currency": {
+            "type": "string"
+          },
+          "status": {
             "type": "string",
-            "format": "date",
-            "example": "2026-01-15"
+            "enum": [
+              "unreviewed",
+              "reviewed",
+              "confirmed",
+              "cancelled"
+            ]
+          },
+          "sequenceNo": {
+            "type": "string",
+            "pattern": "^[A-Z]+-[0-9]{4}-[0-9]{6}$"
+          }
+        }
+      },
+      "PurchaseInvoice": {
+        "type": "object",
+        "required": [
+          "bizId",
+          "supplierId",
+          "items"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "bizId": {
+            "type": "integer"
+          },
+          "supplierId": {
+            "type": "integer"
           },
           "status": {
             "type": "string",
             "enum": [
               "draft",
-              "pending",
-              "posted",
-              "cancelled",
-              "reviewed"
+              "confirmed",
+              "cancelled"
             ]
           },
-          "sequenceNumber": {
-            "type": "string",
-            "example": "RCV-2026-000001"
+          "totalAmount": {
+            "type": "number"
           },
-          "description": {
-            "type": "string",
-            "example": "دفعة عميل"
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvoiceItem"
+            }
+          }
+        }
+      },
+      "InvoiceItem": {
+        "type": "object",
+        "required": [
+          "itemId",
+          "quantity",
+          "unitPrice"
+        ],
+        "properties": {
+          "itemId": {
+            "type": "integer"
           },
-          "currencyId": {
-            "type": "integer",
-            "example": 1
+          "quantity": {
+            "type": "number",
+            "minimum": 0
           },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "Warehouse": {
+        "type": "object",
+        "required": [
+          "bizId",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "bizId": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      },
+      "Fund": {
+        "type": "object",
+        "required": [
+          "bizId",
+          "name",
+          "currency"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "bizId": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "number"
           }
         }
       },
@@ -125,31 +186,21 @@
           "id": {
             "type": "integer"
           },
-          "businessId": {
+          "bizId": {
             "type": "integer"
           },
           "name": {
-            "type": "string",
-            "example": "شركة الأمل"
+            "type": "string"
           },
-          "partnerType": {
+          "type": {
             "type": "string",
             "enum": [
               "customer",
-              "supplier",
-              "both"
+              "supplier"
             ]
           },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
           "balance": {
-            "type": "number",
-            "example": 5000
+            "type": "number"
           }
         }
       },
@@ -159,29 +210,17 @@
           "id": {
             "type": "integer"
           },
-          "businessId": {
+          "bizId": {
             "type": "integer"
           },
           "name": {
-            "type": "string",
-            "example": "أحمد محمد"
+            "type": "string"
           },
           "salary": {
-            "type": "number",
-            "example": 3000
+            "type": "number"
           },
-          "jobTitleId": {
-            "type": "integer"
-          },
-          "departmentId": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "inactive"
-            ]
+          "department": {
+            "type": "string"
           }
         }
       },
@@ -198,20 +237,15 @@
             "type": "integer"
           },
           "action": {
-            "type": "string",
-            "example": "create_voucher"
+            "type": "string"
           },
           "tableName": {
-            "type": "string",
-            "example": "vouchers"
+            "type": "string"
           },
           "recordId": {
             "type": "integer"
           },
-          "oldData": {
-            "type": "object"
-          },
-          "newData": {
+          "changes": {
             "type": "object"
           },
           "createdAt": {
@@ -219,96 +253,49 @@
             "format": "date-time"
           }
         }
-      }
-    }
-  },
-  "security": [
-    {
-      "BearerAuth": []
-    }
-  ],
-  "paths": {
-    "/auth/login": {
-      "post": {
-        "tags": [
-          "Authentication"
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
         ],
-        "summary": "تسجيل الدخول",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "username",
-                  "password"
-                ],
-                "properties": {
-                  "username": {
-                    "type": "string",
-                    "example": "admin"
-                  },
-                  "password": {
-                    "type": "string",
-                    "format": "password"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "تم تسجيل الدخول بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string",
-                      "description": "JWT token (HS256, 7 days)"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "integer"
-                        },
-                        "username": {
-                          "type": "string"
-                        },
-                        "role": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
           },
-          "401": {
-            "description": "بيانات غير صحيحة",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer"
           }
         }
       }
-    },
-    "/businesses/{bizId}/vouchers-enhanced": {
+    }
+  },
+  "paths": {
+    "/businesses/{bizId}/vouchers": {
       "get": {
+        "summary": "قائمة السندات",
         "tags": [
-          "Vouchers — السندات"
+          "Vouchers"
         ],
-        "summary": "جلب قائمة السندات",
         "parameters": [
           {
             "name": "bizId",
@@ -333,34 +320,6 @@
               "type": "integer",
               "default": 20
             }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "posted",
-                "cancelled"
-              ]
-            }
-          },
-          {
-            "name": "dateFrom",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
-            "name": "dateTo",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
           }
         ],
         "responses": {
@@ -378,31 +337,25 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
-      }
-    },
-    "/businesses/{bizId}/vouchers/{id}/status": {
+      },
       "post": {
+        "summary": "إنشاء سند جديد",
         "tags": [
-          "Vouchers — السندات"
+          "Vouchers"
         ],
-        "summary": "تغيير حالة السند",
         "parameters": [
           {
             "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -415,43 +368,195 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "status"
-                ],
-                "properties": {
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "draft",
-                      "pending",
-                      "posted",
-                      "cancelled",
-                      "reviewed",
-                      "unreviewed"
-                    ]
-                  }
-                }
+                "$ref": "#/components/schemas/Voucher"
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "تم تغيير الحالة"
+          "201": {
+            "description": "تم الإنشاء بنجاح"
           },
           "400": {
-            "description": "انتقال حالة غير مسموح"
+            "description": "بيانات غير صالحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/businesses/{bizId}/purchase-invoices": {
+      "get": {
+        "summary": "قائمة فواتير المشتريات",
+        "tags": [
+          "Purchase Invoices"
+        ],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الفواتير",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PurchaseInvoice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "إنشاء فاتورة مشتريات",
+        "tags": [
+          "Purchase Invoices"
+        ],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseInvoice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          }
+        }
+      }
+    },
+    "/businesses/{bizId}/warehouses": {
+      "get": {
+        "summary": "قائمة المخازن",
+        "tags": [
+          "Warehouses"
+        ],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المخازن",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Warehouse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/businesses/{bizId}/funds": {
+      "get": {
+        "summary": "قائمة الصناديق",
+        "tags": [
+          "Funds"
+        ],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الصناديق",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Fund"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "إنشاء صندوق جديد",
+        "tags": [
+          "Funds"
+        ],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Fund"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
           }
         }
       }
     },
     "/businesses/{bizId}/partners": {
       "get": {
+        "summary": "قائمة الشركاء / العملاء / الموردين",
         "tags": [
-          "Partners — الشركاء"
+          "Partners"
         ],
-        "summary": "جلب قائمة الشركاء",
         "parameters": [
           {
             "name": "bizId",
@@ -477,48 +582,14 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": [
-          "Partners — الشركاء"
-        ],
-        "summary": "إضافة شريك جديد",
-        "parameters": [
-          {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Partner"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم الإنشاء"
-          },
-          "400": {
-            "description": "بيانات غير صحيحة"
-          }
-        }
       }
     },
     "/businesses/{bizId}/employees": {
       "get": {
+        "summary": "قائمة الموظفين",
         "tags": [
-          "Employees — الموظفون"
+          "Employees"
         ],
-        "summary": "جلب قائمة الموظفين",
         "parameters": [
           {
             "name": "bizId",
@@ -548,10 +619,10 @@
     },
     "/businesses/{bizId}/audit-log": {
       "get": {
+        "summary": "سجل التدقيق",
         "tags": [
-          "Audit — سجل المراجعة"
+          "Audit"
         ],
-        "summary": "جلب سجل التدقيق",
         "parameters": [
           {
             "name": "bizId",
@@ -562,32 +633,32 @@
             }
           },
           {
-            "name": "action",
+            "name": "table",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "tableName",
+            "name": "from",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             }
           },
           {
-            "name": "limit",
+            "name": "to",
             "in": "query",
             "schema": {
-              "type": "integer",
-              "default": 50,
-              "maximum": 200
+              "type": "string",
+              "format": "date"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "سجل المراجعة",
+            "description": "سجل التدقيق",
             "content": {
               "application/json": {
                 "schema": {
@@ -602,32 +673,64 @@
         }
       }
     },
-    "/health": {
+    "/businesses/{bizId}/reporting/profit-loss": {
       "get": {
+        "summary": "تقرير الأرباح والخسائر",
         "tags": [
-          "System"
+          "Reporting"
         ],
-        "summary": "فحص حالة الخادم",
-        "security": [],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "الخادم يعمل",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "timestamp": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
+            "description": "نتائج الأرباح والخسائر"
+          }
+        }
+      }
+    },
+    "/businesses/{bizId}/reporting/trial-balance": {
+      "get": {
+        "summary": "ميزان المراجعة",
+        "tags": [
+          "Reporting"
+        ],
+        "parameters": [
+          {
+            "name": "bizId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ميزان المراجعة"
           }
         }
       }

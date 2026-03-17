@@ -1,9 +1,10 @@
 /**
- * screens.routes.ts — Phase 7 (thin re-export wrapper)
- * 
- * تم تقسيم هذا الملف في Phase 7 إلى:
- *  - screens-core.routes.ts        (CRUD + Widgets + Templates + Sidebar + User)
- *  - screens-widget-data.routes.ts (Widget Data APIs + Enhanced Widget APIs)
+ * screens.routes.ts — Phase 10 (thin re-export wrapper)
+ * تم التقسيم في Phase 10 إلى:
+ *  - screens-manage.routes.ts      (CRUD + Widgets + Templates + Sidebar + User)
+ *  - screens-permissions.routes.ts (صلاحيات الشاشات)
+ *  - screens-widget-data.routes.ts (Widget Data APIs)
  */
-export { screensRoutes } from './screens-core.routes';
+export { screensManageRoutes } from './screens-manage.routes';
+export { screensPermRoutes } from './screens-permissions.routes';
 export { screensWidgetData } from './screens-widget-data.routes';
