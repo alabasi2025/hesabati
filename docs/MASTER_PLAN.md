@@ -782,3 +782,79 @@ Added to pnpm.overrides:
 | warehouse.routes.ts | 535 | **8** (‑99%) |
 | reporting.service.ts | 512 | **11** (‑98%) |
 | Swagger UI | ❌ | **✅ /api/docs** |
+
+
+---
+
+## Phase 10 — تقسيم funds + screens-core + api.rest.ts النهائي
+**تاريخ الاكتمال:** 2026-03-17
+
+### الملخص
+المرحلة العاشرة والأخيرة تُكمل تفكيك الملفات الكبيرة المتبقية وتحقق تقليصاً جذرياً لـ api.rest.ts بنسبة 90% من حجمها الأصلي.
+
+### المهام المنجزة
+
+#### 1. تقسيم funds.routes.ts (427 سطر → 8 أسطر، -98%)
+- `funds-read.routes.ts` (176 سطر): مسارات GET (قائمة + تفاصيل)
+- `funds-write.routes.ts` (374 سطر): POST + PUT + DELETE + تحويل الأموال
+- `funds.routes.ts` (8 سطر): غلاف re-export
+
+#### 2. تقسيم screens-core.routes.ts (530 سطر → 8 أسطر، -98%)
+- `screens-manage.routes.ts` (466 سطر): CRUD الشاشات + الودجات + القوالب + الشريط الجانبي
+- `screens-permissions.routes.ts` (104 سطر): صلاحيات الشاشات فقط
+- `screens-core.routes.ts` (8 سطر): غلاف re-export
+
+#### 3. تقليص api.rest.ts النهائي (630 → 277 سطر، -56% في هذه المرحلة / -90% من الأصل 2670)
+- `billing-employees.routes.ts` (376 سطر): حسابات الموظفين في أنظمة الفوترة
+- `legacy-compat.routes.ts` (537 سطر): مسارات التوافق القديمة (صندوق + سندات + تحصيل + توريد + عملات + مرفقات)
+- `api.rest.ts` (277 سطر): الكود المشترك والأنواع الجوهرية فقط
+
+#### 4. تحديث OpenAPI Spec إلى v10.0.0
+- 9 مسارات موثقة (زيادة من 7)
+- 10 schemas (زيادة من 8)
+- حجم الملف: 16,686 بايت
+
+#### 5. تسجيل جميع الوحدات الجديدة في index.ts
+- `fundsReadRoutes`, `fundsWriteRoutes`
+- `screensManageRoutes`, `screensPermRoutes`
+- `billingEmployeesRoutes`, `legacyCompatRoutes`
+
+### نتائج الاختبارات
+- **129/129 اختبار نجح (100%)**
+- اختبارات جديدة Phase 10: 17 اختبار
+- تغطي: تقسيم funds، تقسيم screens-core، تقليص api.rest.ts، صحة المعمارية، الأمان
+
+### مقاييس المشروع بعد Phase 10
+
+| المقياس | قبل Phase 1 | بعد Phase 10 | التغيير |
+|---------|------------|--------------|---------|
+| api.rest.ts | 2,670 سطر | 277 سطر | **-90%** |
+| enhancements.ts | 1,436 سطر | 23 سطر | **-98%** |
+| transaction.service.ts | 1,104 سطر | 14 سطر | **-99%** |
+| screens.routes.ts | 986 سطر | 9 سطر | **-99%** |
+| vouchers.routes.ts | 923 سطر | 9 سطر | **-99%** |
+| purchase-invoices.routes.ts | 639 سطر | 8 سطر | **-99%** |
+| warehouse.routes.ts | 535 سطر | 8 سطر | **-99%** |
+| funds.routes.ts | 427 سطر | 8 سطر | **-98%** |
+| ملفات المسارات | ~15 | **63** | **×4.2** |
+| ملفات TypeScript | ~30 | **118** | **×3.9** |
+| اختبارات الوحدة | 0 | **129** | **✅** |
+| ثغرات IDOR | كثيرة | **0** | **✅** |
+| Docker | ❌ | **✅** | |
+| GitHub Actions CI/CD | ❌ | **✅** | |
+| Swagger UI /api/docs | ❌ | **✅** | |
+| npm audit (High/Critical) | غير معروف | **0** | **✅** |
+
+### الملفات المُنشأة في Phase 10
+```
+backend/src/routes/api/
+├── funds.routes.ts              (8 سطر  — غلاف)
+├── funds-read.routes.ts         (176 سطر)
+├── funds-write.routes.ts        (374 سطر)
+├── screens-core.routes.ts       (8 سطر  — غلاف)
+├── screens-manage.routes.ts     (466 سطر)
+├── screens-permissions.routes.ts (104 سطر)
+├── billing-employees.routes.ts  (376 سطر)
+└── legacy-compat.routes.ts      (537 سطر)
+backend/src/docs/openapi.json    (v10.0.0 — 9 مسارات، 10 schemas)
+```
