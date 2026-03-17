@@ -858,3 +858,76 @@ backend/src/routes/api/
 └── legacy-compat.routes.ts      (537 سطر)
 backend/src/docs/openapi.json    (v10.0.0 — 9 مسارات، 10 schemas)
 ```
+
+
+---
+
+## Phase 11 — تقسيم المحركات (Engines) + accounts + validation
+**تاريخ الاكتمال:** 2026-03-17
+
+### الملخص
+المرحلة الحادية عشرة تُركز على تفكيك المحركات الكبيرة وطبقة الـ Middleware، وتحقق تقسيماً معمارياً دقيقاً لطبقة العمل الأساسية.
+
+### المهام المنجزة
+
+#### 1. تقسيم sequencing.engine.ts (744 → 10 أسطر، -99%)
+- `sequencing.types.ts` (185 سطر): الأنواع والثوابت (DbOrTx, CounterType, ARABIC_LABELS, TYPE_PREFIXES)
+- `sequencing-core.engine.ts` (131 سطر): الدوال الأساسية + ترقيم التصنيفات
+- `sequencing-entity.engine.ts` (453 سطر): ترقيم الكيانات (سندات + مخازن + قيود + فواتير + الموحّدة)
+- `sequencing.engine.ts` (10 سطر): غلاف re-export
+
+#### 2. تقسيم screens.engine.ts (638 → 12 أسطر، -98%)
+- `screens.types.ts` (84 سطر): الواجهات (WidgetInput, ScreenInput, PermissionInput)
+- `screens-crud.engine.ts` (259 سطر): CRUD الشاشات (إنشاء + تحديث + حذف + نسخ)
+- `screens-widget.engine.ts` (115 سطر): عمليات الودجات (إضافة + تحديث + حذف + batch)
+- `screens-perm.engine.ts` (224 سطر): الصلاحيات + شاشات المستخدم + الإعدادات + الشريط الجانبي
+- `screens.engine.ts` (12 سطر): غلاف re-export
+
+#### 3. تقسيم accounts.routes.ts (411 → 9 أسطر، -98%)
+- `accounts-read.routes.ts` (140 سطر): GET (قائمة + حسابات العهد + الوسيطة + المعلقة)
+- `accounts-write.routes.ts` (330 سطر): POST + PUT + DELETE
+- `accounts.routes.ts` (9 سطر): غلاف re-export
+
+#### 4. تقسيم validation.ts (411 → 35 أسطر، -91%)
+- `validation-sanitize.ts` (65 سطر): sanitizeString + sanitizeObject + xssSanitizeMiddleware
+- `validation-schemas.ts` (332 سطر): 21+ مخطط Zod لجميع الكيانات
+- `validation.ts` (35 سطر): غلاف + validateBody
+
+### نتائج الاختبارات
+- **150/150 اختبار نجح (100%)**
+- اختبارات جديدة Phase 11: 21 اختبار
+- تغطي: تقسيم sequencing، تقسيم screens، تقسيم accounts، تقسيم validation، معمارية المحركات
+
+### مقاييس المشروع بعد Phase 11
+
+| المقياس | قبل Phase 1 | بعد Phase 11 | التغيير |
+|---------|------------|--------------|---------|
+| sequencing.engine.ts | 744 سطر | 10 سطر | **-99%** |
+| screens.engine.ts | 638 سطر | 12 سطر | **-98%** |
+| accounts.routes.ts | 411 سطر | 9 سطر | **-98%** |
+| validation.ts | 411 سطر | 35 سطر | **-91%** |
+| ملفات TypeScript | ~30 | **129** | **×4.3** |
+| ملفات المحركات | 0 | **22** | **جديد** |
+| اختبارات الوحدة | 0 | **150** | **✅** |
+
+### الملفات المُنشأة في Phase 11
+```
+backend/src/engines/
+├── sequencing.engine.ts          (10 سطر  — غلاف)
+├── sequencing.types.ts           (185 سطر)
+├── sequencing-core.engine.ts     (131 سطر)
+├── sequencing-entity.engine.ts   (453 سطر)
+├── screens.engine.ts             (12 سطر  — غلاف)
+├── screens.types.ts              (84 سطر)
+├── screens-crud.engine.ts        (259 سطر)
+├── screens-widget.engine.ts      (115 سطر)
+└── screens-perm.engine.ts        (224 سطر)
+backend/src/middleware/
+├── validation.ts                 (35 سطر  — غلاف + validateBody)
+├── validation-sanitize.ts        (65 سطر)
+└── validation-schemas.ts         (332 سطر)
+backend/src/routes/api/
+├── accounts.routes.ts            (9 سطر   — غلاف)
+├── accounts-read.routes.ts       (140 سطر)
+└── accounts-write.routes.ts      (330 سطر)
+```
