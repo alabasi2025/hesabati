@@ -2455,8 +2455,8 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  semver@6.3.1:
-    resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
+  semver@7.7.4:
+    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
     hasBin: true
 
   semver@7.7.4:
@@ -3048,7 +3048,7 @@ snapshots:
       debug: 4.4.3
       gensync: 1.0.0-beta.2
       json5: 2.2.3
-      semver: 6.3.1
+      semver: 7.7.4
     transitivePeerDependencies:
       - supports-color
 
@@ -3070,7 +3070,7 @@ snapshots:
       '@babel/helper-validator-option': 7.27.1
       browserslist: 4.28.1
       lru-cache: 5.1.1
-      semver: 6.3.1
+      semver: 7.7.4
 
   '@babel/helper-globals@7.28.0': {}
 
@@ -4994,7 +4994,7 @@ snapshots:
     optionalDependencies:
       '@parcel/watcher': 2.5.6
 
-  semver@6.3.1: {}
+  semver@7.7.4: {}
 
   semver@7.7.4: {}
 
