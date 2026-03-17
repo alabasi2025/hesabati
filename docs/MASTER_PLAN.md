@@ -517,3 +517,40 @@ journal (268), warehouse (241), salaries (122) ...
 - **17 engine namespace exports**
 - **68 direct function exports**
 - **إجمالي 3,719+ سطر TypeScript في engines/**
+
+---
+
+## Phase 5 - Security + audit.engine + Unit Tests (Complete)
+**Commit:** a44c53d | **Date:** 2026-03-17
+
+### What was done:
+
+#### 1. IDOR Fix (Insecure Direct Object Reference)
+- Fixed: /stations/:id (PUT legacy) - now protected with authentication + ownership check
+- Verified: 7 route files - 6 were already protected
+- Added: middleware/ownership.ts (134 lines) - centralized ownership check middleware
+
+#### 2. audit.engine Integration in Routes
+- Created: engines/audit-middleware.engine.ts (120 lines) - helpers: auditCreate, auditUpdate, auditDelete, makeAuditCtx
+- Added audit import to 9 route files: partners, employees, departments, stations, billing-config, categories-expenses, operation-types, journal-entries, accounts
+- Replaced 5 direct db.insert(auditLog) calls with logAction() in enhancements.ts and attachments-enhanced.routes.ts
+
+#### 3. Unit Tests - Total: 56 tests (100% pass)
+| Suite | Tests | Status |
+|-------|-------|--------|
+| Transaction Engine | 11 | Pass |
+| Permissions Engine | 7 | Pass |
+| HR Engine | 8 | Pass |
+| Workflow Engine | 6 | Pass |
+| Currency Engine | 8 | Pass |
+| Audit Engine (NEW) | 7 | Pass |
+| Sequencing Engine (NEW) | 9 | Pass |
+| TOTAL | 56 | 100% |
+
+#### Phase 5 Stats:
+- Files changed: 18
+- Lines added: 1,445
+- IDOR vulnerabilities fixed: 1 (legacy stations route)
+- Audit locations unified: 5 (direct insert -> engine call)
+- Audit coverage: 9 additional route files
+
