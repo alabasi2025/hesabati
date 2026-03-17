@@ -12,6 +12,7 @@ import {
   getAttachmentById, resolveStoragePath, validateFile
 } from '../../engines/attachment.engine.ts';
 import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
 
 export const attachmentsEnhancedRoutes = new Hono();
 const api = attachmentsEnhancedRoutes;
@@ -50,11 +51,7 @@ api.post('/businesses/:bizId/attachments', bizAuthMiddleware(), safeHandler('ر�
     uploadedBy: userId,
   }).returning();
   // سجل التدقيق
-  await db.insert(auditLog).values({
-    userId, businessId: bizId, action: 'upload_attachment',
-    tableName: 'attachments', recordId: created.id,
-    newData: { entityType, entityId, fileName: body.fileName, filePath: finalPath, importance: body.importance || null },
-  });
+  await logAction({ userId, businessId: bizId, action: 'create', tableName: 'attachments', recordId: created.id, newData: { entityType, entityId, fileName: body.fileName, filePath: finalPath, importance: body.importance || null } });
   return c.json(created, 201);
 }));
 
@@ -88,15 +85,7 @@ api.put('/businesses/:bizId/attachments-archive-settings', bizAuthMiddleware(), 
   await mkdir(dir, { recursive: true });
   await writeFile(filePath, JSON.stringify(normalized, null, 2), 'utf8');
   const treeResult = await ensureArchiveTreeForBusiness(bizId, normalized);
-  await db.insert(auditLog).values({
-    userId,
-    businessId: bizId,
-    action: 'update_attachment_archive_settings',
-    tableName: 'businesses',
-    recordId: bizId,
-    oldData: null,
-    newData: { ...normalized, treeResult } as any,
-  });
+  await logAction({ userId, businessId: bizId, action: 'update', tableName: 'businesses', recordId: bizId, newData: { ...normalized, treeResult } as any });
   return c.json({ ...normalized, treeResult });
 }));
 

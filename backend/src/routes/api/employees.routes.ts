@@ -10,6 +10,7 @@ import { getBizId } from './_shared/context-helpers.ts';
 import { getFirstRow } from './_shared/db-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 import type { AppContext } from './_shared/types.ts';
+import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
 
 const employeesRoutes = new Hono();
 

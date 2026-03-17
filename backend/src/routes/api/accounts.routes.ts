@@ -27,6 +27,7 @@ import {
 } from '../../middleware/sequencing.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getBizId } from './_shared/context-helpers.ts';
+import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
 
 const accountsRoutes = new Hono();
 

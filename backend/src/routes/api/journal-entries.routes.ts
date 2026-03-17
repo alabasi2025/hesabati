@@ -18,6 +18,7 @@ import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts
 import { getNextSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
+import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
 
 const journalEntriesRoutes = new Hono();
 

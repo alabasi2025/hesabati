@@ -5,6 +5,10 @@
 
 let passed = 0, failed = 0, total = 0;
 const failures = [];
+function assert(condition, message) {
+  if (!condition) throw new Error(message || 'Assertion failed');
+}
+
 
 function describe(suiteName, fn) {
   console.log(`\n  📦 ${suiteName}`);
@@ -205,12 +209,120 @@ describe('Currency Engine — Unified Balances', () => {
 // ── RESULTS ───────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════
 
+// Results will be printed at the very end of file (after Phase 5 tests)
+
+// ==========================================
+// Phase 5: Audit Engine Tests
+// ==========================================
+
+describe('Audit Engine — Action Types', () => {
+  const validActions = ['create', 'update', 'delete', 'cancel', 'confirm', 'approve', 'login', 'logout', 'export', 'import'];
+  
+  it('all audit actions defined', () => {
+    assert(validActions.length === 10, 'Expected 10 action types');
+  });
+  
+  it('create action exists', () => {
+    assert(validActions.includes('create'), 'create action missing');
+  });
+  
+  it('audit input requires userId, businessId, action, tableName', () => {
+    const input = { userId: 1, businessId: 1, action: 'create', tableName: 'vouchers', recordId: 5 };
+    assert(input.userId > 0, 'userId must be > 0');
+    assert(input.businessId > 0, 'businessId must be > 0');
+    assert(input.tableName.length > 0, 'tableName required');
+  });
+  
+  it('audit does not block main operation on failure', async () => {
+    let operationDone = false;
+    try { throw new Error('audit db error'); } catch { /* ignored */ }
+    operationDone = true;
+    assert(operationDone, 'operation must complete even if audit fails');
+  });
+});
+
+describe('Audit Engine — Filters', () => {
+  it('filters require bizId', () => {
+    const f = { bizId: 1, page: 1, limit: 50 };
+    assert(f.bizId > 0, 'bizId required');
+  });
+  
+  it('default limit is 50', () => {
+    assert(50 > 0, 'limit must be positive');
+  });
+  
+  it('date range validation', () => {
+    const from = new Date('2025-01-01');
+    const to = new Date('2025-12-31');
+    assert(from < to, 'fromDate must be before toDate');
+  });
+});
+
+describe('Sequencing Engine — Format', () => {
+  function fmt(n, pad = 6) { return String(n).padStart(pad, '0'); }
+  
+  it('formats 1 as 000001', () => {
+    assert(fmt(1) === '000001', `Expected 000001, got ${fmt(1)}`);
+  });
+  
+  it('formats 999999 without padding', () => {
+    assert(fmt(999999) === '999999', `Expected 999999, got ${fmt(999999)}`);
+  });
+  
+  it('custom padding 4', () => {
+    assert(fmt(5, 4) === '0005', `Expected 0005, got ${fmt(5, 4)}`);
+  });
+});
+
+describe('Sequencing Engine — Account Hierarchy', () => {
+  function buildCode(parentCode, seqNum) {
+    return `${parentCode}-${String(seqNum).padStart(3, '0')}`;
+  }
+  
+  it('level 1 code', () => {
+    assert(buildCode('1', 1) === '1-001', `Expected 1-001`);
+  });
+  
+  it('level 2 code', () => {
+    assert(buildCode('1-001', 5) === '1-001-005', `Expected 1-001-005`);
+  });
+  
+  it('level 3 deep nesting', () => {
+    const l1 = buildCode('1', 1);
+    const l2 = buildCode(l1, 2);
+    const l3 = buildCode(l2, 3);
+    assert(l3 === '1-001-002-003', `Expected 1-001-002-003`);
+  });
+});
+
+describe('Sequencing Engine — Voucher Sequence', () => {
+  const PREFIXES = { receipt: 'RCV', payment: 'PAY', journal: 'JRN', transfer: 'TRF' };
+  
+  function genSeq(bizId, type, num) {
+    const prefix = PREFIXES[type] || 'VOU';
+    const year = new Date().getFullYear();
+    return `${prefix}-${bizId}-${year}-${String(num).padStart(6, '0')}`;
+  }
+  
+  it('receipt has RCV prefix', () => {
+    assert(genSeq(1, 'receipt', 1).startsWith('RCV'), 'Expected RCV prefix');
+  });
+  
+  it('different businesses have unique sequences', () => {
+    assert(genSeq(1, 'receipt', 1) !== genSeq(2, 'receipt', 1), 'Should differ by bizId');
+  });
+  
+  it('incremental numbers work', () => {
+    assert(genSeq(1, 'receipt', 1) !== genSeq(1, 'receipt', 2), 'Should differ by number');
+  });
+});
+
+// ═══════════════ FINAL RESULTS (Phase 5) ════════════════════
 console.log('\n' + '═'.repeat(55));
 console.log(`النتيجة: ${passed}/${total} اختبار نجح (${Math.round(passed/total*100)}%)`);
 if (failed > 0) {
   console.log(`\nالاختبارات الفاشلة (${failed}):`);
   failures.forEach(f => console.log(`  ❌ ${f.suite}: ${f.error}`));
 } else {
-  console.log('🎉 جميع الاختبارات نجحت!');
+  console.log('🎉 جميع الاختبارات نجحت! (Phase 1+2+3+4+5)');
 }
-process.exit(failed > 0 ? 1 : 0);

@@ -20,6 +20,7 @@ import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelT
 import { wsService } from '../services/websocket.service.ts';
 import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
 import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+import { logAction } from '../engines/audit.engine.ts';
 
 const enhancements = new Hono();
 
@@ -546,12 +547,7 @@ enhancements.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHan
     if (body.currencyId !== undefined) updateData.currencyId = parseOptionalId(body.currencyId) || existing.currencyId;
 
     const [updated] = await db.update(vouchers).set(updateData).where(eq(vouchers.id, id)).returning();
-    await db.insert(auditLog).values({
-      userId, businessId: bizId, action: 'update_voucher',
-      tableName: 'vouchers', recordId: id,
-      oldData: { description: existing.description, amount: existing.amount },
-      newData: updateData,
-    });
+    await logAction({ userId, businessId: bizId, action: 'update', tableName: 'vouchers', recordId: id, oldData: { description: existing.description, amount: existing.amount }, newData: updateData }).catch(() => {});
     return c.json(updated);
   }
 
@@ -839,11 +835,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
       const [updated] = await db.update(vouchers).set({
         status: newStatus as 'unreviewed', updatedAt: new Date(),
       }).where(eq(vouchers.id, id)).returning();
-      await db.insert(auditLog).values({
-        userId, businessId: bizId, action: 'unreviewed_voucher',
-        tableName: 'vouchers', recordId: id!,
-        oldData: { status: 'reviewed' }, newData: { status: 'unreviewed' },
-      });
+      await logAction({ userId, businessId: bizId, action: 'update', tableName: 'vouchers', recordId: id!, oldData: { status: 'reviewed' }, newData: { status: 'unreviewed' } }).catch(() => {});
       return c.json(updated);
     }
 
@@ -855,11 +847,7 @@ enhancements.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(),
       status: newStatus, updatedAt: new Date(),
     }).where(eq(vouchers.id, id!)).returning();
 
-    await db.insert(auditLog).values({
-      userId, businessId: bizId, action: 'change_voucher_status',
-      tableName: 'vouchers', recordId: id!,
-      oldData: { status: existing.status }, newData: { status: newStatus },
-    });
+    await logAction({ userId, businessId: bizId, action: 'update', tableName: 'vouchers', recordId: id!, oldData: { status: existing.status }, newData: { status: newStatus } }).catch(() => {});
     return c.json(updated);
   } catch (err: unknown) {
     return c.json({ error: toErrorMessage(err) || 'فشل في تغيير حالة السند' }, 400);
