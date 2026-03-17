@@ -1,34 +1,70 @@
-# سياسة الأمان — حساباتي (Hesabati)
+# Security Policy — سياسة الأمان
 
-## الإصدارات المدعومة
+## Supported Versions / الإصدارات المدعومة
 
-يتم توفير تحديثات أمان للإصدارات التالية:
+| Version | Supported |
+|---------|-----------|
+| 1.x     | ✅ |
+| < 1.0   | ❌ |
 
-| الإصدار | مدعوم |
-| ------- | ----- |
-| 1.x     | ✅ نعم |
-| < 1.0   | ❌ لا  |
+## Reporting a Vulnerability / الإبلاغ عن ثغرة
 
-- **Backend:** الإصدار الحالي `1.0.0` (من `backend/package.json`).
-- **Frontend:** الإصدار الحالي `0.0.0` (من `frontend/package.json`).
+### English
+If you discover a security vulnerability in Hesabati, please **do NOT open a public GitHub issue**.
 
----
+Instead, please report it via:
+- **Email**: security@hesabati.com
+- **GitHub Security Advisories**: https://github.com/alabasi2025/hesabati/security/advisories/new
 
-## الإبلاغ عن ثغرة أمان
+We will respond within **72 hours** and provide a fix within **14 days** for critical vulnerabilities.
 
-إذا اكتشفت ثغرة أمانية في المشروع:
+### العربية
+إذا اكتشفت ثغرة أمنية في نظام حسابتي، يُرجى **عدم فتح issue عام على GitHub**.
 
-1. **لا تفتح Issue عامًا** يحتوي على تفاصيل الاستغلال.
-2. **أرسل تقريرًا خاصًا** إلى المسؤولين عن المستودع (مثلاً عبر جهة اتصال المؤسسة أو البريد المذكور في المستودع).
-3. **ضمّن إن أمكن:** خطوات إعادة الإنتاج، التأثير المحتمل، واقتراح إصلاح إن وجد.
-4. **ماذا تتوقع:** تأكيد استلام التقرير خلال مدة معقولة، وتحديث عند معالجة الثغرة أو رفض التقرير مع سبب إن أمكن.
+بدلاً من ذلك، أرسل تقريرك عبر:
+- **البريد الإلكتروني**: security@hesabati.com
+- **GitHub Security Advisories**: https://github.com/alabasi2025/hesabati/security/advisories/new
 
-نحن نأخذ الأمان على محمل الجد وسنرد على التقارير المسؤولة بشكل مناسب.
+سنرد خلال **72 ساعة** ونوفر إصلاحاً خلال **14 يوماً** للثغرات الحرجة.
 
----
+## Security Features / ميزات الأمان المُطبَّقة
 
-## إعداد الإنتاج
+### Authentication & Authorization
+- ✅ JWT with HS256 algorithm only (RS256/none rejected)
+- ✅ Token expiry: 7 days
+- ✅ Missing `JWT_SECRET` aborts process in production
+- ✅ Role-based access control (RBAC) with `checkPermission` middleware
 
-- **لا تستخدم** كلمة مرور قاعدة البيانات أو مفتاح JWT الافتراضي في بيئة الإنتاج.
-- عيّن `DB_PASSWORD` و `JWT_SECRET` (وإن أمكن `ALLOWED_ORIGINS`) عبر متغيرات البيئة أو ملف `.env` غير المرفق بالمستودع.
-- راجع `.env.example` في الجذر و `backend/.env.example` و `.env.docker` لقائمة المتغيرات المطلوبة.
+### IDOR Protection
+- ✅ All resource endpoints protected via `requireResourceOwnership`
+- ✅ `bizAuthMiddleware` validates business membership on every request
+- ✅ Zero IDOR vulnerabilities (verified via CI/CD scan)
+
+### Input Validation
+- ✅ Zod schemas for all request bodies
+- ✅ XSS sanitization via `xssSanitizeMiddleware`
+- ✅ `parseId` validates integer IDs before DB queries
+
+### HTTP Security Headers
+- ✅ `Content-Security-Policy` blocks external scripts
+- ✅ `X-Frame-Options: DENY`
+- ✅ `X-Content-Type-Options: nosniff`
+- ✅ `Strict-Transport-Security` with `includeSubDomains`
+- ✅ `Permissions-Policy` disables camera/microphone/geolocation
+
+### Dependency Security
+- ✅ `path-to-regexp >=8.0.0` (ReDoS prevention)
+- ✅ `micromatch >=4.0.8` (ReDoS prevention)
+- ✅ `esbuild >=0.25.0`
+- ✅ Regular Dependabot alerts reviewed
+- ✅ `npm audit` runs on every CI push (blocks on high/critical)
+
+### Infrastructure
+- ✅ Docker: non-root user (`node:20-alpine`)
+- ✅ Multi-stage build (no dev dependencies in production)
+- ✅ `.env.example` with safe defaults
+- ✅ Secrets never committed to repository
+
+## Known Limitations / القيود المعروفة
+- Rate limiting is applied per IP via `rateLimit.ts` but not yet per-role
+- Refresh token rotation not yet implemented
