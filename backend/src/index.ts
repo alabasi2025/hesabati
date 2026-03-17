@@ -20,6 +20,7 @@ import operationEnhRoutes from './routes/api/operation-enhancements.routes.ts';
 import sidebarEnhRoutes from './routes/api/sidebar-enhancements.routes.ts';
 import screenEnhRoutes from './routes/api/screen-enhancements.routes.ts';
 import { screensWidgetData } from './routes/api/screens-widget-data.routes.ts';
+import { docsRoutes } from './routes/api/docs.routes.ts';
 import maintenanceRoutes from './routes/maintenance.ts';
 import { authMiddleware, adminMiddleware } from './middleware/auth.ts';
 import { db, closeDatabase } from './db/index.ts';
@@ -112,6 +113,7 @@ app.route('/api', operationEnhRoutes);
 app.route('/api', sidebarEnhRoutes);
 app.route('/api', screenEnhRoutes);
 app.route('/api', screensWidgetData);
+app.route('/', docsRoutes);
 
 // ===================== Health (قبل المعالج العام حتى لا يلتقطها app.get('*')) =====================
 app.get('/health', (c) => c.json({ 
