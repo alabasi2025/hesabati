@@ -679,3 +679,51 @@ Added to pnpm.overrides:
 | ثغرات IDOR | كثيرة | **0 نشط** |
 | JWT Algorithm | غير محدد | **HS256 صريح** |
 | Docker | ❌ | **✅ Dockerfile + docker-compose** |
+
+
+---
+
+## Phase 8 — تقسيم vouchers + CI/CD + OpenAPI (مكتمل ✅)
+**تاريخ الإنجاز:** 2026-03-17  
+**Commit:** 260a65c
+
+### المنجزات:
+
+#### 1. تقسيم vouchers.routes.ts (923 → 9 سطراً، ‑99%):
+| الملف | الأسطر | المحتوى |
+|-------|--------|---------|
+| `vouchers-list.routes.ts` | 360 | جلب قائمة + معاينة الرقم + رصيد الحساب + التفاصيل |
+| `vouchers-write.routes.ts` | 691 | إنشاء + تعديل + تغيير الحالة |
+| `vouchers.routes.ts` | 9 | thin re-export wrapper |
+
+#### 2. GitHub Actions CI/CD (.github/workflows/ci.yml — 153 سطراً):
+| الـ Job | الهدف |
+|--------|-------|
+| 🔍 lint | TypeScript type checking |
+| 🧪 test | تشغيل 93 اختبار وحدة |
+| 🔒 security | IDOR scan + JWT check + secret detection |
+| 🐳 docker | Docker build (يعتمد على نجاح test + security) |
+
+#### 3. OpenAPI 3.0 Documentation (src/docs/openapi.json):
+- **7 مسار API** موثّق: auth, vouchers, partners, employees, audit-log, health
+- **6 Schemas** معرّفة: Voucher, Partner, Employee, AuditLog, Error, Pagination
+- **BearerAuth (HS256)** كـ default security لجميع المسارات
+- خادم development + production servers
+
+#### 4. اختبارات الوحدة (93 اختبار — 100% ✅):
+| المجموعة الجديدة | عدد الاختبارات |
+|----------------|--------------|
+| Vouchers Architecture | 5 |
+| OpenAPI Documentation | 4 |
+| CI/CD Pipeline | 4 |
+| Reporting Service | 3 |
+
+### إحصائيات المشروع بعد Phase 8:
+| المقياس | Phase 7 | Phase 8 | الإجمالي |
+|---------|---------|---------|---------|
+| ملفات Route | 50 | **52** | +2 |
+| ملفات TS | 102 | **104** | +2 |
+| اختبارات الوحدة | 77 | **93** | +16 |
+| vouchers.routes.ts | 923 سطر | **9 سطر** | ‑99% |
+| CI/CD | ❌ | **✅ 4 jobs** | جديد |
+| OpenAPI | ❌ | **✅ v3.0.3** | جديد |
