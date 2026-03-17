@@ -1,98 +1,85 @@
-version: '3.8'
-
-# ===================== أمان الإنتاج =====================
-# في بيئة الإنتاج يجب تعيين المتغيرات التالية في ملف .env (لا تعتمد على القيم الافتراضية):
-#   DB_PASSWORD   — كلمة مرور قوية لـ PostgreSQL
-#   JWT_SECRET    — مفتاح عشوائي (مثلاً: openssl rand -hex 64)
-#   ALLOWED_ORIGINS — النطاقات المسموحة للواجهة (مفصولة بفاصلة)
-# انسخ .env.example إلى .env وعدّل القيم قبل التشغيل في الإنتاج.
+# ============================================================
+# docker-compose.yml — hesabati full stack
+# ============================================================
+version: '3.9'
 
 services:
-  # ===================== قاعدة البيانات =====================
+  # ── PostgreSQL Database ──────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: hesabati-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-hesabati}
-      POSTGRES_USER: postgres
-      # للتطوير المحلي فقط: قيمة افتراضية — في الإنتاج عيّن DB_PASSWORD في .env (انظر .env.example)
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_local_only}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=en_US.utf8 --lc-ctype=en_US.utf8"
+      POSTGRES_USER: ${POSTGRES_USER:-hesabati}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backups:/backups
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hesabati}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - hesabati-network
+      - hesabati-net
 
-  # ===================== الباكند =====================
+  # ── Backend API ──────────────────────────────────────────
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
+      target: production
     container_name: hesabati-backend
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      # في الإنتاج عيّن DB_PASSWORD و JWT_SECRET في .env — لا تستخدم القيم الافتراضية
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-dev_local_only}@postgres:5432/${POSTGRES_DB:-hesabati}
-      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION}
-      PORT: 3000
       NODE_ENV: production
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
-      DB_MAX_CONNECTIONS: 20
-      DB_IDLE_TIMEOUT: 20
-      DB_CONNECT_TIMEOUT: 10
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hesabati}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hesabati}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
     ports:
-      - "3000:3000"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 5s
-      start_period: 15s
-      retries: 3
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - uploads_data:/app/uploads
     networks:
-      - hesabati-network
+      - hesabati-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # ===================== الفرونتند + Nginx =====================
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: hesabati-frontend
+  # ── Nginx Reverse Proxy (optional) ──────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: hesabati-nginx
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      # لإضافة SSL لاحقاً:
-      # - ./ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
-      # - ./ssl/key.pem:/etc/nginx/ssl/key.pem:ro
-      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_certs:/etc/nginx/certs
     networks:
-      - hesabati-network
+      - hesabati-net
+    profiles:
+      - production
 
 volumes:
   postgres_data:
     driver: local
+  uploads_data:
+    driver: local
+  nginx_certs:
+    driver: local
 
 networks:
-  hesabati-network:
+  hesabati-net:
     driver: bridge

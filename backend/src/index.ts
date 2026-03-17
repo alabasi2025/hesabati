@@ -19,6 +19,7 @@ import vouchersRoutes from './routes/api/vouchers.routes.ts';
 import operationEnhRoutes from './routes/api/operation-enhancements.routes.ts';
 import sidebarEnhRoutes from './routes/api/sidebar-enhancements.routes.ts';
 import screenEnhRoutes from './routes/api/screen-enhancements.routes.ts';
+import { screensWidgetData } from './routes/api/screens-widget-data.routes.ts';
 import maintenanceRoutes from './routes/maintenance.ts';
 import { authMiddleware, adminMiddleware } from './middleware/auth.ts';
 import { db, closeDatabase } from './db/index.ts';
@@ -80,9 +81,15 @@ app.use('*', async (c, next) => {
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   // إزالة header الخادم
   c.header('X-Powered-By', '');
+  // Content Security Policy - منع XSS والموارد غير الموثوقة
+  c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' wss: ws:");
+  // منع استخدام ميزات المتصفح الحساسة
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  // منع MIME type sniffing
+  c.header('X-DNS-Prefetch-Control', 'off');
   // في الإنتاج: فرض HTTPS
   if (isProduction) {
-    c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    c.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
 });
 
@@ -103,6 +110,7 @@ app.route('/api', vouchersRoutes);
 app.route('/api', operationEnhRoutes);
 app.route('/api', sidebarEnhRoutes);
 app.route('/api', screenEnhRoutes);
+app.route('/api', screensWidgetData);
 
 // ===================== Health (قبل المعالج العام حتى لا يلتقطها app.get('*')) =====================
 app.get('/health', (c) => c.json({ 
