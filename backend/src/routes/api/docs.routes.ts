@@ -613,6 +613,74 @@ docsRoutes.get('/api/docs/openapi.json', (c) => {
         }
       }
     },
+    "/businesses/{bizId}/employees": {
+      "get": {
+        "tags": ["Employees — الموظفين"],
+        "summary": "جلب قائمة الموظفين",
+        "security": [{"BearerAuth": []}],
+        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "قائمة الموظفين"}}
+      },
+      "post": {
+        "tags": ["Employees — الموظفين"],
+        "summary": "إضافة موظف جديد",
+        "security": [{"BearerAuth": []}],
+        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Employee"}}}},
+        "responses": {"201": {"description": "تم إضافة الموظف"}}
+      }
+    },
+    "/businesses/{bizId}/warehouses": {
+      "get": {
+        "tags": ["Warehouses — المخازن"],
+        "summary": "جلب قائمة المخازن",
+        "security": [{"BearerAuth": []}],
+        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "قائمة المخازن"}}
+      },
+      "post": {
+        "tags": ["Warehouses — المخازن"],
+        "summary": "إضافة مخزن جديد",
+        "security": [{"BearerAuth": []}],
+        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object"}}}},
+        "responses": {"201": {"description": "تم إضافة المخزن"}}
+      }
+    },
+    "/businesses/{bizId}/salaries": {
+      "get": {
+        "tags": ["Salaries — الرواتب"],
+        "summary": "جلب سجلات الرواتب",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "month", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 12}},
+          {"name": "year", "in": "query", "schema": {"type": "integer"}}
+        ],
+        "responses": {"200": {"description": "سجلات الرواتب"}}
+      }
+    },
+    "/businesses/{bizId}/reports/monthly-revenue": {
+      "get": {
+        "tags": ["Reports — التقارير"],
+        "summary": "تقرير الإيرادات الشهرية",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "year", "in": "query", "schema": {"type": "integer"}}
+        ],
+        "responses": {"200": {"description": "بيانات الإيرادات الشهرية"}}
+      }
+    },
+    "/businesses/{bizId}/reconciliations": {
+      "get": {
+        "tags": ["Reconciliations — المطابقات"],
+        "summary": "جلب قائمة المطابقات",
+        "security": [{"BearerAuth": []}],
+        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "قائمة المطابقات"}}
+      }
+    },
     "/health": {
       "get": {
         "tags": [

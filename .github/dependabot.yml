@@ -1,0 +1,39 @@
+version: 2
+updates:
+  # Backend Node.js dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Riyadh"
+    labels:
+      - "dependencies"
+      - "backend"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alabasi2025"
+    commit-message:
+      prefix: "⬆️ deps(backend)"
+
+  # Frontend Node.js dependencies  
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Riyadh"
+    labels:
+      - "dependencies"
+      - "frontend"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alabasi2025"
+    commit-message:
+      prefix: "⬆️ deps(frontend)"
+    # تجاهل تحديثات Angular الكبيرة (major) تلقائياً
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]

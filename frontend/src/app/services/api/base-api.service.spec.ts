@@ -110,7 +110,8 @@ describe('StatusBadge — status mapping', () => {
 
 describe('AmountDisplay — formatting logic', () => {
   function formatAmount(amount: unknown, locale = 'ar-YE'): string {
-    const n = Number(amount);
+    if (amount === null || amount === undefined) return '—';
+    const n = typeof amount === 'string' ? Number.parseFloat(amount) : Number(amount);
     if (isNaN(n)) return '—';
     return new Intl.NumberFormat(locale, {
       minimumFractionDigits: 0,
