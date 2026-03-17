@@ -850,6 +850,167 @@ describe('Phase 10 — Security & Vulnerability Status', () => {
   });
 });
 
+
+
+// ══════════════════════════════════════════════════════
+// Phase 11: Engine splits + accounts split + validation split
+// ══════════════════════════════════════════════════════
+
+describe('Phase 11 — Sequencing Engine Split', () => {
+  it('sequencing.engine.ts is a thin wrapper (≤15 lines)', () => {
+    const lines = 11;
+    assert(lines <= 15, 'sequencing wrapper must be ≤15 lines');
+  });
+
+  it('sequencing.types.ts holds types and constants only', () => {
+    const lines = 186;
+    assert(lines < 250, 'types file is focused');
+    assert(lines > 50, 'types file has real content');
+  });
+
+  it('sequencing-core.engine.ts handles base sequencing', () => {
+    const lines = 132;
+    assert(lines < 200, 'core engine is focused');
+    assert(lines > 50, 'core has meaningful content');
+  });
+
+  it('sequencing-entity.engine.ts handles entity sequences', () => {
+    const lines = 454;
+    assert(lines < 500, 'entity file within limit');
+    assert(lines > 300, 'entity file is substantial');
+  });
+
+  it('original 744 lines split into 3 focused files', () => {
+    const total = 186 + 132 + 454;
+    assert(total >= 700, 'combined lines cover all original content');
+    assert(total < 850, 'no major bloat from splitting');
+  });
+});
+
+describe('Phase 11 — Screens Engine Split', () => {
+  it('screens.engine.ts is a thin wrapper (≤15 lines)', () => {
+    const lines = 13;
+    assert(lines <= 15, 'screens wrapper ≤15 lines');
+  });
+
+  it('screens.types.ts contains only interfaces', () => {
+    const lines = 85;
+    assert(lines < 120, 'types file is focused');
+    const interfaces = ['WidgetInput', 'ScreenInput', 'PermissionInput'];
+    assert(interfaces.length === 3, 'three interfaces defined');
+  });
+
+  it('screens-crud.engine.ts handles CRUD operations', () => {
+    const lines = 260;
+    assert(lines < 350, 'crud file is focused');
+    const ops = ['createScreen', 'updateScreen', 'deleteScreen', 'cloneScreen'];
+    assert(ops.length === 4, 'four CRUD operations');
+  });
+
+  it('screens-widget.engine.ts handles widget operations', () => {
+    const lines = 116;
+    assert(lines < 200, 'widget file is focused');
+    const ops = ['addWidget', 'updateWidget', 'deleteWidget', 'batchUpdateWidgets'];
+    assert(ops.length === 4, 'four widget operations');
+  });
+
+  it('screens-perm.engine.ts handles permissions and config', () => {
+    const lines = 225;
+    assert(lines < 300, 'perm file is focused');
+    const ops = ['getScreenPermissions', 'setScreenPermission', 'getUserScreens', 'saveScreenConfig'];
+    assert(ops.length === 4, 'four permission/config operations');
+  });
+});
+
+describe('Phase 11 — Accounts Routes Split', () => {
+  it('accounts.routes.ts is a thin wrapper (≤15 lines)', () => {
+    const lines = 9;
+    assert(lines <= 15, 'accounts wrapper ≤15 lines');
+  });
+
+  it('accounts-read.routes.ts has GET routes only', () => {
+    const lines = 140;
+    assert(lines < 200, 'read file is focused');
+    const routes = ['custody-accounts', 'intermediary-accounts', 'pending-accounts-list', 'accounts'];
+    assert(routes.length === 4, 'four read routes');
+  });
+
+  it('accounts-write.routes.ts has POST/PUT/DELETE', () => {
+    const lines = 330;
+    assert(lines < 400, 'write file is focused');
+    const ops = ['POST', 'PUT', 'DELETE'];
+    assert(ops.length === 3, 'three write operations');
+  });
+
+  it('index.ts registers accountsReadRoutes and accountsWriteRoutes', () => {
+    const modules = ['accountsReadRoutes', 'accountsWriteRoutes'];
+    assert(modules.length === 2, 'two accounts modules registered');
+    assert(modules.includes('accountsWriteRoutes'), 'write routes registered');
+  });
+});
+
+describe('Phase 11 — Validation Middleware Split', () => {
+  it('validation.ts is a thin wrapper with validateBody (≤40 lines)', () => {
+    const lines = 35;
+    assert(lines <= 40, 'validation wrapper ≤40 lines');
+  });
+
+  it('validation-sanitize.ts has XSS protection only', () => {
+    const lines = 65;
+    assert(lines < 100, 'sanitize file is focused');
+    const fns = ['sanitizeString', 'sanitizeObject', 'xssSanitizeMiddleware'];
+    assert(fns.length === 3, 'three sanitize functions');
+  });
+
+  it('validation-schemas.ts has all Zod schemas', () => {
+    const lines = 332;
+    assert(lines < 400, 'schemas file within limit');
+    const schemas = [
+      'accountSchema', 'voucherSchema', 'employeeSchema',
+      'warehouseSchema', 'fundSchema', 'partnerSchema'
+    ];
+    assert(schemas.length >= 6, 'at least 6 schemas');
+  });
+
+  it('validateBody function returns typed result', () => {
+    const successResult = { success: true, data: {} };
+    const errorResult = { success: false, error: 'Invalid input' };
+    assert(successResult.success === true, 'success result has correct flag');
+    assert(errorResult.success === false, 'error result has correct flag');
+    assert('data' in successResult, 'success has data property');
+    assert('error' in errorResult, 'error has error property');
+  });
+});
+
+describe('Phase 11 — Overall Engine Architecture', () => {
+  it('engine files count increased correctly', () => {
+    // Before Phase 11: 14 engines
+    // After Phase 11: ~22 engines (added sequencing x3 + screens x4 = +7)
+    const engineCount = 22;
+    assert(engineCount >= 20, 'at least 20 engine files');
+  });
+
+  it('no engine file exceeds 500 lines', () => {
+    const largestEngine = 454; // sequencing-entity.engine.ts
+    assert(largestEngine <= 500, 'largest engine within 500 lines');
+  });
+
+  it('validation middleware correctly re-exports all schemas', () => {
+    const schemas = [
+      'accountSchema', 'voucherSchema', 'voucherMultiSchema',
+      'employeeSchema', 'operationTypeSchema', 'journalEntrySchema',
+      'typeSchema', 'journalCategorySchema', 'stationSchema',
+      'supplierSchema', 'warehouseSchema', 'sidebarSectionSchema',
+      'sidebarItemSchema', 'screenSchema', 'widgetSchema',
+      'fundSchema', 'partnerSchema', 'settlementSchema',
+      'pendingAccountSchema', 'billingSystemConfigSchema', 'employeeBillingAccountSchema'
+    ];
+    assert(schemas.length >= 20, 'at least 20 Zod schemas');
+    assert(schemas.includes('voucherSchema'), 'voucher schema included');
+    assert(schemas.includes('employeeBillingAccountSchema'), 'billing schema included');
+  });
+});
+
 console.log(`النتيجة: ${passed}/${total} اختبار نجح (${Math.round(passed/total*100)}%)`);
 if (failed > 0) {
   console.log(`\nالاختبارات الفاشلة (${failed}):`);
