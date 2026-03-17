@@ -727,3 +727,58 @@ Added to pnpm.overrides:
 | vouchers.routes.ts | 923 سطر | **9 سطر** | ‑99% |
 | CI/CD | ❌ | **✅ 4 jobs** | جديد |
 | OpenAPI | ❌ | **✅ v3.0.3** | جديد |
+
+
+---
+
+## Phase 9 — تقسيم المزيد من الملفات + Swagger UI (مكتمل ✅)
+**تاريخ الإنجاز:** 2026-03-17  
+**Commit:** f6d6e23
+
+### المنجزات:
+
+#### 1. تقسيم purchase-invoices.routes.ts (639 → 8 سطراً، ‑99%):
+| الملف | الأسطر | المحتوى |
+|-------|--------|---------|
+| `purchase-invoices-read.routes.ts` | 181 | جلب القائمة + جلب بالمعرف |
+| `purchase-invoices-write.routes.ts` | 507 | إنشاء + تعديل + اعتماد + إلغاء + حذف |
+| `purchase-invoices.routes.ts` | 8 | thin re-export wrapper |
+
+#### 2. تقسيم warehouse.routes.ts (535 → 8 سطراً، ‑99%):
+| الملف | الأسطر | المحتوى |
+|-------|--------|---------|
+| `warehouse-crud.routes.ts` | 120 | CRUD المخازن (إضافة + تعديل + حذف + جلب) |
+| `warehouse-ops.routes.ts` | 459 | العمليات المخزنية + الجرد + الملخصات |
+| `warehouse.routes.ts` | 8 | thin re-export wrapper |
+
+#### 3. تقسيم reporting.service.ts (512 → 11 سطراً، ‑98%):
+| الملف | الأسطر | المحتوى |
+|-------|--------|---------|
+| `reporting.types.ts` | 124 | الأنواع + التخزين المؤقت |
+| `reporting-core.service.ts` | 276 | P&L + ميزان المراجعة + كشف الحساب |
+| `reporting-summary.service.ts` | 176 | الملخص اليومي + تجميعي + شهري |
+| `reporting.service.ts` | 11 | thin re-export wrapper |
+
+#### 4. Swagger UI (src/routes/api/docs.routes.ts):
+- **GET /api/docs** → واجهة Swagger UI تفاعلية (HTML)
+- **GET /api/docs/openapi.json** → مواصفة OpenAPI 3.0.3 كـ JSON
+- يستخدم `swagger-ui-dist@5` من CDN
+
+#### 5. اختبارات الوحدة (110 اختبار — 100% ✅):
+| المجموعة الجديدة | عدد الاختبارات |
+|----------------|--------------|
+| Purchase Invoices Split | 4 |
+| Warehouse Architecture | 4 |
+| Reporting Service Split | 5 |
+| API Documentation/Swagger | 4 |
+
+### إحصائيات المشروع بعد Phase 9:
+| المقياس | Phase 8 | Phase 9 |
+|---------|---------|---------|
+| ملفات Route | 52 | **57** (+5) |
+| ملفات Service | 10 | **13** (+3) |
+| اختبارات الوحدة | 93 | **110** (+17) |
+| purchase-invoices.routes.ts | 639 | **8** (‑99%) |
+| warehouse.routes.ts | 535 | **8** (‑99%) |
+| reporting.service.ts | 512 | **11** (‑98%) |
+| Swagger UI | ❌ | **✅ /api/docs** |
