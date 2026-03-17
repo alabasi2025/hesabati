@@ -242,10 +242,6 @@
 }
 
 /* ===================== Loading State ===================== */
-.loading-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 60px 20px; text-align: center;
-  p { font-size: 14px; color: var(--text-muted, #94a3b8); font-weight: 600; margin-top: 16px; }
 }
 
 .loading-spinner {
@@ -258,10 +254,6 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===================== Empty State ===================== */
-.empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 60px 20px; text-align: center;
-  h3 { font-size: 18px; font-weight: 800; color: var(--text-primary, #1e293b); margin: 16px 0 8px; }
   p { font-size: 14px; color: var(--text-secondary, #64748b); font-weight: 600; margin-bottom: 24px; }
 }
 
@@ -282,3 +274,9 @@
   .filter-row { flex-direction: column; }
   .account-info-3d { flex-direction: column; align-items: flex-start; }
 }
+
+// ═══════════════════════════════════════════════════
+// NOTE: .loading-state و .empty-state مُعرَّفتان الآن
+// في المكونات المشتركة (LoadingStateComponent / EmptyStateComponent)
+// تم إزالة التعريفات المكررة — Phase 8
+// ═══════════════════════════════════════════════════

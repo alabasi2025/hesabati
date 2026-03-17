@@ -149,7 +149,6 @@
 .badge-pending { background: rgba(249,115,22,0.15); color: #f97316; }
 
 .share-badge { font-size: 20px; font-weight: 800; }
-.empty-state { text-align: center; padding: 24px; color: var(--text-secondary); font-size: 14px; font-weight: 600; }
 
 .pending-section { border-color: rgba(239,68,68,0.25); }
 .pending-title {
@@ -273,3 +272,9 @@
     height: 500px;
   }
 }
+
+// ═══════════════════════════════════════════════════
+// NOTE: .loading-state و .empty-state مُعرَّفتان الآن
+// في المكونات المشتركة (LoadingStateComponent / EmptyStateComponent)
+// تم إزالة التعريفات المكررة — Phase 8
+// ═══════════════════════════════════════════════════

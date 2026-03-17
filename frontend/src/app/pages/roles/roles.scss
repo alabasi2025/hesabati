@@ -73,10 +73,6 @@
 .sc-label { font-size: 11px; font-weight: 600; color: var(--text-secondary, #64748b); }
 
 /* ===================== Empty State ===================== */
-.empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 60px 20px; text-align: center;
-  h3 { font-size: 18px; font-weight: 800; color: var(--text-primary, #1e293b); margin: 16px 0 8px; }
   p { font-size: 14px; color: var(--text-secondary, #64748b); font-weight: 600; margin-bottom: 24px; }
 }
 
@@ -344,3 +340,9 @@
   .modal-3d { border-radius: 16px; }
   .assign-form { flex-direction: column; }
 }
+
+// ═══════════════════════════════════════════════════
+// NOTE: .loading-state و .empty-state مُعرَّفتان الآن
+// في المكونات المشتركة (LoadingStateComponent / EmptyStateComponent)
+// تم إزالة التعريفات المكررة — Phase 8
+// ═══════════════════════════════════════════════════

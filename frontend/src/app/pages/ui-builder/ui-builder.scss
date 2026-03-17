@@ -15,9 +15,7 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 .form-row { display: flex; gap: 12px; .form-group { flex: 1; } }
 .code-input { font-family: 'Fira Code', monospace; font-size: 12px; background: #1e293b; color: #e2e8f0; border-color: #334155; &:focus { border-color: $neon-blue; } }
 .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: $neon-blue; border-radius: 50%; animation: spin 0.7s linear infinite; &.sm { width: 20px; height: 20px; border-width: 2px; } }
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px; color: #94a3b8; &.sm { padding: 20px; } }
-.empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 20px; color: #94a3b8; text-align: center; .material-icons-round { font-size: 48px; opacity: 0.4; } h3 { color: #475569; margin: 0; } p { margin: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } } } h3 { color: #475569; margin: 0; } p { margin: 0; } }
 .error-msg { background: rgba(239,68,68,0.08); color: #ef4444; padding: 12px; border-radius: 8px; font-size: 13px; }
 
 // ===================== Pages List =====================
@@ -80,3 +78,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 @media (min-width: 769px) and (max-width: 1024px) {
   .components-grid { grid-template-columns: repeat(8, 1fr); }
 }
+
+// ═══════════════════════════════════════════════════
+// NOTE: .loading-state و .empty-state مُعرَّفتان الآن
+// في المكونات المشتركة (LoadingStateComponent / EmptyStateComponent)
+// تم إزالة التعريفات المكررة — Phase 8
+// ═══════════════════════════════════════════════════

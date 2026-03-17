@@ -70,12 +70,6 @@
   cursor: pointer;
   .close-x { margin-right: auto; opacity: 0.6; }
 }
-
-.loading-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--text-secondary, #64748b);
-  .material-icons-round { font-size: 40px; color: #3b82f6; }
   .spin { animation: spin 1s linear infinite; }
   p { margin: 12px 0 0; font-size: 14px; }
 }
@@ -368,3 +362,9 @@
 }
 
 .single-entry .form-group { max-width: 320px; }
+
+// ═══════════════════════════════════════════════════
+// NOTE: .loading-state و .empty-state مُعرَّفتان الآن
+// في المكونات المشتركة (LoadingStateComponent / EmptyStateComponent)
+// تم إزالة التعريفات المكررة — Phase 8
+// ═══════════════════════════════════════════════════
