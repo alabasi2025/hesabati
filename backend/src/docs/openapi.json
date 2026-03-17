@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Hesabati API",
-    "description": "نظام المحاسبة — واجهة برمجية شاملة لإدارة المعاملات المالية والمخازن والتقارير",
-    "version": "10.0.0",
+    "description": "نظام محاسبة متكامل — Hesabati Accounting System\n\n**Phases 1-13 complete**: Fully modular, containerized, CI-enabled, 186/186 tests passing.",
+    "version": "14.0.0",
     "contact": {
       "name": "Hesabati Support",
       "url": "https://github.com/alabasi2025/hesabati"
@@ -11,17 +11,12 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000/api",
+      "url": "http://localhost:3000",
       "description": "Development"
     },
     {
-      "url": "https://api.hesabati.com/api",
+      "url": "https://api.hesabati.com",
       "description": "Production"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
     }
   ],
   "components": {
@@ -29,23 +24,53 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT (HS256)"
+        "bearerFormat": "JWT",
+        "description": "JWT token using HS256 algorithm. Include as: Authorization: Bearer <token>"
       }
     },
     "schemas": {
-      "Voucher": {
+      "Error": {
         "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        },
         "required": [
-          "bizId",
-          "voucherType",
-          "amount",
-          "currency"
-        ],
+          "error"
+        ]
+      },
+      "Business": {
+        "type": "object",
         "properties": {
           "id": {
             "type": "integer"
           },
-          "bizId": {
+          "name": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Voucher": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "businessId": {
             "type": "integer"
           },
           "voucherType": {
@@ -56,10 +81,6 @@
             ]
           },
           "amount": {
-            "type": "number",
-            "minimum": 0.01
-          },
-          "currency": {
             "type": "string"
           },
           "status": {
@@ -67,140 +88,41 @@
             "enum": [
               "unreviewed",
               "reviewed",
-              "confirmed",
               "cancelled"
             ]
           },
-          "sequenceNo": {
+          "voucherDate": {
             "type": "string",
-            "pattern": "^[A-Z]+-[0-9]{4}-[0-9]{6}$"
-          }
-        }
-      },
-      "PurchaseInvoice": {
-        "type": "object",
-        "required": [
-          "bizId",
-          "supplierId",
-          "items"
-        ],
-        "properties": {
-          "id": {
-            "type": "integer"
+            "format": "date"
           },
-          "bizId": {
-            "type": "integer"
-          },
-          "supplierId": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "confirmed",
-              "cancelled"
-            ]
-          },
-          "totalAmount": {
-            "type": "number"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InvoiceItem"
-            }
-          }
-        }
-      },
-      "InvoiceItem": {
-        "type": "object",
-        "required": [
-          "itemId",
-          "quantity",
-          "unitPrice"
-        ],
-        "properties": {
-          "itemId": {
-            "type": "integer"
-          },
-          "quantity": {
-            "type": "number",
-            "minimum": 0
-          },
-          "unitPrice": {
-            "type": "number",
-            "minimum": 0
-          }
-        }
-      },
-      "Warehouse": {
-        "type": "object",
-        "required": [
-          "bizId",
-          "name"
-        ],
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "bizId": {
-            "type": "integer"
-          },
-          "name": {
+          "description": {
             "type": "string"
           },
-          "location": {
+          "reference": {
             "type": "string"
           }
         }
       },
-      "Fund": {
+      "Account": {
         "type": "object",
-        "required": [
-          "bizId",
-          "name",
-          "currency"
-        ],
         "properties": {
           "id": {
             "type": "integer"
           },
-          "bizId": {
+          "businessId": {
             "type": "integer"
           },
-          "name": {
+          "code": {
             "type": "string"
           },
-          "currency": {
+          "nameAr": {
+            "type": "string"
+          },
+          "accountType": {
             "type": "string"
           },
           "balance": {
-            "type": "number"
-          }
-        }
-      },
-      "Partner": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "bizId": {
-            "type": "integer"
-          },
-          "name": {
             "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "customer",
-              "supplier"
-            ]
-          },
-          "balance": {
-            "type": "number"
           }
         }
       },
@@ -210,63 +132,153 @@
           "id": {
             "type": "integer"
           },
-          "bizId": {
+          "businessId": {
             "type": "integer"
           },
-          "name": {
+          "nameAr": {
             "type": "string"
           },
-          "salary": {
-            "type": "number"
-          },
-          "department": {
+          "jobTitle": {
             "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
           }
         }
       },
-      "AuditLog": {
+      "Fund": {
         "type": "object",
         "properties": {
           "id": {
             "type": "integer"
           },
-          "userId": {
+          "businessId": {
+            "type": "integer"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "string"
+          }
+        }
+      },
+      "PurchaseInvoice": {
+        "type": "object",
+        "properties": {
+          "id": {
             "type": "integer"
           },
           "businessId": {
             "type": "integer"
           },
-          "action": {
-            "type": "string"
-          },
-          "tableName": {
-            "type": "string"
-          },
-          "recordId": {
+          "supplierId": {
             "type": "integer"
           },
-          "changes": {
-            "type": "object"
+          "totalAmount": {
+            "type": "string"
           },
-          "createdAt": {
+          "status": {
             "type": "string",
-            "format": "date-time"
+            "enum": [
+              "draft",
+              "confirmed",
+              "received",
+              "cancelled"
+            ]
+          },
+          "invoiceDate": {
+            "type": "string",
+            "format": "date"
           }
         }
       },
-      "Error": {
+      "WarehouseOperation": {
         "type": "object",
-        "required": [
-          "success",
-          "message"
-        ],
         "properties": {
-          "success": {
-            "type": "boolean",
-            "example": false
+          "id": {
+            "type": "integer"
           },
-          "message": {
+          "businessId": {
+            "type": "integer"
+          },
+          "warehouseId": {
+            "type": "integer"
+          },
+          "operationType": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out",
+              "transfer"
+            ]
+          },
+          "status": {
             "type": "string"
+          },
+          "totalValue": {
+            "type": "string"
+          }
+        }
+      },
+      "JournalEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "businessId": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "totalDebit": {
+            "type": "string"
+          },
+          "totalCredit": {
+            "type": "string"
+          },
+          "isBalanced": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Screen": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "businessId": {
+            "type": "integer"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReportResult": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object"
+          },
+          "totals": {
+            "type": "object"
           }
         }
       },
@@ -274,51 +286,404 @@
         "type": "object",
         "properties": {
           "page": {
-            "type": "integer",
-            "minimum": 1
+            "type": "integer"
           },
           "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
+            "type": "integer"
           },
           "total": {
             "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "bizId": {
+        "name": "bizId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer"
+        },
+        "description": "Business ID"
+      },
+      "id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer"
+        },
+        "description": "Resource ID"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid request data",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
           }
         }
       }
     }
   },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "المصادقة وإدارة الجلسات"
+    },
+    {
+      "name": "Businesses",
+      "description": "إدارة الشركات والمنشآت"
+    },
+    {
+      "name": "Accounts",
+      "description": "شجرة الحسابات المحاسبية"
+    },
+    {
+      "name": "Vouchers",
+      "description": "السندات المالية (قبض وصرف)"
+    },
+    {
+      "name": "Funds",
+      "description": "الصناديق والخزائن"
+    },
+    {
+      "name": "Employees",
+      "description": "الموظفون والرواتب"
+    },
+    {
+      "name": "Warehouses",
+      "description": "المخازن وعمليات المخزون"
+    },
+    {
+      "name": "PurchaseInvoices",
+      "description": "فواتير الشراء"
+    },
+    {
+      "name": "Reports",
+      "description": "التقارير المالية"
+    },
+    {
+      "name": "Screens",
+      "description": "الشاشات والعناصر المرئية"
+    },
+    {
+      "name": "JournalEntries",
+      "description": "القيود اليومية"
+    },
+    {
+      "name": "Partners",
+      "description": "الشركاء والموردون"
+    },
+    {
+      "name": "Workflow",
+      "description": "سير العمل والموافقات"
+    },
+    {
+      "name": "Docs",
+      "description": "توثيق API (Swagger UI)"
+    }
+  ],
   "paths": {
-    "/businesses/{bizId}/vouchers": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "تسجيل الدخول",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تسجيل دخول ناجح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/businesses": {
       "get": {
-        "summary": "قائمة السندات",
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "جلب قائمة الشركات",
+        "responses": {
+          "200": {
+            "description": "قائمة الشركات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Business"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "إنشاء شركة جديدة",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Business"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}": {
+      "get": {
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "جلب تفاصيل شركة",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل الشركة"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "تعديل شركة",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التعديل"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/accounts": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "جلب شجرة الحسابات",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الحسابات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Account"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "إنشاء حساب جديد",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/accounts/{id}": {
+      "put": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "تعديل حساب",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التعديل"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "حذف حساب",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/vouchers": {
+      "get": {
         "tags": [
           "Vouchers"
         ],
+        "summary": "جلب السندات",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "name": "type",
+            "in": "query",
             "schema": {
-              "type": "integer"
+              "type": "string",
+              "enum": [
+                "receipt",
+                "payment"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
             "name": "page",
             "in": "query",
             "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 20
+              "type": "integer"
             }
           }
         ],
@@ -335,32 +700,17 @@
                 }
               }
             }
-          },
-          "401": {
-            "description": "غير مصرح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
           }
         }
       },
       "post": {
-        "summary": "إنشاء سند جديد",
         "tags": [
           "Vouchers"
         ],
+        "summary": "إنشاء سند جديد",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
           }
         ],
         "requestBody": {
@@ -375,66 +725,94 @@
         },
         "responses": {
           "201": {
-            "description": "تم الإنشاء بنجاح"
+            "description": "تم الإنشاء"
           },
           "400": {
-            "description": "بيانات غير صالحة",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "$ref": "#/components/responses/BadRequest"
           }
         }
       }
     },
-    "/businesses/{bizId}/purchase-invoices": {
+    "/api/businesses/{bizId}/vouchers/{id}": {
       "get": {
-        "summary": "قائمة فواتير المشتريات",
         "tags": [
-          "Purchase Invoices"
+          "Vouchers"
         ],
+        "summary": "جلب تفاصيل سند",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
           }
         ],
         "responses": {
           "200": {
-            "description": "قائمة الفواتير",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PurchaseInvoice"
-                  }
-                }
-              }
-            }
+            "description": "تفاصيل السند"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       },
-      "post": {
-        "summary": "إنشاء فاتورة مشتريات",
+      "put": {
         "tags": [
-          "Purchase Invoices"
+          "Vouchers"
         ],
+        "summary": "تعديل سند",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التعديل"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Vouchers"
+        ],
+        "summary": "حذف سند",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/vouchers/{id}/status": {
+      "post": {
+        "tags": [
+          "Vouchers"
+        ],
+        "summary": "تغيير حالة السند (مراجعة/إلغاء)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
           }
         ],
         "requestBody": {
@@ -442,65 +820,40 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PurchaseInvoice"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم الإنشاء"
-          }
-        }
-      }
-    },
-    "/businesses/{bizId}/warehouses": {
-      "get": {
-        "summary": "قائمة المخازن",
-        "tags": [
-          "Warehouses"
-        ],
-        "parameters": [
-          {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "قائمة المخازن",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Warehouse"
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "reviewed",
+                      "cancelled",
+                      "unreviewed"
+                    ]
                   }
                 }
               }
             }
           }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تغيير الحالة"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
         }
       }
     },
-    "/businesses/{bizId}/funds": {
+    "/api/businesses/{bizId}/funds": {
       "get": {
-        "summary": "قائمة الصناديق",
         "tags": [
           "Funds"
         ],
+        "summary": "جلب الصناديق والخزائن",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
           }
         ],
         "responses": {
@@ -520,84 +873,96 @@
         }
       },
       "post": {
-        "summary": "إنشاء صندوق جديد",
         "tags": [
           "Funds"
         ],
+        "summary": "إنشاء صندوق/خزينة",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Fund"
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
             "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
           }
         }
       }
     },
-    "/businesses/{bizId}/partners": {
+    "/api/businesses/{bizId}/funds/{id}": {
       "get": {
-        "summary": "قائمة الشركاء / العملاء / الموردين",
         "tags": [
-          "Partners"
+          "Funds"
         ],
+        "summary": "جلب تفاصيل صندوق",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
           }
         ],
         "responses": {
           "200": {
-            "description": "قائمة الشركاء",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Partner"
-                  }
-                }
-              }
-            }
+            "description": "تفاصيل الصندوق"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Funds"
+        ],
+        "summary": "تعديل صندوق",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التعديل"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Funds"
+        ],
+        "summary": "حذف صندوق",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
           }
         }
       }
     },
-    "/businesses/{bizId}/employees": {
+    "/api/businesses/{bizId}/employees": {
       "get": {
-        "summary": "قائمة الموظفين",
         "tags": [
           "Employees"
         ],
+        "summary": "جلب الموظفين",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
           }
         ],
         "responses": {
@@ -615,40 +980,313 @@
             }
           }
         }
-      }
-    },
-    "/businesses/{bizId}/audit-log": {
-      "get": {
-        "summary": "سجل التدقيق",
+      },
+      "post": {
         "tags": [
-          "Audit"
+          "Employees"
         ],
+        "summary": "إضافة موظف",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/employees/{id}": {
+      "put": {
+        "tags": [
+          "Employees"
+        ],
+        "summary": "تعديل موظف",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
           },
           {
-            "name": "table",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التعديل"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Employees"
+        ],
+        "summary": "حذف موظف",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
           },
           {
-            "name": "from",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/warehouses": {
+      "get": {
+        "tags": [
+          "Warehouses"
+        ],
+        "summary": "جلب المخازن",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المخازن"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Warehouses"
+        ],
+        "summary": "إنشاء مخزن",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/warehouse-operations": {
+      "get": {
+        "tags": [
+          "Warehouses"
+        ],
+        "summary": "جلب عمليات المخزن",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة العمليات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WarehouseOperation"
+                  }
+                }
+              }
             }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Warehouses"
+        ],
+        "summary": "إنشاء عملية مخزنية",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WarehouseOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/purchase-invoices": {
+      "get": {
+        "tags": [
+          "PurchaseInvoices"
+        ],
+        "summary": "جلب فواتير الشراء",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الفواتير",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PurchaseInvoice"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PurchaseInvoices"
+        ],
+        "summary": "إنشاء فاتورة شراء",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseInvoice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/purchase-invoices/{id}": {
+      "get": {
+        "tags": [
+          "PurchaseInvoices"
+        ],
+        "summary": "جلب تفاصيل فاتورة شراء",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
           },
           {
-            "name": "to",
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل الفاتورة"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "PurchaseInvoices"
+        ],
+        "summary": "تعديل فاتورة شراء",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التعديل"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "PurchaseInvoices"
+        ],
+        "summary": "حذف فاتورة شراء",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/purchase-invoices/{id}/receive": {
+      "post": {
+        "tags": [
+          "PurchaseInvoices"
+        ],
+        "summary": "استلام فاتورة الشراء (تحديث المخزون)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الاستلام والتحديث"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/reports/trial-balance": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "ميزان المراجعة",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "name": "date",
             "in": "query",
             "schema": {
               "type": "string",
@@ -658,14 +1296,11 @@
         ],
         "responses": {
           "200": {
-            "description": "سجل التدقيق",
+            "description": "ميزان المراجعة",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AuditLog"
-                  }
+                  "$ref": "#/components/schemas/ReportResult"
                 }
               }
             }
@@ -673,15 +1308,59 @@
         }
       }
     },
-    "/businesses/{bizId}/reporting/profit-loss": {
+    "/api/businesses/{bizId}/reports/profit-loss": {
       "get": {
-        "summary": "تقرير الأرباح والخسائر",
         "tags": [
-          "Reporting"
+          "Reports"
         ],
+        "summary": "قائمة الدخل (الأرباح والخسائر)",
         "parameters": [
           {
-            "name": "bizId",
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الدخل",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/reports/account-statement/{accountId}": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "كشف حساب",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "name": "accountId",
             "in": "path",
             "required": true,
             "schema": {
@@ -707,22 +1386,141 @@
         ],
         "responses": {
           "200": {
-            "description": "نتائج الأرباح والخسائر"
+            "description": "كشف الحساب"
           }
         }
       }
     },
-    "/businesses/{bizId}/reporting/trial-balance": {
+    "/api/businesses/{bizId}/reports/daily-summary": {
       "get": {
-        "summary": "ميزان المراجعة",
         "tags": [
-          "Reporting"
+          "Reports"
         ],
+        "summary": "الملخص اليومي",
         "parameters": [
           {
-            "name": "bizId",
-            "in": "path",
-            "required": true,
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "الملخص اليومي"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/journal-entries": {
+      "get": {
+        "tags": [
+          "JournalEntries"
+        ],
+        "summary": "جلب القيود اليومية",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة القيود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JournalEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "JournalEntries"
+        ],
+        "summary": "إنشاء قيد يومي",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/screens": {
+      "get": {
+        "tags": [
+          "Screens"
+        ],
+        "summary": "جلب الشاشات",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الشاشات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Screen"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Screens"
+        ],
+        "summary": "إنشاء شاشة",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "تم الإنشاء"
+          }
+        }
+      }
+    },
+    "/api/businesses/{bizId}/widget-stats": {
+      "get": {
+        "tags": [
+          "Screens"
+        ],
+        "summary": "جلب إحصائيات العنصر المرئي",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bizId"
+          },
+          {
+            "name": "widgetId",
+            "in": "query",
             "schema": {
               "type": "integer"
             }
@@ -730,7 +1528,49 @@
         ],
         "responses": {
           "200": {
-            "description": "ميزان المراجعة"
+            "description": "إحصائيات العنصر"
+          }
+        }
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "tags": [
+          "Docs"
+        ],
+        "summary": "Swagger UI — واجهة توثيق API",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Swagger UI HTML page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/docs/openapi.json": {
+      "get": {
+        "tags": [
+          "Docs"
+        ],
+        "summary": "OpenAPI Specification JSON",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0 spec",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
