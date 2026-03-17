@@ -1,867 +1,308 @@
+/**
+ * ApiService — Facade رئيسي يجمع كل خدمات API
+ * 
+ * Phase 3: تم تقسيم الـ 867 سطر إلى 6 ملفات متخصصة:
+ *   - base-api.service.ts     — HTTP core + error handling
+ *   - business-api.service.ts — businesses, stations, dashboard
+ *   - employee-api.service.ts — employees, salaries, billing config
+ *   - account-api.service.ts  — accounts, funds, partners, pending
+ *   - voucher-api.service.ts  — vouchers, collections, journal, custody
+ *   - inventory-api.service.ts — warehouses, items, operations, purchases
+ *   - screen-api.service.ts   — screens, widgets, workflow, sidebar, reports
+ * 
+ * هذا الـ Facade يبقي التوافق الكامل مع كل الصفحات الحالية
+ * لا حاجة لتغيير أي import في الصفحات
+ */
 import { Injectable, inject } from '@angular/core';
-import { AuthService } from './auth.service';
+import { BaseApiService }      from './api/base-api.service';
+import { BusinessApiService }  from './api/business-api.service';
+import { EmployeeApiService }  from './api/employee-api.service';
+import { AccountApiService }   from './api/account-api.service';
+import { VoucherApiService }   from './api/voucher-api.service';
+import { InventoryApiService } from './api/inventory-api.service';
+import { ScreenApiService }    from './api/screen-api.service';
 
-export interface DashboardStats {
-  businesses: number;
-  stations: number;
-  employees: number;
-  accounts: number;
-  funds: number;
-  suppliers: number;
-  partners: number;
-  vouchers: number;
-  pendingAccounts: number;
-  warehouses: number;
-  totalSalaries: string;
-}
-
-export interface Business {
-  id: number;
-  name: string;
-  code: string;
-  type: 'stations' | 'single_station' | 'personal';
-  description: string;
-  icon: string;
-  color: string;
-  isActive: boolean;
-  sortOrder: number;
-  partners: any[];
-  stats: {
-    stations: number;
-    employees: number;
-    accounts: number;
-    funds: number;
-    suppliers: number;
-    pendingAccounts: number;
-  };
-}
+export { DashboardStats, Business } from './api/base-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly API_URL = '/api';
-  private readonly auth = inject(AuthService);
+  private readonly base      = inject(BaseApiService);
+  private readonly biz       = inject(BusinessApiService);
+  private readonly emp       = inject(EmployeeApiService);
+  private readonly acc       = inject(AccountApiService);
+  private readonly vou       = inject(VoucherApiService);
+  private readonly inv       = inject(InventoryApiService);
+  private readonly scr       = inject(ScreenApiService);
 
-  private getHeaders(): HeadersInit {
-    const token = this.auth.getToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    };
-  }
-
-  private async request<T>(path: string, options?: RequestInit): Promise<T> {
-    const res = await fetch(`${this.API_URL}${path}`, {
-      ...options,
-      headers: { ...this.getHeaders(), ...options?.headers },
-    });
-    const text = await res.text();
-    if (!res.ok) {
-      let err: { error?: string; details?: string; location?: string } = {};
-      try {
-        if (text?.trim()) err = JSON.parse(text);
-      } catch {
-        err = { error: this.getArabicHttpError(res.status) };
-      }
-      if (res.status === 401) {
-        this.auth.logout();
-        throw new Error('الجلسة منتهية - يرجى تسجيل الدخول مجدداً');
-      }
-      let errorMsg = err.error || this.getArabicHttpError(res.status);
-      if (err.details) errorMsg += ` (التفاصيل: ${err.details})`;
-      if (err.location) errorMsg += ` [الموقع: ${err.location}]`;
-      const error: any = new Error(errorMsg);
-      error.status = res.status;
-      error.details = err.details;
-      error.location = err.location;
-      error.originalError = err;
-      throw error;
-    }
-    if (!text?.trim()) return undefined as T;
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      return undefined as T;
-    }
-  }
-
-  private getArabicHttpError(status: number): string {
-    const errors: Record<number, string> = {
-      400: 'طلب غير صحيح — تأكد من البيانات المدخلة',
-      401: 'غير مصرح — يرجى تسجيل الدخول مرة أخرى',
-      403: 'ليس لديك صلاحية لهذه العملية',
-      404: 'العنصر المطلوب غير موجود',
-      409: 'تعارض في البيانات — العنصر موجود مسبقاً',
-      422: 'بيانات غير صالحة — تأكد من جميع الحقول المطلوبة',
-      500: 'خطأ في الخادم — يرجى المحاولة لاحقاً',
-      502: 'الخادم غير متاح حالياً',
-      503: 'الخدمة متوقفة مؤقتاً',
-    };
-    return errors[status] || `خطأ غير متوقع (رمز: ${status})`;
+  // ── generic request (used by pages that call api.request directly) ──
+  request<T>(path: string, options?: RequestInit): Promise<T> {
+    return this.base.request<T>(path, options);
   }
 
   // ===================== Dashboard =====================
-  getDashboardStats() { return this.request<DashboardStats>('/dashboard/stats'); }
+  getDashboardStats()          { return this.biz.getDashboardStats(); }
 
   // ===================== الأعمال =====================
-  getBusinesses()          { return this.request<Business[]>('/businesses'); }
-  getBusiness(id: number)  { return this.request<Business>(`/businesses/${id}`); }
+  getBusinesses()              { return this.biz.getBusinesses(); }
+  getBusiness(id: number)      { return this.biz.getBusiness(id); }
 
   // ===================== المحطات =====================
-  getStations(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/stations`); }
-  getStation(bizId: number, id: number)        { return this.request<any>(`/businesses/${bizId}/stations/${id}`); }
-  createStation(bizId: number, d: any)         { return this.request<any>(`/businesses/${bizId}/stations`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateStation(id: number, d: any)            { return this.request<any>(`/stations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  updateStationByBiz(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/stations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteStation(bizId: number, id: number)     { return this.request<any>(`/businesses/${bizId}/stations/${id}`, { method: 'DELETE' }); }
+  getStations(bizId: number)                   { return this.biz.getStations(bizId); }
+  getStation(bizId: number, id: number)        { return this.biz.getStation(bizId, id); }
+  createStation(bizId: number, d: any)         { return this.biz.createStation(bizId, d); }
+  updateStation(id: number, d: any)            { return this.biz.updateStation(id, d); }
+  updateStationByBiz(bizId: number, id: number, d: any) { return this.biz.updateStationByBiz(bizId, id, d); }
+  deleteStation(bizId: number, id: number)     { return this.biz.deleteStation(bizId, id); }
+  checkDbHealth()                              { return this.biz.checkDbHealth(); }
 
   // ===================== الموظفين =====================
-  getEmployees(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/employees`); }
-  createEmployee(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/employees`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateEmployee(id: number, d: any)             { return this.request<any>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteEmployee(id: number)                     { return this.request<any>(`/employees/${id}`, { method: 'DELETE' }); }
+  getEmployees(bizId: number)                    { return this.emp.getEmployees(bizId); }
+  createEmployee(bizId: number, d: any)          { return this.emp.createEmployee(bizId, d); }
+  updateEmployee(id: number, d: any)             { return this.emp.updateEmployee(id, d); }
+  deleteEmployee(id: number)                     { return this.emp.deleteEmployee(id); }
+  getEmployeeBillingAccounts(bizId: number, stationId?: number) { return this.emp.getEmployeeBillingAccounts(bizId, stationId); }
+  createEmployeeBillingAccount(d: any)           { return this.emp.createEmployeeBillingAccount(d); }
+  updateEmployeeBillingAccount(id: number, d: any){ return this.emp.updateEmployeeBillingAccount(id, d); }
+  deleteEmployeeBillingAccount(id: number)       { return this.emp.deleteEmployeeBillingAccount(id); }
+  getDepartments(bizId: number)                  { return this.emp.getDepartments(bizId); }
+  createDepartment(bizId: number, d: any)        { return this.emp.createDepartment(bizId, d); }
+  updateDepartment(id: number, d: any)           { return this.emp.updateDepartment(id, d); }
+  deleteDepartment(id: number)                   { return this.emp.deleteDepartment(id); }
+  getJobTitles(bizId: number)                    { return this.emp.getJobTitles(bizId); }
+  createJobTitle(bizId: number, d: any)          { return this.emp.createJobTitle(bizId, d); }
+  updateJobTitle(id: number, d: any)             { return this.emp.updateJobTitle(id, d); }
+  deleteJobTitle(id: number)                     { return this.emp.deleteJobTitle(id); }
+  getSalaryRecords(bizId: number, month?: number, year?: number) { return this.emp.getSalaryRecords(bizId, month, year); }
+  createSalaryRecord(bizId: number, d: any)      { return this.emp.createSalaryRecord(bizId, d); }
+  updateSalaryRecord(id: number, d: any)         { return this.emp.updateSalaryRecord(id, d); }
+  deleteSalaryRecord(id: number)                 { return this.emp.deleteSalaryRecord(id); }
+  getBillingSystemsConfig(bizId: number)         { return this.emp.getBillingSystemsConfig(bizId); }
+  createBillingSystemConfig(bizId: number, d: any){ return this.emp.createBillingSystemConfig(bizId, d); }
+  updateBillingSystemConfig(id: number, d: any)  { return this.emp.updateBillingSystemConfig(id, d); }
+  deleteBillingSystemConfig(id: number)          { return this.emp.deleteBillingSystemConfig(id); }
+  getBillingAccountTypes(bizId: number)          { return this.emp.getBillingAccountTypes(bizId); }
+  createBillingAccountType(bizId: number, d: any){ return this.emp.createBillingAccountType(bizId, d); }
+  updateBillingAccountType(id: number, d: any)   { return this.emp.updateBillingAccountType(id, d); }
+  deleteBillingAccountType(id: number)           { return this.emp.deleteBillingAccountType(id); }
 
-  // ===================== حسابات الموظفين في أنظمة الفوترة =====================
-  getEmployeeBillingAccounts(bizId: number, stationId?: number) {
-    let url = `/businesses/${bizId}/employee-billing-accounts`;
-    if (stationId) url += `?stationId=${stationId}`;
-    return this.request<any[]>(url);
-  }
-  createEmployeeBillingAccount(d: any)           { return this.request<any>(`/employee-billing-accounts`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateEmployeeBillingAccount(id: number, d: any) { return this.request<any>(`/employee-billing-accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteEmployeeBillingAccount(id: number)       { return this.request<any>(`/employee-billing-accounts/${id}`, { method: 'DELETE' }); }
-
-  // ===================== الحسابات مع الصلاحيات =====================
-  getAccounts(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/accounts`); }
-  getAllAccounts(bizId: number)                  { return this.request<any>(`/businesses/${bizId}/accounts?all=true`); }
-  getCustodyAccounts(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/custody-accounts`); }
-  getIntermediaryAccounts(bizId: number)         { return this.request<any[]>(`/businesses/${bizId}/intermediary-accounts`); }
-  getPendingAccountsList(bizId: number)          { return this.request<any[]>(`/businesses/${bizId}/pending-accounts-list`); }
-  createAccount(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateAccount(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteAccount(bizId: number, id: number)       { return this.request<any>(`/businesses/${bizId}/accounts/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع الحسابات الفرعية =====================
-  getAccountSubNatures(bizId: number)                 { return this.request<any[]>(`/businesses/${bizId}/account-sub-natures`); }
-  createAccountSubNature(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/account-sub-natures`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateAccountSubNature(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/account-sub-natures/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteAccountSubNature(bizId: number, id: number)   { return this.request<any>(`/businesses/${bizId}/account-sub-natures/${id}`, { method: 'DELETE' }); }
-
-  // ===================== ربط الحسابات المسموحة =====================
-  getAccountLinks(accountId: number)             { return this.request<any[]>(`/accounts/${accountId}/allowed-links`); }
-  getAccountAllowedTargets(accountId: number, type: string) { return this.request<any[]>(`/accounts/${accountId}/allowed-targets?type=${type}`); }
-  createAccountLink(d: any)                      { return this.request<any>(`/account-links`, { method: 'POST', body: JSON.stringify(d) }); }
-  deleteAccountLink(id: number)                  { return this.request<any>(`/account-links/${id}`, { method: 'DELETE' }); }
-
-  // ===================== الصناديق =====================
-  getFunds(bizId: number, includeCustody = false) {
-    const query = includeCustody ? '?includeCustody=true' : '';
-    return this.request<any[]>(`/businesses/${bizId}/funds${query}`);
-  }
-  getFund(id: number)                            { return this.request<any>(`/funds/${id}`); }
-  createFund(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/funds`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateFund(bizId: number, id: number, d: any)  { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteFund(bizId: number, id: number)           { return this.request<any>(`/businesses/${bizId}/funds/${id}`, { method: 'DELETE' }); }
+  // ===================== الحسابات =====================
+  getAccounts(bizId: number)                     { return this.acc.getAccounts(bizId); }
+  getAllAccounts(bizId: number)                   { return this.acc.getAllAccounts(bizId); }
+  getCustodyAccounts(bizId: number)              { return this.acc.getCustodyAccounts(bizId); }
+  getIntermediaryAccounts(bizId: number)         { return this.acc.getIntermediaryAccounts(bizId); }
+  getPendingAccountsList(bizId: number)          { return this.acc.getPendingAccountsList(bizId); }
+  createAccount(bizId: number, d: any)           { return this.acc.createAccount(bizId, d); }
+  updateAccount(bizId: number, id: number, d: any){ return this.acc.updateAccount(bizId, id, d); }
+  deleteAccount(bizId: number, id: number)       { return this.acc.deleteAccount(bizId, id); }
+  getAccountBalance(bizId: number, accountId: number){ return this.acc.getAccountBalance(bizId, accountId); }
+  getAccountSubNatures(bizId: number)            { return this.acc.getAccountSubNatures(bizId); }
+  createAccountSubNature(bizId: number, d: any)  { return this.acc.createAccountSubNature(bizId, d); }
+  updateAccountSubNature(bizId: number, id: number, d: any){ return this.acc.updateAccountSubNature(bizId, id, d); }
+  deleteAccountSubNature(bizId: number, id: number){ return this.acc.deleteAccountSubNature(bizId, id); }
+  getAccountLinks(accountId: number)             { return this.acc.getAccountLinks(accountId); }
+  getAccountAllowedTargets(accountId: number, type: string){ return this.acc.getAccountAllowedTargets(accountId, type); }
+  createAccountLink(d: any)                      { return this.acc.createAccountLink(d); }
+  deleteAccountLink(id: number)                  { return this.acc.deleteAccountLink(id); }
+  getFunds(bizId: number, includeCustody = false){ return this.acc.getFunds(bizId, includeCustody); }
+  getFund(id: number)                            { return this.acc.getFund(id); }
+  createFund(bizId: number, d: any)              { return this.acc.createFund(bizId, d); }
+  updateFund(bizId: number, id: number, d: any)  { return this.acc.updateFund(bizId, id, d); }
+  deleteFund(bizId: number, id: number)          { return this.acc.deleteFund(bizId, id); }
+  getFundTypes(bizId: number)                    { return this.acc.getFundTypes(bizId); }
+  createFundType(bizId: number, d: any)          { return this.acc.createFundType(bizId, d); }
+  updateFundType(id: number, d: any)             { return this.acc.updateFundType(id, d); }
+  deleteFundType(id: number)                     { return this.acc.deleteFundType(id); }
+  getBankTypes(bizId: number)                    { return this.acc.getBankTypes(bizId); }
+  createBankType(bizId: number, d: any)          { return this.acc.createBankType(bizId, d); }
+  updateBankType(id: number, d: any)             { return this.acc.updateBankType(id, d); }
+  deleteBankType(id: number)                     { return this.acc.deleteBankType(id); }
+  getExchangeTypes(bizId: number)                { return this.acc.getExchangeTypes(bizId); }
+  createExchangeType(bizId: number, d: any)      { return this.acc.createExchangeType(bizId, d); }
+  updateExchangeType(id: number, d: any)         { return this.acc.updateExchangeType(id, d); }
+  deleteExchangeType(id: number)                 { return this.acc.deleteExchangeType(id); }
+  getEWalletTypes(bizId: number)                 { return this.acc.getEWalletTypes(bizId); }
+  createEWalletType(bizId: number, d: any)       { return this.acc.createEWalletType(bizId, d); }
+  updateEWalletType(id: number, d: any)          { return this.acc.updateEWalletType(id, d); }
+  deleteEWalletType(id: number)                  { return this.acc.deleteEWalletType(id); }
+  getAccountingMainTypes(bizId: number)          { return this.acc.getAccountingMainTypes(bizId); }
+  createAccountingMainType(bizId: number, d: any){ return this.acc.createAccountingMainType(bizId, d); }
+  updateAccountingMainType(bizId: number, id: number, d: any){ return this.acc.updateAccountingMainType(bizId, id, d); }
+  deleteAccountingMainType(bizId: number, id: number){ return this.acc.deleteAccountingMainType(bizId, id); }
+  getAccountingTypes(bizId: number)              { return this.acc.getAccountingTypes(bizId); }
+  createAccountingType(bizId: number, d: any)    { return this.acc.createAccountingType(bizId, d); }
+  updateAccountingType(bizId: number, id: number, d: any){ return this.acc.updateAccountingType(bizId, id, d); }
+  deleteAccountingType(bizId: number, id: number){ return this.acc.deleteAccountingType(bizId, id); }
+  getPendingAccounts(bizId: number)              { return this.acc.getPendingAccounts(bizId); }
+  createPendingAccount(bizId: number, d: any)    { return this.acc.createPendingAccount(bizId, d); }
+  updatePendingAccount(id: number, d: any)       { return this.acc.updatePendingAccount(id, d); }
+  deletePendingAccount(id: number)               { return this.acc.deletePendingAccount(id); }
+  getPartners(bizId: number)                     { return this.acc.getPartners(bizId); }
+  createPartner(bizId: number, d: any)           { return this.acc.createPartner(bizId, d); }
+  updatePartner(id: number, d: any)              { return this.acc.updatePartner(id, d); }
+  deletePartner(id: number)                      { return this.acc.deletePartner(id); }
 
   // ===================== السندات =====================
-  getVouchers(bizId: number, type?: string)      { return this.request<any[]>(`/businesses/${bizId}/vouchers${type ? '?type=' + type : ''}`); }
-  createVoucher(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/vouchers`, { method: 'POST', body: JSON.stringify(d) }); }
-  createVoucherMulti(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/vouchers-multi`, { method: 'POST', body: JSON.stringify(d) }); }
-  getVoucherNumberPreview(bizId: number, params: {
-    voucherType: 'receipt' | 'payment';
-    voucherDate?: string | null;
-    fromAccountId?: number | null;
-    toAccountId?: number | null;
-    fromFundId?: number | null;
-    toFundId?: number | null;
-  }) {
-    const search = new URLSearchParams();
-    search.set('voucherType', params.voucherType);
-    if (params.voucherDate) search.set('voucherDate', params.voucherDate);
-    if (params.fromAccountId) search.set('fromAccountId', String(params.fromAccountId));
-    if (params.toAccountId) search.set('toAccountId', String(params.toAccountId));
-    if (params.fromFundId) search.set('fromFundId', String(params.fromFundId));
-    if (params.toFundId) search.set('toFundId', String(params.toFundId));
-    return this.request<any>(`/businesses/${bizId}/voucher-number-preview?${search.toString()}`);
-  }
-  deleteVoucher(id: number)                      { return this.request<any>(`/vouchers/${id}`, { method: 'DELETE' }); }
+  getVouchers(bizId: number, type?: string)      { return this.vou.getVouchers(bizId, type); }
+  createVoucher(bizId: number, d: any)           { return this.vou.createVoucher(bizId, d); }
+  createVoucherMulti(bizId: number, d: any)      { return this.vou.createVoucherMulti(bizId, d); }
+  createVoucherDraft(bizId: number, d: any)      { return this.vou.createVoucherDraft(bizId, d); }
+  deleteVoucher(id: number)                      { return this.vou.deleteVoucher(id); }
+  getVoucherNumberPreview(bizId: number, params: any) { return this.vou.getVoucherNumberPreview(bizId, params); }
+  getVouchersAdvanced(bizId: number, filters?: any)   { return this.vou.getVouchersAdvanced(bizId, filters); }
+  updateVoucher(bizId: number, id: number, d: any)    { return this.vou.updateVoucher(bizId, id, d); }
+  changeVoucherStatus(bizId: number, id: number, status: string) { return this.vou.changeVoucherStatus(bizId, id, status); }
+  getVoucherDetails(bizId: number, id: number)   { return this.vou.getVoucherDetails(bizId, id); }
+  getVoucherCategories(bizId: number)            { return this.vou.getVoucherCategories(bizId); }
+  getCollections(bizId: number, stationId?: number, date?: string) { return this.vou.getCollections(bizId, stationId, date); }
+  getCollection(id: number)                      { return this.vou.getCollection(id); }
+  createCollection(bizId: number, d: any)        { return this.vou.createCollection(bizId, d); }
+  createDelivery(collectionId: number, d: any)   { return this.vou.createDelivery(collectionId, d); }
+  getSettlements(bizId: number)                  { return this.vou.getSettlements(bizId); }
+  createSettlement(bizId: number, d: any)        { return this.vou.createSettlement(bizId, d); }
+  updateSettlement(id: number, d: any)           { return this.vou.updateSettlement(id, d); }
+  deleteSettlement(id: number)                   { return this.vou.deleteSettlement(id); }
+  getJournalEntries(bizId: number)               { return this.vou.getJournalEntries(bizId); }
+  createJournalEntry(bizId: number, d: any)      { return this.vou.createJournalEntry(bizId, d); }
+  deleteJournalEntry(id: number)                 { return this.vou.deleteJournalEntry(id); }
+  getJournalEntryCategories(bizId: number)       { return this.vou.getJournalEntryCategories(bizId); }
+  createJournalEntryCategory(bizId: number, d: any){ return this.vou.createJournalEntryCategory(bizId, d); }
+  updateJournalEntryCategory(id: number, d: any) { return this.vou.updateJournalEntryCategory(id, d); }
+  deleteJournalEntryCategory(id: number)         { return this.vou.deleteJournalEntryCategory(id); }
+  getReconciliations(bizId: number)              { return this.vou.getReconciliations(bizId); }
+  getReconciliation(bizId: number, id: number)   { return this.vou.getReconciliation(bizId, id); }
+  createReconciliation(bizId: number, d: any)    { return this.vou.createReconciliation(bizId, d); }
+  updateReconciliation(bizId: number, id: number, d: any){ return this.vou.updateReconciliation(bizId, id, d); }
+  getCustodyRecords(bizId: number)               { return this.vou.getCustodyRecords(bizId); }
+  getCustodyRecord(bizId: number, id: number)    { return this.vou.getCustodyRecord(bizId, id); }
+  createCustodyRecord(bizId: number, d: any)     { return this.vou.createCustodyRecord(bizId, d); }
+  updateCustodyRecord(bizId: number, id: number, d: any){ return this.vou.updateCustodyRecord(bizId, id, d); }
+  deleteCustodyRecord(bizId: number, id: number) { return this.vou.deleteCustodyRecord(bizId, id); }
+  addCustodySettlement(bizId: number, custodyId: number, d: any){ return this.vou.addCustodySettlement(bizId, custodyId, d); }
 
-  // ===================== التحصيل اليومي =====================
-  getCollections(bizId: number, stationId?: number, date?: string) {
-    let url = `/businesses/${bizId}/collections`;
-    const params: string[] = [];
-    if (stationId) params.push(`stationId=${stationId}`);
-    if (date) params.push(`date=${date}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any[]>(url);
-  }
-  getCollection(id: number)                      { return this.request<any>(`/collections/${id}`); }
-  createCollection(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/collections`, { method: 'POST', body: JSON.stringify(d) }); }
+  // ===================== المخازن والموردين =====================
+  getSuppliers(bizId: number)                    { return this.inv.getSuppliers(bizId); }
+  createSupplier(bizId: number, d: any)          { return this.inv.createSupplier(bizId, d); }
+  updateSupplier(id: number, d: any)             { return this.inv.updateSupplier(id, d); }
+  deleteSupplier(id: number)                     { return this.inv.deleteSupplier(id); }
+  getSupplierTypes(bizId: number)                { return this.inv.getSupplierTypes(bizId); }
+  createSupplierType(bizId: number, d: any)      { return this.inv.createSupplierType(bizId, d); }
+  updateSupplierType(id: number, d: any)         { return this.inv.updateSupplierType(id, d); }
+  deleteSupplierType(id: number)                 { return this.inv.deleteSupplierType(id); }
+  getWarehouses(bizId: number)                   { return this.inv.getWarehouses(bizId); }
+  getWarehouse(id: number)                       { return this.inv.getWarehouse(id); }
+  createWarehouse(bizId: number, d: any)         { return this.inv.createWarehouse(bizId, d); }
+  updateWarehouse(id: number, d: any)            { return this.inv.updateWarehouse(id, d); }
+  deleteWarehouse(id: number)                    { return this.inv.deleteWarehouse(id); }
+  getWarehouseTypes(bizId: number)               { return this.inv.getWarehouseTypes(bizId); }
+  createWarehouseType(bizId: number, d: any)     { return this.inv.createWarehouseType(bizId, d); }
+  updateWarehouseType(id: number, d: any)        { return this.inv.updateWarehouseType(id, d); }
+  deleteWarehouseType(id: number)                { return this.inv.deleteWarehouseType(id); }
+  getWarehouseOperations(bizId: number, type?: string, warehouseId?: number){ return this.inv.getWarehouseOperations(bizId, type, warehouseId); }
+  getWarehouseOperationsByWarehouse(bizId: number, warehouseId: number){ return this.inv.getWarehouseOperationsByWarehouse(bizId, warehouseId); }
+  createWarehouseOperation(bizId: number, d: any){ return this.inv.createWarehouseOperation(bizId, d); }
+  getWarehouseOperation(id: number)              { return this.inv.getWarehouseOperation(id); }
+  getWarehouseInventory(bizId: number, warehouseId: number){ return this.inv.getWarehouseInventory(bizId, warehouseId); }
+  getInventoryItems(bizId: number)               { return this.inv.getInventoryItems(bizId); }
+  getInventoryItemTypes(bizId: number)           { return this.inv.getInventoryItemTypes(bizId); }
+  createInventoryItemType(bizId: number, d: any) { return this.inv.createInventoryItemType(bizId, d); }
+  updateInventoryItemType(id: number, d: any)    { return this.inv.updateInventoryItemType(id, d); }
+  deleteInventoryItemType(id: number)            { return this.inv.deleteInventoryItemType(id); }
+  getStockLevels(bizId: number, warehouseId?: number){ return this.inv.getStockLevels(bizId, warehouseId); }
+  getStockAlerts(bizId: number)                  { return this.inv.getStockAlerts(bizId); }
+  getStockValuation(bizId: number, warehouseId?: number){ return this.inv.getStockValuation(bizId, warehouseId); }
+  getItemMovements(bizId: number, itemId: number, limit?: number){ return this.inv.getItemMovements(bizId, itemId, limit); }
+  createStockMovement(bizId: number, data: any)  { return this.inv.createStockMovement(bizId, data); }
+  getPurchaseInvoices(bizId: number, status?: string){ return this.inv.getPurchaseInvoices(bizId, status); }
+  getPurchaseInvoice(bizId: number, id: number)  { return this.inv.getPurchaseInvoice(bizId, id); }
+  createPurchaseInvoice(bizId: number, data: any){ return this.inv.createPurchaseInvoice(bizId, data); }
+  updatePurchaseInvoice(bizId: number, id: number, data: any){ return this.inv.updatePurchaseInvoice(bizId, id, data); }
+  confirmPurchaseInvoice(bizId: number, id: number){ return this.inv.confirmPurchaseInvoice(bizId, id); }
+  receivePurchaseInvoice(bizId: number, id: number, receivedItems: any[]){ return this.inv.receivePurchaseInvoice(bizId, id, receivedItems); }
+  deletePurchaseInvoice(bizId: number, id: number){ return this.inv.deletePurchaseInvoice(bizId, id); }
+  getOperationCategories(bizId: number, includeTypes = false){ return this.inv.getOperationCategories(bizId, includeTypes); }
+  getOperationCategory(bizId: number, id: number){ return this.inv.getOperationCategory(bizId, id); }
+  createOperationCategory(bizId: number, data: any){ return this.inv.createOperationCategory(bizId, data); }
+  updateOperationCategory(bizId: number, id: number, data: any){ return this.inv.updateOperationCategory(bizId, id, data); }
+  deleteOperationCategory(bizId: number, id: number){ return this.inv.deleteOperationCategory(bizId, id); }
+  getOperationTypes(bizId: number, category?: string, screen?: string){ return this.inv.getOperationTypes(bizId, category, screen); }
+  getOperationType(id: number)                   { return this.inv.getOperationType(id); }
+  createOperationType(bizId: number, d: any)     { return this.inv.createOperationType(bizId, d); }
+  updateOperationType(id: number, d: any)        { return this.inv.updateOperationType(id, d); }
+  deleteOperationType(id: number)                { return this.inv.deleteOperationType(id); }
+  addOperationTypeAccount(otId: number, d: any)  { return this.inv.addOperationTypeAccount(otId, d); }
+  removeOperationTypeAccount(id: number)         { return this.inv.removeOperationTypeAccount(id); }
+  cloneOperationType(bizId: number, id: number, d?: any){ return this.inv.cloneOperationType(bizId, id, d); }
+  toggleOperationType(bizId: number, id: number) { return this.inv.toggleOperationType(bizId, id); }
+  getOperationTypesStats(bizId: number)          { return this.inv.getOperationTypesStats(bizId); }
+  checkOperationTypeName(bizId: number, name: string, excludeId?: number){ return this.inv.checkOperationTypeName(bizId, name, excludeId); }
+  getExpenseCategories(bizId: number)            { return this.inv.getExpenseCategories(bizId); }
+  createExpenseCategory(bizId: number, d: any)   { return this.inv.createExpenseCategory(bizId, d); }
+  updateExpenseCategory(id: number, d: any)      { return this.inv.updateExpenseCategory(id, d); }
+  deleteExpenseCategory(id: number)              { return this.inv.deleteExpenseCategory(id); }
+  getExpenseBudget(bizId: number, month?: number, year?: number){ return this.inv.getExpenseBudget(bizId, month, year); }
+  createExpenseBudget(bizId: number, d: any)     { return this.inv.createExpenseBudget(bizId, d); }
+  updateExpenseBudget(id: number, d: any)        { return this.inv.updateExpenseBudget(id, d); }
+  deleteExpenseBudget(id: number)                { return this.inv.deleteExpenseBudget(id); }
 
-  // ===================== التوريد =====================
-  createDelivery(collectionId: number, d: any)   { return this.request<any>(`/collections/${collectionId}/deliveries`, { method: 'POST', body: JSON.stringify(d) }); }
-
-  // ===================== الشركاء =====================
-  getPartners(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/partners`); }
-  createPartner(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/partners`, { method: 'POST', body: JSON.stringify(d) }); }
-  updatePartner(id: number, d: any)              { return this.request<any>(`/partners/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deletePartner(id: number)                      { return this.request<any>(`/partners/${id}`, { method: 'DELETE' }); }
-
-  // ===================== الموردين =====================
-  getSuppliers(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/suppliers`); }
-  createSupplier(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/suppliers`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSupplier(id: number, d: any)             { return this.request<any>(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSupplier(id: number)                     { return this.request<any>(`/suppliers/${id}`, { method: 'DELETE' }); }
-
-  // ===================== المخازن =====================
-  getWarehouses(bizId: number)                   { return this.request<any[]>(`/businesses/${bizId}/warehouses`); }
-  getWarehouse(id: number)                       { return this.request<any>(`/warehouses/${id}`); }
-  createWarehouse(bizId: number, d: any)         { return this.request<any>(`/businesses/${bizId}/warehouses`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateWarehouse(id: number, d: any)            { return this.request<any>(`/warehouses/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteWarehouse(id: number)                    { return this.request<any>(`/warehouses/${id}`, { method: 'DELETE' }); }
-
-  // ===================== الحسابات المعلقة =====================
-  getPendingAccounts(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/pending-accounts`); }
-  createPendingAccount(bizId: number, d: any)    { return this.request<any>(`/businesses/${bizId}/pending-accounts`, { method: 'POST', body: JSON.stringify(d) }); }
-  updatePendingAccount(id: number, d: any)       { return this.request<any>(`/pending-accounts/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deletePendingAccount(id: number)               { return this.request<any>(`/pending-accounts/${id}`, { method: 'DELETE' }); }
-
-  // ===================== التصفيات =====================
-  getSettlements(bizId: number)                  { return this.request<any[]>(`/businesses/${bizId}/settlements`); }
-  createSettlement(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/settlements`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSettlement(id: number, d: any)           { return this.request<any>(`/settlements/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSettlement(id: number)                   { return this.request<any>(`/settlements/${id}`, { method: 'DELETE' }); }
-
-  // ===================== تصنيفات السندات (مشتقة من operation_categories) =====================
-  getVoucherCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/voucher-categories`); }
-
-  // ===================== أنواع العمليات (القوالب) =====================
-  getOperationTypes(bizId: number, category?: string, screen?: string) {
-    let url = `/businesses/${bizId}/operation-types`;
-    const params: string[] = [];
-    if (category) params.push(`category=${category}`);
-    if (screen) params.push(`screen=${screen}`);
-    if (params.length) url += `?${params.join('&')}`;
-    return this.request<any[]>(url);
-  }
-  getOperationType(id: number)                      { return this.request<any>(`/operation-types/${id}`); }
-  createOperationType(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/operation-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateOperationType(id: number, d: any)           { return this.request<any>(`/operation-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteOperationType(id: number)                   { return this.request<any>(`/operation-types/${id}`, { method: 'DELETE' }); }
-  addOperationTypeAccount(otId: number, d: any)     { return this.request<any>(`/operation-types/${otId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
-  removeOperationTypeAccount(id: number)            { return this.request<any>(`/operation-type-accounts/${id}`, { method: 'DELETE' }); }
-
-  // ===================== القيود المحاسبية =====================
-  getJournalEntries(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/journal-entries`); }
-  createJournalEntry(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/journal-entries`, { method: 'POST', body: JSON.stringify(d) }); }
-  deleteJournalEntry(id: number)                { return this.request<any>(`/journal-entries/${id}`, { method: 'DELETE' }); }
-
-  // ===================== إعدادات أنظمة الفوترة =====================
-  getBillingSystemsConfig(bizId: number)              { return this.request<any[]>(`/businesses/${bizId}/billing-systems-config`); }
-  createBillingSystemConfig(bizId: number, d: any)    { return this.request<any>(`/businesses/${bizId}/billing-systems-config`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateBillingSystemConfig(id: number, d: any)       { return this.request<any>(`/billing-systems-config/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteBillingSystemConfig(id: number)               { return this.request<any>(`/billing-systems-config/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع حسابات الفوترة =====================
-  getBillingAccountTypes(bizId: number)               { return this.request<any[]>(`/businesses/${bizId}/billing-account-types`); }
-  createBillingAccountType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/billing-account-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateBillingAccountType(id: number, d: any)        { return this.request<any>(`/billing-account-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteBillingAccountType(id: number)                { return this.request<any>(`/billing-account-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع الصناديق =====================
-  getFundTypes(bizId: number)                         { return this.request<any[]>(`/businesses/${bizId}/fund-types`); }
-  createFundType(bizId: number, d: any)               { return this.request<any>(`/businesses/${bizId}/fund-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateFundType(id: number, d: any)                  { return this.request<any>(`/fund-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteFundType(id: number)                          { return this.request<any>(`/fund-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع البنوك =====================
-  getBankTypes(bizId: number)                         { return this.request<any[]>(`/businesses/${bizId}/bank-types`); }
-  createBankType(bizId: number, d: any)               { return this.request<any>(`/businesses/${bizId}/bank-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateBankType(id: number, d: any)                  { return this.request<any>(`/bank-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteBankType(id: number)                          { return this.request<any>(`/bank-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع الصرافين =====================
-  getExchangeTypes(bizId: number)                     { return this.request<any[]>(`/businesses/${bizId}/exchange-types`); }
-  createExchangeType(bizId: number, d: any)           { return this.request<any>(`/businesses/${bizId}/exchange-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateExchangeType(id: number, d: any)              { return this.request<any>(`/exchange-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteExchangeType(id: number)                      { return this.request<any>(`/exchange-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع المحافظ الإلكترونية =====================
-  getEWalletTypes(bizId: number)                      { return this.request<any[]>(`/businesses/${bizId}/e-wallet-types`); }
-  createEWalletType(bizId: number, d: any)            { return this.request<any>(`/businesses/${bizId}/e-wallet-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateEWalletType(id: number, d: any)               { return this.request<any>(`/e-wallet-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteEWalletType(id: number)                       { return this.request<any>(`/e-wallet-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== التبويب الجانبي =====================
-  getSidebarSections(bizId: number)                      { return this.request<any[]>(`/businesses/${bizId}/sidebar-sections`); }
-  createSidebarSection(bizId: number, d: any)            { return this.request<any>(`/businesses/${bizId}/sidebar-sections`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSidebarSection(id: number, d: any)               { return this.request<any>(`/sidebar-sections/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSidebarSection(id: number)                       { return this.request<any>(`/sidebar-sections/${id}`, { method: 'DELETE' }); }
-
-  getSidebarItems(bizId: number)                         { return this.request<any[]>(`/businesses/${bizId}/sidebar-items`); }
-  createSidebarItem(d: any)                              { return this.request<any>(`/sidebar-items`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSidebarItem(id: number, d: any)                  { return this.request<any>(`/sidebar-items/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSidebarItem(id: number)                          { return this.request<any>(`/sidebar-items/${id}`, { method: 'DELETE' }); }
-
-  getUserSidebar(bizId: number, userId: number)          { return this.request<any[]>(`/businesses/${bizId}/users/${userId}/sidebar`); }
-  updateUserSidebar(bizId: number, userId: number, d: any) { return this.request<any>(`/businesses/${bizId}/users/${userId}/sidebar`, { method: 'PUT', body: JSON.stringify(d) }); }
-
-  getUsers()                                             { return this.request<any[]>('/users'); }
-
-  // ===================== الشاشات المخصصة =====================
-  getScreens(bizId: number)                          { return this.request<any[]>(`/businesses/${bizId}/screens`); }
-  createScreen(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateScreen(id: number, d: any)                   { return this.request<any>(`/screens/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteScreen(id: number)                           { return this.request<any>(`/screens/${id}`, { method: 'DELETE' }); }
-  getScreenWidgets(screenId: number)                  { return this.request<any[]>(`/screens/${screenId}/widgets`); }
-  createScreenWidget(screenId: number, d: any)        { return this.request<any>(`/screens/${screenId}/widgets`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateWidget(id: number, d: any)                   { return this.request<any>(`/widgets/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteWidget(id: number)                           { return this.request<any>(`/widgets/${id}`, { method: 'DELETE' }); }
-  batchUpdateWidgets(screenId: number, widgets: any[])  { return this.request<any[]>(`/screens/${screenId}/widgets/batch`, { method: 'PUT', body: JSON.stringify({ widgets }) }); }
-
-  // ===================== ربط القوالب والحسابات بالعناصر =====================
-  getWidgetTemplates(widgetId: number)                  { return this.request<any[]>(`/widgets/${widgetId}/templates`); }
-  addWidgetTemplate(widgetId: number, d: any)           { return this.request<any>(`/widgets/${widgetId}/templates`, { method: 'POST', body: JSON.stringify(d) }); }
-  removeWidgetTemplate(id: number)                      { return this.request<any>(`/widget-templates/${id}`, { method: 'DELETE' }); }
-  getWidgetAccountLinks(widgetId: number)               { return this.request<any[]>(`/widgets/${widgetId}/accounts`); }
-  addWidgetAccount(widgetId: number, d: any)            { return this.request<any>(`/widgets/${widgetId}/accounts`, { method: 'POST', body: JSON.stringify(d) }); }
-  removeWidgetAccount(id: number)                       { return this.request<any>(`/widget-accounts/${id}`, { method: 'DELETE' }); }
-
-  // ===================== نسخ الشاشات والعناصر =====================
-  cloneScreen(screenId: number, d: any)                 { return this.request<any>(`/screens/${screenId}/clone`, { method: 'POST', body: JSON.stringify(d) }); }
-  copyWidgetToScreen(widgetId: number, targetScreenId: number) { return this.request<any>(`/widgets/${widgetId}/copy-to/${targetScreenId}`, { method: 'POST', body: JSON.stringify({}) }); }
-  getScreensWithWidgets(bizId: number)                  { return this.request<any[]>(`/businesses/${bizId}/screens-with-widgets`); }
-
-  // ===================== صلاحيات الشاشات =====================
-  getScreenPermissions(screenId: number)                { return this.request<any[]>(`/screens/${screenId}/permissions`); }
-  setScreenPermissions(screenId: number, d: any)        { return this.request<any>(`/screens/${screenId}/permissions`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateScreenPermission(id: number, d: any)            { return this.request<any>(`/screen-permissions/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteScreenPermission(id: number)                    { return this.request<any>(`/screen-permissions/${id}`, { method: 'DELETE' }); }
-  batchUpdateScreenPermissions(screenId: number, permissions: any[]) { return this.request<any>(`/screens/${screenId}/permissions/batch`, { method: 'PUT', body: JSON.stringify({ permissions }) }); }
-
-  // ===================== إنشاء شاشة من قالب وربط بالقائمة الجانبية =====================
-  createScreenFromTemplate(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/screens`, { method: 'POST', body: JSON.stringify(d) }); }
-  addScreenToSidebar(bizId: number, screenId: number, d: any) { return this.request<any>(`/businesses/${bizId}/screens/${screenId}/add-to-sidebar`, { method: 'POST', body: JSON.stringify(d) }); }
-  getUserScreens(bizId: number, userId: number)         { return this.request<any[]>(`/businesses/${bizId}/users/${userId}/screens`); }
-
-  // ===================== بيانات العناصر الحقيقية =====================
-  getWidgetStats(bizId: number, dateFrom?: string, dateTo?: string) {
-    let url = `/businesses/${bizId}/widget-stats`;
-    const params: string[] = [];
-    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
-    if (dateTo) params.push(`dateTo=${dateTo}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  getWidgetLog(bizId: number, filters?: { dateFrom?: string; dateTo?: string; operationTypeId?: number; limit?: number; offset?: number }) {
-    let url = `/businesses/${bizId}/widget-log`;
-    const params: string[] = [];
-    if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
-    if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
-    if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
-    if (filters?.limit) params.push(`limit=${filters.limit}`);
-    if (filters?.offset) params.push(`offset=${filters.offset}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  getWidgetAccounts(bizId: number, accountIds?: number[]) {
-    let url = `/businesses/${bizId}/widget-accounts`;
-    if (accountIds?.length) url += `?accountIds=${accountIds.join(',')}`;
-    return this.request<any[]>(url);
-  }
-  getWidgetChart(bizId: number, months?: number) {
-    let url = `/businesses/${bizId}/widget-chart`;
-    if (months) url += `?months=${months}`;
-    return this.request<any>(url);
-  }
-  getWidgetNotes(widgetId: number)                    { return this.request<any>(`/widgets/${widgetId}/notes`); }
-  saveWidgetNotes(widgetId: number, text: string)     { return this.request<any>(`/widgets/${widgetId}/notes`, { method: 'PUT', body: JSON.stringify({ text }) }); }
-  getWidgetOperationTypes(bizId: number, ids?: number[]) {
-    let url = `/businesses/${bizId}/widget-operation-types`;
-    if (ids?.length) url += `?ids=${ids.join(',')}`;
-    return this.request<any[]>(url);
-  }
-
-  // ===================== العملات =====================
-  getCurrencies() { return this.request<any[]>('/currencies'); }
-
-  // ===================== المرفقات =====================
-  getAttachments(entityType: string, entityId: number) { return this.request<any[]>(`/attachments/${entityType}/${entityId}`); }
-  uploadAttachment(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/attachments`, { method: 'POST', body: JSON.stringify(d) }); }
-  deleteAttachment(bizId: number, id: number)          { return this.request<any>(`/businesses/${bizId}/attachments/${id}`, { method: 'DELETE' }); }
-  getAttachmentsArchiveSettings(bizId: number)         { return this.request<any>(`/businesses/${bizId}/attachments-archive-settings`); }
-  saveAttachmentsArchiveSettings(bizId: number, d: any){ return this.request<any>(`/businesses/${bizId}/attachments-archive-settings`, { method: 'PUT', body: JSON.stringify(d) }); }
-  buildAttachmentsArchiveTree(bizId: number)            { return this.request<any>(`/businesses/${bizId}/attachments-archive-build`, { method: 'POST' }); }
-  pickAttachmentsArchiveFolder(bizId: number)           { return this.request<any>(`/businesses/${bizId}/attachments-archive-pick-folder`, { method: 'POST' }); }
-  browseAttachmentsArchiveFs(bizId: number, dirPath?: string) {
-    let url = `/businesses/${bizId}/attachments-archive-fs`;
-    if (dirPath) url += `?path=${encodeURIComponent(dirPath)}`;
-    return this.request<any>(url);
-  }
-  createAttachmentsArchiveFolder(bizId: number, dirPath: string, folderName: string) {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive-fs/mkdir`, {
-      method: 'POST',
-      body: JSON.stringify({ path: dirPath, name: folderName }),
-    });
-  }
-  getAttachmentsArchiveItems(bizId: number, filters?: { search?: string; voucherType?: string; treasuryType?: string; importance?: string }) {
-    let url = `/businesses/${bizId}/attachments-archive-items`;
-    const params: string[] = [];
-    if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
-    if (filters?.voucherType) params.push(`voucherType=${encodeURIComponent(filters.voucherType)}`);
-    if (filters?.treasuryType) params.push(`treasuryType=${encodeURIComponent(filters.treasuryType)}`);
-    if (filters?.importance) params.push(`importance=${encodeURIComponent(filters.importance)}`);
-    if (params.length) url += `?${params.join('&')}`;
-    return this.request<any[]>(url);
-  }
-  rebuildAttachmentArchivePath(bizId: number, id: number, importance?: string) {
-    return this.request<any>(`/businesses/${bizId}/attachments/${id}/rebuild-path`, {
-      method: 'POST',
-      body: JSON.stringify({ importance }),
-    });
-  }
-
-  // ===================== أسعار الصرف =====================
-  getExchangeRates(bizId: number, date?: string) {
-    let url = `/businesses/${bizId}/exchange-rates`;
-    if (date) url += `?date=${date}`;
-    return this.request<any[]>(url);
-  }
-  createExchangeRate(bizId: number, d: any)            { return this.request<any>(`/businesses/${bizId}/exchange-rates`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateExchangeRate(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/exchange-rates/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteExchangeRate(bizId: number, id: number)        { return this.request<any>(`/businesses/${bizId}/exchange-rates/${id}`, { method: 'DELETE' }); }
-  convertCurrency(bizId: number, from: number, to: number, amount: number) {
-    return this.request<any>(`/businesses/${bizId}/exchange-rates/convert?from=${from}&to=${to}&amount=${amount}`);
-  }
-
-  // ===================== الأدوار والصلاحيات RBAC =====================
-  getRoles(bizId: number)                              { return this.request<any[]>(`/businesses/${bizId}/roles`); }
-  createRole(bizId: number, d: any)                    { return this.request<any>(`/businesses/${bizId}/roles`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateRole(bizId: number, id: number, d: any)        { return this.request<any>(`/businesses/${bizId}/roles/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteRole(bizId: number, id: number)                { return this.request<any>(`/businesses/${bizId}/roles/${id}`, { method: 'DELETE' }); }
-  getUserRoles(bizId: number)                          { return this.request<any[]>(`/businesses/${bizId}/user-roles`); }
-  assignUserRole(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/user-roles`, { method: 'POST', body: JSON.stringify(d) }); }
-  removeUserRole(bizId: number, userId: number)        { return this.request<any>(`/businesses/${bizId}/user-roles/${userId}`, { method: 'DELETE' }); }
-
-  // ===================== التقارير =====================
-  getProfitLossReport(bizId: number, dateFrom?: string, dateTo?: string) {
-    let url = `/businesses/${bizId}/reports/profit-loss`;
-    const params: string[] = [];
-    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
-    if (dateTo) params.push(`dateTo=${dateTo}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  getAccountStatement(
-    bizId: number,
-    accountId: number,
-    dateFrom?: string,
-    dateTo?: string,
-    sourceType?: 'all' | 'payment_voucher' | 'receipt_voucher' | 'journal_manual' | 'inventory_txn',
-  ) {
-    let url = `/businesses/${bizId}/reports/account-statement/${accountId}`;
-    const params: string[] = [];
-    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
-    if (dateTo) params.push(`dateTo=${dateTo}`);
-    if (sourceType && sourceType !== 'all') params.push(`sourceType=${sourceType}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  getDailySummary(bizId: number, date?: string) {
-    let url = `/businesses/${bizId}/reports/daily-summary`;
-    if (date) url += `?date=${date}`;
-    return this.request<any>(url);
-  }
-  getTrialBalance(bizId: number, dateFrom?: string, dateTo?: string) {
-    let url = `/businesses/${bizId}/reports/trial-balance`;
-    const params: string[] = [];
-    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
-    if (dateTo) params.push(`dateTo=${dateTo}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-
-  // ===================== إعداد الشاشة المخصصة (collection-style) =====================
-  getCollectionStyleConfig(bizId: number, screenId: number) {
-    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`);
-  }
-  saveCollectionStyleConfig(bizId: number, screenId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style-config`, { method: 'PUT', body: JSON.stringify(d) });
-  }
-
-  // ===================== تحسينات السندات =====================
-  getVouchersEnhanced(bizId: number, filters?: {
-    type?: string; status?: string; dateFrom?: string; dateTo?: string;
-    search?: string; voucherNumber?: string; minAmount?: number; maxAmount?: number;
-    operationTypeId?: number; treasuryType?: string; treasuryId?: number;
-    limit?: number; offset?: number;
-    sortBy?: string; sortDir?: string;
-  }) {
-    let url = `/businesses/${bizId}/vouchers-enhanced`;
-    const params: string[] = [];
-    if (filters?.type) params.push(`type=${filters.type}`);
-    if (filters?.status) params.push(`status=${filters.status}`);
-    if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
-    if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
-    if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
-    if (filters?.voucherNumber) params.push(`voucherNumber=${encodeURIComponent(filters.voucherNumber)}`);
-    if (filters?.minAmount) params.push(`minAmount=${filters.minAmount}`);
-    if (filters?.maxAmount) params.push(`maxAmount=${filters.maxAmount}`);
-    if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
-    if (filters?.treasuryType) params.push(`treasuryType=${filters.treasuryType}`);
-    if (filters?.treasuryId) params.push(`treasuryId=${filters.treasuryId}`);
-    if (filters?.limit) params.push(`limit=${filters.limit}`);
-    if (filters?.offset !== undefined) params.push(`offset=${filters.offset}`);
-    if (filters?.sortBy) params.push(`sortBy=${filters.sortBy}`);
-    if (filters?.sortDir) params.push(`sortDir=${filters.sortDir}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  updateVoucher(bizId: number, id: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/vouchers/${id}`, { method: 'PUT', body: JSON.stringify(d) });
-  }
-  changeVoucherStatus(bizId: number, id: number, status: string) {
-    return this.request<any>(`/businesses/${bizId}/vouchers/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) });
-  }
-  getAccountBalance(bizId: number, accountId: number) {
-    return this.request<any>(`/businesses/${bizId}/account-balance/${accountId}`);
-  }
-  getVoucherDetails(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/vouchers/${id}/details`);
-  }
-  createVoucherDraft(bizId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/vouchers-draft`, { method: 'POST', body: JSON.stringify(d) });
-  }
-
-  // ===================== تحسينات أنواع العمليات =====================
-  cloneOperationType(bizId: number, id: number, d?: any) {
-    return this.request<any>(`/businesses/${bizId}/operation-types/${id}/clone`, { method: 'POST', body: JSON.stringify(d || {}) });
-  }
-  toggleOperationType(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/operation-types/${id}/toggle`, { method: 'POST', body: '{}' });
-  }
-  getOperationTypesStats(bizId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/operation-types-stats`);
-  }
-  checkOperationTypeName(bizId: number, name: string, excludeId?: number) {
-    let url = `/businesses/${bizId}/operation-types/check-name?name=${encodeURIComponent(name)}`;
-    if (excludeId) url += `&excludeId=${excludeId}`;
-    return this.request<{ exists: boolean; name: string }>(url);
-  }
-
-  // ===================== تحسينات إعدادات السايدبار =====================
-  copySidebarConfig(bizId: number, fromUserId: number, toUserId: number) {
-    return this.request<any>(`/businesses/${bizId}/sidebar-config/copy`, { method: 'POST', body: JSON.stringify({ fromUserId, toUserId }) });
-  }
-  resetSidebarConfig(bizId: number, userId: number) {
-    return this.request<any>(`/businesses/${bizId}/sidebar-config/reset/${userId}`, { method: 'POST', body: '{}' });
-  }
-
-  // ===================== تحسينات الشاشات المخصصة =====================
-  getWidgetLogEnhanced(bizId: number, filters?: {
-    dateFrom?: string; dateTo?: string; operationTypeId?: number;
-    search?: string; minAmount?: number; maxAmount?: number;
-    status?: string; limit?: number; offset?: number;
-  }) {
-    let url = `/businesses/${bizId}/widget-log-enhanced`;
-    const params: string[] = [];
-    if (filters?.dateFrom) params.push(`dateFrom=${filters.dateFrom}`);
-    if (filters?.dateTo) params.push(`dateTo=${filters.dateTo}`);
-    if (filters?.operationTypeId) params.push(`operationTypeId=${filters.operationTypeId}`);
-    if (filters?.search) params.push(`search=${encodeURIComponent(filters.search)}`);
-    if (filters?.minAmount) params.push(`minAmount=${filters.minAmount}`);
-    if (filters?.maxAmount) params.push(`maxAmount=${filters.maxAmount}`);
-    if (filters?.status) params.push(`status=${filters.status}`);
-    if (filters?.limit) params.push(`limit=${filters.limit}`);
-    if (filters?.offset !== undefined) params.push(`offset=${filters.offset}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  getWidgetStatsEnhanced(bizId: number, period?: string, dateFrom?: string, dateTo?: string) {
-    let url = `/businesses/${bizId}/widget-stats-enhanced`;
-    const params: string[] = [];
-    if (period) params.push(`period=${period}`);
-    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
-    if (dateTo) params.push(`dateTo=${dateTo}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-  getWidgetChartEnhanced(bizId: number, groupBy?: string, months?: number, dateFrom?: string, dateTo?: string) {
-    let url = `/businesses/${bizId}/widget-chart-enhanced`;
-    const params: string[] = [];
-    if (groupBy) params.push(`groupBy=${groupBy}`);
-    if (months) params.push(`months=${months}`);
-    if (dateFrom) params.push(`dateFrom=${dateFrom}`);
-    if (dateTo) params.push(`dateTo=${dateTo}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any>(url);
-  }
-
-  // ===================== تصنيفات المخازن =====================
-  getWarehouseTypes(bizId: number)                { return this.request<any[]>(`/businesses/${bizId}/warehouse-types`); }
-  createWarehouseType(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/warehouse-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateWarehouseType(id: number, d: any)         { return this.request<any>(`/warehouse-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteWarehouseType(id: number)                 { return this.request<any>(`/warehouse-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== الأنواع المرنة (رئيسي + فرعي) =====================
-  getAccountingMainTypes(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/accounting-main-types`); }
-  createAccountingMainType(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/accounting-main-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateAccountingMainType(bizId: number, id: number, d: any) { return this.request<any>(`/businesses/${bizId}/accounting-main-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteAccountingMainType(bizId: number, id: number)      { return this.request<any>(`/businesses/${bizId}/accounting-main-types/${id}`, { method: 'DELETE' }); }
-
-  getAccountingTypes(bizId: number)                        { return this.request<any[]>(`/businesses/${bizId}/accounting-types`); }
-  createAccountingType(bizId: number, d: any)              { return this.request<any>(`/businesses/${bizId}/accounting-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateAccountingType(bizId: number, id: number, d: any)  { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteAccountingType(bizId: number, id: number)          { return this.request<any>(`/businesses/${bizId}/accounting-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== تصنيفات قيود اليومية =====================
-  getJournalEntryCategories(bizId: number)        { return this.request<any[]>(`/businesses/${bizId}/journal-entry-categories`); }
-  createJournalEntryCategory(bizId: number, d: any) { return this.request<any>(`/businesses/${bizId}/journal-entry-categories`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateJournalEntryCategory(id: number, d: any)  { return this.request<any>(`/journal-entry-categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteJournalEntryCategory(id: number)          { return this.request<any>(`/journal-entry-categories/${id}`, { method: 'DELETE' }); }
-
-  // ===================== تصنيفات المصروفات (الوحدة 13) =====================
-  getExpenseCategories(bizId: number)            { return this.request<any[]>(`/businesses/${bizId}/expense-categories`); }
-  createExpenseCategory(bizId: number, d: any)   { return this.request<any>(`/businesses/${bizId}/expense-categories`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateExpenseCategory(id: number, d: any)      { return this.request<any>(`/expense-categories/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteExpenseCategory(id: number)              { return this.request<any>(`/expense-categories/${id}`, { method: 'DELETE' }); }
-
-  // ===================== ميزانية المصروفات (الوحدة 13) =====================
-  getExpenseBudget(bizId: number, month?: number, year?: number) {
-    let url = `/businesses/${bizId}/expense-budget`;
-    const p: string[] = [];
-    if (month != null) p.push(`month=${month}`);
-    if (year != null) p.push(`year=${year}`);
-    if (p.length) url += '?' + p.join('&');
-    return this.request<any[]>(url);
-  }
-  createExpenseBudget(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/expense-budget`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateExpenseBudget(id: number, d: any)         { return this.request<any>(`/expense-budget/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteExpenseBudget(id: number)                { return this.request<any>(`/expense-budget/${id}`, { method: 'DELETE' }); }
-
-  // ===================== سجلات الرواتب (الوحدة 13) =====================
-  getSalaryRecords(bizId: number, month?: number, year?: number) {
-    let url = `/businesses/${bizId}/salaries`;
-    const p: string[] = [];
-    if (month != null) p.push(`month=${month}`);
-    if (year != null) p.push(`year=${year}`);
-    if (p.length) url += '?' + p.join('&');
-    return this.request<any[]>(url);
-  }
-  createSalaryRecord(bizId: number, d: any)       { return this.request<any>(`/businesses/${bizId}/salaries`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSalaryRecord(id: number, d: any)         { return this.request<any>(`/salaries/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSalaryRecord(id: number)                 { return this.request<any>(`/salaries/${id}`, { method: 'DELETE' }); }
-
-  // ===================== العمليات المخزنية =====================
-  getWarehouseOperations(bizId: number, type?: string, warehouseId?: number) {
-    let url = `/businesses/${bizId}/warehouse-operations`;
-    const params: string[] = [];
-    if (type) params.push(`type=${type}`);
-    if (warehouseId) params.push(`warehouseId=${warehouseId}`);
-    if (params.length) url += '?' + params.join('&');
-    return this.request<any[]>(url);
-  }
-  getWarehouseOperationsByWarehouse(bizId: number, warehouseId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/warehouses/${warehouseId}/operations`);
-  }
-  createWarehouseOperation(bizId: number, d: any) { return this.request<any>(`/businesses/${bizId}/warehouse-operations`, { method: 'POST', body: JSON.stringify(d) }); }
-  getWarehouseOperation(id: number)               { return this.request<any>(`/warehouse-operations/${id}`); }
-  getWarehouseInventory(bizId: number, warehouseId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/warehouses/${warehouseId}/inventory`);
-  }
-  getInventoryItems(bizId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/inventory-items`);
-  }
-
-  // ===================== سير العمل (Workflow) =====================
-  getVoucherTransitions(bizId: number, voucherId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/vouchers/${voucherId}/transitions`);
-  }
-  executeVoucherTransition(bizId: number, voucherId: number, transitionId: number, note?: string) {
-    return this.request<any>(`/businesses/${bizId}/vouchers/${voucherId}/transition`, { method: 'POST', body: JSON.stringify({ transitionId, note }) });
-  }
-  getVoucherWorkflowHistory(bizId: number, voucherId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/vouchers/${voucherId}/workflow-history`);
-  }
-  setupDefaultWorkflow(bizId: number, opTypeId: number) {
-    return this.request<any>(`/businesses/${bizId}/operation-types/${opTypeId}/setup-workflow`, { method: 'POST' });
-  }
-  getOperationTypeTransitions(bizId: number, opTypeId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/operation-types/${opTypeId}/transitions`);
-  }
-  addOperationTypeTransition(bizId: number, opTypeId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/operation-types/${opTypeId}/transitions`, { method: 'POST', body: JSON.stringify(d) });
-  }
-  deleteTransition(bizId: number, transitionId: number) {
-    return this.request<any>(`/businesses/${bizId}/transitions/${transitionId}`, { method: 'DELETE' });
-  }
-
-  // ===================== بناء الواجهات الديناميكية (UI Builder) =====================
-  getUiPages(bizId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/ui/pages`);
-  }
-  getUiPageByKey(bizId: number, pageKey: string) {
-    return this.request<any>(`/businesses/${bizId}/ui/pages/key/${pageKey}`);
-  }
-  getUiPage(bizId: number, pageId: number) {
-    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}`);
-  }
-  createUiPage(bizId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/pages`, { method: 'POST', body: JSON.stringify(d) });
-  }
-  updateUiPage(bizId: number, pageId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}`, { method: 'PUT', body: JSON.stringify(d) });
-  }
-  deleteUiPage(bizId: number, pageId: number) {
-    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}`, { method: 'DELETE' });
-  }
-  addUiComponent(bizId: number, pageId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/pages/${pageId}/components`, { method: 'POST', body: JSON.stringify(d) });
-  }
-  updateUiComponent(bizId: number, componentId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/components/${componentId}`, { method: 'PUT', body: JSON.stringify(d) });
-  }
-  deleteUiComponent(bizId: number, componentId: number) {
-    return this.request<any>(`/businesses/${bizId}/ui/components/${componentId}`, { method: 'DELETE' });
-  }
-  getUiDataSources(bizId: number) {
-    return this.request<any[]>(`/businesses/${bizId}/ui/data-sources`);
-  }
-  createUiDataSource(bizId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/data-sources`, { method: 'POST', body: JSON.stringify(d) });
-  }
-  updateUiDataSource(bizId: number, dsId: number, d: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/data-sources/${dsId}`, { method: 'PUT', body: JSON.stringify(d) });
-  }
-  deleteUiDataSource(bizId: number, dsId: number) {
-    return this.request<any>(`/businesses/${bizId}/ui/data-sources/${dsId}`, { method: 'DELETE' });
-  }
-  executeUiDataSource(bizId: number, dsId: number, params?: any) {
-    return this.request<any>(`/businesses/${bizId}/ui/data-sources/${dsId}/execute`, { method: 'POST', body: JSON.stringify(params || {}) });
-  }
-
-  // ===================== التقارير المتقدمة =====================
-  getMonthlyRevenue(bizId: number, year?: number) {
-    const q = year ? `?year=${year}` : '';
-    return this.request<any>(`/businesses/${bizId}/reports/monthly-revenue${q}`);
-  }
-  getAggregatedProfitLoss(dateFrom?: string, dateTo?: string) {
-    const params = new URLSearchParams();
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
-    const q = params.toString() ? `?${params}` : '';
-    return this.request<any>(`/reports/aggregated-profit-loss${q}`);
-  }
-  getAggregatedSummary() {
-    return this.request<any>(`/reports/aggregated-summary`);
-  }
-
-  // ===================== محرك المخزون - دوال جديدة =====================
-  getStockLevels(bizId: number, warehouseId?: number) {
-    const q = warehouseId ? `?warehouseId=${warehouseId}` : '';
-    return this.request<any>(`/businesses/${bizId}/stock-levels${q}`);
-  }
-  getStockAlerts(bizId: number) {
-    return this.request<any>(`/businesses/${bizId}/stock-alerts`);
-  }
-  getStockValuation(bizId: number, warehouseId?: number) {
-    const q = warehouseId ? `?warehouseId=${warehouseId}` : '';
-    return this.request<any>(`/businesses/${bizId}/stock-valuation${q}`);
-  }
-  getItemMovements(bizId: number, itemId: number, limit?: number) {
-    const q = limit ? `?limit=${limit}` : '';
-    return this.request<any>(`/businesses/${bizId}/items/${itemId}/movements${q}`);
-  }
-  createStockMovement(bizId: number, data: any) {
-    return this.request<any>(`/businesses/${bizId}/stock-movements`, { method: 'POST', body: JSON.stringify(data) });
-  }
-
-  // ===================== أصناف العمليات =====================
-  getOperationCategories(bizId: number, includeTypes = false) {
-    const q = includeTypes ? '?includeTypes=true' : '';
-    return this.request<any[]>(`/businesses/${bizId}/operation-categories${q}`);
-  }
-  getOperationCategory(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/operation-categories/${id}`);
-  }
-  createOperationCategory(bizId: number, data: any) {
-    return this.request<any>(`/businesses/${bizId}/operation-categories`, { method: 'POST', body: JSON.stringify(data) });
-  }
-  updateOperationCategory(bizId: number, id: number, data: any) {
-    return this.request<any>(`/businesses/${bizId}/operation-categories/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-  }
-  deleteOperationCategory(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/operation-categories/${id}`, { method: 'DELETE' });
-  }
-
-  // ===================== فواتير المشتريات =====================
-  getPurchaseInvoices(bizId: number, status?: string) {
-    const q = status ? `?status=${status}` : '';
-    return this.request<any[]>(`/businesses/${bizId}/purchase-invoices${q}`);
-  }
-  getPurchaseInvoice(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}`);
-  }
-  createPurchaseInvoice(bizId: number, data: any) {
-    return this.request<any>(`/businesses/${bizId}/purchase-invoices`, { method: 'POST', body: JSON.stringify(data) });
-  }
-  updatePurchaseInvoice(bizId: number, id: number, data: any) {
-    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-  }
-  confirmPurchaseInvoice(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}/confirm`, { method: 'POST' });
-  }
-  receivePurchaseInvoice(bizId: number, id: number, receivedItems: any[]) {
-    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}/receive`, { method: 'POST', body: JSON.stringify({ receivedItems }) });
-  }
-  deletePurchaseInvoice(bizId: number, id: number) {
-    return this.request<any>(`/businesses/${bizId}/purchase-invoices/${id}`, { method: 'DELETE' });
-  }
-
-  // ===================== أنواع الموردين =====================
-  getSupplierTypes(bizId: number)                { return this.request<any[]>(`/businesses/${bizId}/supplier-types`); }
-  createSupplierType(bizId: number, d: any)      { return this.request<any>(`/businesses/${bizId}/supplier-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateSupplierType(id: number, d: any)         { return this.request<any>(`/supplier-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteSupplierType(id: number)                 { return this.request<any>(`/supplier-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== الأقسام =====================
-  getDepartments(bizId: number)                  { return this.request<any[]>(`/businesses/${bizId}/departments`); }
-  createDepartment(bizId: number, d: any)        { return this.request<any>(`/businesses/${bizId}/departments`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateDepartment(id: number, d: any)           { return this.request<any>(`/departments/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteDepartment(id: number)                   { return this.request<any>(`/departments/${id}`, { method: 'DELETE' }); }
-
-  // ===================== المسميات الوظيفية =====================
-  getJobTitles(bizId: number)                    { return this.request<any[]>(`/businesses/${bizId}/job-titles`); }
-  createJobTitle(bizId: number, d: any)          { return this.request<any>(`/businesses/${bizId}/job-titles`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateJobTitle(id: number, d: any)             { return this.request<any>(`/job-titles/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteJobTitle(id: number)                     { return this.request<any>(`/job-titles/${id}`, { method: 'DELETE' }); }
-
-  // ===================== أنواع الأصناف =====================
-  getInventoryItemTypes(bizId: number)               { return this.request<any[]>(`/businesses/${bizId}/inventory-item-types`); }
-  createInventoryItemType(bizId: number, d: any)     { return this.request<any>(`/businesses/${bizId}/inventory-item-types`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateInventoryItemType(id: number, d: any)        { return this.request<any>(`/inventory-item-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteInventoryItemType(id: number)                { return this.request<any>(`/inventory-item-types/${id}`, { method: 'DELETE' }); }
-
-  // ===================== المطابقات =====================
-  getReconciliations(bizId: number)                          { return this.request<any[]>(`/businesses/${bizId}/reconciliations`); }
-  getReconciliation(bizId: number, id: number)               { return this.request<any>(`/businesses/${bizId}/reconciliations/${id}`); }
-  createReconciliation(bizId: number, d: any)                { return this.request<any>(`/businesses/${bizId}/reconciliations`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateReconciliation(bizId: number, id: number, d: any)    { return this.request<any>(`/businesses/${bizId}/reconciliations/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-
-  // ===================== العهد =====================
-  getCustodyRecords(bizId: number)                           { return this.request<any[]>(`/businesses/${bizId}/custody`); }
-  getCustodyRecord(bizId: number, id: number)                { return this.request<any>(`/businesses/${bizId}/custody/${id}`); }
-  createCustodyRecord(bizId: number, d: any)                 { return this.request<any>(`/businesses/${bizId}/custody`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateCustodyRecord(bizId: number, id: number, d: any)     { return this.request<any>(`/businesses/${bizId}/custody/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteCustodyRecord(bizId: number, id: number)             { return this.request<any>(`/businesses/${bizId}/custody/${id}`, { method: 'DELETE' }); }
-  addCustodySettlement(bizId: number, custodyId: number, d: any) { return this.request<any>(`/businesses/${bizId}/custody/${custodyId}/settle`, { method: 'POST', body: JSON.stringify(d) }); }
-
-  // ===================== فحص الاتصال =====================
-  async checkDbHealth(): Promise<{ status: string; message: string; latency?: string }> {
-    try {
-      const res = await fetch('/health/db');
-      return await res.json();
-    } catch {
-      return { status: 'disconnected', message: 'فشل الاتصال بالخادم' };
-    }
-  }
+  // ===================== الشاشات وسير العمل =====================
+  getScreens(bizId: number)                      { return this.scr.getScreens(bizId); }
+  createScreen(bizId: number, d: any)            { return this.scr.createScreen(bizId, d); }
+  updateScreen(id: number, d: any)               { return this.scr.updateScreen(id, d); }
+  deleteScreen(id: number)                       { return this.scr.deleteScreen(id); }
+  cloneScreen(screenId: number, d: any)          { return this.scr.cloneScreen(screenId, d); }
+  getScreensWithWidgets(bizId: number)           { return this.scr.getScreensWithWidgets(bizId); }
+  getScreenWidgets(screenId: number)             { return this.scr.getScreenWidgets(screenId); }
+  createScreenWidget(screenId: number, d: any)   { return this.scr.createScreenWidget(screenId, d); }
+  updateWidget(id: number, d: any)               { return this.scr.updateWidget(id, d); }
+  deleteWidget(id: number)                       { return this.scr.deleteWidget(id); }
+  batchUpdateWidgets(screenId: number, widgets: any[]){ return this.scr.batchUpdateWidgets(screenId, widgets); }
+  copyWidgetToScreen(widgetId: number, targetScreenId: number){ return this.scr.copyWidgetToScreen(widgetId, targetScreenId); }
+  getWidgetTemplates(widgetId: number)           { return this.scr.getWidgetTemplates(widgetId); }
+  addWidgetTemplate(widgetId: number, d: any)    { return this.scr.addWidgetTemplate(widgetId, d); }
+  removeWidgetTemplate(id: number)               { return this.scr.removeWidgetTemplate(id); }
+  getWidgetAccountLinks(widgetId: number)        { return this.scr.getWidgetAccountLinks(widgetId); }
+  addWidgetAccount(widgetId: number, d: any)     { return this.scr.addWidgetAccount(widgetId, d); }
+  removeWidgetAccount(id: number)                { return this.scr.removeWidgetAccount(id); }
+  getScreenPermissions(screenId: number)         { return this.scr.getScreenPermissions(screenId); }
+  setScreenPermissions(screenId: number, d: any) { return this.scr.setScreenPermissions(screenId, d); }
+  getWidgetLogEnhanced(bizId: number, filters?: any){ return this.scr.getWidgetLogEnhanced(bizId, filters); }
+  getWidgetStatsEnhanced(bizId: number, period?: string, dateFrom?: string, dateTo?: string){ return this.scr.getWidgetStatsEnhanced(bizId, period, dateFrom, dateTo); }
+  getWidgetChartEnhanced(bizId: number, groupBy?: string, months?: number, dateFrom?: string, dateTo?: string){ return this.scr.getWidgetChartEnhanced(bizId, groupBy, months, dateFrom, dateTo); }
+  getVoucherTransitions(bizId: number, voucherId: number){ return this.scr.getVoucherTransitions(bizId, voucherId); }
+  executeVoucherTransition(bizId: number, voucherId: number, transitionId: number, note?: string){ return this.scr.executeVoucherTransition(bizId, voucherId, transitionId, note); }
+  getVoucherWorkflowHistory(bizId: number, voucherId: number){ return this.scr.getVoucherWorkflowHistory(bizId, voucherId); }
+  setupDefaultWorkflow(bizId: number, opTypeId: number){ return this.scr.setupDefaultWorkflow(bizId, opTypeId); }
+  getOperationTypeTransitions(bizId: number, opTypeId: number){ return this.scr.getOperationTypeTransitions(bizId, opTypeId); }
+  addOperationTypeTransition(bizId: number, opTypeId: number, d: any){ return this.scr.addOperationTypeTransition(bizId, opTypeId, d); }
+  deleteTransition(bizId: number, transitionId: number){ return this.scr.deleteTransition(bizId, transitionId); }
+  getSidebarSections(bizId: number)              { return this.scr.getSidebarSections(bizId); }
+  createSidebarSection(bizId: number, d: any)    { return this.scr.createSidebarSection(bizId, d); }
+  updateSidebarSection(id: number, d: any)       { return this.scr.updateSidebarSection(id, d); }
+  deleteSidebarSection(id: number)               { return this.scr.deleteSidebarSection(id); }
+  getSidebarItems(bizId: number)                 { return this.scr.getSidebarItems(bizId); }
+  createSidebarItem(d: any)                      { return this.scr.createSidebarItem(d); }
+  updateSidebarItem(id: number, d: any)          { return this.scr.updateSidebarItem(id, d); }
+  deleteSidebarItem(id: number)                  { return this.scr.deleteSidebarItem(id); }
+  getUserSidebar(bizId: number, userId: number)  { return this.scr.getUserSidebar(bizId, userId); }
+  updateUserSidebar(bizId: number, userId: number, d: any){ return this.scr.updateUserSidebar(bizId, userId, d); }
+  copySidebarConfig(bizId: number, fromUserId: number, toUserId: number){ return this.scr.copySidebarConfig(bizId, fromUserId, toUserId); }
+  resetSidebarConfig(bizId: number, userId: number){ return this.scr.resetSidebarConfig(bizId, userId); }
+  getUsers()                                     { return this.scr.getUsers(); }
+  getUiPages(bizId: number)                      { return this.scr.getUiPages(bizId); }
+  getUiPageByKey(bizId: number, pageKey: string) { return this.scr.getUiPageByKey(bizId, pageKey); }
+  getUiPage(bizId: number, pageId: number)       { return this.scr.getUiPage(bizId, pageId); }
+  createUiPage(bizId: number, d: any)            { return this.scr.createUiPage(bizId, d); }
+  updateUiPage(bizId: number, pageId: number, d: any){ return this.scr.updateUiPage(bizId, pageId, d); }
+  deleteUiPage(bizId: number, pageId: number)    { return this.scr.deleteUiPage(bizId, pageId); }
+  addUiComponent(bizId: number, pageId: number, d: any){ return this.scr.addUiComponent(bizId, pageId, d); }
+  updateUiComponent(bizId: number, componentId: number, d: any){ return this.scr.updateUiComponent(bizId, componentId, d); }
+  deleteUiComponent(bizId: number, componentId: number){ return this.scr.deleteUiComponent(bizId, componentId); }
+  getUiDataSources(bizId: number)                { return this.scr.getUiDataSources(bizId); }
+  createUiDataSource(bizId: number, d: any)      { return this.scr.createUiDataSource(bizId, d); }
+  updateUiDataSource(bizId: number, dsId: number, d: any){ return this.scr.updateUiDataSource(bizId, dsId, d); }
+  deleteUiDataSource(bizId: number, dsId: number){ return this.scr.deleteUiDataSource(bizId, dsId); }
+  executeUiDataSource(bizId: number, dsId: number, params?: any){ return this.scr.executeUiDataSource(bizId, dsId, params); }
+  getMonthlyRevenue(bizId: number, year?: number){ return this.scr.getMonthlyRevenue(bizId, year); }
+  getAggregatedProfitLoss(dateFrom?: string, dateTo?: string){ return this.scr.getAggregatedProfitLoss(dateFrom, dateTo); }
+  getAggregatedSummary()                         { return this.scr.getAggregatedSummary(); }
 }
