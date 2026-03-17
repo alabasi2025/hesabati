@@ -12,7 +12,7 @@
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else if (!departments().length) {
     <div class="empty-state">
       <span class="material-icons-round">business</span>

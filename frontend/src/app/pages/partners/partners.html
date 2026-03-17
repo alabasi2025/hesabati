@@ -25,7 +25,7 @@
   }
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else if (!partners().length) {
     <div class="empty-state"><span class="material-icons-round">group_off</span><p>لا يوجد شركاء مسجلين</p>
       <button class="add-btn small" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة شريك</button>
