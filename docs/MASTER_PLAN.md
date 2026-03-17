@@ -630,3 +630,52 @@ Added to pnpm.overrides:
 - Route files total: 48 files
 - Engine files total: 14 files
 
+
+
+---
+
+## Phase 7 — تقسيم الخدمات الكبيرة + Docker (مكتمل ✅)
+**تاريخ الإنجاز:** 2026-03-17  
+**Commit:** e91a2bf
+
+### المنجزات:
+
+#### 1. تقسيم transaction.service.ts (1,104 → 14 سطراً):
+| الملف | الأسطر | المحتوى |
+|-------|--------|---------|
+| `transaction.types.ts` | 92 | الأنواع والـinterfaces |
+| `transaction-post.service.ts` | 424 | postTransaction + postMultiTransaction |
+| `transaction-cancel.service.ts` | 312 | cancelTransaction + confirmDraftTransaction |
+| `transaction.service.ts` | 14 | thin re-export wrapper |
+
+#### 2. تقسيم screens.routes.ts (986 → 9 سطراً):
+| الملف | الأسطر | المحتوى |
+|-------|--------|---------|
+| `screens-core.routes.ts` | 530 | CRUD + Widgets + Templates + Sidebar + User |
+| `screens-widget-data.routes.ts` | 487 | Widget Data APIs + Enhanced Widget APIs |
+| `screens.routes.ts` | 9 | thin re-export wrapper |
+
+#### 3. Docker Infrastructure:
+- `Dockerfile` — Multi-stage build (deps → builder → production)، non-root user، health check
+- `docker-compose.yml` — PostgreSQL 16 + Backend + Nginx (optional profile)
+- `.env.example` — قالب متغيرات البيئة
+- `.dockerignore` — استبعاد node_modules، .env، logs
+
+#### 4. اختبارات الوحدة:
+- أُضيفت **21 اختبار** جديد لـ Phase 7
+- إجمالي الاختبارات: **77 اختبار** (100% نجاح)
+
+### إحصائيات المشروع بعد Phase 7:
+| المقياس | قبل | بعد |
+|---------|-----|-----|
+| `api.rest.ts` | 2,670 | 630 (‑76%) |
+| `enhancements.ts` | 1,436 | 23 (‑98%) |
+| `transaction.service.ts` | 1,104 | 14 (‑99%) |
+| `screens.routes.ts` | 986 | 9 (‑99%) |
+| ملفات Route | ~15 | **50** |
+| ملفات Service | 2 | **10** |
+| ملفات Engine | 0 | **14** |
+| اختبارات الوحدة | 0 | **77** (100%) |
+| ثغرات IDOR | كثيرة | **0 نشط** |
+| JWT Algorithm | غير محدد | **HS256 صريح** |
+| Docker | ❌ | **✅ Dockerfile + docker-compose** |
