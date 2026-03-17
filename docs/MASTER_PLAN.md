@@ -554,3 +554,79 @@ journal (268), warehouse (241), salaries (122) ...
 - Audit locations unified: 5 (direct insert -> engine call)
 - Audit coverage: 9 additional route files
 
+---
+
+## Phase 5 - Security + audit.engine + Unit Tests (Complete)
+**Commit:** a44c53d | **Date:** 2026-03-17
+
+### What was done:
+
+#### 1. IDOR Fix (Insecure Direct Object Reference)
+- Fixed: /stations/:id (PUT legacy) - now protected with authentication + ownership check
+- Verified: 7 route files - 6 were already protected
+- Added: middleware/ownership.ts (134 lines) - centralized ownership check middleware
+
+#### 2. audit.engine Integration in Routes
+- Created: engines/audit-middleware.engine.ts (120 lines) - helpers: auditCreate, auditUpdate, auditDelete, makeAuditCtx
+- Added audit import to 9 route files: partners, employees, departments, stations, billing-config, categories-expenses, operation-types, journal-entries, accounts
+- Replaced 5 direct db.insert(auditLog) calls with logAction() in enhancements.ts and attachments-enhanced.routes.ts
+
+#### 3. Unit Tests - Total: 56 tests (100% pass)
+| Suite | Tests | Status |
+|-------|-------|--------|
+| Transaction Engine | 11 | Pass |
+| Permissions Engine | 7 | Pass |
+| HR Engine | 8 | Pass |
+| Workflow Engine | 6 | Pass |
+| Currency Engine | 8 | Pass |
+| Audit Engine (NEW) | 7 | Pass |
+| Sequencing Engine (NEW) | 9 | Pass |
+| TOTAL | 56 | 100% |
+
+#### Phase 5 Stats:
+- Files changed: 18
+- Lines added: 1,445
+- IDOR vulnerabilities fixed: 1 (legacy stations route)
+- Audit locations unified: 5 (direct insert -> engine call)
+- Audit coverage: 9 additional route files
+
+---
+
+## Phase 6 - Decompose enhancements.ts + JWT Security (Complete)
+**Commit:** d6ea4b9 | **Date:** 2026-03-17
+
+### What was done:
+
+#### 1. enhancements.ts Decomposition: 1,436 → 23 lines (-98%)
+| New File | Lines | Content |
+|----------|-------|---------|
+| api/vouchers.routes.ts | 924 | Receipt/Payment/Transaction vouchers |
+| api/operation-enhancements.routes.ts | 168 | Operation type enhancements |
+| api/sidebar-enhancements.routes.ts | 83 | Sidebar settings |
+| api/screen-enhancements.routes.ts | 317 | Custom screens |
+| enhancements.ts | 23 | Thin re-export wrapper |
+
+#### 2. JWT Security Hardening
+- Fixed: Algorithm confusion attack - explicit HS256 in verify() and sign()
+- Added: { algorithms: ['HS256'] } in jwt.verify
+- Added: { algorithm: 'HS256' } in jwt.sign
+
+#### 3. Dependency Security Overrides
+Added to pnpm.overrides:
+- path-to-regexp >= 8.0.0 (ReDoS fix)
+- micromatch >= 4.0.8 (ReDoS fix)
+- esbuild >= 0.25.0 (SSRF fix, existing)
+- @orpc/client >= 1.13.6 (existing)
+
+#### 4. Security Documentation
+- Created: docs/SECURITY.md - full security configuration guide
+
+#### Phase 6 Stats:
+- Files changed: 9
+- Lines added: 1,521
+- enhancements.ts reduction: 1,436 → 23 lines (-98%)
+- New route files: 4
+- Security fixes: JWT algorithm + 2 dep overrides
+- Route files total: 48 files
+- Engine files total: 14 files
+
