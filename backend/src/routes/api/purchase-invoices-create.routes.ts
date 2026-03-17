@@ -1,0 +1,138 @@
+/**
+ * purchase-invoices-create.routes.ts — Phase 13
+ * إنشاء فواتير الشراء
+ */
+import { Hono } from 'hono';
+import { db } from '../db/index.ts';
+import { eq, and, sql, inArray } from 'drizzle-orm';
+import {
+  businesses, purchaseInvoices, purchaseInvoiceItems,
+  inventoryItems, warehouses, suppliers, supplierBalances,
+  accounts, accountBalances, operationTypes, operationTypeAccounts,
+  journalEntries, journalEntryLines, auditLog, currencies,
+} from '../db/schema/index.ts';
+import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
+import { checkPermission } from '../middleware/permissions.ts';
+import { getNextSequence } from '../middleware/sequencing.ts';
+import { wsService } from '../services/websocket.service.ts';
+import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+import { logAction } from '../engines/audit.engine.ts';
+
+const piCreateRoutes = new Hono();
+
+
+
+
+piCreateRoutes.post(
+  "/businesses/:bizId/purchase-invoices",
+  bizAuthMiddleware(),
+  checkPermission("purchase_invoices", "create"),
+  safeHandler("إنشاء فاتورة مشتريات", async (c: AppContext) => {
+    const bizId = getBizId(c);
+    const userId = getUserId(c);
+    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+
+    const { items, ...invoiceData } = body;
+
+    if (!invoiceData.supplierId) {
+      return c.json({ error: "المورد مطلوب" }, 400);
+    }
+    if (!invoiceData.currencyId) {
+      return c.json({ error: "العملة مطلوبة" }, 400);
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return c.json({ error: "يجب إضافة عنصر واحد على الأقل" }, 400);
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const { fullSequenceNumber, sequentialNumber } =
+        await getNextPurchaseInvoiceSequence(bizId, undefined, tx);
+
+      const invoiceNumber = invoiceData.invoiceNumber
+        ? String(invoiceData.invoiceNumber)
+        : fullSequenceNumber;
+
+      let subtotal = 0;
+      let totalTax = 0;
+      let totalDiscount = 0;
+
+      for (const item of items as any[]) {
+        const qty = parseFloat(item.quantity) || 0;
+        const cost = parseFloat(item.unitCost) || 0;
+        const itemTax = parseFloat(item.tax) || 0;
+        const itemDiscount = parseFloat(item.discount) || 0;
+        subtotal += qty * cost;
+        totalTax += itemTax;
+        totalDiscount += itemDiscount;
+      }
+
+      const totalAmount = subtotal + totalTax - totalDiscount;
+      const paidAmount = parseFloat(String(invoiceData.paidAmount)) || 0;
+      const remainingAmount = totalAmount - paidAmount;
+
+      const [created] = await tx
+        .insert(purchaseInvoices)
+        .values({
+          businessId: bizId,
+          invoiceNumber,
+          fullSequenceNumber,
+          sequenceNumber: sequentialNumber,
+          supplierId: Number(invoiceData.supplierId),
+          supplierAccountId: invoiceData.supplierAccountId
+            ? Number(invoiceData.supplierAccountId)
+            : null,
+          warehouseId: invoiceData.warehouseId
+            ? Number(invoiceData.warehouseId)
+            : null,
+          currencyId: Number(invoiceData.currencyId),
+          subtotal: String(subtotal),
+          tax: String(totalTax),
+          discount: String(totalDiscount),
+          totalAmount: String(totalAmount),
+          paidAmount: String(paidAmount),
+          remainingAmount: String(remainingAmount),
+          paymentMethod: (invoiceData.paymentMethod as any) || "credit",
+          status: "draft",
+          invoiceDate: invoiceData.invoiceDate
+            ? new Date(String(invoiceData.invoiceDate))
+            : new Date(),
+          dueDate: invoiceData.dueDate
+            ? new Date(String(invoiceData.dueDate))
+            : null,
+          externalReference: invoiceData.externalReference
+            ? String(invoiceData.externalReference)
+            : null,
+          notes: invoiceData.notes ? String(invoiceData.notes) : null,
+          receivedQuantity: "0",
+          receivedStatus: "pending",
+          createdBy: userId,
+        })
+        .returning();
+
+      const itemsToInsert = (items as any[]).map((item, idx) => ({
+        invoiceId: created.id,
+        inventoryItemId: Number(item.inventoryItemId),
+        quantity: String(item.quantity),
+        unitCost: String(item.unitCost),
+        totalCost: String(
+          (parseFloat(item.quantity) || 0) * (parseFloat(item.unitCost) || 0)
+        ),
+        tax: String(item.tax || 0),
+        discount: String(item.discount || 0),
+        receivedQuantity: "0",
+        sortOrder: idx,
+        notes: item.notes || null,
+      }));
+
+      await tx.insert(purchaseInvoiceItems).values(itemsToInsert);
+
+      return created;
+    });
+
+    return c.json(result, 201);
+  })
+);
+
+
+export { piCreateRoutes };

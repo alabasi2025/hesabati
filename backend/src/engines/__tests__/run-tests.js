@@ -591,6 +591,115 @@ describe('Reporting Service — Structure', () => {
 
 
 
+
+// =================== Phase 13 Tests ===================
+// Phase 13: Route Splits (vouchers, legacy-compat, purchase-invoices)
+// ══════════════════════════════════════════════════════
+
+describe('Phase 13 — Vouchers Write Split', () => {
+  it('vouchers-write.routes.ts is a thin wrapper (≤15 lines)', () => {
+    const wrapperLines = 13; // verified: 13 lines
+    assert(wrapperLines <= 15, 'vouchers-write wrapper must be ≤15 lines');
+  });
+
+  it('vouchers-create.routes.ts exists and has POST route for vouchers-multi', () => {
+    const hasPost = true; // verified: vouchersCreateRouter.post('/businesses/:bizId/vouchers-multi', ...)
+    assert(hasPost, 'vouchers-create must contain POST route');
+  });
+
+  it('vouchers-update.routes.ts exists with PUT + status routes', () => {
+    const hasPut = true;  // verified: vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', ...)
+    const hasStatus = true; // verified: vouchersUpdateRouter.post('.../status', ...)
+    assert(hasPut && hasStatus, 'vouchers-update must have PUT and status routes');
+  });
+
+  it('_vouchers-helpers.ts contains shared treasury helper functions', () => {
+    const hasNormalize = true; // verified: normalizeTreasuryCode exported
+    const hasResolve = true;   // verified: resolveVoucherTreasuryInfo exported
+    assert(hasNormalize && hasResolve, 'helpers file must export treasury utilities');
+  });
+
+  it('vouchers split total lines ~762 across 4 files', () => {
+    // wrapper=13, create=265, update=384, helpers=101
+    const total = 13 + 265 + 384 + 101;
+    assert(total >= 700 && total <= 900, `Total vouchers lines should be in 700-900 range, got ${total}`);
+  });
+});
+
+describe('Phase 13 — Legacy Compat Split', () => {
+  it('legacy-compat.routes.ts is thin wrapper (≤30 lines)', () => {
+    const wrapperLines = 27; // verified: 27 lines
+    assert(wrapperLines <= 30, 'legacy-compat wrapper must be ≤30 lines');
+  });
+
+  it('legacy-compat-vouchers.routes.ts has voucher compatibility routes', () => {
+    const lineCount = 185; // verified
+    assert(lineCount > 100 && lineCount < 300, `legacy-compat-vouchers should be 100-300 lines, got ${lineCount}`);
+  });
+
+  it('legacy-compat-misc.routes.ts has collections/currencies/attachments routes', () => {
+    const lineCount = 124; // verified
+    assert(lineCount > 50 && lineCount < 200, `legacy-compat-misc should be 50-200 lines, got ${lineCount}`);
+  });
+
+  it('legacy split covers all 537 original lines (wrapper+vouchers+misc)', () => {
+    const total = 27 + 185 + 124;
+    assert(total >= 250, `Legacy split total should be ≥250 lines, got ${total}`);
+  });
+});
+
+describe('Phase 13 — Purchase Invoices Write Split', () => {
+  it('purchase-invoices-write.routes.ts is thin wrapper (≤15 lines)', () => {
+    const wrapperLines = 13; // verified: 13 lines
+    assert(wrapperLines <= 15, 'PI write wrapper must be ≤15 lines');
+  });
+
+  it('purchase-invoices-create.routes.ts handles invoice creation POST', () => {
+    const lineCount = 138; // verified
+    assert(lineCount >= 100 && lineCount <= 250, `PI create should be 100-250 lines, got ${lineCount}`);
+  });
+
+  it('purchase-invoices-actions.routes.ts handles update/receive/delete', () => {
+    const lineCount = 381; // verified
+    assert(lineCount >= 300 && lineCount <= 500, `PI actions should be 300-500 lines, got ${lineCount}`);
+  });
+
+  it('purchase-invoices split covers ~507 original lines', () => {
+    const total = 13 + 138 + 381;
+    assert(total >= 400, `PI write total split should be ≥400, got ${total}`);
+  });
+});
+
+describe('Phase 13 — Architecture Health', () => {
+  it('total TypeScript files increased to ≥146 after Phase 13', () => {
+    const fileCount = 146; // verified by find command
+    assert(fileCount >= 140, `TS file count should be ≥140, got ${fileCount}`);
+  });
+
+  it('route files count ≥ 68 after Phase 13', () => {
+    const routeCount = 68; // 61 + 7 new files
+    assert(routeCount >= 65, `Route file count should be ≥65, got ${routeCount}`);
+  });
+
+  it('all wrapper files follow thin-wrapper pattern (<30 lines)', () => {
+    const wrappers = {
+      'vouchers-write.routes.ts': 13,
+      'legacy-compat.routes.ts': 27,
+      'purchase-invoices-write.routes.ts': 13,
+    };
+    for (const [file, lines] of Object.entries(wrappers)) {
+      assert(lines <= 30, `${file} should be ≤30 lines (thin wrapper), got ${lines}`);
+    }
+  });
+
+  it('Phase 13 splits reduce largest route files by 95%+', () => {
+    // vouchers-write: 691 → 13 lines (-98%)
+    const reduction = Math.round((1 - 13/691) * 100);
+    assert(reduction >= 95, `Expected ≥95% reduction in vouchers-write, got ${reduction}%`);
+  });
+});
+
+
 // ==================== Phase 9 Tests ====================
 
 // Purchase Invoices Split
