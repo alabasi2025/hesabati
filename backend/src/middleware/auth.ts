@@ -45,7 +45,7 @@ export function authMiddleware() {
 
     try {
       const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as JwtPayload;
       c.set('user', decoded);
       await next();
     } catch {
@@ -72,7 +72,7 @@ export function generateToken(payload: JwtPayload): string {
 /** التحقق من الـ token واستخراج البيانات (للاستخدام خارج HTTP مثل WebSocket). */
 export function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    return jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as JwtPayload;
   } catch {
     return null;
   }

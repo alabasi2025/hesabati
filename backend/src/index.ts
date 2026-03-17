@@ -15,6 +15,10 @@ import authRoutes from './routes/auth.ts';
 import dashboardRoutes from './routes/dashboard.ts';
 import apiRoutes from './routes/api/index.ts';
 import enhancementRoutes from './routes/enhancements.ts';
+import vouchersRoutes from './routes/api/vouchers.routes.ts';
+import operationEnhRoutes from './routes/api/operation-enhancements.routes.ts';
+import sidebarEnhRoutes from './routes/api/sidebar-enhancements.routes.ts';
+import screenEnhRoutes from './routes/api/screen-enhancements.routes.ts';
 import maintenanceRoutes from './routes/maintenance.ts';
 import { authMiddleware, adminMiddleware } from './middleware/auth.ts';
 import { db, closeDatabase } from './db/index.ts';
@@ -95,6 +99,10 @@ app.route('/api/maintenance', maintenanceRoutes);
 app.route('/api/dashboard', dashboardRoutes);
 app.route('/api', apiRoutes);
 app.route('/api', enhancementRoutes);
+app.route('/api', vouchersRoutes);
+app.route('/api', operationEnhRoutes);
+app.route('/api', sidebarEnhRoutes);
+app.route('/api', screenEnhRoutes);
 
 // ===================== Health (قبل المعالج العام حتى لا يلتقطها app.get('*')) =====================
 app.get('/health', (c) => c.json({ 

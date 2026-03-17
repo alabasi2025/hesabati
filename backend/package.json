@@ -45,7 +45,9 @@
   "pnpm": {
     "overrides": {
       "esbuild": ">=0.25.0",
-      "@orpc/client": ">=1.13.6"
+      "@orpc/client": ">=1.13.6",
+      "path-to-regexp": ">=8.0.0",
+      "micromatch": ">=4.0.8"
     }
   }
 }
