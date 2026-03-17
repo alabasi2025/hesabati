@@ -12,8 +12,9 @@
 
 /** Format amount with Arabic-Yemen locale (default) */
 export function formatAmount(amount: unknown, locale: string = 'ar-YE'): string {
+  if (amount === null || amount === undefined) return '—';
   const n = typeof amount === 'string' ? Number.parseFloat(amount) : Number(amount);
-  if (Number.isNaN(n)) return '0';
+  if (Number.isNaN(n)) return '—';
   return n.toLocaleString(locale);
 }
 
