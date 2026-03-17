@@ -83,10 +83,8 @@ async function seed() {
   const getNatureId = (businessId: number, natureKey: string): number | null =>
     businessNatureByKey.get(businessId)?.[natureKey] ?? null;
 
-  /**
-   * إنشاء حساب مرتبط بكيان تشغيلي (صندوق، مخزن، مورد، إلخ)
-   * تطبق آلية الترقيم الصحيحة: FND-01, BNK-01, WHS-01, SUP-01, إلخ
-   */
+  // إنشاء حساب مرتبط بكيان تشغيلي (صندوق، مخزن، مورد، إلخ)
+  // تطبق آلية الترقيم الصحيحة: FND-01, BNK-01, WHS-01, SUP-01, إلخ
   const createLinkedAccount = async (
     businessId: number,
     name: string,

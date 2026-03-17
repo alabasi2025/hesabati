@@ -14,16 +14,10 @@ interface TreasuryPreviewInfo {
   treasuryId: number;
 }
 
+interface TreasuryStats {
   receipts: string | number;
   payments: string | number;
   operations_count: string | number;
-}
-
-interface TreasuryPreviewInfo {
-  kind: 'fund' | 'bank' | 'exchange' | 'e_wallet';
-  kindCode: string;
-  treasuryCode: string;
-  treasuryId: number;
 }
 
 function normalizeTreasuryCode(

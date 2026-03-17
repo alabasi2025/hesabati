@@ -137,10 +137,10 @@ export {
 } from './notification.engine.ts';
 
 // Currency (re-export من currency.engine)
-export {
 // Phase 5: Audit Middleware Engine (helper for easy audit integration)
 export * as AuditMiddlewareEngine from './audit-middleware.engine.ts';
 export { auditCreate, auditUpdate, auditDelete, auditAction as logAuditAction, makeAuditCtx } from './audit-middleware.engine.ts';
+export {
   getExchangeRate,
   addExchangeRate,
   getExchangeRateHistory,
