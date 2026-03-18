@@ -24,7 +24,7 @@
     "@orpc/openapi": "^1.4.0",
     "@orpc/server": "^1.13.7",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.3.1",
     "drizzle-orm": "^0.39.3",
     "hono": "^4.12.7",
     "jsonwebtoken": "^9.0.2",
