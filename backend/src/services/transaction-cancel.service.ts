@@ -39,6 +39,7 @@ import {
   verifyFundOwnership,
 } from "../routes/api/_shared/ownership.ts";
 
+import { validateTransactionOwnership, getSequenceYear, generateVoucherNumberByTreasury, resolveTemplatePrefix, computeBalancedTotals, resolveTreasuryForVoucher } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult } from './transaction.types';
 import { applyAccountingForConfirmedVoucher } from './transaction-post.service';
 

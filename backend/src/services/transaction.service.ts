@@ -1,14 +1,10 @@
 /**
- * transaction.service.ts — Phase 7 (thin re-export wrapper)
- * 
- * تم تقسيم هذا الملف في Phase 7 إلى:
- *  - transaction.types.ts         (الأنواع)
- *  - transaction-post.service.ts  (postTransaction + postMultiTransaction)
- *  - transaction-cancel.service.ts (cancelTransaction + confirmDraftTransaction)
- * 
- * هذا الملف يعيد التصدير للتوافق مع الاستيرادات الموجودة.
+ * transaction.service.ts — Phase 7 & 15 Fix
+ * Re-export wrapper for all transaction modules
  */
+export type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types.ts';
+export * from './transaction-helpers.ts';
+export { postTransaction } from './transaction-single.service.ts';
+export { postMultiTransaction } from './transaction-multi.service.ts';
+export { cancelTransaction, confirmDraftTransaction, isConfirmingTransition, applyAccountingForConfirmedVoucher } from './transaction-cancel.service.ts';
 
-export type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types';
-export { postTransaction, postMultiTransaction, applyAccountingForConfirmedVoucher } from './transaction-post.service';
-export { cancelTransaction, confirmDraftTransaction, isConfirmingTransition } from './transaction-cancel.service';

@@ -43,6 +43,7 @@ import {
   verifyFundOwnership,
 } from "../routes/api/_shared/ownership.ts";
 
+import { validateTransactionOwnership, getSequenceYear, generateVoucherNumberByTreasury, resolveTemplatePrefix, resolveTreasuryForVoucher } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types';
 
 // ===================== الدالة الرئيسية: تنفيذ المعاملة =====================

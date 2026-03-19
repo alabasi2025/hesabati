@@ -4,6 +4,8 @@
  *  - validation-sanitize.ts (دوال التنظيف)
  *  - validation-schemas.ts  (مخططات Zod)
  */
+import { z } from 'zod';
+import { FIELD_LABELS } from './validation-schemas.ts';
 export * from './validation-sanitize.ts';
 export * from './validation-schemas.ts';
 

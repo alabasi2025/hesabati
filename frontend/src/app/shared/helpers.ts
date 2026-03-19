@@ -74,8 +74,8 @@ export function trackById(_: number, item: any): any {
 
 /** Voucher status labels */
 export const VOUCHER_STATUS: Record<string, { label: string; icon: string; color: string }> = {
-  draft:     { label: 'مسودة',  icon: 'edit_note',     color: 'orange' },
-  confirmed: { label: 'معتمد',  icon: 'check_circle',  color: 'green' },
+  unreviewed: { label: 'غير مراجع', icon: 'pending', color: '#f59e0b' },
+  reviewed: { label: 'مراجع', icon: 'check_circle', color: '#22c55e' },
   cancelled: { label: 'ملغي',   icon: 'cancel',        color: 'red' },
 };
 

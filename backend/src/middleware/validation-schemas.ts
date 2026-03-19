@@ -298,7 +298,7 @@ export const employeeBillingAccountSchema = z.object({
 /**
  * دالة مساعدة للتحقق من صحة البيانات
  */
-const FIELD_LABELS: Record<string, string> = {
+export const FIELD_LABELS: Record<string, string> = {
   name: 'الاسم',
   subTypeKey: 'المفتاح',
   description: 'الوصف',

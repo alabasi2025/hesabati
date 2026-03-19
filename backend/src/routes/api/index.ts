@@ -51,6 +51,7 @@ import { fundTypesRoutes }   from './fund-types.routes.ts';
 import { sidebarRoutes }     from './sidebar.routes.ts';
 import { screensManageRoutes, screensPermRoutes } from './screens.routes.ts';
 import { billingEmployeesRoutes } from './billing-employees.routes.ts';
+import { billingAccountsApi } from './routes/api/billing-accounts.routes.ts';
 import { legacyCompatRoutes }     from './legacy-compat.routes.ts';
 
 const api = new Hono();
@@ -101,6 +102,7 @@ api.route('/', sidebarRoutes);
 api.route('/', screensManageRoutes);
 api.route('/', screensPermRoutes);
 api.route('/', billingEmployeesRoutes);
+api.route('/', billingAccountsApi);
 api.route('/', legacyCompatRoutes);
 
 export default api;
