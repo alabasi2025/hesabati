@@ -120,6 +120,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     items: [
       { icon: 'assessment', label: 'التقارير', path: 'reports', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'analytics', label: 'التقارير المتقدمة', path: 'reports-advanced', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'policy', label: 'التحليل الجنائي', path: 'forensic-analysis', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
   {
@@ -423,6 +424,7 @@ export class SidebarComponent {
       { title: '9. التقارير', items: [
         { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
         { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
+        { icon: 'policy', label: 'التحليل الجنائي', route: `${b}/forensic-analysis` },
       ]},
       { title: '10. بناء الواجهات', items: [
         { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
@@ -481,6 +483,7 @@ export class SidebarComponent {
       { title: '9. التقارير', items: [
         { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
         { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
+        { icon: 'policy', label: 'التحليل الجنائي', route: `${b}/forensic-analysis` },
       ]},
       { title: '10. بناء الواجهات', items: [
         { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
@@ -526,6 +529,7 @@ export class SidebarComponent {
       { title: '9. التقارير', items: [
         { icon: 'assessment', label: 'التقارير', route: `${b}/reports` },
         { icon: 'analytics', label: 'التقارير المتقدمة', route: `${b}/reports-advanced` },
+        { icon: 'policy', label: 'التحليل الجنائي', route: `${b}/forensic-analysis` },
       ]},
       { title: '10. بناء الواجهات', items: [
         { icon: 'space_dashboard', label: 'الشاشات المخصصة', route: `${b}/custom-screens` },
