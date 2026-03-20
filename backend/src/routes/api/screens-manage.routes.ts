@@ -16,10 +16,14 @@ import { db } from '../../db/index.ts';
 import {
   screenTemplates, screenWidgets, screenWidgetTemplates,
   screenWidgetAccounts, screenPermissions, customScreenConfig,
-  sidebarItems, sidebarSections, uiPages, uiComponents
+  sidebarItems, sidebarSections, uiPages, uiComponents, userSidebarConfig,
+  operationTypes, accounts,
 } from '../../db/schema/core.ts';
-import { eq, and, inArray, desc } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../../middleware/auth.ts';
+import { eq, and, inArray, desc, sql } from 'drizzle-orm';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
 import * as ScreensEng from '../../engines/screens.engine.ts';
 
 export const screensRoutes = new Hono();

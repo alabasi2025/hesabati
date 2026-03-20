@@ -613,23 +613,6 @@ docsRoutes.get('/api/docs/openapi.json', (c) => {
         }
       }
     },
-    "/businesses/{bizId}/employees": {
-      "get": {
-        "tags": ["Employees — الموظفين"],
-        "summary": "جلب قائمة الموظفين",
-        "security": [{"BearerAuth": []}],
-        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {"200": {"description": "قائمة الموظفين"}}
-      },
-      "post": {
-        "tags": ["Employees — الموظفين"],
-        "summary": "إضافة موظف جديد",
-        "security": [{"BearerAuth": []}],
-        "parameters": [{"name": "bizId", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Employee"}}}},
-        "responses": {"201": {"description": "تم إضافة الموظف"}}
-      }
-    },
     "/businesses/{bizId}/warehouses": {
       "get": {
         "tags": ["Warehouses — المخازن"],

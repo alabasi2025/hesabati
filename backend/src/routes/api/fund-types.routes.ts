@@ -7,7 +7,12 @@ import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { fundTypes, bankTypes, exchangeTypes, eWalletTypes } from '../../db/schema/core.ts';
 import { eq, and } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../../middleware/auth.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { validateBody, typeSchema } from '../../middleware/validation.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
+import { getNextCategorySequence } from '../../middleware/sequencing.ts';
 
 export const fundTypesRoutes = new Hono();
 const api = fundTypesRoutes;
