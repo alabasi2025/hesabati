@@ -52,10 +52,8 @@ export function xssSanitizeMiddleware() {
         const body = await c.req.json();
         const sanitized = sanitizeObject(body);
         // نخزن النسخة المنظفة في الـ context
+        // (يُستخدم بواسطة getBody(c) في middleware/helpers.ts)
         c.set('sanitizedBody', sanitized);
-        // نُعيد تعريف req.json على هذا الطلب لإعادة النسخة المنظّفة مباشرةً
-        // حتى تستفيد كل الـ handlers التي تستدعي c.req.json() تلقائياً
-        (c.req as unknown as { json: () => Promise<unknown> }).json = async () => sanitized;
       } catch {
         // إذا لم يكن هناك body أو ليس JSON، نتجاهل
       }
