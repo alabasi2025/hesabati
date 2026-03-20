@@ -11,8 +11,8 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
+  getBody,
 } from "../../middleware/helpers.ts";
 import {
   getNextSequence,
@@ -81,7 +81,7 @@ jobTitlesRoutes.post(
   checkPermission("employees", "create"),
   safeHandler("إنشاء مسمى وظيفي", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (!body.name) {
       return c.json({ error: "اسم المسمى الوظيفي مطلوب" }, 400);
@@ -130,7 +130,7 @@ jobTitlesRoutes.put(
       return c.json({ error: "المسمى الوظيفي غير موجود" }, 404);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     const updatePayload: Record<string, unknown> = {
       updatedAt: new Date(),

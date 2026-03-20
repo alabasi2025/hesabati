@@ -7,7 +7,9 @@ import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { sidebarSections, sidebarItems, userSidebarConfig } from '../../db/schema/core.ts';
 import { eq, and, inArray } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../../middleware/auth.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 
 export const sidebarRoutes = new Hono();
 const api = sidebarRoutes;
@@ -21,7 +23,7 @@ api.get('/businesses/:bizId/sidebar-sections', bizAuthMiddleware(), safeHandler(
 
 api.post('/businesses/:bizId/sidebar-sections', bizAuthMiddleware(), safeHandler('إضافة قسم سايدبار', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(sidebarSectionSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const [created] = await db.insert(sidebarSections).values({ ...validation.data, businessId: bizId }).returning();
@@ -34,7 +36,7 @@ api.put('/sidebar-sections/:id', safeHandler('تعديل قسم سايدبار',
   const [rec] = await db.select().from(sidebarSections).where(eq(sidebarSections.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(sidebarSections).set({ ...body, updatedAt: new Date() }).where(eq(sidebarSections.id, id)).returning();
   if (!updated) return c.json({ error: 'قسم غير موجود' }, 404);
   return c.json(updated);
@@ -74,7 +76,7 @@ api.get('/businesses/:bizId/sidebar-items', bizAuthMiddleware(), safeHandler('ج
 }));
 
 api.post('/sidebar-items', safeHandler('إضافة عنصر سايدبار', async (c) => {
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   
   // إصلاح #1: التحقق من sectionId (حقل إلزامي)
   if (!body.sectionId) {
@@ -116,7 +118,7 @@ api.put('/sidebar-items/:id', safeHandler('تعديل عنصر سايدبار', 
   const [section] = await db.select().from(sidebarSections).where(eq(sidebarSections.id, item.sectionId));
   const err = await requireResourceOwnership(c, section ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(sidebarItems).set(body).where(eq(sidebarItems.id, id)).returning();
   if (!updated) return c.json({ error: 'عنصر غير موجود' }, 404);
   return c.json(updated);
@@ -224,7 +226,7 @@ api.get('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHan
 api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHandler('تحديث سايدبار المستخدم', async (c) => {
   const userId = parseId(c.req.param('userId'));
   if (!userId) return c.json({ error: 'معرّف المستخدم غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const { items } = body;
   
   if (!items || !Array.isArray(items)) {

@@ -8,7 +8,7 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import { operationTypes, operationTypeAccounts, accounts, operationCategories } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { operationTypeSchema, validateBody } from '../../middleware/validation.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
@@ -83,7 +83,7 @@ operationTypesRoutes.get('/operation-types/:id', safeHandler('جلب تفاصي�
 
 operationTypesRoutes.post('/businesses/:bizId/operation-types', bizAuthMiddleware(), safeHandler('إضافة نوع عملية', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(operationTypeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const data = validation.data as Record<string, unknown> & {
@@ -163,7 +163,7 @@ operationTypesRoutes.put('/operation-types/:id', safeHandler('تعديل نوع 
   const [ot] = await db.select().from(operationTypes).where(eq(operationTypes.id, id));
   const err = await requireResourceOwnership(c, ot ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json()) as Record<string, unknown> & { screens?: unknown; linkedAccounts?: { accountId: number; label?: string; permission?: string; sortOrder?: number }[] };
+  const body = (await getBody(c)) as Record<string, unknown> & { screens?: unknown; linkedAccounts?: { accountId: number; label?: string; permission?: string; sortOrder?: number }[] };
   if (typeof body.screens === 'string') body.screens = [body.screens];
   const { linkedAccounts: laList, ...otData } = body;
   const { screens: _screens, ...restOt } = otData;
@@ -208,7 +208,7 @@ operationTypesRoutes.post('/operation-types/:otId/accounts', safeHandler('ربط
   const [ot] = await db.select().from(operationTypes).where(eq(operationTypes.id, otId));
   const err = await requireResourceOwnership(c, ot ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json()) as { accountId?: number; employeeBillingAccountId?: number };
+  const body = await getBody(c) as { accountId?: number; employeeBillingAccountId?: number };
   if (!body.accountId && !body.employeeBillingAccountId) {
     return c.json({ error: 'يجب تحديد حساب أو حساب فوترة' }, 400);
   }

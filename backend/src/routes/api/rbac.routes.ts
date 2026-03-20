@@ -8,7 +8,9 @@ import { db } from '../../db/index.ts';
 import { roles, rolePermissions, userRoles, users } from '../../db/schema/core.ts';
 import { eq, and } from 'drizzle-orm';
 import { getUserMaxAmounts, checkResourceLimit } from '../../engines/permissions.engine.ts';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 
 export const rbacRoutes = new Hono();
 const api = rbacRoutes;
@@ -41,7 +43,7 @@ api.get('/businesses/:bizId/roles', bizAuthMiddleware(), safeHandler('جلب ا�
 
 api.post('/businesses/:bizId/roles', bizAuthMiddleware(), safeHandler('إنشاء دور', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.name) return c.json({ error: 'اسم الدور مطلوب' }, 400);
   const [created] = await db.insert(roles).values({
     businessId: bizId, name: body.name, description: body.description || null,
@@ -62,7 +64,7 @@ api.put('/businesses/:bizId/roles/:id', bizAuthMiddleware(), safeHandler('تعد
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(roles).set({
     name: body.name, description: body.description, color: body.color,
     maxVoucherAmount: body.maxVoucherAmount ? String(body.maxVoucherAmount) : null,
@@ -99,7 +101,7 @@ api.delete('/businesses/:bizId/roles/:id', bizAuthMiddleware(), safeHandler('ح�
 api.post('/businesses/:bizId/user-roles', bizAuthMiddleware(), safeHandler('تعيين دور لمستخدم', async (c) => {
   const bizId = getBizId(c);
   const assignedBy = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.userId || !body.roleId) return c.json({ error: 'userId و roleId مطلوبان' }, 400);
   // حذف الدور القديم إن وجد
   await db.delete(userRoles).where(and(eq(userRoles.userId, body.userId), eq(userRoles.businessId, bizId)));

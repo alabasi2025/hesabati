@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { billingSystemsConfig, billingAccountTypes } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { billingSystemConfigSchema, validateBody } from '../../middleware/validation.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
@@ -45,7 +45,7 @@ billingConfigRoutes.get('/businesses/:bizId/billing-systems-config', bizAuthMidd
 
 billingConfigRoutes.post('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), safeHandler('إضافة إعداد نظام فوترة', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(billingSystemConfigSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const data = validation.data as Record<string, unknown> & {
@@ -95,7 +95,7 @@ billingConfigRoutes.put('/billing-systems-config/:id', safeHandler('تعديل �
   const [rec] = await db.select().from(billingSystemsConfig).where(eq(billingSystemsConfig.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const bizId = rec?.businessId;
   const types = await db.select({
     id: billingAccountTypes.id,
@@ -143,7 +143,7 @@ billingConfigRoutes.get('/businesses/:bizId/billing-account-types', bizAuthMiddl
 
 billingConfigRoutes.post('/businesses/:bizId/billing-account-types', bizAuthMiddleware(), safeHandler('إضافة نوع حساب فوترة', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json()) as { name?: string; [k: string]: unknown };
+  const body = await getBody(c) as { name?: string; [k: string]: unknown };
   if (!body.name) return c.json({ error: 'اسم النوع مطلوب' }, 400);
   const [created] = await db.insert(billingAccountTypes).values({ businessId: bizId, name: body.name, ...body }).returning();
   return c.json(created, 201);
@@ -155,7 +155,7 @@ billingConfigRoutes.put('/billing-account-types/:id', safeHandler('تعديل ن
   const [rec] = await db.select().from(billingAccountTypes).where(eq(billingAccountTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(billingAccountTypes).set(body).where(eq(billingAccountTypes.id, id)).returning();
   if (!updated) return c.json({ error: 'نوع غير موجود' }, 404);
   return c.json(updated);

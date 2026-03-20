@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import {
   getAvailableTransitions,
@@ -31,7 +31,7 @@ workflowRoutes.post('/businesses/:bizId/vouchers/:voucherId/transition', bizAuth
   const bizId = getBizId(c);
   const voucherId = parseId(c.req.param('voucherId'));
   if (!voucherId) return c.json({ error: 'معرّف السند غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const { transitionId, note } = body;
   if (!transitionId) return c.json({ error: 'معرّف الانتقال مطلوب' }, 400);
   const userId = getUserId(c) || 1;
@@ -74,7 +74,7 @@ workflowRoutes.post('/businesses/:bizId/operation-types/:opTypeId/transitions', 
   const bizId = getBizId(c);
   const opTypeId = parseId(c.req.param('opTypeId'));
   if (!opTypeId) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const transition = await addTransition(bizId, opTypeId, body);
   return c.json(transition, 201);
 }));

@@ -3,7 +3,7 @@
  * جلب السندات: قائمة + معاينة الرقم + رصيد الحساب + تفاصيل
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
@@ -12,18 +12,18 @@ import {
   operationCategories,
   journalEntries, journalEntryLines,
   users, auditLog,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../engines/transaction.engine.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
-import type { AppContext } from './api/_shared/types.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
+import type { AppContext } from './_shared/types.ts';
 
 interface PeriodStatsRow {
   receipts: string | number;

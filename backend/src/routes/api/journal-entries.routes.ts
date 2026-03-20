@@ -14,7 +14,7 @@ import {
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { getNextSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
@@ -55,7 +55,7 @@ journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware
 
 journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إضافة قيد محاسبي', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json()) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string };
+  const body = await getBody(c) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string };
   const { lines, ...entryData } = body;
   if (!lines || !Array.isArray(lines) || lines.length < 2) {
     return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل (مدين ودائن)' }, 400);

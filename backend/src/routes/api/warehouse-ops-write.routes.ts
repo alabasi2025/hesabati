@@ -3,20 +3,20 @@
  * عمليات المخزن: إنشاء + جلب تفصيلي
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, inArray, desc } from 'drizzle-orm';
 import {
   businesses, warehouses, warehouseOperations, warehouseOperationItems,
   inventoryItems, inventoryStock, inventoryMovements,
   accounts, accountBalances, operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines, auditLog,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence } from '../middleware/sequencing.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
 
 const warehouseOpsWriteRoutes = new Hono();
 
@@ -54,7 +54,7 @@ warehouseOpsWriteRoutes.get('/businesses/:bizId/warehouses/:warehouseId/operatio
 warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPermission('inventory', 'create'), safeHandler('إنشاء عملية مخزنية', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c) ?? 0;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
 
   let opTemplate: Record<string, unknown> | null = null;
   if (body.operationTypeId) {

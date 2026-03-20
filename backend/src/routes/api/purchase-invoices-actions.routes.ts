@@ -3,21 +3,21 @@
  * تعديل + إضافة بنود + استلام + حذف فواتير الشراء
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
   businesses, purchaseInvoices, purchaseInvoiceItems,
   inventoryItems, warehouses, suppliers, supplierBalances,
   accounts, accountBalances, operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines, auditLog, currencies,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence } from '../middleware/sequencing.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
 
 const piActionsRoutes = new Hono();
 
@@ -48,7 +48,7 @@ piActionsRoutes.put(
       return c.json({ error: "لا يمكن تعديل فاتورة مكتملة أو ملغاة" }, 400);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const { items, ...updateData } = body;
 
     const result = await db.transaction(async (tx) => {
@@ -239,7 +239,7 @@ piActionsRoutes.post(
     const id = parseId(c.req.param("id"));
     if (!id) return c.json({ error: "معرّف الفاتورة غير صالح" }, 400);
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const { receivedItems } = body;
 
     if (!Array.isArray(receivedItems) || receivedItems.length === 0) {

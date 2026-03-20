@@ -12,7 +12,7 @@ import {
 } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
-import { normalizeBody, parseId, safeHandler } from "../../middleware/helpers.ts";
+import { parseId, safeHandler, getBody } from "../../middleware/helpers.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import type { AppContext } from "./_shared/types.ts";
 
@@ -99,7 +99,7 @@ reconciliationsRoutes.post(
   checkPermission("accounts", "create"),
   safeHandler("إنشاء مطابقة", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
     if (!title) return c.json({ error: "عنوان المطابقة مطلوب" }, 400);
@@ -165,7 +165,7 @@ reconciliationsRoutes.put(
       .limit(1);
     if (!existing) return c.json({ error: "المطابقة غير موجودة" }, 404);
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
 
     if (body.title !== undefined) updatePayload.title = String(body.title);
@@ -283,7 +283,7 @@ reconciliationsRoutes.post(
       .limit(1);
     if (!existing) return c.json({ error: "المطابقة غير موجودة" }, 404);
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const [item] = await db
       .insert(reconciliationItems)
       .values({
