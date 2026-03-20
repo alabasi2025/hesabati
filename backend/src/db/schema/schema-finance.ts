@@ -4,6 +4,26 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  voucherTypeEnum,
+  voucherStatusEnum,
+  expenseTypeEnum,
+  warehouseTypeEnum,
+  movementTypeEnum,
+  reconciliationTypeEnum,
+  reconciliationStatusEnum,
+  pendingStatusEnum,
+} from './schema-base.ts';
+import {
+  businesses,
+  accounts,
+  funds,
+  stations,
+  employees,
+  billingSystemsConfig,
+} from './schema-business.ts';
+import { users, currencies } from './schema-users.ts';
+import { operationTypes } from './schema-warehouse.ts';
 
 
 // ===================== SUPPLIERS =====================

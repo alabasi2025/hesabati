@@ -4,6 +4,9 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { businesses, accounts, funds, employeeBillingAccounts } from './schema-business.ts';
+import { users } from './schema-users.ts';
+import { warehouses } from './schema-finance.ts';
 
 export const operationCategories = pgTable('operation_categories', {
   id: serial('id').primaryKey(),

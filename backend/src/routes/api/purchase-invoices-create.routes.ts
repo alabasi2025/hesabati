@@ -1,23 +1,23 @@
-/**
- * purchase-invoices-create.routes.ts — Phase 13
- * إنشاء فواتير الشراء
+﻿/**
+ * purchase-invoices-create.routes.ts â€” Phase 13
+ * ط¥ظ†ط´ط§ط، ظپظˆط§طھظٹط± ط§ظ„ط´ط±ط§ط،
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
   businesses, purchaseInvoices, purchaseInvoiceItems,
   inventoryItems, warehouses, suppliers, supplierBalances,
   accounts, accountBalances, operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines, auditLog, currencies,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence } from '../middleware/sequencing.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
 
 const piCreateRoutes = new Hono();
 
@@ -28,7 +28,7 @@ piCreateRoutes.post(
   "/businesses/:bizId/purchase-invoices",
   bizAuthMiddleware(),
   checkPermission("purchase_invoices", "create"),
-  safeHandler("إنشاء فاتورة مشتريات", async (c: AppContext) => {
+  safeHandler("ط¥ظ†ط´ط§ط، ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ", async (c: AppContext) => {
     const bizId = getBizId(c);
     const userId = getUserId(c);
     const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
@@ -36,13 +36,13 @@ piCreateRoutes.post(
     const { items, ...invoiceData } = body;
 
     if (!invoiceData.supplierId) {
-      return c.json({ error: "المورد مطلوب" }, 400);
+      return c.json({ error: "ط§ظ„ظ…ظˆط±ط¯ ظ…ط·ظ„ظˆط¨" }, 400);
     }
     if (!invoiceData.currencyId) {
-      return c.json({ error: "العملة مطلوبة" }, 400);
+      return c.json({ error: "ط§ظ„ط¹ظ…ظ„ط© ظ…ط·ظ„ظˆط¨ط©" }, 400);
     }
     if (!Array.isArray(items) || items.length === 0) {
-      return c.json({ error: "يجب إضافة عنصر واحد على الأقل" }, 400);
+      return c.json({ error: "ظٹط¬ط¨ ط¥ط¶ط§ظپط© ط¹ظ†طµط± ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„" }, 400);
     }
 
     const result = await db.transaction(async (tx) => {
@@ -136,3 +136,5 @@ piCreateRoutes.post(
 
 
 export { piCreateRoutes };
+
+

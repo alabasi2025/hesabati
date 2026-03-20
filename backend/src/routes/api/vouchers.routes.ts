@@ -5,5 +5,13 @@
  *  - vouchers-list.routes.ts   (جلب + معاينة + رصيد + تفاصيل)
  *  - vouchers-write.routes.ts  (إنشاء + تعديل + تغيير الحالة)
  */
-export { vouchersListRouter } from './vouchers-list.routes';
-export { vouchersWriteRouter } from './vouchers-write.routes';
+import { Hono } from 'hono';
+import { vouchersListRouter } from './vouchers-list.routes';
+import { vouchersWriteRouter } from './vouchers-write.routes';
+
+const vouchersRouter = new Hono();
+vouchersRouter.route('/', vouchersListRouter);
+vouchersRouter.route('/', vouchersWriteRouter);
+
+export { vouchersListRouter, vouchersWriteRouter, vouchersRouter };
+export default vouchersRouter;

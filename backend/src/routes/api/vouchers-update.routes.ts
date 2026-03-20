@@ -1,9 +1,9 @@
-/**
- * vouchers-update.routes.ts — Phase 13
- * تعديل + تغيير حالة السندات: PUT + POST /status
+﻿/**
+ * vouchers-update.routes.ts â€” Phase 13
+ * طھط¹ط¯ظٹظ„ + طھط؛ظٹظٹط± ط­ط§ظ„ط© ط§ظ„ط³ظ†ط¯ط§طھ: PUT + POST /status
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
@@ -12,31 +12,31 @@ import {
   operationCategories,
   journalEntries, journalEntryLines,
   users, auditLog,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../engines/transaction.engine.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
-import type { AppContext } from './api/_shared/types.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
+import type { AppContext } from './_shared/types.ts';
 import { normalizeTreasuryCode, resolveVoucherTreasuryInfo } from './_vouchers-helpers.ts';
 
 const vouchersUpdateRouter = new Hono();
 
-vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('تعديل سند', async (c) => {
+vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('طھط¹ط¯ظٹظ„ ط³ظ†ط¯', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c) ?? 0;
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ط³ظ†ط¯ ط؛ظٹط± طµط§ظ„ط­' }, 400);
 
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
-  if (!existing) return c.json({ error: 'السند غير موجود' }, 404);
-  if (existing.status === 'reviewed') return c.json({ error: 'لا يمكن تعديل سند مراجع، قم بإلغاء المراجعة أولاً' }, 400);
+  if (!existing) return c.json({ error: 'ط§ظ„ط³ظ†ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (existing.status === 'reviewed') return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھط¹ط¯ظٹظ„ ط³ظ†ط¯ ظ…ط±ط§ط¬ط¹طŒ ظ‚ظ… ط¨ط¥ظ„ط؛ط§ط، ط§ظ„ظ…ط±ط§ط¬ط¹ط© ط£ظˆظ„ط§ظ‹' }, 400);
 
   const body = normalizeBody(await c.req.json());
   const parseOptionalId = (value: unknown): number | null => {
@@ -60,7 +60,7 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
     body.fromAccountId !== undefined ||
     body.toAccountId !== undefined;
 
-  // تحديث بسيط (بيانات الرأس فقط)
+  // طھط­ط¯ظٹط« ط¨ط³ظٹط· (ط¨ظٹط§ظ†ط§طھ ط§ظ„ط±ط£ط³ ظپظ‚ط·)
   if (!wantsStructuralUpdate) {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (body.description !== undefined) updateData.description = body.description;
@@ -76,13 +76,13 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
 
   const voucherType = String(body.voucherType || existing.voucherType || '').toLowerCase();
   if (voucherType !== 'receipt' && voucherType !== 'payment') {
-    return c.json({ error: 'نوع السند غير مدعوم للتعديل الهيكلي' }, 400);
+    return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط³ظ†ط¯ ط؛ظٹط± ظ…ط¯ط¹ظˆظ… ظ„ظ„طھط¹ط¯ظٹظ„ ط§ظ„ظ‡ظٹظƒظ„ظٹ' }, 400);
   }
 
   const baseDescription = String(body.description ?? existing.description ?? '').trim();
   const reference = body.reference !== undefined ? (String(body.reference || '').trim() || null) : (existing.reference ?? null);
   const voucherDate = body.voucherDate ? new Date(String(body.voucherDate)) : new Date(existing.voucherDate || new Date());
-  if (Number.isNaN(voucherDate.getTime())) return c.json({ error: 'تاريخ السند غير صالح' }, 400);
+  if (Number.isNaN(voucherDate.getTime())) return c.json({ error: 'طھط§ط±ظٹط® ط§ظ„ط³ظ†ط¯ ط؛ظٹط± طµط§ظ„ط­' }, 400);
   const currencyId = parseOptionalId(body.currencyId) || existing.currencyId || 1;
 
   const providedEntries = Array.isArray(body.entries) ? body.entries : [];
@@ -94,15 +94,15 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
     }))
     .filter((entry: any) => Number.isInteger(entry.accountId) && Number.isFinite(entry.amount) && entry.amount > 0);
   if (counterpartEntries.length === 0) {
-    return c.json({ error: 'أدخل سطراً واحداً على الأقل في بنود السند' }, 400);
+    return c.json({ error: 'ط£ط¯ط®ظ„ ط³ط·ط±ط§ظ‹ ظˆط§ط­ط¯ط§ظ‹ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ ظپظٹ ط¨ظ†ظˆط¯ ط§ظ„ط³ظ†ط¯' }, 400);
   }
   const totalAmount = counterpartEntries.reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
   if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-    return c.json({ error: 'مجموع البنود غير صالح' }, 400);
+    return c.json({ error: 'ظ…ط¬ظ…ظˆط¹ ط§ظ„ط¨ظ†ظˆط¯ ط؛ظٹط± طµط§ظ„ط­' }, 400);
   }
   const requestedAmount = parseOptionalAmount(body.amount);
   if (requestedAmount && Math.abs(requestedAmount - totalAmount) > 0.001) {
-    return c.json({ error: 'مجموع البنود يجب أن يساوي مبلغ السند' }, 400);
+    return c.json({ error: 'ظ…ط¬ظ…ظˆط¹ ط§ظ„ط¨ظ†ظˆط¯ ظٹط¬ط¨ ط£ظ† ظٹط³ط§ظˆظٹ ظ…ط¨ظ„ط؛ ط§ظ„ط³ظ†ط¯' }, 400);
   }
 
   const fundTreasuryId = voucherType === 'payment'
@@ -124,7 +124,7 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
     } else {
       const [createdSystemAccount] = await db.insert(accounts).values({
         businessId: bizId,
-        name: 'حساب الصناديق (آلي)',
+        name: 'ط­ط³ط§ط¨ ط§ظ„طµظ†ط§ط¯ظٹظ‚ (ط¢ظ„ظٹ)',
         accountType: 'fund',
         canCreateVoucher: false,
         canApproveVoucher: false,
@@ -135,7 +135,7 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
     }
   }
   if (!accountTreasuryId) {
-    return c.json({ error: 'الخزينة مطلوبة للتعديل' }, 400);
+    return c.json({ error: 'ط§ظ„ط®ط²ظٹظ†ط© ظ…ط·ظ„ظˆط¨ط© ظ„ظ„طھط¹ط¯ظٹظ„' }, 400);
   }
 
   const accountIdsToValidate = Array.from(new Set<number>([
@@ -147,7 +147,7 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
     .from(accounts)
     .where(and(eq(accounts.businessId, bizId), inArray(accounts.id, accountIdsToValidate)));
   if (validAccounts.length !== accountIdsToValidate.length) {
-    return c.json({ error: 'أحد الحسابات المختارة لا ينتمي لنفس العمل' }, 400);
+    return c.json({ error: 'ط£ط­ط¯ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط®طھط§ط±ط© ظ„ط§ ظٹظ†طھظ…ظٹ ظ„ظ†ظپط³ ط§ظ„ط¹ظ…ظ„' }, 400);
   }
   if (fundTreasuryId) {
     const [fundRow] = await db
@@ -155,7 +155,7 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
       .from(funds)
       .where(and(eq(funds.businessId, bizId), eq(funds.id, fundTreasuryId)))
       .limit(1);
-    if (!fundRow) return c.json({ error: 'الخزينة المختارة غير صالحة' }, 400);
+    if (!fundRow) return c.json({ error: 'ط§ظ„ط®ط²ظٹظ†ط© ط§ظ„ظ…ط®طھط§ط±ط© ط؛ظٹط± طµط§ظ„ط­ط©' }, 400);
   }
 
   const counterpartLineType: 'debit' | 'credit' = voucherType === 'payment' ? 'debit' : 'credit';
@@ -323,38 +323,38 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
   return c.json(result);
 }));
 
-// 3. تغيير حالة السند (مسودة → معتمد → ملغي)
+// 3. طھط؛ظٹظٹط± ط­ط§ظ„ط© ط§ظ„ط³ظ†ط¯ (ظ…ط³ظˆط¯ط© â†’ ظ…ط¹طھظ…ط¯ â†’ ظ…ظ„ط؛ظٹ)
 
-vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(), safeHandler('تغيير حالة السند', async (c) => {
+vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddleware(), safeHandler('طھط؛ظٹظٹط± ط­ط§ظ„ط© ط§ظ„ط³ظ†ط¯', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c) ?? 0;
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ط³ظ†ط¯ ط؛ظٹط± طµط§ظ„ط­' }, 400);
 
   const body = await getBody(c);
   const newStatus = body.status;
   if (!['unreviewed', 'reviewed'].includes(newStatus)) {
-    return c.json({ error: 'الحالة غير صالحة. القيم المسموحة: unreviewed, reviewed' }, 400);
+    return c.json({ error: 'ط§ظ„ط­ط§ظ„ط© ط؛ظٹط± طµط§ظ„ط­ط©. ط§ظ„ظ‚ظٹظ… ط§ظ„ظ…ط³ظ…ظˆط­ط©: unreviewed, reviewed' }, 400);
   }
 
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
-  if (!existing) return c.json({ error: 'السند غير موجود' }, 404);
+  if (!existing) return c.json({ error: 'ط§ظ„ط³ظ†ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
 
-  // التحقق من صحة التحول
-  // لا قيود على تغيير الحالة بين unreviewed و reviewed
+  // ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† طµط­ط© ط§ظ„طھط­ظˆظ„
+  // ظ„ط§ ظ‚ظٹظˆط¯ ط¹ظ„ظ‰ طھط؛ظٹظٹط± ط§ظ„ط­ط§ظ„ط© ط¨ظٹظ† unreviewed ظˆ reviewed
 
   try {
     if (existing.status === newStatus) {
       return c.json(existing);
     }
 
-    // نقطة الترحيل الموحدة: اعتماد المسودة فقط عبر المحرك المالي.
+    // ظ†ظ‚ط·ط© ط§ظ„طھط±ط­ظٹظ„ ط§ظ„ظ…ظˆط­ط¯ط©: ط§ط¹طھظ…ط§ط¯ ط§ظ„ظ…ط³ظˆط¯ط© ظپظ‚ط· ط¹ط¨ط± ط§ظ„ظ…ط­ط±ظƒ ط§ظ„ظ…ط§ظ„ظٹ.
     if (existing.status === 'unreviewed' && newStatus === 'reviewed') {
       const result = await confirmDraftTransaction(bizId, userId, id);
       return c.json(result.voucher);
     }
 
-    // السماح بالرجوع من reviewed إلى unreviewed (إلغاء المراجعة)
+    // ط§ظ„ط³ظ…ط§ط­ ط¨ط§ظ„ط±ط¬ظˆط¹ ظ…ظ† reviewed ط¥ظ„ظ‰ unreviewed (ط¥ظ„ط؛ط§ط، ط§ظ„ظ…ط±ط§ط¬ط¹ط©)
     if (existing.status === 'reviewed' && newStatus === 'unreviewed') {
       const [updated] = await db.update(vouchers).set({
         status: newStatus as 'unreviewed', updatedAt: new Date(),
@@ -363,10 +363,10 @@ vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddl
       return c.json(updated);
     }
 
-    // إلغاء السند المعتمد عبر المحرك المالي (يعكس الأثر دون إنشاء سند عكسي).
-    // منطق الإلغاء محذوف - لا يوجد حالة ثالثة
+    // ط¥ظ„ط؛ط§ط، ط§ظ„ط³ظ†ط¯ ط§ظ„ظ…ط¹طھظ…ط¯ ط¹ط¨ط± ط§ظ„ظ…ط­ط±ظƒ ط§ظ„ظ…ط§ظ„ظٹ (ظٹط¹ظƒط³ ط§ظ„ط£ط«ط± ط¯ظˆظ† ط¥ظ†ط´ط§ط، ط³ظ†ط¯ ط¹ظƒط³ظٹ).
+    // ظ…ظ†ط·ظ‚ ط§ظ„ط¥ظ„ط؛ط§ط، ظ…ط­ط°ظˆظپ - ظ„ط§ ظٹظˆط¬ط¯ ط­ط§ظ„ط© ط«ط§ظ„ط«ط©
 
-    // حالات لا تتطلب أثر مالي (مثل draft -> cancelled).
+    // ط­ط§ظ„ط§طھ ظ„ط§ طھطھط·ظ„ط¨ ط£ط«ط± ظ…ط§ظ„ظٹ (ظ…ط«ظ„ draft -> cancelled).
     const [updated] = await db.update(vouchers).set({
       status: newStatus, updatedAt: new Date(),
     }).where(eq(vouchers.id, id!)).returning();
@@ -374,11 +374,13 @@ vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddl
     await logAction({ userId, businessId: bizId, action: 'update', tableName: 'vouchers', recordId: id!, oldData: { status: existing.status }, newData: { status: newStatus } }).catch(() => {});
     return c.json(updated);
   } catch (err: unknown) {
-    return c.json({ error: toErrorMessage(err) || 'فشل في تغيير حالة السند' }, 400);
+    return c.json({ error: toErrorMessage(err) || 'ظپط´ظ„ ظپظٹ طھط؛ظٹظٹط± ط­ط§ظ„ط© ط§ظ„ط³ظ†ط¯' }, 400);
   }
 }));
 
-// 4. جلب رصيد حساب (لعرضه أثناء إنشاء العملية)
+// 4. ط¬ظ„ط¨ ط±طµظٹط¯ ط­ط³ط§ط¨ (ظ„ط¹ط±ط¶ظ‡ ط£ط«ظ†ط§ط، ط¥ظ†ط´ط§ط، ط§ظ„ط¹ظ…ظ„ظٹط©)
 
 
 export { vouchersUpdateRouter };
+
+

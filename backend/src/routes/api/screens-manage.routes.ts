@@ -19,7 +19,9 @@ import {
   sidebarItems, sidebarSections, uiPages, uiComponents
 } from '../../db/schema/core.ts';
 import { eq, and, inArray, desc } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../../middleware/auth.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import * as ScreensEng from '../../engines/screens.engine.ts';
 
 export const screensRoutes = new Hono();

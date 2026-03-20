@@ -4,6 +4,10 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { businesses, accounts, employees, funds } from './schema-business.ts';
+import { users, currencies } from './schema-users.ts';
+import { reconciliations, vouchers, suppliers, warehouses, inventoryItems } from './schema-finance.ts';
+import { operationTypes } from './schema-warehouse.ts';
 
 // ===================== SEQUENCE COUNTERS (عدادات التسلسل الذكي) =====================
 
