@@ -20,7 +20,7 @@ import {
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { warehouseSchema, validateBody } from '../../middleware/validation.ts';
 import { checkPermission, validateConstraints } from '../../middleware/permissions.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
 import { getNextSequence, getNextItemInCategorySequence, generateWarehouseOpFullSequence } from '../../middleware/sequencing.ts';
 import { postTransaction } from '../../engines/transaction.engine.ts';
 import { processStockMovement } from '../../services/inventory.service.ts';
@@ -48,7 +48,7 @@ warehouseRoutes.get('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHa
 
 warehouseRoutes.post('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('إضافة مخزن', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(warehouseSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const data = validation.data as Record<string, unknown> & { name?: string; warehouseType?: string; subType?: unknown; subTypeId?: number; sequenceNumber?: number; code?: string };
@@ -84,7 +84,7 @@ warehouseRoutes.put('/warehouses/:id', safeHandler('تعديل مخزن', async 
   const [warehouse] = await db.select().from(warehouses).where(eq(warehouses.id, id));
   const err = await requireResourceOwnership(c, warehouse ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(warehouses).set({ ...body, updatedAt: new Date() }).where(eq(warehouses.id, id)).returning();
   if (!updated) return c.json({ error: 'مخزن غير موجود' }, 404);
 

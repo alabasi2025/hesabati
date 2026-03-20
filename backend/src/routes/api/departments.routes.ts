@@ -11,8 +11,8 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
+  getBody,
 } from "../../middleware/helpers.ts";
 import {
   getNextSequence,
@@ -84,7 +84,7 @@ departmentsRoutes.post(
   checkPermission("employees", "create"),
   safeHandler("إنشاء قسم", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (!body.name) {
       return c.json({ error: "اسم القسم مطلوب" }, 400);
@@ -138,7 +138,7 @@ departmentsRoutes.put(
       return c.json({ error: "القسم غير موجود" }, 404);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (body.code && body.code !== existing.code) {
       const [existingCode] = await db

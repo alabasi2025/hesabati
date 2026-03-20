@@ -18,7 +18,6 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { fundSchema, validateBody } from "../../middleware/validation.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
 } from "../../middleware/helpers.ts";
 import {

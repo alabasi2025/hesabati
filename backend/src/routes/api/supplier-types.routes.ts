@@ -11,8 +11,8 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
+  getBody,
 } from "../../middleware/helpers.ts";
 import {
   getNextSequence,
@@ -82,7 +82,7 @@ supplierTypesRoutes.post(
   checkPermission("suppliers", "create"),
   safeHandler("إنشاء نوع مورد", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (!body.name) {
       return c.json({ error: "اسم النوع مطلوب" }, 400);
@@ -150,7 +150,7 @@ supplierTypesRoutes.put(
       return c.json({ error: "النوع غير موجود" }, 404);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (body.subTypeKey && body.subTypeKey !== existing.subTypeKey) {
       const [existingKey] = await db

@@ -3,16 +3,16 @@
  * بيانات العناصر الأساسية: stats, log, accounts, chart
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, desc, between, gte, lte } from 'drizzle-orm';
 import {
   businesses, accounts, accountBalances, vouchers, voucherLines,
   funds, fundBalances, screenWidgets, screenWidgetAccounts, screenWidgetWarehouses,
   warehouseOperations, warehouseOperationItems, inventoryItems,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
-import { getBizId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId } from '../../middleware/helpers.ts';
+import { getBizId } from './_shared/context-helpers.ts';
 
 const widgetBasicApi = new Hono();
 

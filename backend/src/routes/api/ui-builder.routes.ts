@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import {
   getPages,
@@ -50,7 +50,7 @@ uiBuilderRoutes.get('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), 
 
 uiBuilderRoutes.post('/businesses/:bizId/ui/pages', bizAuthMiddleware(), checkPermission('ui_builder', 'create'), safeHandler('إنشاء صفحة', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.pageKey || !body.title) return c.json({ error: 'المفتاح والعنوان مطلوبان' }, 400);
   const page = await createPage(bizId, body);
   return c.json(page, 201);
@@ -60,7 +60,7 @@ uiBuilderRoutes.put('/businesses/:bizId/ui/pages/:pageId', bizAuthMiddleware(), 
   const bizId = getBizId(c);
   const pageId = parseId(c.req.param('pageId'));
   if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const result = await updatePage(bizId, pageId, body);
   return c.json(result);
 }));
@@ -77,7 +77,7 @@ uiBuilderRoutes.post('/businesses/:bizId/ui/pages/:pageId/components', bizAuthMi
   const bizId = getBizId(c);
   const pageId = parseId(c.req.param('pageId'));
   if (!pageId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.componentType) return c.json({ error: 'نوع المكون مطلوب' }, 400);
   const component = await addComponent(bizId, pageId, body);
   return c.json(component, 201);
@@ -87,7 +87,7 @@ uiBuilderRoutes.put('/businesses/:bizId/ui/components/:componentId', bizAuthMidd
   const bizId = getBizId(c);
   const componentId = parseId(c.req.param('componentId'));
   if (!componentId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   await updateComponent(bizId, componentId, body);
   return c.json({ success: true });
 }));
@@ -108,7 +108,7 @@ uiBuilderRoutes.get('/businesses/:bizId/ui/data-sources', bizAuthMiddleware(), s
 
 uiBuilderRoutes.post('/businesses/:bizId/ui/data-sources', bizAuthMiddleware(), safeHandler('إنشاء مصدر بيانات', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.name || !body.sourceType) return c.json({ error: 'الاسم والنوع مطلوبان' }, 400);
   const user = c.get('user') as { role?: string } | undefined;
   if (body.sourceType === 'query' && user?.role !== 'admin') {
@@ -122,7 +122,7 @@ uiBuilderRoutes.put('/businesses/:bizId/ui/data-sources/:dsId', bizAuthMiddlewar
   const bizId = getBizId(c);
   const dsId = parseId(c.req.param('dsId'));
   if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const user = c.get('user') as { role?: string } | undefined;
   const isAdmin = user?.role === 'admin';
   const touchesQuery = body.sourceType === 'query' || body.queryTemplate !== undefined;
@@ -150,7 +150,7 @@ uiBuilderRoutes.post('/businesses/:bizId/ui/data-sources/:dsId/execute', bizAuth
   const bizId = getBizId(c);
   const dsId = parseId(c.req.param('dsId'));
   if (!dsId) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const result = await executeDataSource(bizId, dsId, body);
   return c.json(result);
 }));

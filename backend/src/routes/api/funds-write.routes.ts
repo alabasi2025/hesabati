@@ -18,8 +18,8 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { fundSchema, validateBody } from "../../middleware/validation.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
+  getBody,
 } from "../../middleware/helpers.ts";
 import {
   buildAccountHierarchyCode,
@@ -117,7 +117,7 @@ fundsRoutes.post(
   checkPermission("funds", "create"),
   safeHandler("إضافة صندوق", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const validation = validateBody(fundSchema, body);
     if (!validation.success) return c.json({ error: validation.error }, 400);
     const insertPayload: Record<string, unknown> = {
@@ -215,7 +215,7 @@ fundsRoutes.put(
       .where(and(eq(funds.id, id), eq(funds.businessId, bizId)));
     if (!existing)
       return c.json({ error: "صندوق غير موجود أو لا ينتمي لهذا العمل" }, 404);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     let nextFundType = "";
     if (typeof body.fundType === "string") nextFundType = body.fundType;
     else if (typeof existing.fundType === "string") nextFundType = existing.fundType;
@@ -313,7 +313,7 @@ fundsRoutes.put(
     const [existing] = await db.select().from(funds).where(eq(funds.id, id));
     const err = await requireResourceOwnership(c, existing ?? null);
     if (err) return err;
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     let nextFundType = "";
     if (typeof body.fundType === "string") nextFundType = body.fundType;
     else if (typeof existing.fundType === "string") nextFundType = existing.fundType;

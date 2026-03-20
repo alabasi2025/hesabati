@@ -11,7 +11,9 @@ import {
   getAttachments, saveAttachment, deleteAttachment,
   getAttachmentById, resolveStoragePath, validateFile
 } from '../../engines/attachment.engine.ts';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
 
 export const attachmentsEnhancedRoutes = new Hono();
@@ -21,7 +23,7 @@ const api = attachmentsEnhancedRoutes;
 api.post('/businesses/:bizId/attachments', bizAuthMiddleware(), safeHandler('رفع مرفق', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.entityType || !body.entityId || !body.fileName) {
     return c.json({ error: 'entityType, entityId, fileName مطلوبة' }, 400);
   }
@@ -78,7 +80,7 @@ api.get('/businesses/:bizId/attachments-archive-settings', bizAuthMiddleware(), 
 api.put('/businesses/:bizId/attachments-archive-settings', bizAuthMiddleware(), safeHandler('حفظ إعدادات الأرشفة الإلكترونية', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const normalized = normalizeArchiveSettings(body);
   const filePath = getArchiveSettingsFilePath(bizId);
   const dir = path.dirname(filePath);
@@ -187,7 +189,7 @@ api.post('/businesses/:bizId/attachments-archive-fs/mkdir', bizAuthMiddleware(),
     return c.json({ error: 'إنشاء المجلد مدعوم حالياً على ويندوز فقط' }, 400);
   }
 
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const parentPath = String(body.path || '').trim();
   const folderName = String(body.name || '').trim();
   if (!parentPath || !folderName) {
@@ -280,7 +282,7 @@ api.post('/businesses/:bizId/attachments/:id/rebuild-path', bizAuthMiddleware(),
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف المرفق غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [existing] = await db.select().from(attachments).where(eq(attachments.id, id));
   if (!existing) return c.json({ error: 'المرفق غير موجود' }, 404);
   if (String(existing.entityType) !== 'voucher') return c.json({ error: 'إعادة التوليد تدعم مرفقات السندات فقط حالياً' }, 400);

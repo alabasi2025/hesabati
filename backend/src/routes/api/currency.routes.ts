@@ -10,7 +10,9 @@ import { eq, and } from 'drizzle-orm';
 import {
   getExchangeRateHistory, addExchangeRate, clearRateCache, getUnifiedBalances
 } from '../../engines/currency.engine.ts';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 
 export const currencyRoutes = new Hono();
 const api = currencyRoutes;
@@ -34,7 +36,7 @@ api.get('/businesses/:bizId/exchange-rates', bizAuthMiddleware(), safeHandler('�
 api.post('/businesses/:bizId/exchange-rates', bizAuthMiddleware(), safeHandler('إضافة سعر صرف', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.fromCurrencyId || !body.toCurrencyId || !body.rate || !body.effectiveDate) {
     return c.json({ error: 'جميع الحقول مطلوبة: fromCurrencyId, toCurrencyId, rate, effectiveDate' }, 400);
   }
@@ -53,7 +55,7 @@ api.put('/businesses/:bizId/exchange-rates/:id', bizAuthMiddleware(), safeHandle
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   // مسح cache عند التعديل
   clearRateCache();
   const [updated] = await db.update(exchangeRates).set({

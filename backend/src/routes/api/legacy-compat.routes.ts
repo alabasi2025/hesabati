@@ -3,10 +3,10 @@
  * يُجمع مسارات التوافق القديمة من الملفات المنفصلة
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and } from 'drizzle-orm';
-import { funds } from '../db/schema/index.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
+import { funds } from '../../db/schema/index.ts';
+import { safeHandler, parseId } from '../../middleware/helpers.ts';
 import { legacyVouchersApi } from './legacy-compat-vouchers.routes.ts';
 import { legacyMiscApi } from './legacy-compat-misc.routes.ts';
 

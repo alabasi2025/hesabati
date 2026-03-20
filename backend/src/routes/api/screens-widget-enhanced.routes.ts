@@ -3,17 +3,17 @@
  * بيانات العناصر المحسّنة + الملاحظات + قوالب العمليات
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, desc, between, gte, lte } from 'drizzle-orm';
 import {
   businesses, accounts, accountBalances, vouchers, voucherLines,
   funds, fundBalances, screenWidgets, screenWidgetAccounts, screenWidgetWarehouses,
   warehouseOperations, warehouseOperationItems, inventoryItems,
   operationTypes,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
-import { getBizId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
+import { getBizId } from './_shared/context-helpers.ts';
 
 const widgetEnhancedApi = new Hono();
 
@@ -216,7 +216,7 @@ widgetEnhancedApi.get('/widgets/:widgetId/notes', safeHandler('جلب ملاحظ
 widgetEnhancedApi.put('/widgets/:widgetId/notes', safeHandler('حفظ ملاحظات العنصر', async (c) => {
   const widgetId = parseId(c.req.param('widgetId'));
   if (!widgetId) return c.json({ error: 'معرّف العنصر غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [widget] = await db.select({ config: screenWidgets.config }).from(screenWidgets).where(eq(screenWidgets.id, widgetId));
   if (!widget) return c.json({ error: 'عنصر غير موجود' }, 404);
   const baseConfig = widget.config && typeof widget.config === 'object' ? widget.config : {};
