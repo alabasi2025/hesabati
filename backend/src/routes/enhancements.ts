@@ -12,7 +12,7 @@
 import { Hono } from 'hono';
 
 // Re-export from sub-routers for backward compatibility
-export { default as vouchersRouter } from './api/vouchers.routes.ts';
+export { vouchersListRouter, vouchersWriteRouter } from './api/vouchers.routes.ts';
 export { default as operationEnhRouter } from './api/operation-enhancements.routes.ts';
 export { default as sidebarEnhRouter } from './api/sidebar-enhancements.routes.ts';
 export { default as screenEnhRouter } from './api/screen-enhancements.routes.ts';

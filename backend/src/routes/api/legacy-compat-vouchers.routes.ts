@@ -19,6 +19,10 @@ import { postTransaction, cancelTransaction } from '../../engines/transaction.en
 import { wsService } from '../../services/websocket.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
+import { requireResourceOwnership, verifyAccountOwnership } from './_shared/ownership.ts';
+import { validateBody, voucherSchema } from '../../middleware/validation.ts';
+import { validateConstraints } from '../../middleware/permissions.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
 
 const legacyVouchersApi = new Hono();
 

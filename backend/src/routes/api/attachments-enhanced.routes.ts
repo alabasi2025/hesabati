@@ -6,7 +6,11 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { attachments } from '../../db/schema/core.ts';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
+import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import {
   getAttachments, saveAttachment, deleteAttachment,
   getAttachmentById, resolveStoragePath, validateFile
@@ -15,6 +19,14 @@ import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
+import {
+  getArchiveSettingsDefaults, getArchiveSettingsFilePath, normalizeArchiveSettings,
+  readArchiveSettings, resolveVoucherArchivePath, ensureArchiveTreeForBusiness,
+  listWindowsDrives, detectImportanceFromPath,
+} from './api.rest.ts';
+import { normalizeDbResult } from '../../utils/db-result.ts';
+
+const execFileAsync = promisify(execFile);
 
 export const attachmentsEnhancedRoutes = new Hono();
 const api = attachmentsEnhancedRoutes;
@@ -44,16 +56,20 @@ api.post('/businesses/:bizId/attachments', bizAuthMiddleware(), safeHandler('ر�
   }
 
   const [created] = await db.insert(attachments).values({
+    businessId: bizId,
+    tableName: entityType,
+    recordId: entityId,
     entityType,
     entityId,
     fileName: body.fileName,
     filePath: finalPath,
     fileSize: body.fileSize || 0, fileType: body.fileType || body.mimeType || 'application/octet-stream',
+    mimeType: body.mimeType || body.fileType || null,
     description: body.description || null,
-    uploadedBy: userId,
+    uploadedBy: userId ?? null,
   }).returning();
   // سجل التدقيق
-  await logAction({ userId, businessId: bizId, action: 'create', tableName: 'attachments', recordId: created.id, newData: { entityType, entityId, fileName: body.fileName, filePath: finalPath, importance: body.importance || null } });
+  await logAction({ userId: userId ?? 0, bizId, action: 'create', tableName: 'attachments', recordId: created.id, newData: { entityType, entityId, fileName: body.fileName, filePath: finalPath, importance: body.importance || null } });
   return c.json(created, 201);
 }));
 
@@ -87,7 +103,7 @@ api.put('/businesses/:bizId/attachments-archive-settings', bizAuthMiddleware(), 
   await mkdir(dir, { recursive: true });
   await writeFile(filePath, JSON.stringify(normalized, null, 2), 'utf8');
   const treeResult = await ensureArchiveTreeForBusiness(bizId, normalized);
-  await logAction({ userId, businessId: bizId, action: 'update', tableName: 'businesses', recordId: bizId, newData: { ...normalized, treeResult } as any });
+  await logAction({ userId: userId ?? 0, bizId, action: 'update', tableName: 'businesses', recordId: bizId, newData: { ...normalized, treeResult } as any });
   return c.json({ ...normalized, treeResult });
 }));
 
@@ -289,7 +305,7 @@ api.post('/businesses/:bizId/attachments/:id/rebuild-path', bizAuthMiddleware(),
 
   const settings = await readArchiveSettings(bizId);
   const importance = String(body.importance || detectImportanceFromPath(existing.filePath, settings.importanceLevels));
-  const nextPath = await resolveVoucherArchivePath(bizId, existing.entityId, importance);
+  const nextPath = await resolveVoucherArchivePath(bizId, existing.entityId ?? 0, importance);
   if (!nextPath) return c.json({ error: 'تعذر تحديد السند المرتبط بهذا المرفق' }, 400);
   await mkdir(nextPath, { recursive: true });
 

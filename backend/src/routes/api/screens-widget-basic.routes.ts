@@ -13,6 +13,7 @@ import {
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, parseId } from '../../middleware/helpers.ts';
 import { getBizId } from './_shared/context-helpers.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
 
 const widgetBasicApi = new Hono();
 

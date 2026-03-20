@@ -1,0 +1,3 @@
+Add after line 20 (import { logAction }...):
+import { AppContext } from './_shared/types.ts';
+import { processStockMovement } from '../../services/inventory.service.ts';

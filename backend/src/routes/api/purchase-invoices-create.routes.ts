@@ -18,6 +18,8 @@ import { getNextSequence } from '../../middleware/sequencing.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
+import { AppContext } from './_shared/types.ts';
+import { getNextPurchaseInvoiceSequence } from '../../engines/sequencing-entity.engine.ts';
 
 const piCreateRoutes = new Hono();
 

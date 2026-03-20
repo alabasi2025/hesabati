@@ -11,8 +11,17 @@ import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getNextSequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
-import { normalizeDbResult } from '../../utils/db-result.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { TYPE_PREFIXES } from '../../engines/sequencing.types.ts';
+import { resolveVoucherTreasuryInfo } from './_vouchers-helpers.ts';
+
+interface PeriodStatsRow {
+  period?: string;
+  total?: string | number | null;
+  [key: string]: unknown;
+}
+
 
 const screenEnhRouter = new Hono();
 

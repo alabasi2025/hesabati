@@ -9,14 +9,18 @@ import {
   businesses, warehouses, warehouseOperations, warehouseOperationItems,
   inventoryItems, inventoryStock, inventoryMovements,
   accounts, accountBalances, operationTypes, operationTypeAccounts,
-  journalEntries, journalEntryLines, auditLog,
+  journalEntries, journalEntryLines, auditLog, warehouseTypes,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
-import { safeHandler, parseId, toErrorMessage } from '../../middleware/helpers.ts';
-import { checkPermission } from '../../middleware/permissions.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { checkPermission, validateConstraints } from '../../middleware/permissions.ts';
 import { getNextSequence } from '../../middleware/sequencing.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
+import { getFirstRow } from '../../utils/db-result.ts';
+import { generateWarehouseOpFullSequence } from '../../engines/sequencing-entity.engine.ts';
+import { processStockMovement } from '../../services/inventory.service.ts';
+import { postTransaction } from '../../engines/transaction.engine.ts';
 
 const warehouseOpsWriteRoutes = new Hono();
 

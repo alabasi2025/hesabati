@@ -4,7 +4,7 @@
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, funds, accounts,
   attachments, stations, employees, operationTypes,

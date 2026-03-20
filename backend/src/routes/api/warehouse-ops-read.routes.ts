@@ -7,11 +7,13 @@ import { db } from '../../db/index.ts';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import {
   businesses, warehouses, warehouseOperations, warehouseOperationItems,
-  inventoryItems, inventoryStock, inventoryMovements,
+  inventoryItems, inventoryStock, inventoryMovements, operationTypes,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, parseId } from '../../middleware/helpers.ts';
 import { getBizId } from './_shared/context-helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
+import { normalizeDbResult } from '../../utils/db-result.ts';
 
 const warehouseOpsReadRoutes = new Hono();
 
@@ -202,7 +204,7 @@ warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations-summary', bi
   return c.json(rows);
 }));
 
-export default warehouseRoutes;
+export default warehouseOpsReadRoutes;
 
 
 
