@@ -1,0 +1,313 @@
+<div class="page-container">
+
+  <!-- رأس الصفحة -->
+  <div class="page-header">
+    <div class="header-icon">
+      <span class="material-icons">policy</span>
+    </div>
+    <div class="header-text">
+      <h1>التحليل الجنائي المالي</h1>
+      <p>فحص شامل للمعاملات المالية للكشف عن الأنماط غير المعتادة والمخاطر</p>
+    </div>
+    <button class="btn-print" (click)="printReport()" title="طباعة">
+      <span class="material-icons">print</span>
+    </button>
+  </div>
+
+  <!-- فلتر التاريخ -->
+  <div class="filter-card">
+    <div class="filter-group">
+      <label>من تاريخ</label>
+      <input type="date" [(ngModel)]="dateFrom" />
+    </div>
+    <div class="filter-group">
+      <label>إلى تاريخ</label>
+      <input type="date" [(ngModel)]="dateTo" />
+    </div>
+    <button class="btn-apply" (click)="loadTab()">
+      <span class="material-icons">search</span>
+      تحليل
+    </button>
+  </div>
+
+  <!-- التبويبات -->
+  <div class="tabs-bar">
+    @for (tab of tabs; track tab.key) {
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === tab.key"
+        (click)="switchTab(tab.key)"
+      >
+        <span class="material-icons">{{ tab.icon }}</span>
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- محتوى التحميل -->
+  @if (loading()) {
+    <app-loading-state message="جارٍ التحليل الجنائي..." />
+  } @else {
+
+    <div class="print-area">
+
+      <!-- ── الملخص العام ────────────────────────────────────── -->
+      @if (activeTab === 'summary') {
+        @if (summary) {
+          <!-- شريط مستوى المخاطر -->
+          <div class="risk-banner" [ngClass]="riskLevelClass(summary.riskLevel)">
+            <span class="material-icons risk-icon">
+              {{ summary.riskLevel === 'critical' || summary.riskLevel === 'high' ? 'error' :
+                 summary.riskLevel === 'medium' ? 'warning' : 'check_circle' }}
+            </span>
+            <div>
+              <strong>مستوى المخاطر: {{ riskLevelLabel(summary.riskLevel) }}</strong>
+              <span>درجة المخاطر {{ summary.riskScore }} / 100</span>
+            </div>
+            <div class="risk-bar-wrap">
+              <div class="risk-bar-fill" [style.width.%]="summary.riskScore"></div>
+            </div>
+          </div>
+
+          <!-- بطاقات الإحصاء -->
+          <div class="stat-grid">
+            <div class="stat-card blue">
+              <div class="stat-value">{{ summary.totalVouchers | number }}</div>
+              <div class="stat-label">إجمالي السندات</div>
+            </div>
+            <div class="stat-card" [ngClass]="summary.unreviewedPercentage > 30 ? 'red' : summary.unreviewedPercentage > 10 ? 'amber' : 'green'">
+              <div class="stat-value">{{ summary.unreviewedCount | number }}</div>
+              <div class="stat-label">غير مراجعة ({{ summary.unreviewedPercentage | number:'1.0-0' }}%)</div>
+            </div>
+            <div class="stat-card" [ngClass]="summary.suspiciousCount > 0 ? 'red' : 'green'">
+              <div class="stat-value">{{ summary.suspiciousCount | number }}</div>
+              <div class="stat-label">معاملات مشبوهة</div>
+            </div>
+            <div class="stat-card" [ngClass]="summary.duplicatesCount > 0 ? 'amber' : 'green'">
+              <div class="stat-value">{{ summary.duplicatesCount | number }}</div>
+              <div class="stat-label">مجموعات مكررة محتملة</div>
+            </div>
+            <div class="stat-card" [ngClass]="summary.largeTransactionsCount > 0 ? 'amber' : 'green'">
+              <div class="stat-value">{{ summary.largeTransactionsCount | number }}</div>
+              <div class="stat-label">معاملات كبيرة غير معتادة</div>
+            </div>
+            <div class="stat-card" [ngClass]="summary.totalAmountAtRisk > 0 ? 'red' : 'green'">
+              <div class="stat-value">{{ formatAmount(summary.totalAmountAtRisk) }}</div>
+              <div class="stat-label">إجمالي المبالغ في خطر</div>
+            </div>
+          </div>
+
+          <!-- نقاط التحقق -->
+          <div class="checklist-card">
+            <h3><span class="material-icons">fact_check</span> نقاط التحقق الجنائي</h3>
+            <ul class="checklist">
+              <li [ngClass]="summary.unreviewedCount === 0 ? 'ok' : 'warn'">
+                <span class="material-icons">{{ summary.unreviewedCount === 0 ? 'check_circle' : 'warning' }}</span>
+                السندات غير المراجعة:
+                <strong>{{ summary.unreviewedCount === 0 ? 'لا توجد' : summary.unreviewedCount + ' سند غير مراجع' }}</strong>
+              </li>
+              <li [ngClass]="summary.suspiciousCount === 0 ? 'ok' : 'fail'">
+                <span class="material-icons">{{ summary.suspiciousCount === 0 ? 'check_circle' : 'error' }}</span>
+                المعاملات خارج ساعات العمل:
+                <strong>{{ summary.suspiciousCount === 0 ? 'لا توجد' : summary.suspiciousCount + ' معاملة مشبوهة' }}</strong>
+              </li>
+              <li [ngClass]="summary.duplicatesCount === 0 ? 'ok' : 'warn'">
+                <span class="material-icons">{{ summary.duplicatesCount === 0 ? 'check_circle' : 'warning' }}</span>
+                الإدخالات المكررة المحتملة:
+                <strong>{{ summary.duplicatesCount === 0 ? 'لا توجد' : summary.duplicatesCount + ' مجموعة مكررة' }}</strong>
+              </li>
+              <li [ngClass]="summary.largeTransactionsCount === 0 ? 'ok' : 'warn'">
+                <span class="material-icons">{{ summary.largeTransactionsCount === 0 ? 'check_circle' : 'warning' }}</span>
+                المعاملات الكبيرة غير المعتادة:
+                <strong>{{ summary.largeTransactionsCount === 0 ? 'لا توجد' : summary.largeTransactionsCount + ' معاملة' }}</strong>
+              </li>
+            </ul>
+          </div>
+        } @else {
+          <app-empty-state message="لا توجد بيانات للتحليل في الفترة المحددة" />
+        }
+      }
+
+      <!-- ── المعاملات المشبوهة ────────────────────────────── -->
+      @if (activeTab === 'suspicious') {
+        @if (suspicious.length > 0) {
+          <div class="table-card">
+            <div class="table-header">
+              <span class="material-icons">warning</span>
+              المعاملات المشبوهة ({{ suspicious.length }})
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>رقم السند</th>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>التاريخ</th>
+                    <th>سبب الإشارة</th>
+                    <th>مستوى الخطر</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of suspicious; track row.id) {
+                    <tr>
+                      <td><strong>{{ row.voucherNumber }}</strong></td>
+                      <td>{{ voucherTypeLabel(row.voucherType) }}</td>
+                      <td class="amount">{{ formatAmount(row.amount) }}</td>
+                      <td>{{ formatDate(row.voucherDate) }}</td>
+                      <td class="reason">{{ row.reason }}</td>
+                      <td>
+                        <span class="badge" [ngClass]="riskLevelClass(row.riskLevel)">
+                          {{ riskLevelLabel(row.riskLevel) }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @else {
+          <app-empty-state message="لا توجد معاملات مشبوهة في الفترة المحددة ✓" />
+        }
+      }
+
+      <!-- ── الإدخالات المكررة ─────────────────────────────── -->
+      @if (activeTab === 'duplicates') {
+        @if (duplicates.length > 0) {
+          <div class="table-card">
+            <div class="table-header">
+              <span class="material-icons">content_copy</span>
+              الإدخالات المكررة المحتملة ({{ duplicates.length }} مجموعة)
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>المبلغ</th>
+                    <th>نوع السند</th>
+                    <th>التاريخ</th>
+                    <th>عدد التكرار</th>
+                    <th>أرقام السندات</th>
+                    <th>مستوى الخطر</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of duplicates; track row.voucherDate + row.amount) {
+                    <tr>
+                      <td class="amount"><strong>{{ formatAmount(row.amount) }}</strong></td>
+                      <td>{{ voucherTypeLabel(row.voucherType) }}</td>
+                      <td>{{ formatDate(row.voucherDate) }}</td>
+                      <td class="center"><strong>{{ row.count }}</strong></td>
+                      <td class="small">{{ row.voucherNumbers.join('، ') }}</td>
+                      <td>
+                        <span class="badge" [ngClass]="riskLevelClass(row.riskLevel)">
+                          {{ riskLevelLabel(row.riskLevel) }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @else {
+          <app-empty-state message="لا توجد إدخالات مكررة في الفترة المحددة ✓" />
+        }
+      }
+
+      <!-- ── المعاملات الكبيرة ─────────────────────────────── -->
+      @if (activeTab === 'large-transactions') {
+        @if (largeTransactions.length > 0) {
+          <div class="table-card">
+            <div class="table-header">
+              <span class="material-icons">trending_up</span>
+              المعاملات الكبيرة غير المعتادة ({{ largeTransactions.length }})
+            </div>
+            <p class="hint">السندات التي تتجاوز 3 أضعاف متوسط المعاملات في الفترة المحددة</p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>رقم السند</th>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>المتوسط</th>
+                    <th>معامل الانحراف</th>
+                    <th>التاريخ</th>
+                    <th>الوصف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of largeTransactions; track row.id) {
+                    <tr>
+                      <td><strong>{{ row.voucherNumber }}</strong></td>
+                      <td>{{ voucherTypeLabel(row.voucherType) }}</td>
+                      <td class="amount red"><strong>{{ formatAmount(row.amount) }}</strong></td>
+                      <td class="amount">{{ formatAmount(row.avgAmount) }}</td>
+                      <td class="center">
+                        <span class="badge risk-high">×{{ row.deviationFactor | number:'1.1-1' }}</span>
+                      </td>
+                      <td>{{ formatDate(row.voucherDate) }}</td>
+                      <td class="small">{{ row.description || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @else {
+          <app-empty-state message="لا توجد معاملات كبيرة غير معتادة في الفترة المحددة ✓" />
+        }
+      }
+
+      <!-- ── السندات غير المراجعة ─────────────────────────── -->
+      @if (activeTab === 'unreviewed') {
+        @if (unreviewed.length > 0) {
+          <div class="table-card">
+            <div class="table-header">
+              <span class="material-icons">pending_actions</span>
+              السندات غير المراجعة ({{ unreviewed.length }})
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>رقم السند</th>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>تاريخ السند</th>
+                    <th>تاريخ الإنشاء</th>
+                    <th>عمر السند (يوم)</th>
+                    <th>الوصف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of unreviewed; track row.id) {
+                    <tr [ngClass]="row.daysOld > 30 ? 'row-critical' : row.daysOld > 7 ? 'row-warn' : ''">
+                      <td><strong>{{ row.voucherNumber }}</strong></td>
+                      <td>{{ voucherTypeLabel(row.voucherType) }}</td>
+                      <td class="amount">{{ formatAmount(row.amount) }}</td>
+                      <td>{{ formatDate(row.voucherDate) }}</td>
+                      <td>{{ formatDate(row.createdAt) }}</td>
+                      <td class="center">
+                        <span class="badge" [ngClass]="row.daysOld > 30 ? 'risk-critical' : row.daysOld > 7 ? 'risk-high' : 'risk-low'">
+                          {{ row.daysOld }}
+                        </span>
+                      </td>
+                      <td class="small">{{ row.description || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @else {
+          <app-empty-state message="جميع السندات مراجعة ✓" />
+        }
+      }
+
+    </div><!-- /print-area -->
+  }
+
+</div>

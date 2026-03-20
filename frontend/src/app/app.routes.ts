@@ -67,6 +67,7 @@ export const routes: Routes = [
       { path: 'departments', loadComponent: () => import('./pages/departments/departments').then(m => m.DepartmentsComponent) },
       { path: 'job-titles', loadComponent: () => import('./pages/job-titles/job-titles').then(m => m.JobTitlesComponent) },
       { path: 'attachments-archive', loadComponent: () => import('./pages/attachments-archive/attachments-archive').then(m => m.AttachmentsArchiveComponent) },
+      { path: 'forensic-analysis', loadComponent: () => import('./pages/forensic-analysis/forensic-analysis').then(m => m.ForensicAnalysisComponent) },
     ],
   },
   { path: '', redirectTo: 'login', pathMatch: 'full' },
