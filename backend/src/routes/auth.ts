@@ -11,10 +11,10 @@ const authRoutes = new Hono();
 authRoutes.post('/login', async (c) => {
   try {
     const body = await getBody(c);
-    const username = body?.username;
+    const username = body?.username?.trim();
     const password = body?.password;
 
-    if (!username || !password) {
+    if (!username || !password?.trim()) {
       return c.json({ error: 'اسم المستخدم وكلمة المرور مطلوبان' }, 400);
     }
 
