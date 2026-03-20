@@ -18,9 +18,6 @@
  * @since Phase 3
  */
 
-// ── Re-exports من websocket.service ────────────────────────────────────────
-export { wsService } from '../services/websocket.service.ts';
-
 // ── واجهات الإشعارات ────────────────────────────────────────────────────────
 export interface NotificationPayload {
   type: 'new_voucher' | 'status_change' | 'screen_update' | 'low_stock' | 'salary_due' | 'system';

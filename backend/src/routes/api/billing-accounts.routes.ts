@@ -3,15 +3,18 @@
  * حسابات الفوترة للموظفين (employee-billing-accounts CRUD)
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and } from 'drizzle-orm';
 import {
   businesses, employeeBillingAccounts, billingAccountTypes,
-  accounts, employees,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId, normalizeBody } from '../middleware/helpers.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+  accounts, employees, billingSystemsConfig, stations,
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
+import { validateBody } from '../../middleware/validation.ts';
+import { employeeBillingAccountSchema } from '../../middleware/validation-schemas.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const billingAccountsApi = new Hono();
 
@@ -48,7 +51,7 @@ billingAccountsApi.get('/businesses/:bizId/employee-billing-accounts', bizAuthMi
 }));
 
 billingAccountsApi.post('/employee-billing-accounts', safeHandler('إضافة حساب فوترة', async (c) => {
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(employeeBillingAccountSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const employeeId = validation.data?.employeeId;
@@ -81,7 +84,7 @@ billingAccountsApi.put('/employee-billing-accounts/:id', safeHandler('تعديل
   if (err) return err;
   if (!employee) return c.json({ error: 'الموظف المرتبط غير موجود' }, 404);
   const bizId = employee.businessId;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const payload = body as { employeeId?: number; stationId?: number; billingSystemId?: number };
 
   if (payload.employeeId) {
