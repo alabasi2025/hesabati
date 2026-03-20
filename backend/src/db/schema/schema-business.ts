@@ -4,6 +4,8 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { accountTypeEnum, employeeStatusEnum, collectionMethodEnum } from './schema-base.ts';
+import { currencies } from './schema-users.ts';
 
 // ===================== BUSINESSES (الأعمال) =====================
 
@@ -171,6 +173,7 @@ export const billingSystemsConfig = pgTable('billing_systems_config', {
   stationMode: varchar('station_mode', { length: 20 }).notNull().default('per_station'),
   stationIds: jsonb('station_ids').$type<number[]>().default([]),
   supportedMethodIds: jsonb('supported_method_ids').$type<number[]>().default([]),
+  collectionMethod: collectionMethodEnum('collection_method'),
   sortOrder: integer('sort_order').default(0),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),

@@ -11,7 +11,9 @@ import {
   getAttachments, saveAttachment, deleteAttachment,
   getAttachmentById, resolveStoragePath, validateFile
 } from '../../engines/attachment.engine.ts';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
 
 export const attachmentsEnhancedRoutes = new Hono();

@@ -3,15 +3,17 @@
  * حسابات الفوترة للموظفين (employee-billing-accounts CRUD)
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and } from 'drizzle-orm';
 import {
   businesses, employeeBillingAccounts, billingAccountTypes,
-  accounts, employees,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId, normalizeBody } from '../middleware/helpers.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+  accounts, employees, stations, billingSystemsConfig,
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId, normalizeBody } from '../../middleware/helpers.ts';
+import { validateBody, employeeBillingAccountSchema } from '../../middleware/validation.ts';
+import { getBizId } from './_shared/context-helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
 
 const billingAccountsApi = new Hono();
 

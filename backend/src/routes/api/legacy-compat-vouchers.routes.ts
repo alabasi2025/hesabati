@@ -3,22 +3,22 @@
  * مسارات توافق السندات القديمة (Legacy vouchers routes)
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
   accounts, accountBalances, funds, fundBalances,
   operationCategories, journalEntries, journalEntryLines,
   users, auditLog,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence } from '../middleware/sequencing.ts';
-import { postTransaction, cancelTransaction } from '../engines/transaction.engine.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { postTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
 
 const legacyVouchersApi = new Hono();
 

@@ -22,7 +22,7 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/__tests__", "src/db/check-schema-match.ts",
+  "exclude": ["node_modules", "dist", "src/__tests__", "src/engines/__tests__", "src/db/check-schema-match.ts",
     "src/db/add-account-types-sidebar.ts", "src/db/add-sidebar-salaries-section.ts",
     "src/db/check-account-ids.ts", "src/db/check-dashboard-data.ts",
     "src/db/check-operations.ts", "src/db/check-schema-runner.ts",

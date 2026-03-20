@@ -8,7 +8,9 @@ import { db } from '../../db/index.ts';
 import { roles, rolePermissions, userRoles, users } from '../../db/schema/core.ts';
 import { eq, and } from 'drizzle-orm';
 import { getUserMaxAmounts, checkResourceLimit } from '../../engines/permissions.engine.ts';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 export const rbacRoutes = new Hono();
 const api = rbacRoutes;

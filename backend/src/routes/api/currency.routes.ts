@@ -10,7 +10,9 @@ import { eq, and } from 'drizzle-orm';
 import {
   getExchangeRateHistory, addExchangeRate, clearRateCache, getUnifiedBalances
 } from '../../engines/currency.engine.ts';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 export const currencyRoutes = new Hono();
 const api = currencyRoutes;
