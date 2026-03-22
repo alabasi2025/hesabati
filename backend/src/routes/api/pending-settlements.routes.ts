@@ -7,7 +7,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { pendingAccounts, reconciliations, accounts, accountSubNatures } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { pendingAccountSchema, settlementSchema, validateBody } from '../../middleware/validation.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { generateLeafAccountCode } from '../../middleware/sequencing.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
@@ -42,7 +42,7 @@ pendingSettlementsRoutes.get('/businesses/:bizId/pending-accounts', bizAuthMiddl
 
 pendingSettlementsRoutes.post('/businesses/:bizId/pending-accounts', bizAuthMiddleware(), safeHandler('إضافة حساب معلق', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(pendingAccountSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const d = validation.data as Record<string, unknown> & { 
@@ -96,7 +96,7 @@ pendingSettlementsRoutes.put('/pending-accounts/:id', safeHandler('تعديل ح
   const [pending] = await db.select().from(pendingAccounts).where(eq(pendingAccounts.id, id));
   const err = await requireResourceOwnership(c, pending ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(pendingAccounts).set({ ...body, updatedAt: new Date() }).where(eq(pendingAccounts.id, id)).returning();
   if (!updated) return c.json({ error: 'حساب معلق غير موجود' }, 404);
   return c.json(updated);
@@ -121,7 +121,7 @@ pendingSettlementsRoutes.get('/businesses/:bizId/settlements', bizAuthMiddleware
 
 pendingSettlementsRoutes.post('/businesses/:bizId/settlements', bizAuthMiddleware(), safeHandler('إضافة تصفية', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(settlementSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const data = validation.data as Record<string, unknown> & {
@@ -147,7 +147,7 @@ pendingSettlementsRoutes.put('/settlements/:id', safeHandler('تعديل تصف�
   const [rec] = await db.select().from(reconciliations).where(eq(reconciliations.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(reconciliations).set({ ...body, updatedAt: new Date() }).where(eq(reconciliations.id, id)).returning();
   if (!updated) return c.json({ error: 'تصفية غير موجودة' }, 404);
   return c.json(updated);

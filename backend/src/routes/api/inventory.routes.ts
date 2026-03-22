@@ -7,7 +7,7 @@ import { db } from '../../db/index.ts';
 import { inventoryItems } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import {
   getStockLevels,
@@ -62,7 +62,7 @@ inventoryRoutes.get('/businesses/:bizId/items/:itemId/movements', bizAuthMiddlew
 inventoryRoutes.post('/businesses/:bizId/stock-movements', bizAuthMiddleware(), checkPermission('inventory', 'create'), safeHandler('تسجيل حركة مخزون', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
 
   if (!body.itemId || !body.warehouseId || !body.movementType || !body.quantity || !body.movementDate) {
     return c.json({ error: 'البيانات المطلوبة: itemId, warehouseId, movementType, quantity, movementDate' }, 400);

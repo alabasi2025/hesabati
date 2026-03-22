@@ -25,7 +25,6 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
 } from "../../middleware/helpers.ts";
 import {

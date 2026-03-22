@@ -1,42 +1,42 @@
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   operationTypes, operationTypeAccounts, accounts, accountBalances,
   sidebarSections, sidebarItems, userSidebarConfig,
   screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
   users, vouchers, currencies, operationCategories,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { normalizeDbResult } from '../utils/db-result.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { normalizeDbResult } from '../../utils/db-result.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 const sidebarEnhRouter = new Hono();
 
-// ===================== تحسينات إعدادات التبويب الجانبي =====================
+// ===================== طھط­ط³ظٹظ†ط§طھ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„طھط¨ظˆظٹط¨ ط§ظ„ط¬ط§ظ†ط¨ظٹ =====================
 
-// 10. نسخ إعدادات من مستخدم لآخر
-sidebarEnhRouter.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddleware(), safeHandler('نسخ إعدادات السايدبار', async (c) => {
+// 10. ظ†ط³ط® ط¥ط¹ط¯ط§ط¯ط§طھ ظ…ظ† ظ…ط³طھط®ط¯ظ… ظ„ط¢ط®ط±
+sidebarEnhRouter.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddleware(), safeHandler('ظ†ط³ط® ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط³ط§ظٹط¯ط¨ط§ط±', async (c) => {
   const bizId = getBizId(c);
   const body = await getBody(c);
   const { fromUserId, toUserId } = body;
-  if (!fromUserId || !toUserId) return c.json({ error: 'fromUserId و toUserId مطلوبان' }, 400);
-  if (fromUserId === toUserId) return c.json({ error: 'لا يمكن النسخ لنفس المستخدم' }, 400);
+  if (!fromUserId || !toUserId) return c.json({ error: 'fromUserId ظˆ toUserId ظ…ط·ظ„ظˆط¨ط§ظ†' }, 400);
+  if (fromUserId === toUserId) return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† ط§ظ„ظ†ط³ط® ظ„ظ†ظپط³ ط§ظ„ظ…ط³طھط®ط¯ظ…' }, 400);
 
-  // جلب إعدادات المصدر
+  // ط¬ظ„ط¨ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طµط¯ط±
   const sourceConfigs = await db.select().from(userSidebarConfig)
     .where(and(eq(userSidebarConfig.businessId, bizId), eq(userSidebarConfig.userId, fromUserId)));
 
-  if (sourceConfigs.length === 0) return c.json({ error: 'لا توجد إعدادات للمستخدم المصدر' }, 404);
+  if (sourceConfigs.length === 0) return c.json({ error: 'ظ„ط§ طھظˆط¬ط¯ ط¥ط¹ط¯ط§ط¯ط§طھ ظ„ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ظ…طµط¯ط±' }, 404);
 
-  // حذف إعدادات المستهدف الحالية
+  // ط­ط°ظپ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…ط³طھظ‡ط¯ظپ ط§ظ„ط­ط§ظ„ظٹط©
   await db.delete(userSidebarConfig)
     .where(and(eq(userSidebarConfig.businessId, bizId), eq(userSidebarConfig.userId, toUserId)));
 
-  // نسخ الإعدادات
+  // ظ†ط³ط® ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ
   for (const cfg of sourceConfigs) {
     await db.insert(userSidebarConfig).values({
       userId: toUserId,
@@ -52,17 +52,17 @@ sidebarEnhRouter.post('/businesses/:bizId/sidebar-config/copy', bizAuthMiddlewar
   return c.json({ success: true, copiedCount: sourceConfigs.length });
 }));
 
-// 11. إعادة تعيين الإعدادات الافتراضية
-sidebarEnhRouter.post('/businesses/:bizId/sidebar-config/reset/:userId', bizAuthMiddleware(), safeHandler('إعادة تعيين إعدادات السايدبار', async (c) => {
+// 11. ط¥ط¹ط§ط¯ط© طھط¹ظٹظٹظ† ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط§ظپطھط±ط§ط¶ظٹط©
+sidebarEnhRouter.post('/businesses/:bizId/sidebar-config/reset/:userId', bizAuthMiddleware(), safeHandler('ط¥ط¹ط§ط¯ط© طھط¹ظٹظٹظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط³ط§ظٹط¯ط¨ط§ط±', async (c) => {
   const bizId = getBizId(c);
   const userId = parseId(c.req.param('userId'));
-  if (!userId) return c.json({ error: 'معرّف المستخدم غير صالح' }, 400);
+  if (!userId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± طµط§ظ„ط­' }, 400);
 
-  // حذف الإعدادات الحالية
+  // ط­ط°ظپ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط­ط§ظ„ظٹط©
   await db.delete(userSidebarConfig)
     .where(and(eq(userSidebarConfig.businessId, bizId), eq(userSidebarConfig.userId, userId)));
 
-  // جلب كل العناصر وإنشاء إعدادات افتراضية (كل شيء ظاهر)
+  // ط¬ظ„ط¨ ظƒظ„ ط§ظ„ط¹ظ†ط§طµط± ظˆط¥ظ†ط´ط§ط، ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظپطھط±ط§ط¶ظٹط© (ظƒظ„ ط´ظٹط، ط¸ط§ظ‡ط±)
   const allItems = await db.select({ id: sidebarItems.id, sortOrder: sidebarItems.sortOrder })
     .from(sidebarItems)
     .leftJoin(sidebarSections, eq(sidebarItems.sectionId, sidebarSections.id))
@@ -80,3 +80,5 @@ sidebarEnhRouter.post('/businesses/:bizId/sidebar-config/reset/:userId', bizAuth
 
 
 export default sidebarEnhRouter;
+
+

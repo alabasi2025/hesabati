@@ -1,28 +1,28 @@
-/**
- * screens-widget-basic.routes.ts — Phase 15
- * بيانات العناصر الأساسية: stats, log, accounts, chart
+﻿/**
+ * screens-widget-basic.routes.ts â€” Phase 15
+ * ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ†ط§طµط± ط§ظ„ط£ط³ط§ط³ظٹط©: stats, log, accounts, chart
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, desc, between, gte, lte } from 'drizzle-orm';
 import {
   businesses, accounts, accountBalances, vouchers, voucherLines,
   funds, fundBalances, screenWidgets, screenWidgetAccounts, screenWidgetWarehouses,
   warehouseOperations, warehouseOperationItems, inventoryItems,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
-import { getBizId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId } from '../../middleware/helpers.ts';
+import { getBizId } from './_shared/context-helpers.ts';
 
 const widgetBasicApi = new Hono();
 
-// جلب إحصائيات الشاشة المخصصة (KPIs)
-widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('جلب إحصائيات العناصر', async (c) => {
+// ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ط´ط§ط´ط© ط§ظ„ظ…ط®طµطµط© (KPIs)
+widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ط¹ظ†ط§طµط±', async (c) => {
   const bizId = getBizId(c);
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
 
-  // إجمالي التحصيل (receipt vouchers)
+  // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طھط­طµظٹظ„ (receipt vouchers)
   const receiptResult = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(total_debit AS NUMERIC)), 0) as total
     FROM journal_entries
@@ -30,13 +30,13 @@ widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeH
     AND EXISTS (
       SELECT 1 FROM operation_types ot
       WHERE ot.id = journal_entries.operation_type_id
-      AND (ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%')
+      AND (ot.voucher_type = 'receipt' OR je.category ILIKE '%طھط­طµظٹظ„%' OR ot.name ILIKE '%طھط­طµظٹظ„%')
     )
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
   `);
 
-  // إجمالي الصرف (payment vouchers)
+  // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طµط±ظپ (payment vouchers)
   const paymentResult = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(total_debit AS NUMERIC)), 0) as total
     FROM journal_entries
@@ -44,13 +44,13 @@ widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeH
     AND EXISTS (
       SELECT 1 FROM operation_types ot
       WHERE ot.id = journal_entries.operation_type_id
-      AND (ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%')
+      AND (ot.voucher_type = 'payment' OR je.category ILIKE '%طµط±ظپ%' OR je.category ILIKE '%ظ…طµط±ظˆظپط§طھ%' OR ot.name ILIKE '%طµط±ظپ%' OR ot.name ILIKE '%ظ…طµط±ظˆظپط§طھ%')
     )
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
   `);
 
-  // عدد العمليات
+  // ط¹ط¯ط¯ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
   const opsResult = await db.execute(sql`
     SELECT COUNT(*) as total FROM journal_entries
     WHERE business_id = ${bizId}
@@ -58,7 +58,7 @@ widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeH
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
   `);
 
-  // صافي الرصيد (مجموع أرصدة الحسابات)
+  // طµط§ظپظٹ ط§ظ„ط±طµظٹط¯ (ظ…ط¬ظ…ظˆط¹ ط£ط±طµط¯ط© ط§ظ„ط­ط³ط§ط¨ط§طھ)
   const balanceResult = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(ab.balance AS NUMERIC)), 0) as total
     FROM account_balances ab
@@ -79,8 +79,8 @@ widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeH
   });
 }));
 
-// جلب سجل العمليات الحقيقي
-widgetBasicApi.get('/businesses/:bizId/widget-log', bizAuthMiddleware(), safeHandler('جلب سجل العمليات للعنصر', async (c) => {
+// ط¬ظ„ط¨ ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ط­ظ‚ظٹظ‚ظٹ
+widgetBasicApi.get('/businesses/:bizId/widget-log', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ظ„ظ„ط¹ظ†طµط±', async (c) => {
   const bizId = getBizId(c);
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
@@ -128,8 +128,8 @@ widgetBasicApi.get('/businesses/:bizId/widget-log', bizAuthMiddleware(), safeHan
   });
 }));
 
-// جلب بيانات مراقبة الحسابات (أرصدة حقيقية + آخر حركات)
-widgetBasicApi.get('/businesses/:bizId/widget-accounts', bizAuthMiddleware(), safeHandler('جلب بيانات مراقبة الحسابات', async (c) => {
+// ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ط­ط³ط§ط¨ط§طھ (ط£ط±طµط¯ط© ط­ظ‚ظٹظ‚ظٹط© + ط¢ط®ط± ط­ط±ظƒط§طھ)
+widgetBasicApi.get('/businesses/:bizId/widget-accounts', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ط­ط³ط§ط¨ط§طھ', async (c) => {
   const bizId = getBizId(c);
   const accountIdsParam = c.req.query('accountIds');
 
@@ -180,8 +180,8 @@ widgetBasicApi.get('/businesses/:bizId/widget-accounts', bizAuthMiddleware(), sa
   return c.json(resultRows);
 }));
 
-// جلب بيانات الرسم البياني (حركات شهرية)
-widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeHandler('جلب بيانات الرسم البياني', async (c) => {
+// ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط±ط³ظ… ط§ظ„ط¨ظٹط§ظ†ظٹ (ط­ط±ظƒط§طھ ط´ظ‡ط±ظٹط©)
+widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط±ط³ظ… ط§ظ„ط¨ظٹط§ظ†ظٹ', async (c) => {
   const bizId = getBizId(c);
   const months = Number.parseInt(c.req.query('months') || '6');
 
@@ -190,8 +190,8 @@ widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeH
       TO_CHAR(je.entry_date, 'YYYY-MM') as period,
       TO_CHAR(je.entry_date, 'Mon') as period_label,
       EXTRACT(MONTH FROM je.entry_date) as month_num,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%طھط­طµظٹظ„%' OR ot.name ILIKE '%طھط­طµظٹظ„%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%طµط±ظپ%' OR je.category ILIKE '%ظ…طµط±ظˆظپط§طھ%' OR ot.name ILIKE '%طµط±ظپ%' OR ot.name ILIKE '%ظ…طµط±ظˆظپط§طھ%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -204,8 +204,8 @@ widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeH
   const resultRows = normalizeDbResult(rows);
 
   const arabicMonths: Record<number, string> = {
-    1: 'يناير', 2: 'فبراير', 3: 'مارس', 4: 'أبريل', 5: 'مايو', 6: 'يونيو',
-    7: 'يوليو', 8: 'أغسطس', 9: 'سبتمبر', 10: 'أكتوبر', 11: 'نوفمبر', 12: 'ديسمبر',
+    1: 'ظٹظ†ط§ظٹط±', 2: 'ظپط¨ط±ط§ظٹط±', 3: 'ظ…ط§ط±ط³', 4: 'ط£ط¨ط±ظٹظ„', 5: 'ظ…ط§ظٹظˆ', 6: 'ظٹظˆظ†ظٹظˆ',
+    7: 'ظٹظˆظ„ظٹظˆ', 8: 'ط£ط؛ط³ط·ط³', 9: 'ط³ط¨طھظ…ط¨ط±', 10: 'ط£ظƒطھظˆط¨ط±', 11: 'ظ†ظˆظپظ…ط¨ط±', 12: 'ط¯ظٹط³ظ…ط¨ط±',
   };
 
   return c.json({
@@ -218,3 +218,4 @@ widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeH
 
 
 export { widgetBasicApi };
+

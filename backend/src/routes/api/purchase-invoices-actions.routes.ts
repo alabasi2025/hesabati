@@ -1,23 +1,23 @@
-/**
- * purchase-invoices-actions.routes.ts — Phase 13
- * تعديل + إضافة بنود + استلام + حذف فواتير الشراء
+﻿/**
+ * purchase-invoices-actions.routes.ts â€” Phase 13
+ * طھط¹ط¯ظٹظ„ + ط¥ط¶ط§ظپط© ط¨ظ†ظˆط¯ + ط§ط³طھظ„ط§ظ… + ط­ط°ظپ ظپظˆط§طھظٹط± ط§ظ„ط´ط±ط§ط،
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
   businesses, purchaseInvoices, purchaseInvoiceItems,
   inventoryItems, warehouses, suppliers, supplierBalances,
   accounts, accountBalances, operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines, auditLog, currencies,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence } from '../middleware/sequencing.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
 
 const piActionsRoutes = new Hono();
 
@@ -25,10 +25,10 @@ piActionsRoutes.put(
   "/businesses/:bizId/purchase-invoices/:id",
   bizAuthMiddleware(),
   checkPermission("purchase_invoices", "update"),
-  safeHandler("تعديل فاتورة مشتريات", async (c: AppContext) => {
+  safeHandler("طھط¹ط¯ظٹظ„ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ", async (c: AppContext) => {
     const bizId = getBizId(c);
     const id = parseId(c.req.param("id"));
-    if (!id) return c.json({ error: "معرّف الفاتورة غير صالح" }, 400);
+    if (!id) return c.json({ error: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± طµط§ظ„ط­" }, 400);
 
     const [existing] = await db
       .select()
@@ -41,14 +41,14 @@ piActionsRoutes.put(
       );
 
     if (!existing) {
-      return c.json({ error: "الفاتورة غير موجودة" }, 404);
+      return c.json({ error: "ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" }, 404);
     }
 
     if (existing.status === "completed" || existing.status === "cancelled") {
-      return c.json({ error: "لا يمكن تعديل فاتورة مكتملة أو ملغاة" }, 400);
+      return c.json({ error: "ظ„ط§ ظٹظ…ظƒظ† طھط¹ط¯ظٹظ„ ظپط§طھظˆط±ط© ظ…ظƒطھظ…ظ„ط© ط£ظˆ ظ…ظ„ط؛ط§ط©" }, 400);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const { items, ...updateData } = body;
 
     const result = await db.transaction(async (tx) => {
@@ -163,11 +163,11 @@ piActionsRoutes.post(
   "/businesses/:bizId/purchase-invoices/:id/confirm",
   bizAuthMiddleware(),
   checkPermission("purchase_invoices", "update"),
-  safeHandler("تأكيد فاتورة مشتريات", async (c: AppContext) => {
+  safeHandler("طھط£ظƒظٹط¯ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ", async (c: AppContext) => {
     const bizId = getBizId(c);
     const userId = getUserId(c);
     const id = parseId(c.req.param("id"));
-    if (!id) return c.json({ error: "معرّف الفاتورة غير صالح" }, 400);
+    if (!id) return c.json({ error: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± طµط§ظ„ط­" }, 400);
 
     const [existing] = await db
       .select()
@@ -180,21 +180,21 @@ piActionsRoutes.post(
       );
 
     if (!existing) {
-      return c.json({ error: "الفاتورة غير موجودة" }, 404);
+      return c.json({ error: "ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" }, 404);
     }
 
     if (existing.status !== "draft") {
-      return c.json({ error: "يمكن تأكيد الفواتير المسودة فقط" }, 400);
+      return c.json({ error: "ظٹظ…ظƒظ† طھط£ظƒظٹط¯ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ط³ظˆط¯ط© ظپظ‚ط·" }, 400);
     }
 
-    // جلب بنود الفاتورة لتحديث المخزون
+    // ط¬ظ„ط¨ ط¨ظ†ظˆط¯ ط§ظ„ظپط§طھظˆط±ط© ظ„طھط­ط¯ظٹط« ط§ظ„ظ…ط®ط²ظˆظ†
     const invoiceItems = await db
       .select()
       .from(purchaseInvoiceItems)
       .where(eq(purchaseInvoiceItems.invoiceId, id));
 
     const result = await db.transaction(async (tx) => {
-      // تحديث حالة الفاتورة
+      // طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ظپط§طھظˆط±ط©
       const [updated] = await tx
         .update(purchaseInvoices)
         .set({
@@ -204,7 +204,7 @@ piActionsRoutes.post(
         .where(eq(purchaseInvoices.id, id))
         .returning();
 
-      // تحديث المخزون لكل بند إن وُجد مستودع
+      // طھط­ط¯ظٹط« ط§ظ„ظ…ط®ط²ظˆظ† ظ„ظƒظ„ ط¨ظ†ط¯ ط¥ظ† ظˆظڈط¬ط¯ ظ…ط³طھظˆط¯ط¹
       if (existing.warehouseId && invoiceItems.length > 0) {
         for (const item of invoiceItems) {
           if (item.inventoryItemId) {
@@ -216,7 +216,7 @@ piActionsRoutes.post(
               unitCost: parseFloat(String(item.unitCost)),
               referenceType: "purchase_invoice",
               referenceId: id,
-              notes: `تأكيد فاتورة مشتريات #${existing.invoiceNumber}`,
+              notes: `طھط£ظƒظٹط¯ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ #${existing.invoiceNumber}`,
               createdBy: userId,
             }, tx as any);
           }
@@ -234,16 +234,16 @@ piActionsRoutes.post(
   "/businesses/:bizId/purchase-invoices/:id/receive",
   bizAuthMiddleware(),
   checkPermission("purchase_invoices", "update"),
-  safeHandler("استلام بضائع فاتورة مشتريات", async (c: AppContext) => {
+  safeHandler("ط§ط³طھظ„ط§ظ… ط¨ط¶ط§ط¦ط¹ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ", async (c: AppContext) => {
     const bizId = getBizId(c);
     const id = parseId(c.req.param("id"));
-    if (!id) return c.json({ error: "معرّف الفاتورة غير صالح" }, 400);
+    if (!id) return c.json({ error: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± طµط§ظ„ط­" }, 400);
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     const { receivedItems } = body;
 
     if (!Array.isArray(receivedItems) || receivedItems.length === 0) {
-      return c.json({ error: "يجب تحديد الكميات المستلمة" }, 400);
+      return c.json({ error: "ظٹط¬ط¨ طھط­ط¯ظٹط¯ ط§ظ„ظƒظ…ظٹط§طھ ط§ظ„ظ…ط³طھظ„ظ…ط©" }, 400);
     }
 
     const [existing] = await db
@@ -257,11 +257,11 @@ piActionsRoutes.post(
       );
 
     if (!existing) {
-      return c.json({ error: "الفاتورة غير موجودة" }, 404);
+      return c.json({ error: "ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" }, 404);
     }
 
     if (existing.status === "cancelled") {
-      return c.json({ error: "الفاتورة ملغاة" }, 400);
+      return c.json({ error: "ط§ظ„ظپط§طھظˆط±ط© ظ…ظ„ط؛ط§ط©" }, 400);
     }
 
     const result = await db.transaction(async (tx) => {
@@ -297,7 +297,7 @@ piActionsRoutes.post(
               allItemsFullyReceived = false;
             }
 
-            // تحديث المخزون عند الاستلام الفعلي
+            // طھط­ط¯ظٹط« ط§ظ„ظ…ط®ط²ظˆظ† ط¹ظ†ط¯ ط§ظ„ط§ط³طھظ„ط§ظ… ط§ظ„ظپط¹ظ„ظٹ
             if (existing.warehouseId && invoiceItem.inventoryItemId) {
               await processStockMovement(bizId, {
                 warehouseId: existing.warehouseId,
@@ -307,7 +307,7 @@ piActionsRoutes.post(
                 unitCost: parseFloat(String(invoiceItem.unitCost)),
                 referenceType: "purchase_invoice_receive",
                 referenceId: id,
-                notes: `استلام فاتورة مشتريات #${existing.invoiceNumber}`,
+                notes: `ط§ط³طھظ„ط§ظ… ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ #${existing.invoiceNumber}`,
                 createdBy: undefined,
               }, tx as any);
             }
@@ -341,10 +341,10 @@ piActionsRoutes.delete(
   "/businesses/:bizId/purchase-invoices/:id",
   bizAuthMiddleware(),
   checkPermission("purchase_invoices", "delete"),
-  safeHandler("حذف فاتورة مشتريات", async (c: AppContext) => {
+  safeHandler("ط­ط°ظپ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ", async (c: AppContext) => {
     const bizId = getBizId(c);
     const id = parseId(c.req.param("id"));
-    if (!id) return c.json({ error: "معرّف الفاتورة غير صالح" }, 400);
+    if (!id) return c.json({ error: "ظ…ط¹ط±ظ‘ظپ ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± طµط§ظ„ط­" }, 400);
 
     const [existing] = await db
       .select()
@@ -357,11 +357,11 @@ piActionsRoutes.delete(
       );
 
     if (!existing) {
-      return c.json({ error: "الفاتورة غير موجودة" }, 404);
+      return c.json({ error: "ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" }, 404);
     }
 
     if (existing.status === "completed") {
-      return c.json({ error: "لا يمكن حذف فاتورة مكتملة" }, 400);
+      return c.json({ error: "ظ„ط§ ظٹظ…ظƒظ† ط­ط°ظپ ظپط§طھظˆط±ط© ظ…ظƒطھظ…ظ„ط©" }, 400);
     }
 
     await db.transaction(async (tx) => {
@@ -375,7 +375,9 @@ piActionsRoutes.delete(
   })
 );
 
-export default purchaseInvoicesRoutes;
+export default piActionsRoutes;
 
 
 export { piActionsRoutes };
+
+

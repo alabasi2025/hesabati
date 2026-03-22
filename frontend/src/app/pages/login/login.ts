@@ -22,7 +22,7 @@ export class LoginComponent {
   showPassword = signal(false);
 
   async onLogin() {
-    if (!this.username() || !this.password()) {
+    if (!this.username().trim() || !this.password().trim()) {
       this.error.set('يرجى إدخال اسم المستخدم وكلمة المرور');
       return;
     }

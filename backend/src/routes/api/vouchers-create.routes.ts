@@ -1,9 +1,9 @@
-/**
- * vouchers-create.routes.ts — Phase 13
- * إنشاء السندات: POST /businesses/:bizId/vouchers-multi
+﻿/**
+ * vouchers-create.routes.ts â€” Phase 13
+ * ط¥ظ†ط´ط§ط، ط§ظ„ط³ظ†ط¯ط§طھ: POST /businesses/:bizId/vouchers-multi
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
@@ -12,18 +12,18 @@ import {
   operationCategories,
   journalEntries, journalEntryLines,
   users, auditLog,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { validateBody, voucherMultiSchema } from '../middleware/validation.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../engines/transaction.engine.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { normalizeDbResult, getFirstRow } from '../utils/db-result.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
-import type { AppContext } from './api/_shared/types.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
+import type { AppContext } from './_shared/types.ts';
 import { normalizeTreasuryCode, resolveVoucherTreasuryInfo } from './_vouchers-helpers.ts';
 
 interface PeriodStatsRow {
@@ -41,10 +41,10 @@ vouchersCreateRouter.post(
   '/businesses/:bizId/vouchers-multi',
   bizAuthMiddleware(),
   checkPermission('vouchers', 'create'),
-  safeHandler('إضافة سند متعدد', async (c) => {
+  safeHandler('ط¥ط¶ط§ظپط© ط³ظ†ط¯ ظ…طھط¹ط¯ط¯', async (c) => {
     const bizId = getBizId(c);
     const userId = getUserId(c) ?? 0;
-    const body = normalizeBody(await c.req.json());
+    const body = await getBody(c);
 
     const validation = validateBody(voucherMultiSchema, body);
     if (!validation.success) return c.json({ error: validation.error }, 400);
@@ -56,8 +56,8 @@ vouchersCreateRouter.post(
           .from(operationTypes)
           .where(and(eq(operationTypes.id, data.operationTypeId), eq(operationTypes.businessId, bizId)))
       : [null];
-    if (data.operationTypeId && !opType) return c.json({ error: 'نوع العملية غير موجود' }, 404);
-    if (opType?.isActive === false) return c.json({ error: 'نوع العملية غير مفعّل' }, 400);
+    if (data.operationTypeId && !opType) return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+    if (opType?.isActive === false) return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± ظ…ظپط¹ظ‘ظ„' }, 400);
 
     const currencyId = data.currencyId || 1;
     const vType = (opType?.voucherType as any) || data.voucherType || 'receipt';
@@ -69,7 +69,7 @@ vouchersCreateRouter.post(
       ? (data.toAccountId ?? opType?.sourceAccountId ?? null)
       : (data.fromAccountId ?? opType?.sourceAccountId ?? null);
 
-    // عند اختيار صندوق كخزينة، نستخدم حساب خزينة داخلي موحّد لمعالجة الأثر الداخلي
+    // ط¹ظ†ط¯ ط§ط®طھظٹط§ط± طµظ†ط¯ظˆظ‚ ظƒط®ط²ظٹظ†ط©طŒ ظ†ط³طھط®ط¯ظ… ط­ط³ط§ط¨ ط®ط²ظٹظ†ط© ط¯ط§ط®ظ„ظٹ ظ…ظˆط­ظ‘ط¯ ظ„ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ط£ط«ط± ط§ظ„ط¯ط§ط®ظ„ظٹ
     if (!treasuryAccountId && treasuryFundId) {
       const accRows = await db.execute(sql`
         SELECT id FROM accounts
@@ -84,7 +84,7 @@ vouchersCreateRouter.post(
       } else {
         const [created] = await db.insert(accounts).values({
           businessId: bizId,
-          name: 'حساب الصناديق (آلي)',
+          name: 'ط­ط³ط§ط¨ ط§ظ„طµظ†ط§ط¯ظٹظ‚ (ط¢ظ„ظٹ)',
           accountType: 'fund',
           canCreateVoucher: false,
           canApproveVoucher: false,
@@ -94,7 +94,7 @@ vouchersCreateRouter.post(
       }
     }
     if (!treasuryAccountId) {
-      return c.json({ error: 'الخزينة مطلوبة. اختر صندوقاً أو حساب خزينة صالحاً قبل الحفظ' }, 400);
+      return c.json({ error: 'ط§ظ„ط®ط²ظٹظ†ط© ظ…ط·ظ„ظˆط¨ط©. ط§ط®طھط± طµظ†ط¯ظˆظ‚ط§ظ‹ ط£ظˆ ط­ط³ط§ط¨ ط®ط²ظٹظ†ط© طµط§ظ„ط­ط§ظ‹ ظ‚ط¨ظ„ ط§ظ„ط­ظپط¸' }, 400);
     }
 
     const voucherDate = data.voucherDate ? new Date(data.voucherDate) : null;
@@ -108,7 +108,7 @@ vouchersCreateRouter.post(
       })
       .filter((e: any) => Number.isFinite(e.amount) && e.amount > 0);
 
-    if (entries.length === 0) return c.json({ error: 'أدخل مبلغاً واحداً على الأقل' }, 400);
+    if (entries.length === 0) return c.json({ error: 'ط£ط¯ط®ظ„ ظ…ط¨ظ„ط؛ط§ظ‹ ظˆط§ط­ط¯ط§ظ‹ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„' }, 400);
 
     const total = entries.reduce((s: number, e: any) => s + e.amount, 0);
     const entryLineType: 'debit' | 'credit' = vType === 'receipt' ? 'credit' : 'debit';
@@ -147,7 +147,7 @@ vouchersCreateRouter.post(
           stationId: data.stationId || null,
           employeeId: data.employeeId || null,
           supplierId: data.supplierId || null,
-          // ربط الخزينة بالصندوق/الحساب حسب نوع السند
+          // ط±ط¨ط· ط§ظ„ط®ط²ظٹظ†ط© ط¨ط§ظ„طµظ†ط¯ظˆظ‚/ط§ظ„ط­ط³ط§ط¨ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ط³ظ†ط¯
           toFundId: vType === 'receipt' ? treasuryFundId : null,
           fromFundId: vType === 'payment' ? treasuryFundId : null,
           fromAccountId: vType === 'payment' ? treasuryAccountId : null,
@@ -255,7 +255,7 @@ vouchersCreateRouter.post(
       try { wsService.notifyNewVoucher(bizId, createdVoucher); } catch { /* optional */ }
       return c.json(createdVoucher, 201);
     } catch (err: unknown) {
-      return c.json({ error: toErrorMessage(err) || 'فشل في تنفيذ المعاملة' }, 400);
+      return c.json({ error: toErrorMessage(err) || 'ظپط´ظ„ ظپظٹ طھظ†ظپظٹط° ط§ظ„ظ…ط¹ط§ظ…ظ„ط©' }, 400);
     }
   })
 );
@@ -263,3 +263,5 @@ vouchersCreateRouter.post(
 
 
 export { vouchersCreateRouter };
+
+

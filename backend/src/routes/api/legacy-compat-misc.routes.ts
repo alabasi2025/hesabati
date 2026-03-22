@@ -1,23 +1,23 @@
-/**
- * legacy-compat-misc.routes.ts — Phase 13
- * مسارات توافق متنوعة (collections, currencies, attachments, legacy)
+﻿/**
+ * legacy-compat-misc.routes.ts â€” Phase 13
+ * ظ…ط³ط§ط±ط§طھ طھظˆط§ظپظ‚ ظ…طھظ†ظˆط¹ط© (collections, currencies, attachments, legacy)
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, and } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, funds, accounts,
   attachments, stations, employees, operationTypes,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId } from '../../middleware/helpers.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 const legacyMiscApi = new Hono();
 
-// ===================== التحصيل اليومي (Compatibility via vouchers) =====================
-legacyMiscApi.get('/businesses/:bizId/collections', bizAuthMiddleware(), safeHandler('جلب التحصيلات', async (c) => {
+// ===================== ط§ظ„طھط­طµظٹظ„ ط§ظ„ظٹظˆظ…ظٹ (Compatibility via vouchers) =====================
+legacyMiscApi.get('/businesses/:bizId/collections', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط§ظ„طھط­طµظٹظ„ط§طھ', async (c) => {
   const bizId = getBizId(c);
   const stationId = c.req.query('stationId');
   const dateStr = c.req.query('date');
@@ -45,50 +45,50 @@ legacyMiscApi.get('/businesses/:bizId/collections', bizAuthMiddleware(), safeHan
   return c.json(rows);
 }));
 
-legacyMiscApi.get('/collections/:id', safeHandler('جلب تفاصيل تحصيل', async (c) => {
+legacyMiscApi.get('/collections/:id', safeHandler('ط¬ظ„ط¨ طھظپط§طµظٹظ„ طھط­طµظٹظ„', async (c) => {
   return c.json({
-    error: 'هذا المسار قديم. استخدم /businesses/:bizId/vouchers أو شاشة التحصيل الجديدة المعتمدة على السندات.',
+    error: 'ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط± ظ‚ط¯ظٹظ…. ط§ط³طھط®ط¯ظ… /businesses/:bizId/vouchers ط£ظˆ ط´ط§ط´ط© ط§ظ„طھط­طµظٹظ„ ط§ظ„ط¬ط¯ظٹط¯ط© ط§ظ„ظ…ط¹طھظ…ط¯ط© ط¹ظ„ظ‰ ط§ظ„ط³ظ†ط¯ط§طھ.',
   }, 410);
 }));
 
-legacyMiscApi.post('/businesses/:bizId/collections', bizAuthMiddleware(), safeHandler('إضافة تحصيل', async (c) => {
+legacyMiscApi.post('/businesses/:bizId/collections', bizAuthMiddleware(), safeHandler('ط¥ط¶ط§ظپط© طھط­طµظٹظ„', async (c) => {
   return c.json({
-    error: 'تم إيقاف هذا المسار. استخدم /businesses/:bizId/vouchers/multi لإنشاء سندات التحصيل.',
+    error: 'طھظ… ط¥ظٹظ‚ط§ظپ ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط±. ط§ط³طھط®ط¯ظ… /businesses/:bizId/vouchers/multi ظ„ط¥ظ†ط´ط§ط، ط³ظ†ط¯ط§طھ ط§ظ„طھط­طµظٹظ„.',
   }, 410);
 }));
 
-// ===================== التوريد =====================
-legacyMiscApi.post('/collections/:id/deliveries', safeHandler('إضافة توريد', async (c) => {
+// ===================== ط§ظ„طھظˆط±ظٹط¯ =====================
+legacyMiscApi.post('/collections/:id/deliveries', safeHandler('ط¥ط¶ط§ظپط© طھظˆط±ظٹط¯', async (c) => {
   return c.json({
-    error: 'تم إيقاف هذا المسار. استخدم /businesses/:bizId/vouchers/multi لإنشاء سندات التوريد/الصرف.',
+    error: 'طھظ… ط¥ظٹظ‚ط§ظپ ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط±. ط§ط³طھط®ط¯ظ… /businesses/:bizId/vouchers/multi ظ„ط¥ظ†ط´ط§ط، ط³ظ†ط¯ط§طھ ط§ظ„طھظˆط±ظٹط¯/ط§ظ„طµط±ظپ.',
   }, 410);
 }));
 
-// ===================== العملات =====================
-legacyMiscApi.get('/currencies', safeHandler('جلب العملات', async (c) => {
+// ===================== ط§ظ„ط¹ظ…ظ„ط§طھ =====================
+legacyMiscApi.get('/currencies', safeHandler('ط¬ظ„ط¨ ط§ظ„ط¹ظ…ظ„ط§طھ', async (c) => {
   const rows = await db.select().from(currencies).orderBy(currencies.id);
   return c.json(rows);
 }));
 
-// ===================== المرفقات =====================
-legacyMiscApi.get('/attachments/:entityType/:entityId', safeHandler('جلب المرفقات', async (c) => {
+// ===================== ط§ظ„ظ…ط±ظپظ‚ط§طھ =====================
+legacyMiscApi.get('/attachments/:entityType/:entityId', safeHandler('ط¬ظ„ط¨ ط§ظ„ظ…ط±ظپظ‚ط§طھ', async (c) => {
   const entityType = c.req.param('entityType');
   const entityId = parseId(c.req.param('entityId'));
-  if (!entityId) return c.json({ error: 'معرّف الكيان غير صالح' }, 400);
+  if (!entityId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ظƒظٹط§ظ† ط؛ظٹط± طµط§ظ„ط­' }, 400);
   const rows = await db.select().from(attachments)
     .where(and(eq(attachments.entityType, entityType), eq(attachments.entityId, entityId)));
   return c.json(rows);
 }));
 
 // ===================== Legacy routes =====================
-// ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/stations بدلاً من هذا المسار - يسرب بيانات جميع الأعمال
-legacyMiscApi.get('/stations', safeHandler('جلب المحطات (legacy)', async (c) => {
+// âڑ ï¸ڈ DEPRECATED: ظٹط¬ط¨ ط§ط³طھط®ط¯ط§ظ… /businesses/:bizId/stations ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط± - ظٹط³ط±ط¨ ط¨ظٹط§ظ†ط§طھ ط¬ظ…ظٹط¹ ط§ظ„ط£ط¹ظ…ط§ظ„
+legacyMiscApi.get('/stations', safeHandler('ط¬ظ„ط¨ ط§ظ„ظ…ط­ط·ط§طھ (legacy)', async (c) => {
   const rows = await db.select().from(stations).orderBy(stations.id);
   return c.json(rows);
 }));
 
-// ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/employees بدلاً من هذا المسار - يسرب بيانات جميع الأعمال
-legacyMiscApi.get('/employees', safeHandler('جلب الموظفين (legacy)', async (c) => {
+// âڑ ï¸ڈ DEPRECATED: ظٹط¬ط¨ ط§ط³طھط®ط¯ط§ظ… /businesses/:bizId/employees ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط± - ظٹط³ط±ط¨ ط¨ظٹط§ظ†ط§طھ ط¬ظ…ظٹط¹ ط§ظ„ط£ط¹ظ…ط§ظ„
+legacyMiscApi.get('/employees', safeHandler('ط¬ظ„ط¨ ط§ظ„ظ…ظˆط¸ظپظٹظ† (legacy)', async (c) => {
   const rows = await db.select({
     id: employees.id, fullName: employees.fullName, jobTitle: employees.jobTitle,
     stationId: employees.stationId, department: employees.department,
@@ -101,24 +101,26 @@ legacyMiscApi.get('/employees', safeHandler('جلب الموظفين (legacy)', 
   return c.json(rows);
 }));
 
-// ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/accounts بدلاً من هذا المسار - يسرب بيانات جميع الأعمال
-legacyMiscApi.get('/accounts', safeHandler('جلب الحسابات (legacy)', async (c) => {
+// âڑ ï¸ڈ DEPRECATED: ظٹط¬ط¨ ط§ط³طھط®ط¯ط§ظ… /businesses/:bizId/accounts ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط± - ظٹط³ط±ط¨ ط¨ظٹط§ظ†ط§طھ ط¬ظ…ظٹط¹ ط§ظ„ط£ط¹ظ…ط§ظ„
+legacyMiscApi.get('/accounts', safeHandler('ط¬ظ„ط¨ ط§ظ„ط­ط³ط§ط¨ط§طھ (legacy)', async (c) => {
   const rows = await db.select().from(accounts).orderBy(accounts.accountType, accounts.name);
   return c.json(rows);
 }));
 
-// ⚠️ DEPRECATED: يجب استخدام /businesses/:bizId/funds بدلاً من هذا المسار - يسرب بيانات جميع الأعمال
-legacyMiscApi.get('/funds', safeHandler('جلب الصناديق (legacy)', async (c) => {
+// âڑ ï¸ڈ DEPRECATED: ظٹط¬ط¨ ط§ط³طھط®ط¯ط§ظ… /businesses/:bizId/funds ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ظ‡ط°ط§ ط§ظ„ظ…ط³ط§ط± - ظٹط³ط±ط¨ ط¨ظٹط§ظ†ط§طھ ط¬ظ…ظٹط¹ ط§ظ„ط£ط¹ظ…ط§ظ„
+legacyMiscApi.get('/funds', safeHandler('ط¬ظ„ط¨ ط§ظ„طµظ†ط§ط¯ظٹظ‚ (legacy)', async (c) => {
   const rows = await db.select().from(funds).orderBy(funds.fundType, funds.name);
   return c.json(rows);
 }));
 
 
-// ── المسارات المستخرجة في Phase 4 ───────────────────────────────────────────
-// fund-types.routes.ts  → /businesses/:bizId/fund-types, bank-types...
-// sidebar.routes.ts     → /businesses/:bizId/sidebar-sections...
-// screens.routes.ts     → /businesses/:bizId/screens, widgets...
+// â”€â”€ ط§ظ„ظ…ط³ط§ط±ط§طھ ط§ظ„ظ…ط³طھط®ط±ط¬ط© ظپظٹ Phase 4 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// fund-types.routes.ts  â†’ /businesses/:bizId/fund-types, bank-types...
+// sidebar.routes.ts     â†’ /businesses/:bizId/sidebar-sections...
+// screens.routes.ts     â†’ /businesses/:bizId/screens, widgets...
 
 
 
 export { legacyMiscApi };
+
+

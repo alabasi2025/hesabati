@@ -12,7 +12,7 @@ import {
   employees,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import { getBizId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
@@ -49,7 +49,7 @@ categoriesExpensesRoutes.get('/businesses/:bizId/expense-categories', bizAuthMid
 
 categoriesExpensesRoutes.post('/businesses/:bizId/expense-categories', bizAuthMiddleware(), safeHandler('إضافة تصنيف مصروفات', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [created] = await db.insert(expenseCategories).values({ ...body, businessId: bizId }).returning();
   return c.json(created, 201);
 }));
@@ -60,7 +60,7 @@ categoriesExpensesRoutes.put('/expense-categories/:id', safeHandler('تعديل 
   const [rec] = await db.select().from(expenseCategories).where(eq(expenseCategories.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(expenseCategories).set({ ...body, updatedAt: new Date() }).where(eq(expenseCategories.id, id)).returning();
   if (!updated) return c.json({ error: 'تصنيف غير موجود' }, 404);
   return c.json(updated);
@@ -90,7 +90,7 @@ categoriesExpensesRoutes.get('/businesses/:bizId/expense-budget', bizAuthMiddlew
 
 categoriesExpensesRoutes.post('/businesses/:bizId/expense-budget', bizAuthMiddleware(), safeHandler('إضافة بند ميزانية', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+  const body = (await getBody(c)) as Record<string, unknown>;
   const [created] = await db.insert(expenseBudget).values({
     businessId: bizId,
     name: String(body.name ?? ''),
@@ -111,7 +111,7 @@ categoriesExpensesRoutes.put('/expense-budget/:id', safeHandler('تعديل بن
   const [rec] = await db.select().from(expenseBudget).where(eq(expenseBudget.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+  const body = (await getBody(c)) as Record<string, unknown>;
   const [updated] = await db.update(expenseBudget).set({
     name: body.name as string,
     stationId: (body.stationId as number | null) ?? null,
@@ -170,7 +170,7 @@ categoriesExpensesRoutes.get('/businesses/:bizId/salaries', bizAuthMiddleware(),
 
 categoriesExpensesRoutes.post('/businesses/:bizId/salaries', bizAuthMiddleware(), safeHandler('إضافة سجل راتب', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+  const body = (await getBody(c)) as Record<string, unknown>;
   const baseSalary = Number(body.baseSalary ?? 0);
   const advance = Number(body.advance ?? 0);
   const deductions = Number(body.deductions ?? 0);
@@ -198,7 +198,7 @@ categoriesExpensesRoutes.put('/salaries/:id', safeHandler('تعديل سجل ر�
   const [rec] = await db.select().from(salaryRecords).where(eq(salaryRecords.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+  const body = (await getBody(c)) as Record<string, unknown>;
   const baseSalary = Number(body.baseSalary ?? 0);
   const advance = Number(body.advance ?? 0);
   const deductions = Number(body.deductions ?? 0);

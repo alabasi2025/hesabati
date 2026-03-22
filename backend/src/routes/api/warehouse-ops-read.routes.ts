@@ -1,25 +1,25 @@
-/**
- * warehouse-ops-read.routes.ts — Phase 15
- * عمليات المخزن: قراءة وتقارير
+﻿/**
+ * warehouse-ops-read.routes.ts â€” Phase 15
+ * ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†: ظ‚ط±ط§ط،ط© ظˆطھظ‚ط§ط±ظٹط±
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import {
   businesses, warehouses, warehouseOperations, warehouseOperationItems,
   inventoryItems, inventoryStock, inventoryMovements,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
-import { getBizId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId } from '../../middleware/helpers.ts';
+import { getBizId } from './_shared/context-helpers.ts';
 
 const warehouseOpsReadRoutes = new Hono();
 
-warehouseOpsReadRoutes.get('/warehouse-operations/:id', safeHandler('جلب تفاصيل عملية مخزنية', async (c) => {
+warehouseOpsReadRoutes.get('/warehouse-operations/:id', safeHandler('ط¬ظ„ط¨ طھظپط§طµظٹظ„ ط¹ظ…ظ„ظٹط© ظ…ط®ط²ظ†ظٹط©', async (c) => {
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف العملية غير صالح' }, 400);
+  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± طµط§ظ„ط­' }, 400);
   const [operation] = await db.select().from(warehouseOperations).where(eq(warehouseOperations.id, id));
-  if (!operation) return c.json({ error: 'العملية المخزنية غير موجودة' }, 404);
+  if (!operation) return c.json({ error: 'ط§ظ„ط¹ظ…ظ„ظٹط© ط§ظ„ظ…ط®ط²ظ†ظٹط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©' }, 404);
   const opErr = await requireResourceOwnership(c, operation);
   if (opErr) return opErr;
   const items = await db.select().from(warehouseOperationItems)
@@ -42,11 +42,11 @@ warehouseOpsReadRoutes.get('/warehouse-operations/:id', safeHandler('جلب تف
   return c.json({ ...operation, items, operationType, sourceWarehouse, destinationWarehouse });
 }));
 
-// جلب مخزون مخزن
-warehouseOpsReadRoutes.get('/businesses/:bizId/warehouses/:warehouseId/inventory', bizAuthMiddleware(), safeHandler('جلب مخزون المخزن', async (c) => {
+// ط¬ظ„ط¨ ظ…ط®ط²ظˆظ† ظ…ط®ط²ظ†
+warehouseOpsReadRoutes.get('/businesses/:bizId/warehouses/:warehouseId/inventory', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ظ…ط®ط²ظˆظ† ط§ظ„ظ…ط®ط²ظ†', async (c) => {
   const bizId = getBizId(c);
   const warehouseId = parseId(c.req.param('warehouseId'));
-  if (!warehouseId) return c.json({ error: 'معرّف المخزن غير صالح' }, 400);
+  if (!warehouseId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ط®ط²ظ† ط؛ظٹط± طµط§ظ„ط­' }, 400);
   const result = await db.execute(sql`
     SELECT
       woi.item_name,
@@ -90,8 +90,8 @@ warehouseOpsReadRoutes.get('/businesses/:bizId/warehouses/:warehouseId/inventory
   return c.json(filteredRows);
 }));
 
-// جلب كل العمليات المخزنية للعمل
-warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHandler('جلب كل العمليات المخزنية', async (c) => {
+// ط¬ظ„ط¨ ظƒظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†ظٹط© ظ„ظ„ط¹ظ…ظ„
+warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ظƒظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†ظٹط©', async (c) => {
   const bizId = getBizId(c);
   const opType = c.req.query('type');
   const warehouseId = c.req.query('warehouseId');
@@ -119,13 +119,13 @@ warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations', bizAuthMid
   return c.json(rows);
 }));
 
-// ملخص مخزون عدة مخازن
-warehouseOpsReadRoutes.get('/businesses/:bizId/inventory-summary', bizAuthMiddleware(), safeHandler('ملخص مخزون عدة مخازن', async (c) => {
+// ظ…ظ„ط®طµ ظ…ط®ط²ظˆظ† ط¹ط¯ط© ظ…ط®ط§ط²ظ†
+warehouseOpsReadRoutes.get('/businesses/:bizId/inventory-summary', bizAuthMiddleware(), safeHandler('ظ…ظ„ط®طµ ظ…ط®ط²ظˆظ† ط¹ط¯ط© ظ…ط®ط§ط²ظ†', async (c) => {
   const bizId = getBizId(c);
   const warehouseIdsParam = c.req.query('warehouseIds');
-  if (!warehouseIdsParam) return c.json({ error: 'يجب تحديد المخازن' }, 400);
+  if (!warehouseIdsParam) return c.json({ error: 'ظٹط¬ط¨ طھط­ط¯ظٹط¯ ط§ظ„ظ…ط®ط§ط²ظ†' }, 400);
   const warehouseIds = warehouseIdsParam.split(',').map(Number).filter((n: number) => !Number.isNaN(n) && n > 0);
-  if (warehouseIds.length === 0) return c.json({ error: 'معرّفات المخازن غير صالحة' }, 400);
+  if (warehouseIds.length === 0) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپط§طھ ط§ظ„ظ…ط®ط§ط²ظ† ط؛ظٹط± طµط§ظ„ط­ط©' }, 400);
   const allInventory: any[] = [];
   for (const whId of warehouseIds) {
     const result = await db.execute(sql`
@@ -177,14 +177,14 @@ warehouseOpsReadRoutes.get('/businesses/:bizId/inventory-summary', bizAuthMiddle
   return c.json({ items: allInventory, summary: { totalItems, totalQuantity, totalCost, warehouseCount: warehouseIds.length } });
 }));
 
-// ملخص العمليات المخزنية
-warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations-summary', bizAuthMiddleware(), safeHandler('ملخص العمليات المخزنية', async (c) => {
+// ظ…ظ„ط®طµ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†ظٹط©
+warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations-summary', bizAuthMiddleware(), safeHandler('ظ…ظ„ط®طµ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†ظٹط©', async (c) => {
   const bizId = getBizId(c);
   const from = c.req.query('from') || c.req.query('dateFrom');
   const to = c.req.query('to') || c.req.query('dateTo');
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (from && !dateRegex.test(from)) return c.json({ error: 'تنسيق تاريخ البداية غير صالح (YYYY-MM-DD)' }, 400);
-  if (to && !dateRegex.test(to)) return c.json({ error: 'تنسيق تاريخ النهاية غير صالح (YYYY-MM-DD)' }, 400);
+  if (from && !dateRegex.test(from)) return c.json({ error: 'طھظ†ط³ظٹظ‚ طھط§ط±ظٹط® ط§ظ„ط¨ط¯ط§ظٹط© ط؛ظٹط± طµط§ظ„ط­ (YYYY-MM-DD)' }, 400);
+  if (to && !dateRegex.test(to)) return c.json({ error: 'طھظ†ط³ظٹظ‚ طھط§ط±ظٹط® ط§ظ„ظ†ظ‡ط§ظٹط© ط؛ظٹط± طµط§ظ„ط­ (YYYY-MM-DD)' }, 400);
   let query = sql`
     SELECT
       wo.operation_type,
@@ -202,8 +202,9 @@ warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations-summary', bi
   return c.json(rows);
 }));
 
-export default warehouseRoutes;
+export default warehouseOpsReadRoutes;
 
 
 
 export { warehouseOpsReadRoutes };
+

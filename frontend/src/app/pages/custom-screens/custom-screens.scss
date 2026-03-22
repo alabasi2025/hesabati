@@ -311,6 +311,8 @@ $transition: all 0.35s $ease-out;
     }
   }
 }
+
+.empty-state {
   h3 { font-size: 22px; font-weight: 800; color: var(--text-primary); margin: 20px 0 8px; }
   p { color: var(--text-muted); font-size: 15px; margin: 0 0 28px; }
 }

@@ -3,38 +3,7 @@
  * Phase 5 Tests
  */
 
-function describe(name: string, fn: () => void) {
-  console.log('\n📦 ' + name);
-  fn();
-}
-
-function it(name: string, fn: () => void | Promise<void>) {
-  try {
-    const result = fn();
-    if (result instanceof Promise) {
-      result
-        .then(() => console.log('  ✅ ' + name))
-        .catch((err: Error) => console.log('  ❌ ' + name + ': ' + err.message));
-    } else {
-      console.log('  ✅ ' + name);
-    }
-  } catch (err: unknown) {
-    console.log('  ❌ ' + name + ': ' + (err as Error).message);
-  }
-}
-
-function expect(val: unknown) {
-  return {
-    toBe: (expected: unknown) => { if (val !== expected) throw new Error(`Expected "${expected}", got "${val}"`); },
-    toEqual: (expected: unknown) => { if (JSON.stringify(val) !== JSON.stringify(expected)) throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(val)}`); },
-    toBeTruthy: () => { if (!val) throw new Error(`Expected truthy, got "${val}"`); },
-    toBeFalsy: () => { if (val) throw new Error(`Expected falsy, got "${val}"`); },
-    toBeGreaterThan: (n: number) => { if ((val as number) <= n) throw new Error(`Expected > ${n}, got ${val}`); },
-    toContain: (str: string) => { if (!String(val).includes(str)) throw new Error(`Expected to contain "${str}", got "${val}"`); },
-    toMatch: (pattern: RegExp) => { if (!pattern.test(String(val))) throw new Error(`Expected to match ${pattern}, got "${val}"`); },
-    toHaveLength: (len: number) => { if ((val as string).length !== len) throw new Error(`Expected length ${len}, got ${(val as string).length}`); },
-  };
-}
+import { describe, it, expect } from 'vitest';
 
 // ==========================================
 // Test: Arabic Labels (ARABIC_LABELS constant)
@@ -214,5 +183,3 @@ describe('Counter Types', () => {
     expect(COUNTER_TYPES).toContain('journal');
   });
 });
-
-console.log('\n✅ Sequencing Engine Tests Complete');
