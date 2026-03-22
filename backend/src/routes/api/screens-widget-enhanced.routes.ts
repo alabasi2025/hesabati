@@ -1,6 +1,6 @@
-﻿/**
- * screens-widget-enhanced.routes.ts â€” Phase 15
- * ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ†ط§طµط± ط§ظ„ظ…ط­ط³ظ‘ظ†ط© + ط§ظ„ظ…ظ„ط§ط­ط¸ط§طھ + ظ‚ظˆط§ظ„ط¨ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
+/**
+ * screens-widget-enhanced.routes.ts — Phase 15
+ * بيانات العناصر المحسّنة + الملاحظات + قوالب العمليات
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
@@ -19,14 +19,14 @@ const widgetEnhancedApi = new Hono();
 
 // ===================== Enhanced Widget APIs =====================
 
-// ط¥ط­طµط§ط¦ظٹط§طھ ظ…ط­ط³ظ‘ظ†ط© ظ…ط¹ ظپظ„طھط± ظپطھط±ط© ط²ظ…ظ†ظٹط©
-widgetEnhancedApi.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ظ…ط­ط³ظ‘ظ†ط©', async (c) => {
+// إحصائيات محسّنة مع فلتر فترة زمنية
+widgetEnhancedApi.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware(), safeHandler('جلب إحصائيات محسّنة', async (c) => {
   const bizId = getBizId(c);
   const period = c.req.query('period'); // today | week | month | year
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
 
-  // ط­ط³ط§ط¨ ظ†ط·ط§ظ‚ ط§ظ„طھط§ط±ظٹط® ط¨ظ†ط§ط،ظ‹ ط¹ظ„ظ‰ ط§ظ„ظپطھط±ط©
+  // حساب نطاق التاريخ بناءً على الفترة
   let dateCondition = sql``;
   if (dateFrom && dateTo) {
     dateCondition = sql`AND je.entry_date >= ${dateFrom} AND je.entry_date <= ${dateTo}`;
@@ -42,8 +42,8 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddlew
 
   const result = await db.execute(sql`
     SELECT
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%طھط­طµظٹظ„%' OR ot.name ILIKE '%طھط­طµظٹظ„%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%طµط±ظپ%' OR je.category ILIKE '%ظ…طµط±ظˆظپط§طھ%' OR ot.name ILIKE '%طµط±ظپ%' OR ot.name ILIKE '%ظ…طµط±ظˆظپط§طھ%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as total_payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -70,8 +70,8 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddlew
   });
 }));
 
-// ط³ط¬ظ„ ط¹ظ…ظ„ظٹط§طھ ظ…ط­ط³ظ‘ظ† ظ…ط¹ ط¨ط­ط« ظ†طµظٹ ظˆظپظ„طھط± ظ…ط¨ظ„ط؛ ظˆطھط±ظ‚ظٹظ… طµظپط­ط§طھ
-widgetEnhancedApi.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط³ط¬ظ„ ط¹ظ…ظ„ظٹط§طھ ظ…ط­ط³ظ‘ظ†', async (c) => {
+// سجل عمليات محسّن مع بحث نصي وفلتر مبلغ وترقيم صفحات
+widgetEnhancedApi.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), safeHandler('جلب سجل عمليات محسّن', async (c) => {
   const bizId = getBizId(c);
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
@@ -101,7 +101,7 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddlewar
   if (minAmount) conditions = sql`${conditions} AND CAST(je.total_debit AS NUMERIC) >= ${Number.parseFloat(minAmount)}`;
   if (maxAmount) conditions = sql`${conditions} AND CAST(je.total_debit AS NUMERIC) <= ${Number.parseFloat(maxAmount)}`;
 
-  // طھط±طھظٹط¨ ط¯ظٹظ†ط§ظ…ظٹظƒظٹ
+  // ترتيب ديناميكي
   const validSortColumns: Record<string, any> = {
     'entry_date': sql`je.entry_date`,
     'created_at': sql`je.created_at`,
@@ -138,8 +138,8 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddlewar
   });
 }));
 
-// ط±ط³ظ… ط¨ظٹط§ظ†ظٹ ظ…ط­ط³ظ‘ظ† ظ…ط¹ طھط¬ظ…ظٹط¹ ط£ط³ط¨ظˆط¹ظٹ/ط´ظ‡ط±ظٹ/ط³ظ†ظˆظٹ ظˆطھظˆط§ط±ظٹط® ظ…ط®طµطµط©
-widgetEnhancedApi.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط±ط³ظ… ط¨ظٹط§ظ†ظٹ ظ…ط­ط³ظ‘ظ†', async (c) => {
+// رسم بياني محسّن مع تجميع أسبوعي/شهري/سنوي وتواريخ مخصصة
+widgetEnhancedApi.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware(), safeHandler('جلب بيانات رسم بياني محسّن', async (c) => {
   const bizId = getBizId(c);
   const groupBy = c.req.query('groupBy') || 'monthly'; // weekly | monthly | yearly
   const months = Number.parseInt(c.req.query('months') || '6');
@@ -151,15 +151,15 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddlew
     : sql`AND je.entry_date >= (CURRENT_DATE - INTERVAL '1 month' * ${months})`;
 
   const arabicMonths: Record<number, string> = {
-    1: 'ظٹظ†ط§ظٹط±', 2: 'ظپط¨ط±ط§ظٹط±', 3: 'ظ…ط§ط±ط³', 4: 'ط£ط¨ط±ظٹظ„', 5: 'ظ…ط§ظٹظˆ', 6: 'ظٹظˆظ†ظٹظˆ',
-    7: 'ظٹظˆظ„ظٹظˆ', 8: 'ط£ط؛ط³ط·ط³', 9: 'ط³ط¨طھظ…ط¨ط±', 10: 'ط£ظƒطھظˆط¨ط±', 11: 'ظ†ظˆظپظ…ط¨ط±', 12: 'ط¯ظٹط³ظ…ط¨ط±',
+    1: 'يناير', 2: 'فبراير', 3: 'مارس', 4: 'أبريل', 5: 'مايو', 6: 'يونيو',
+    7: 'يوليو', 8: 'أغسطس', 9: 'سبتمبر', 10: 'أكتوبر', 11: 'نوفمبر', 12: 'ديسمبر',
   };
 
   let periodExpr: any, periodLabel: any, orderExpr: any;
 
   if (groupBy === 'weekly') {
     periodExpr = sql`TO_CHAR(je.entry_date, 'IYYY-IW')`;
-    periodLabel = sql`'ط£ط³ط¨ظˆط¹ ' || TO_CHAR(je.entry_date, 'IW')`;
+    periodLabel = sql`'أسبوع ' || TO_CHAR(je.entry_date, 'IW')`;
     orderExpr = sql`TO_CHAR(je.entry_date, 'IYYY-IW')`;
   } else if (groupBy === 'yearly') {
     periodExpr = sql`TO_CHAR(je.entry_date, 'YYYY')`;
@@ -175,8 +175,8 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddlew
     SELECT
       ${periodExpr} as period,
       ${periodLabel} as period_label,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%طھط­طµظٹظ„%' OR ot.name ILIKE '%طھط­طµظٹظ„%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
-      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%طµط±ظپ%' OR je.category ILIKE '%ظ…طµط±ظˆظپط§طھ%' OR ot.name ILIKE '%طµط±ظپ%' OR ot.name ILIKE '%ظ…طµط±ظˆظپط§طھ%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' OR je.category ILIKE '%تحصيل%' OR ot.name ILIKE '%تحصيل%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as receipts,
+      COALESCE(SUM(CASE WHEN ot.voucher_type = 'payment' OR je.category ILIKE '%صرف%' OR je.category ILIKE '%مصروفات%' OR ot.name ILIKE '%صرف%' OR ot.name ILIKE '%مصروفات%' THEN CAST(je.total_debit AS NUMERIC) ELSE 0 END), 0) as payments,
       COUNT(*) as operations_count
     FROM journal_entries je
     LEFT JOIN operation_types ot ON ot.id = je.operation_type_id
@@ -204,29 +204,29 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddlew
   });
 }));
 
-// ط­ظپط¸/ط¬ظ„ط¨ ظ…ظ„ط§ط­ط¸ط§طھ ط§ظ„ط¹ظ†طµط±
-widgetEnhancedApi.get('/widgets/:widgetId/notes', safeHandler('ط¬ظ„ط¨ ظ…ظ„ط§ط­ط¸ط§طھ ط§ظ„ط¹ظ†طµط±', async (c) => {
+// حفظ/جلب ملاحظات العنصر
+widgetEnhancedApi.get('/widgets/:widgetId/notes', safeHandler('جلب ملاحظات العنصر', async (c) => {
   const widgetId = parseId(c.req.param('widgetId'));
-  if (!widgetId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ط¹ظ†طµط± ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!widgetId) return c.json({ error: 'معرّف العنصر غير صالح' }, 400);
   const [widget] = await db.select({ config: screenWidgets.config }).from(screenWidgets).where(eq(screenWidgets.id, widgetId));
-  if (!widget) return c.json({ error: 'ط¹ظ†طµط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (!widget) return c.json({ error: 'عنصر غير موجود' }, 404);
   return c.json({ text: (widget.config as any)?.text || '' });
 }));
 
-widgetEnhancedApi.put('/widgets/:widgetId/notes', safeHandler('ط­ظپط¸ ظ…ظ„ط§ط­ط¸ط§طھ ط§ظ„ط¹ظ†طµط±', async (c) => {
+widgetEnhancedApi.put('/widgets/:widgetId/notes', safeHandler('حفظ ملاحظات العنصر', async (c) => {
   const widgetId = parseId(c.req.param('widgetId'));
   if (!widgetId) return c.json({ error: 'معرّف العنصر غير صالح' }, 400);
   const body = await getBody(c);
   const [widget] = await db.select({ config: screenWidgets.config }).from(screenWidgets).where(eq(screenWidgets.id, widgetId));
-  if (!widget) return c.json({ error: 'ط¹ظ†طµط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (!widget) return c.json({ error: 'عنصر غير موجود' }, 404);
   const baseConfig = widget.config && typeof widget.config === 'object' ? widget.config : {};
   const newConfig = { ...baseConfig, text: body.text || '' };
   const [updated] = await db.update(screenWidgets).set({ config: newConfig, updatedAt: new Date() }).where(eq(screenWidgets.id, widgetId)).returning();
   return c.json(updated);
 }));
 
-// ط¬ظ„ط¨ ظ‚ظˆط§ظ„ط¨ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ظ…ط¹ طھظپط§طµظٹظ„ظ‡ط§ ظ„ط¹ظ†طµط± ط§ظ„ظ‚ظˆط§ظ„ط¨
-widgetEnhancedApi.get('/businesses/:bizId/widget-operation-types', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ظ‚ظˆط§ظ„ط¨ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ظ„ظ„ط¹ظ†طµط±', async (c) => {
+// جلب قوالب العمليات مع تفاصيلها لعنصر القوالب
+widgetEnhancedApi.get('/businesses/:bizId/widget-operation-types', bizAuthMiddleware(), safeHandler('جلب قوالب العمليات للعنصر', async (c) => {
   const bizId = getBizId(c);
   const idsParam = c.req.query('ids');
 
@@ -246,7 +246,7 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-operation-types', bizAuthMiddle
       .orderBy(operationTypes.sortOrder);
   }
 
-  // ط¬ظ„ط¨ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط© ط¨ظƒظ„ ظ†ظˆط¹ ط¹ظ…ظ„ظٹط©
+  // جلب الحسابات المرتبطة بكل نوع عملية
   const opTypeIds = rows.map(r => r.id);
   let opAccounts: any[] = [];
   if (opTypeIds.length > 0) {
@@ -271,13 +271,12 @@ widgetEnhancedApi.get('/businesses/:bizId/widget-operation-types', bizAuthMiddle
 
   return c.json(rows.map(r => ({ ...r, accounts: accMap[r.id] || [] })));
 }));
-// â”€â”€ ط§ظ„ظ…ط³ط§ط±ط§طھ ط§ظ„ظ…ط³طھط®ط±ط¬ط© (Phase 3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// currency.routes.ts    â†’ /businesses/:bizId/exchange-rates
-// rbac.routes.ts        â†’ /businesses/:bizId/roles
-// attachments-enhanced  â†’ /businesses/:bizId/attachments
-// misc-categories       â†’ /businesses/:bizId/warehouse-types
-// screens.engine.ts     â†’ ظٹظڈط³طھط®ط¯ظ… ظ…ط¨ط§ط´ط±ط© ظ…ظ† engines/
+// ── المسارات المستخرجة (Phase 3) ──────────────────────────────────────────────
+// currency.routes.ts    → /businesses/:bizId/exchange-rates
+// rbac.routes.ts        → /businesses/:bizId/roles
+// attachments-enhanced  → /businesses/:bizId/attachments
+// misc-categories       → /businesses/:bizId/warehouse-types
+// screens.engine.ts     → يُستخدم مباشرة من engines/
 
 
 export { widgetEnhancedApi };
-

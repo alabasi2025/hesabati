@@ -1,6 +1,6 @@
-﻿/**
- * warehouse-ops-write.routes.ts â€” Phase 15
- * ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†: ط¥ظ†ط´ط§ط، + ط¬ظ„ط¨ طھظپطµظٹظ„ظٹ
+/**
+ * warehouse-ops-write.routes.ts — Phase 15
+ * عمليات المخزن: إنشاء + جلب تفصيلي
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
@@ -20,10 +20,10 @@ import { logAction } from '../../engines/audit.engine.ts';
 
 const warehouseOpsWriteRoutes = new Hono();
 
-warehouseOpsWriteRoutes.get('/businesses/:bizId/warehouses/:warehouseId/operations', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط®ط²ظ†', async (c) => {
+warehouseOpsWriteRoutes.get('/businesses/:bizId/warehouses/:warehouseId/operations', bizAuthMiddleware(), safeHandler('جلب عمليات المخزن', async (c) => {
   const bizId = getBizId(c);
   const warehouseId = parseId(c.req.param('warehouseId'));
-  if (!warehouseId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ظ…ط®ط²ظ† ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!warehouseId) return c.json({ error: 'معرّف المخزن غير صالح' }, 400);
 
   const rows = await db.select({
     id: warehouseOperations.id,
@@ -50,8 +50,8 @@ warehouseOpsWriteRoutes.get('/businesses/:bizId/warehouses/:warehouseId/operatio
   return c.json(rows);
 }));
 
-// ط¥ظ†ط´ط§ط، ط¹ظ…ظ„ظٹط© ظ…ط®ط²ظ†ظٹط©
-warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPermission('inventory', 'create'), safeHandler('ط¥ظ†ط´ط§ط، ط¹ظ…ظ„ظٹط© ظ…ط®ط²ظ†ظٹط©', async (c) => {
+// إنشاء عملية مخزنية
+warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthMiddleware(), checkPermission('inventory', 'create'), safeHandler('إنشاء عملية مخزنية', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c) ?? 0;
   const body = await getBody(c);
@@ -67,35 +67,35 @@ warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthM
     }
   }
 
-  if (!body.operationTypeId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© (ط§ظ„ظ‚ط§ظ„ط¨) ظ…ط·ظ„ظˆط¨' }, 400);
-  if (!body.operationType) return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط§ظ„ظ…ط®ط²ظ†ظٹط© ظ…ط·ظ„ظˆط¨' }, 400);
+  if (!body.operationTypeId) return c.json({ error: 'معرّف نوع العملية (القالب) مطلوب' }, 400);
+  if (!body.operationType) return c.json({ error: 'نوع العملية المخزنية مطلوب' }, 400);
 
   const userPermissions = c.get('userPermissions') as { isAdmin?: boolean; constraints?: unknown } | undefined;
   const constraintsCheck = validateConstraints(userPermissions ?? {}, { operationTypeId: body.operationTypeId });
   if (!constraintsCheck.valid) return c.json({ error: constraintsCheck.error }, 403);
 
   if (!body.sourceWarehouseId && !body.destinationWarehouseId) {
-    return c.json({ error: 'ظٹط¬ط¨ طھط­ط¯ظٹط¯ ظ…ط®ط²ظ† ظ…طµط¯ط± ط£ظˆ ظ…ط®ط²ظ† ظˆط¬ظ‡ط©' }, 400);
+    return c.json({ error: 'يجب تحديد مخزن مصدر أو مخزن وجهة' }, 400);
   }
   if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
-    return c.json({ error: 'ظٹط¬ط¨ ط¥ط¶ط§ظپط© طµظ†ظپ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„' }, 400);
+    return c.json({ error: 'يجب إضافة صنف واحد على الأقل' }, 400);
   }
 
   if (body.sourceWarehouseId) {
     const [srcWh] = await db.select().from(warehouses).where(and(eq(warehouses.id, body.sourceWarehouseId), eq(warehouses.businessId, bizId)));
-    if (!srcWh) return c.json({ error: 'ط§ظ„ظ…ط®ط²ظ† ط§ظ„ظ…طµط¯ط± ط؛ظٹط± ظ…ظˆط¬ظˆط¯ ط£ظˆ ظ„ط§ ظٹظ†طھظ…ظٹ ظ„ظ‡ط°ط§ ط§ظ„ط¹ظ…ظ„' }, 400);
+    if (!srcWh) return c.json({ error: 'المخزن المصدر غير موجود أو لا ينتمي لهذا العمل' }, 400);
   }
   if (body.destinationWarehouseId) {
     const [destWh] = await db.select().from(warehouses).where(and(eq(warehouses.id, body.destinationWarehouseId), eq(warehouses.businessId, bizId)));
-    if (!destWh) return c.json({ error: 'ط§ظ„ظ…ط®ط²ظ† ط§ظ„ظˆط¬ظ‡ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ ط£ظˆ ظ„ط§ ظٹظ†طھظ…ظٹ ظ„ظ‡ط°ط§ ط§ظ„ط¹ظ…ظ„' }, 400);
+    if (!destWh) return c.json({ error: 'المخزن الوجهة غير موجود أو لا ينتمي لهذا العمل' }, 400);
   }
 
   const validTypes = ['supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer'];
   if (!validTypes.includes(body.operationType)) {
-    return c.json({ error: `ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± طµط§ظ„ط­. ط§ظ„ط£ظ†ظˆط§ط¹ ط§ظ„ظ…طھط§ط­ط©: ${validTypes.join(', ')}` }, 400);
+    return c.json({ error: `نوع العملية غير صالح. الأنواع المتاحة: ${validTypes.join(', ')}` }, 400);
   }
   if (body.operationType === 'receive_transfer' && !body.relatedOperationId) {
-    return c.json({ error: 'ط§ط³طھظ„ط§ظ… ط§ظ„طھط­ظˆظٹظ„ ظٹطھط·ظ„ط¨ طھط­ط¯ظٹط¯ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ظ…ط±طھط¨ط·ط© (relatedOperationId)' }, 400);
+    return c.json({ error: 'استلام التحويل يتطلب تحديد عملية التحويل المرتبطة (relatedOperationId)' }, 400);
   }
 
   let totalCost = 0;
@@ -222,7 +222,7 @@ warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthM
         inventoryResults.push(result);
       }
     } catch (invErr: unknown) {
-      console.error(`طھط­ط°ظٹط±: ظپط´ظ„ طھط­ط¯ظٹط« ط§ظ„ظ…ط®ط²ظˆظ† ظ„ظ„طµظ†ظپ ${itemName}:`, toErrorMessage(invErr));
+      console.error(`تحذير: فشل تحديث المخزون للصنف ${itemName}:`, toErrorMessage(invErr));
     }
   }
 
@@ -246,14 +246,13 @@ warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthM
           .where(eq(warehouseOperations.id, created.id));
       }
     } catch (txErr: unknown) {
-      console.error('طھط­ط°ظٹط±: ظپط´ظ„ ط¥ظ†ط´ط§ط، ط§ظ„ظ‚ظٹط¯ ط§ظ„ظ…ط­ط§ط³ط¨ظٹ:', toErrorMessage(txErr));
+      console.error('تحذير: فشل إنشاء القيد المحاسبي:', toErrorMessage(txErr));
     }
   }
 
   return c.json({ ...created, inventoryUpdated: inventoryResults.length > 0, inventoryResults, relatedVoucherId }, 201);
 }));
 
-// ط¬ظ„ط¨ طھظپط§طµظٹظ„ ط¹ظ…ظ„ظٹط© ظ…ط®ط²ظ†ظٹط© ظ…ط¹ ط§ظ„ط£طµظ†ط§ظپ
+// جلب تفاصيل عملية مخزنية مع الأصناف
 
 export { warehouseOpsWriteRoutes };
-

@@ -1,5 +1,5 @@
-﻿/**
- * Misc Routes â€” طھطµظ†ظٹظپط§طھ ط§ظ„ظ…ط®ط§ط²ظ† ظˆظ‚ظٹظˆط¯ ط§ظ„ظٹظˆظ…ظٹط©
+/**
+ * Misc Routes — تصنيفات المخازن وقيود اليومية
  * @module routes/api/misc-categories.routes
  * @since Phase 3
  */
@@ -14,14 +14,14 @@ import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 export const miscCategoriesRoutes = new Hono();
 const api = miscCategoriesRoutes;
 
-// ===================== طھطµظ†ظٹظپط§طھ ط§ظ„ظ…ط®ط§ط²ظ† =====================
-api.get('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ طھطµظ†ظٹظپط§طھ ط§ظ„ظ…ط®ط§ط²ظ†', async (c) => {
+// ===================== تصنيفات المخازن =====================
+api.get('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler('جلب تصنيفات المخازن', async (c) => {
   const bizId = getBizId(c);
   const rows = await db.select().from(warehouseTypes).where(eq(warehouseTypes.businessId, bizId)).orderBy(warehouseTypes.sortOrder);
   return c.json(rows);
 }));
 
-api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler('ط¥ط¶ط§ظپط© طھطµظ†ظٹظپ ظ…ط®ط²ظ†', async (c) => {
+api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler('إضافة تصنيف مخزن', async (c) => {
   const bizId = getBizId(c);
   const body = await getBody(c);
   const validation = validateBody(typeSchema, body);
@@ -31,21 +31,21 @@ api.post('/businesses/:bizId/warehouse-types', bizAuthMiddleware(), safeHandler(
   return c.json(created, 201);
 }));
 
-api.put('/warehouse-types/:id', safeHandler('طھط¹ط¯ظٹظ„ طھطµظ†ظٹظپ ظ…ط®ط²ظ†', async (c) => {
+api.put('/warehouse-types/:id', safeHandler('تعديل تصنيف مخزن', async (c) => {
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„طھطµظ†ظٹظپ ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
   const [rec] = await db.select().from(warehouseTypes).where(eq(warehouseTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
   const body = await getBody(c);
   const [updated] = await db.update(warehouseTypes).set({ ...body, updatedAt: new Date() }).where(eq(warehouseTypes.id, id)).returning();
-  if (!updated) return c.json({ error: 'ط§ظ„طھطµظ†ظٹظپ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (!updated) return c.json({ error: 'التصنيف غير موجود' }, 404);
   return c.json(updated);
 }));
 
-api.delete('/warehouse-types/:id', safeHandler('ط­ط°ظپ طھطµظ†ظٹظپ ظ…ط®ط²ظ†', async (c) => {
+api.delete('/warehouse-types/:id', safeHandler('حذف تصنيف مخزن', async (c) => {
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„طھطµظ†ظٹظپ ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
   const [rec] = await db.select().from(warehouseTypes).where(eq(warehouseTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
@@ -53,14 +53,14 @@ api.delete('/warehouse-types/:id', safeHandler('ط­ط°ظپ طھطµظ†ظٹظ
   return c.json({ success: true });
 }));
 
-// ===================== طھطµظ†ظٹظپط§طھ ظ‚ظٹظˆط¯ ط§ظ„ظٹظˆظ…ظٹط© =====================
-api.get('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ طھطµظ†ظٹظپط§طھ ظ‚ظٹظˆط¯ ط§ظ„ظٹظˆظ…ظٹط©', async (c) => {
+// ===================== تصنيفات قيود اليومية =====================
+api.get('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('جلب تصنيفات قيود اليومية', async (c) => {
   const bizId = getBizId(c);
   const rows = await db.select().from(journalEntryCategories).where(eq(journalEntryCategories.businessId, bizId)).orderBy(journalEntryCategories.sortOrder);
   return c.json(rows);
 }));
 
-api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('ط¥ط¶ط§ظپط© طھطµظ†ظٹظپ ظ‚ظٹط¯ ظٹظˆظ…ظٹط©', async (c) => {
+api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('إضافة تصنيف قيد يومية', async (c) => {
   const bizId = getBizId(c);
   const body = await getBody(c);
   const validation = validateBody(journalCategorySchema, body);
@@ -70,21 +70,21 @@ api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), saf
   return c.json(created, 201);
 }));
 
-api.put('/journal-entry-categories/:id', safeHandler('طھط¹ط¯ظٹظ„ طھطµظ†ظٹظپ ظ‚ظٹط¯ ظٹظˆظ…ظٹط©', async (c) => {
+api.put('/journal-entry-categories/:id', safeHandler('تعديل تصنيف قيد يومية', async (c) => {
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„طھطµظ†ظٹظپ ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
   const [rec] = await db.select().from(journalEntryCategories).where(eq(journalEntryCategories.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
   const body = await getBody(c);
   const [updated] = await db.update(journalEntryCategories).set({ ...body, updatedAt: new Date() }).where(eq(journalEntryCategories.id, id)).returning();
-  if (!updated) return c.json({ error: 'ط§ظ„طھطµظ†ظٹظپ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (!updated) return c.json({ error: 'التصنيف غير موجود' }, 404);
   return c.json(updated);
 }));
 
-api.delete('/journal-entry-categories/:id', safeHandler('ط­ط°ظپ طھطµظ†ظٹظپ ظ‚ظٹط¯ ظٹظˆظ…ظٹط©', async (c) => {
+api.delete('/journal-entry-categories/:id', safeHandler('حذف تصنيف قيد يومية', async (c) => {
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„طھطµظ†ظٹظپ ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!id) return c.json({ error: 'معرّف التصنيف غير صالح' }, 400);
   const [rec] = await db.select().from(journalEntryCategories).where(eq(journalEntryCategories.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
@@ -93,5 +93,4 @@ api.delete('/journal-entry-categories/:id', safeHandler('ط­ط°ظپ طھطµظ
 }));
 
 export default api;
-
 

@@ -1,6 +1,6 @@
-﻿/**
- * purchase-invoices-create.routes.ts â€” Phase 13
- * ط¥ظ†ط´ط§ط، ظپظˆط§طھظٹط± ط§ظ„ط´ط±ط§ط،
+/**
+ * purchase-invoices-create.routes.ts — Phase 13
+ * إنشاء فواتير الشراء
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
@@ -28,7 +28,7 @@ piCreateRoutes.post(
   "/businesses/:bizId/purchase-invoices",
   bizAuthMiddleware(),
   checkPermission("purchase_invoices", "create"),
-  safeHandler("ط¥ظ†ط´ط§ط، ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ", async (c: AppContext) => {
+  safeHandler("إنشاء فاتورة مشتريات", async (c: AppContext) => {
     const bizId = getBizId(c);
     const userId = getUserId(c);
     const body = (await getBody(c)) as Record<string, unknown>;
@@ -36,13 +36,13 @@ piCreateRoutes.post(
     const { items, ...invoiceData } = body;
 
     if (!invoiceData.supplierId) {
-      return c.json({ error: "ط§ظ„ظ…ظˆط±ط¯ ظ…ط·ظ„ظˆط¨" }, 400);
+      return c.json({ error: "المورد مطلوب" }, 400);
     }
     if (!invoiceData.currencyId) {
-      return c.json({ error: "ط§ظ„ط¹ظ…ظ„ط© ظ…ط·ظ„ظˆط¨ط©" }, 400);
+      return c.json({ error: "العملة مطلوبة" }, 400);
     }
     if (!Array.isArray(items) || items.length === 0) {
-      return c.json({ error: "ظٹط¬ط¨ ط¥ط¶ط§ظپط© ط¹ظ†طµط± ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„" }, 400);
+      return c.json({ error: "يجب إضافة عنصر واحد على الأقل" }, 400);
     }
 
     const result = await db.transaction(async (tx) => {
@@ -136,5 +136,3 @@ piCreateRoutes.post(
 
 
 export { piCreateRoutes };
-
-

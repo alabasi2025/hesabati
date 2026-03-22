@@ -1,6 +1,6 @@
-﻿/**
- * _vouchers-helpers.ts â€” Phase 13
- * ط¯ظˆط§ظ„ ظ…ط³ط§ط¹ط¯ط© ظ…ط´طھط±ظƒط© ظ„ظ„ط³ظ†ط¯ط§طھ
+/**
+ * _vouchers-helpers.ts — Phase 13
+ * دوال مساعدة مشتركة للسندات
  */
 import { db } from '../../db/index.ts';
 import { eq, and } from 'drizzle-orm';
@@ -93,4 +93,3 @@ async function resolveVoucherTreasuryInfo(
 
 
 export { normalizeTreasuryCode, resolveVoucherTreasuryInfo, type TreasuryPreviewInfo };
-

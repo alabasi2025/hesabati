@@ -1,6 +1,6 @@
-﻿/**
- * vouchers-list.routes.ts â€” Phase 8
- * ط¬ظ„ط¨ ط§ظ„ط³ظ†ط¯ط§طھ: ظ‚ط§ط¦ظ…ط© + ظ…ط¹ط§ظٹظ†ط© ط§ظ„ط±ظ‚ظ… + ط±طµظٹط¯ ط§ظ„ط­ط³ط§ط¨ + طھظپط§طµظٹظ„
+/**
+ * vouchers-list.routes.ts — Phase 8
+ * جلب السندات: قائمة + معاينة الرقم + رصيد الحساب + تفاصيل
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
@@ -112,10 +112,10 @@ async function resolveVoucherTreasuryInfo(
 const vouchersRouter = new Hono();
 
 
-// ===================== طھط­ط³ظٹظ†ط§طھ ط§ظ„ط³ظ†ط¯ط§طھ (Vouchers) =====================
+// ===================== تحسينات السندات (Vouchers) =====================
 
-// 1. ط¬ظ„ط¨ ط§ظ„ط³ظ†ط¯ط§طھ ظ…ط¹ ظپظ„طھط±ط© ظ…طھظ‚ط¯ظ…ط© + pagination
-vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط§ظ„ط³ظ†ط¯ط§طھ ط§ظ„ظ…ط­ط³ظ†', async (c) => {
+// 1. جلب السندات مع فلترة متقدمة + pagination
+vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), safeHandler('جلب السندات المحسن', async (c) => {
   const bizId = getBizId(c);
   const typeFilter = c.req.query('type');
   const statusFilter = c.req.query('status');
@@ -171,7 +171,7 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
     }
   }
 
-  // طھط±طھظٹط¨ ط¢ظ…ظ† (whitelist) ظ„ظ…ظ†ط¹ ط­ظ‚ظ† SQL ط¹ط¨ط± sortBy/sortDir
+  // ترتيب آمن (whitelist) لمنع حقن SQL عبر sortBy/sortDir
   const normalizedSortDir = String(sortDir).toLowerCase() === 'asc' ? 'asc' : 'desc';
   let orderBySql = sql`v.created_at DESC`;
   if (sortBy === 'voucher_date') {
@@ -187,7 +187,7 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
     orderBySql = normalizedSortDir === 'asc' ? sql`v.created_at ASC, v.id ASC` : sql`v.created_at DESC, v.id DESC`;
   }
 
-  // ط¬ظ„ط¨ ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ…ط¹ ط§ظ„ط­ط³ط§ط¨ط§طھ ظˆط£ظ†ظˆط§ط¹ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
+  // جلب البيانات مع الحسابات وأنواع العمليات
   const rows = await db.execute(sql`
     SELECT v.*,
       ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category_id as operation_category,
@@ -210,14 +210,14 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
     LIMIT ${limit} OFFSET ${offset}
   `);
 
-  // ط¹ط¯ط¯ ط§ظ„ظ†طھط§ط¦ط¬ ط§ظ„ظƒظ„ظٹ
+  // عدد النتائج الكلي
   const countResult = await db.execute(sql`
     SELECT COUNT(*) as total FROM vouchers v WHERE ${conditions}
   `);
   const countRows = normalizeDbResult<{ total: string }>(countResult);
   const total = Number(getFirstRow<{ total: string }>(countResult)?.total ?? 0);
 
-  // ط¥ط­طµط§ط¦ظٹط§طھ
+  // إحصائيات
   const statsResult = await db.execute(sql`
     SELECT
       COUNT(*) as total_count,
@@ -236,9 +236,9 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
   return c.json({ vouchers: resultRows, total, stats, limit, offset });
 }));
 
-// 1.5 ط¥ظ†ط´ط§ط، ط³ظ†ط¯ ظ…طھط¹ط¯ط¯ ط§ظ„ط³ط·ظˆط± (ط³ظ†ط¯ ظˆط§ط­ط¯ ط¨ط¯ظ„ ط¹ط¯ط© ط³ظ†ط¯ط§طھ)
+// 1.5 إنشاء سند متعدد السطور (سند واحد بدل عدة سندات)
 
-vouchersRouter.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddleware(), safeHandler('ظ…ط¹ط§ظٹظ†ط© ط±ظ‚ظ… ط§ظ„ط³ظ†ط¯', async (c) => {
+vouchersRouter.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddleware(), safeHandler('معاينة رقم السند', async (c) => {
   const bizId = getBizId(c);
   const voucherType = String(c.req.query('voucherType') || 'receipt');
   const voucherDate = c.req.query('voucherDate') ? new Date(String(c.req.query('voucherDate'))) : new Date();
@@ -258,7 +258,7 @@ vouchersRouter.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddlewar
   );
 
   if (!treasury) {
-    return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظˆظ„ظٹط¯ ط±ظ‚ظ… ط§ظ„ط³ظ†ط¯ ظ‚ط¨ظ„ ط§ط®طھظٹط§ط± ط®ط²ظٹظ†ط© طµط­ظٹط­ط©' }, 400);
+    return c.json({ error: 'لا يمكن توليد رقم السند قبل اختيار خزينة صحيحة' }, 400);
   }
 
   const counterType = `treasury_${treasury.kind}_${voucherType}`;
@@ -278,15 +278,15 @@ vouchersRouter.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddlewar
   });
 }));
 
-// 2. طھط¹ط¯ظٹظ„ ط³ظ†ط¯ (ظ‚ط¨ظ„ ط§ظ„ط§ط¹طھظ…ط§ط¯)
+// 2. تعديل سند (قبل الاعتماد)
 
-vouchersRouter.get('/businesses/:bizId/account-balance/:accountId', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط±طµظٹط¯ ط­ط³ط§ط¨', async (c) => {
+vouchersRouter.get('/businesses/:bizId/account-balance/:accountId', bizAuthMiddleware(), safeHandler('جلب رصيد حساب', async (c) => {
   const bizId = getBizId(c);
   const accountId = parseId(c.req.param('accountId'));
-  if (!accountId) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ط­ط³ط§ط¨ ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!accountId) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
 
   const [account] = await db.select().from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)));
-  if (!account) return c.json({ error: 'ط§ظ„ط­ط³ط§ط¨ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (!account) return c.json({ error: 'الحساب غير موجود' }, 404);
 
   const balances = await db.execute(sql`
     SELECT ab.balance, c.code as currency_code, c.symbol as currency_symbol, c.name_ar as currency_name
@@ -302,16 +302,16 @@ vouchersRouter.get('/businesses/:bizId/account-balance/:accountId', bizAuthMiddl
   });
 }));
 
-// 5. ط¬ظ„ط¨ طھظپط§طµظٹظ„ ط¹ظ…ظ„ظٹط© (drill-down)
-vouchersRouter.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(), safeHandler('طھظپط§طµظٹظ„ ط§ظ„ط³ظ†ط¯', async (c) => {
+// 5. جلب تفاصيل عملية (drill-down)
+vouchersRouter.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(), safeHandler('تفاصيل السند', async (c) => {
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ط§ظ„ط³ظ†ط¯ ط؛ظٹط± طµط§ظ„ط­' }, 400);
+  if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
   const [voucher] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
-  if (!voucher) return c.json({ error: 'ط§ظ„ط³ظ†ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
+  if (!voucher) return c.json({ error: 'السند غير موجود' }, 404);
 
-  // ط¬ظ„ط¨ ط§ظ„ظ‚ظٹط¯ ط§ظ„ظ…ط­ط§ط³ط¨ظٹ ط§ظ„ظ…ط±طھط¨ط·
+  // جلب القيد المحاسبي المرتبط
   const journalResult = await db.execute(sql`
     SELECT je.*, jel.id as line_id, jel.account_id, jel.line_type, jel.amount as line_amount, jel.description as line_description,
       a.name as account_name, a.account_type
@@ -323,14 +323,14 @@ vouchersRouter.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(
   `);
   const journalRows = normalizeDbResult(journalResult);
 
-  // ط¬ظ„ط¨ ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط©
+  // جلب نوع العملية
   let opType = null;
   if (voucher.operationTypeId) {
     const [ot] = await db.select().from(operationTypes).where(eq(operationTypes.id, voucher.operationTypeId));
     opType = ot;
   }
 
-  // ط¬ظ„ط¨ ط§ظ„ط­ط³ط§ط¨ط§طھ
+  // جلب الحسابات
   let fromAccount = null, toAccount = null;
   if (voucher.fromAccountId) {
     const [acc] = await db.select().from(accounts).where(eq(accounts.id, voucher.fromAccountId));
@@ -341,7 +341,7 @@ vouchersRouter.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(
     toAccount = acc;
   }
 
-  // ط³ط¬ظ„ ط§ظ„طھط¯ظ‚ظٹظ‚
+  // سجل التدقيق
   const auditResult = await db.execute(sql`
     SELECT * FROM audit_log WHERE table_name = 'vouchers' AND record_id = ${id} ORDER BY created_at DESC
   `);
@@ -358,5 +358,3 @@ export default vouchersRouter;
 
 
 export { vouchersRouter as vouchersListRouter };
-
-
