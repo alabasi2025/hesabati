@@ -14,7 +14,7 @@ authRoutes.post('/login', async (c) => {
     const username = body?.username?.trim();
     const password = body?.password?.trim();
 
-    if (!username || !password?.trim()) {
+    if (!username || !password) {
       return c.json({ error: 'اسم المستخدم وكلمة المرور مطلوبان' }, 400);
     }
 
