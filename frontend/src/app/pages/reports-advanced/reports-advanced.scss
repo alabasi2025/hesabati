@@ -242,6 +242,11 @@
 }
 
 /* ===================== Loading State ===================== */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
 .loading-spinner {
@@ -254,6 +259,7 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===================== Empty State ===================== */
+.empty-state {
   p { font-size: 14px; color: var(--text-secondary, #64748b); font-weight: 600; margin-bottom: 24px; }
 }
 

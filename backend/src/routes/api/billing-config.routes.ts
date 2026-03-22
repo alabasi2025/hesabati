@@ -19,6 +19,13 @@ function toSystemKey(name: string): string {
   return compact.split('').filter((ch) => /[a-z0-9_]/.test(ch)).join('');
 }
 
+function sanitizePositiveIntIds(values: unknown[]): number[] {
+  const ids = values
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n > 0) as number[];
+  return Array.from(new Set(ids));
+}
+
 // ===================== إعدادات أنظمة الفوترة =====================
 billingConfigRoutes.get('/businesses/:bizId/billing-systems-config', bizAuthMiddleware(), safeHandler('جلب إعدادات أنظمة الفوترة', async (c) => {
   const bizId = getBizId(c);
@@ -63,11 +70,11 @@ billingConfigRoutes.post('/businesses/:bizId/billing-systems-config', bizAuthMid
   const typeIdByName = new Map(types.map((t) => [t.name, t.id]));
   let supportedMethodIds: number[] = [];
   if (Array.isArray(data.supportedMethodIds)) {
-    supportedMethodIds = data.supportedMethodIds;
+    supportedMethodIds = sanitizePositiveIntIds(data.supportedMethodIds);
   } else if (Array.isArray(data.supportedTypes)) {
-    supportedMethodIds = data.supportedTypes
+    supportedMethodIds = sanitizePositiveIntIds(data.supportedTypes
       .map((name) => typeIdByName.get(name))
-      .filter((id): id is number => typeof id === 'number');
+      .filter((id): id is number => typeof id === 'number'));
   }
   const stationMode = data.stationMode || data.stationScope || 'per_station';
   const systemKey = (typeof data.systemKey === 'string' && data.systemKey.trim().length > 0)
@@ -112,10 +119,13 @@ billingConfigRoutes.put('/billing-systems-config/:id', safeHandler('تعديل �
   if (typeof patch.stationScope === 'string' && !patch.stationMode) {
     updateData.stationMode = patch.stationScope;
   }
+  if (Array.isArray(patch.supportedMethodIds)) {
+    updateData.supportedMethodIds = sanitizePositiveIntIds(patch.supportedMethodIds);
+  }
   if (!Array.isArray(patch.supportedMethodIds) && Array.isArray(patch.supportedTypes)) {
-    updateData.supportedMethodIds = patch.supportedTypes
+    updateData.supportedMethodIds = sanitizePositiveIntIds(patch.supportedTypes
       .map((name) => typeIdByName.get(name))
-      .filter((typeId): typeId is number => typeof typeId === 'number');
+      .filter((typeId): typeId is number => typeof typeId === 'number'));
   }
   delete updateData.stationScope;
   delete updateData.supportedTypes;

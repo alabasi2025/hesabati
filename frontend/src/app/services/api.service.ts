@@ -22,7 +22,7 @@ import { VoucherApiService }   from './api/voucher-api.service';
 import { InventoryApiService } from './api/inventory-api.service';
 import { ScreenApiService }    from './api/screen-api.service';
 
-export { DashboardStats, Business } from './api/base-api.service';
+export type { DashboardStats, Business } from './api/base-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -305,4 +305,140 @@ export class ApiService {
   getMonthlyRevenue(bizId: number, year?: number){ return this.scr.getMonthlyRevenue(bizId, year); }
   getAggregatedProfitLoss(dateFrom?: string, dateTo?: string){ return this.scr.getAggregatedProfitLoss(dateFrom, dateTo); }
   getAggregatedSummary()                         { return this.scr.getAggregatedSummary(); }
+
+  // ===================== توافق خلفي (واجهات مطلوبة من الصفحات) =====================
+  getAttachmentsArchiveSettings(bizId: number) {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/settings`);
+  }
+  browseAttachmentsArchiveFs(bizId: number, dirPath = '') {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/fs?dir=${encodeURIComponent(dirPath)}`);
+  }
+  createAttachmentsArchiveFolder(bizId: number, currentPath: string, folderName: string) {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/folders`, {
+      method: 'POST',
+      body: JSON.stringify({ currentPath, folderName }),
+    });
+  }
+  saveAttachmentsArchiveSettings(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+  getAttachmentsArchiveItems(bizId: number, filters?: any) {
+    const q = new URLSearchParams(filters || {}).toString();
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/items${q ? `?${q}` : ''}`);
+  }
+  rebuildAttachmentArchivePath(bizId: number, attachmentId: number, importance?: string) {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/rebuild-path/${attachmentId}`, { method: 'POST' });
+  }
+  buildAttachmentsArchiveTree(bizId: number) {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive/tree/build`, { method: 'POST' });
+  }
+
+  getCollectionStyleConfig(bizId: number, screenId: number) {
+    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style`);
+  }
+  saveCollectionStyleConfig(bizId: number, screenId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/screens/${screenId}/collection-style`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  getWidgetLog(bizId: number, filters?: any) { return this.scr.getWidgetLogEnhanced(bizId, filters); }
+  getWidgetStats(bizId: number, period?: string, dateFrom?: string, dateTo?: string) {
+    return this.scr.getWidgetStatsEnhanced(bizId, period, dateFrom, dateTo);
+  }
+  getWidgetChart(bizId: number, months = 6, groupBy = 'month', dateFrom?: string, dateTo?: string) {
+    return this.scr.getWidgetChartEnhanced(bizId, groupBy, months, dateFrom, dateTo);
+  }
+  getWidgetAccounts(bizId: number, accountIds: number[]) {
+    const ids = (accountIds || []).join(',');
+    return this.request<any>(`/businesses/${bizId}/widgets/accounts?accountIds=${encodeURIComponent(ids)}`);
+  }
+  getCurrencies() { return this.request<any[]>('/currencies'); }
+  batchUpdateScreenPermissions(screenId: number, permissions: any[]) {
+    return this.request<any>(`/screens/${screenId}/permissions/batch`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissions }),
+    });
+  }
+  addScreenToSidebar(bizId: number, screenId: number, data?: any) {
+    return this.request<any>(`/businesses/${bizId}/sidebar/items/from-screen/${screenId}`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  }
+
+  getAccountStatement(bizId: number, accountId: number, dateFrom?: string, dateTo?: string, sourceType?: string) {
+    const q = new URLSearchParams({
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+      ...(sourceType ? { sourceType } : {}),
+    }).toString();
+    return this.request<any>(`/businesses/${bizId}/accounts/${accountId}/statement${q ? `?${q}` : ''}`);
+  }
+
+  getExchangeRates(bizId: number) { return this.request<any[]>(`/businesses/${bizId}/exchange-rates`); }
+  createExchangeRate(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/exchange-rates`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  updateExchangeRate(bizId: number, id: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/exchange-rates/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+  deleteExchangeRate(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/exchange-rates/${id}`, { method: 'DELETE' });
+  }
+  convertCurrency(bizId: number, amount: number, fromCurrencyId: number, toCurrencyId: number, date?: string) {
+    return this.request<any>(`/businesses/${bizId}/exchange-rates/convert`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, fromCurrencyId, toCurrencyId, date }),
+    });
+  }
+
+  getProfitLossReport(bizId: number, dateFrom?: string, dateTo?: string) {
+    const q = new URLSearchParams({ ...(dateFrom ? { dateFrom } : {}), ...(dateTo ? { dateTo } : {}) }).toString();
+    return this.request<any>(`/businesses/${bizId}/reports/profit-loss${q ? `?${q}` : ''}`);
+  }
+  getDailySummary(bizId: number, date: string) {
+    return this.request<any>(`/businesses/${bizId}/reports/daily-summary?date=${encodeURIComponent(date)}`);
+  }
+  getTrialBalance(bizId: number, dateFrom?: string, dateTo?: string) {
+    const q = new URLSearchParams({ ...(dateFrom ? { dateFrom } : {}), ...(dateTo ? { dateTo } : {}) }).toString();
+    return this.request<any>(`/businesses/${bizId}/reports/trial-balance${q ? `?${q}` : ''}`);
+  }
+
+  getRoles(bizId: number) { return this.request<any[]>(`/businesses/${bizId}/roles`); }
+  getUserRoles(bizId: number) { return this.request<any[]>(`/businesses/${bizId}/user-roles`); }
+  createRole(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/roles`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  updateRole(bizId: number, id: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+  deleteRole(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/roles/${id}`, { method: 'DELETE' });
+  }
+  assignUserRole(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/user-roles`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  removeUserRole(bizId: number, userId: number) {
+    return this.request<any>(`/businesses/${bizId}/user-roles/${userId}`, { method: 'DELETE' });
+  }
+
+  getVouchersEnhanced(bizId: number, filters?: any) { return this.getVouchersAdvanced(bizId, filters); }
+
+  getAttachments(entityType: string, entityId: number) {
+    return this.request<any[]>(`/attachments?entityType=${encodeURIComponent(entityType)}&entityId=${entityId}`);
+  }
+  uploadAttachment(bizId: number, data: any) {
+    return this.request<any>(`/businesses/${bizId}/attachments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  deleteAttachment(bizId: number, id: number) {
+    return this.request<any>(`/businesses/${bizId}/attachments/${id}`, { method: 'DELETE' });
+  }
 }

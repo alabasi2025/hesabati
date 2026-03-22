@@ -1,6 +1,6 @@
-/**
- * billing-employees.routes.ts — Phase 15 (thin wrapper)
- * يُجمع مسارات فوترة الموظفين وإعدادات الفوترة
+﻿/**
+ * billing-employees.routes.ts â€” Phase 15 (thin wrapper)
+ * ظٹظڈط¬ظ…ط¹ ظ…ط³ط§ط±ط§طھ ظپظˆطھط±ط© ط§ظ„ظ…ظˆط¸ظپظٹظ† ظˆط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظپظˆطھط±ط©
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
@@ -35,16 +35,16 @@ function getArchiveSettingsDefaults(): ArchiveSettingsPayload {
   return {
     basePath: 'D:\\Archive\\Attachments',
     folderByType: {
-      fund: 'صندوق',
-      bank: 'بنك',
-      exchange: 'صراف',
-      e_wallet: 'محفظة',
+      fund: 'طµظ†ط¯ظˆظ‚',
+      bank: 'ط¨ظ†ظƒ',
+      exchange: 'طµط±ط§ظپ',
+      e_wallet: 'ظ…ط­ظپط¸ط©',
     },
     voucherFolders: {
-      receipt: 'سند قبض',
-      payment: 'سند صرف',
+      receipt: 'ط³ظ†ط¯ ظ‚ط¨ط¶',
+      payment: 'ط³ظ†ط¯ طµط±ظپ',
     },
-    importanceLevels: ['عاجل', 'مهم', 'عادي'],
+    importanceLevels: ['ط¹ط§ط¬ظ„', 'ظ…ظ‡ظ…', 'ط¹ط§ط¯ظٹ'],
   };
 }
 
@@ -85,7 +85,7 @@ async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayloa
 
 function sanitizePathSegment(value: unknown): string {
   const s = typeof value === 'string' ? value.trim() : '';
-  if (!s) return 'غير-محدد';
+  if (!s) return 'ط؛ظٹط±-ظ…ط­ط¯ط¯';
   return s.replaceAll(/[\\/:*?"<>|]/g, '-');
 }
 
@@ -95,7 +95,7 @@ function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
   for (const level of levels) {
     if (parts.has(level)) return level;
   }
-  return levels.at(-1) || 'عادي';
+  return levels.at(-1) || 'ط¹ط§ط¯ظٹ';
 }
 
 async function resolveVoucherArchivePath(
@@ -148,12 +148,12 @@ async function resolveVoucherArchivePath(
   }
 
   if (!treasuryType) treasuryType = 'fund';
-  if (!treasuryName) treasuryName = 'خزينة-غير-محددة';
+  if (!treasuryName) treasuryName = 'ط®ط²ظٹظ†ط©-ط؛ظٹط±-ظ…ط­ط¯ط¯ط©';
 
   const settings = await readArchiveSettings(bizId);
   const typeFolder = settings.folderByType[treasuryType] || treasuryType;
   const voucherFolder = type === 'payment' ? settings.voucherFolders.payment : settings.voucherFolders.receipt;
-  const normalizedImportance = sanitizePathSegment(importance || settings.importanceLevels[2] || 'عادي');
+  const normalizedImportance = sanitizePathSegment(importance || settings.importanceLevels[2] || 'ط¹ط§ط¯ظٹ');
 
   return path.join(
     settings.basePath,
@@ -195,14 +195,14 @@ async function ensureArchiveTreeForBusiness(
 
   const uniqueDirs = new Set<string>();
   const voucherFolders = [
-    settings.voucherFolders.receipt || 'سند قبض',
-    settings.voucherFolders.payment || 'سند صرف',
+    settings.voucherFolders.receipt || 'ط³ظ†ط¯ ظ‚ط¨ط¶',
+    settings.voucherFolders.payment || 'ط³ظ†ط¯ طµط±ظپ',
   ];
-  const levels = (settings.importanceLevels || []).length ? settings.importanceLevels : ['عادي'];
+  const levels = (settings.importanceLevels || []).length ? settings.importanceLevels : ['ط¹ط§ط¯ظٹ'];
 
   for (const treasuryType of ['fund', 'bank', 'exchange', 'e_wallet'] as const) {
     const typeFolder = sanitizePathSegment(settings.folderByType[treasuryType] || treasuryType);
-    const names = byType[treasuryType].length ? byType[treasuryType] : ['خزينة-افتراضية'];
+    const names = byType[treasuryType].length ? byType[treasuryType] : ['ط®ط²ظٹظ†ط©-ط§ظپطھط±ط§ط¶ظٹط©'];
     for (const name of names) {
       for (const voucherFolder of voucherFolders) {
         for (const level of levels) {
@@ -241,8 +241,9 @@ async function listWindowsDrives(): Promise<string[]> {
 }
 
 
-// ===================== حسابات الموظفين في أنظمة الفوترة =====================
+// ===================== ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ظˆط¸ظپظٹظ† ظپظٹ ط£ظ†ط¸ظ…ط© ط§ظ„ظپظˆطھط±ط© =====================
 
 api.route('/', billingAccountsApi);
 
 export { api as billingEmployeesRoutes };
+

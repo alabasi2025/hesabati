@@ -16,19 +16,19 @@ import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 const operationEnhRouter = new Hono();
 
-// ===================== تحسينات أنواع العمليات =====================
+// ===================== طھط­ط³ظٹظ†ط§طھ ط£ظ†ظˆط§ط¹ ط§ظ„ط¹ظ…ظ„ظٹط§طھ =====================
 
-// 6. نسخ/استنساخ نوع عملية
-operationEnhRouter.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddleware(), safeHandler('نسخ نوع عملية', async (c) => {
+// 6. ظ†ط³ط®/ط§ط³طھظ†ط³ط§ط® ظ†ظˆط¹ ط¹ظ…ظ„ظٹط©
+operationEnhRouter.post('/businesses/:bizId/operation-types/:id/clone', bizAuthMiddleware(), safeHandler('ظ†ط³ط® ظ†ظˆط¹ ط¹ظ…ظ„ظٹط©', async (c) => {
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
+  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± طµط§ظ„ط­' }, 400);
 
   const [original] = await db.select().from(operationTypes).where(and(eq(operationTypes.id, id), eq(operationTypes.businessId, bizId)));
-  if (!original) return c.json({ error: 'نوع العملية غير موجود' }, 404);
+  if (!original) return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
 
   const body = await getBody(c);
-  const newName = body.name || `${original.name} (نسخة)`;
+  const newName = body.name || `${original.name} (ظ†ط³ط®ط©)`;
   const normalizedCategoryId = Number.isInteger(original.categoryId) && Number(original.categoryId) > 0
     ? Number(original.categoryId)
     : 0;
@@ -51,7 +51,7 @@ operationEnhRouter.post('/businesses/:bizId/operation-types/:id/clone', bizAuthM
   }
   const autoCode = `${categoryPrefix}-${String(seqNum).padStart(3, '0')}`;
 
-  // إنشاء النسخة
+  // ط¥ظ†ط´ط§ط، ط§ظ„ظ†ط³ط®ط©
   const [cloned] = await db.insert(operationTypes).values({
     businessId: bizId,
     name: newName,
@@ -70,10 +70,10 @@ operationEnhRouter.post('/businesses/:bizId/operation-types/:id/clone', bizAuthM
     hasMultiLines: original.hasMultiLines,
     sortOrder: original.sortOrder,
     isActive: true,
-    notes: `نسخة من: ${original.name}`,
+    notes: `ظ†ط³ط®ط© ظ…ظ†: ${original.name}`,
   }).returning();
 
-  // نسخ الحسابات المرتبطة
+  // ظ†ط³ط® ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط©
   const linkedAccounts = await db.select().from(operationTypeAccounts).where(eq(operationTypeAccounts.operationTypeId, id));
   if (linkedAccounts.length > 0) {
     await db.insert(operationTypeAccounts).values(
@@ -92,30 +92,30 @@ operationEnhRouter.post('/businesses/:bizId/operation-types/:id/clone', bizAuthM
   return c.json(cloned, 201);
 }));
 
-// 7. تفعيل/تعطيل نوع عملية
-operationEnhRouter.post('/businesses/:bizId/operation-types/:id/toggle', bizAuthMiddleware(), safeHandler('تفعيل/تعطيل نوع عملية', async (c) => {
+// 7. طھظپط¹ظٹظ„/طھط¹ط·ظٹظ„ ظ†ظˆط¹ ط¹ظ…ظ„ظٹط©
+operationEnhRouter.post('/businesses/:bizId/operation-types/:id/toggle', bizAuthMiddleware(), safeHandler('طھظپط¹ظٹظ„/طھط¹ط·ظٹظ„ ظ†ظˆط¹ ط¹ظ…ظ„ظٹط©', async (c) => {
   const bizId = getBizId(c);
   const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف نوع العملية غير صالح' }, 400);
+  if (!id) return c.json({ error: 'ظ…ط¹ط±ظ‘ظپ ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± طµط§ظ„ط­' }, 400);
 
   const [existing] = await db.select().from(operationTypes).where(and(eq(operationTypes.id, id), eq(operationTypes.businessId, bizId)));
-  if (!existing) return c.json({ error: 'نوع العملية غير موجود' }, 404);
+  if (!existing) return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
 
-  // منع تفعيل قالب غير مكتمل: يجب تحديد الخزينة والحسابات المرتبطة أولاً
+  // ظ…ظ†ط¹ طھظپط¹ظٹظ„ ظ‚ط§ظ„ط¨ ط؛ظٹط± ظ…ظƒطھظ…ظ„: ظٹط¬ط¨ طھط­ط¯ظٹط¯ ط§ظ„ط®ط²ظٹظ†ط© ظˆط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط© ط£ظˆظ„ط§ظ‹
   const nextIsActive = !existing.isActive;
   if (nextIsActive) {
     const vt = String(existing.voucherType ?? '').trim();
     if (vt === 'receipt' || vt === 'payment') {
       const pm = String(existing.paymentMethod ?? '').trim();
-      if (!pm) return c.json({ error: 'لا يمكن تفعيل هذا القالب قبل تحديد وسيلة الدفع والخزينة' }, 400);
+      if (!pm) return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظپط¹ظٹظ„ ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨ ظ‚ط¨ظ„ طھط­ط¯ظٹط¯ ظˆط³ظٹظ„ط© ط§ظ„ط¯ظپط¹ ظˆط§ظ„ط®ط²ظٹظ†ط©' }, 400);
       if (pm === 'cash') {
-        if (!existing.sourceFundId) return c.json({ error: 'لا يمكن تفعيل هذا القالب قبل تحديد الخزينة (الصندوق)' }, 400);
+        if (!existing.sourceFundId) return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظپط¹ظٹظ„ ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨ ظ‚ط¨ظ„ طھط­ط¯ظٹط¯ ط§ظ„ط®ط²ظٹظ†ط© (ط§ظ„طµظ†ط¯ظˆظ‚)' }, 400);
       } else {
-        if (!existing.sourceAccountId) return c.json({ error: 'لا يمكن تفعيل هذا القالب قبل تحديد الخزينة (حساب بنك/صراف/محفظة)' }, 400);
+        if (!existing.sourceAccountId) return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظپط¹ظٹظ„ ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨ ظ‚ط¨ظ„ طھط­ط¯ظٹط¯ ط§ظ„ط®ط²ظٹظ†ط© (ط­ط³ط§ط¨ ط¨ظ†ظƒ/طµط±ط§ظپ/ظ…ط­ظپط¸ط©)' }, 400);
       }
       const [cntRow] = await db.select({ cnt: count() }).from(operationTypeAccounts)
         .where(eq(operationTypeAccounts.operationTypeId, id));
-      if (!cntRow?.cnt) return c.json({ error: 'لا يمكن تفعيل هذا القالب قبل إضافة حساب واحد على الأقل في الحسابات المرتبطة' }, 400);
+      if (!cntRow?.cnt) return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظپط¹ظٹظ„ ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨ ظ‚ط¨ظ„ ط¥ط¶ط§ظپط© ط­ط³ط§ط¨ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ ظپظٹ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط©' }, 400);
     }
   }
 
@@ -126,8 +126,8 @@ operationEnhRouter.post('/businesses/:bizId/operation-types/:id/toggle', bizAuth
   return c.json(updated);
 }));
 
-// 8. إحصائيات استخدام أنواع العمليات
-operationEnhRouter.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware(), safeHandler('إحصائيات أنواع العمليات', async (c) => {
+// 8. ط¥ط­طµط§ط¦ظٹط§طھ ط§ط³طھط®ط¯ط§ظ… ط£ظ†ظˆط§ط¹ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
+operationEnhRouter.get('/businesses/:bizId/operation-types-stats', bizAuthMiddleware(), safeHandler('ط¥ط­طµط§ط¦ظٹط§طھ ط£ظ†ظˆط§ط¹ ط§ظ„ط¹ظ…ظ„ظٹط§طھ', async (c) => {
   const bizId = getBizId(c);
 
   const result = await db.execute(sql`
@@ -146,12 +146,12 @@ operationEnhRouter.get('/businesses/:bizId/operation-types-stats', bizAuthMiddle
   return c.json(rows);
 }));
 
-// 9. التحقق من تكرار اسم نوع العملية
-operationEnhRouter.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddleware(), safeHandler('التحقق من تكرار اسم', async (c) => {
+// 9. ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† طھظƒط±ط§ط± ط§ط³ظ… ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط©
+operationEnhRouter.get('/businesses/:bizId/operation-types/check-name', bizAuthMiddleware(), safeHandler('ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† طھظƒط±ط§ط± ط§ط³ظ…', async (c) => {
   const bizId = getBizId(c);
   const name = c.req.query('name');
   const excludeId = c.req.query('excludeId');
-  if (!name) return c.json({ error: 'الاسم مطلوب' }, 400);
+  if (!name) return c.json({ error: 'ط§ظ„ط§ط³ظ… ظ…ط·ظ„ظˆط¨' }, 400);
 
   let conditions = sql`business_id = ${bizId} AND LOWER(name) = LOWER(${name})`;
   if (excludeId) conditions = sql`${conditions} AND id != ${parseInt(excludeId)}`;
@@ -165,3 +165,5 @@ operationEnhRouter.get('/businesses/:bizId/operation-types/check-name', bizAuthM
 
 
 export default operationEnhRouter;
+
+
