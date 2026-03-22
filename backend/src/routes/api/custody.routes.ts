@@ -14,8 +14,8 @@ import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import {
   safeHandler,
-  normalizeBody,
   parseId,
+  getBody,
 } from "../../middleware/helpers.ts";
 import {
   getNextSequence,
@@ -112,7 +112,7 @@ custodyRoutes.post(
   safeHandler("إنشاء عهدة", async (c: AppContext) => {
     const bizId = getBizId(c);
     const userId = getUserId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (!body.custodyType) {
       return c.json({ error: "نوع العهدة مطلوب" }, 400);
@@ -178,7 +178,7 @@ custodyRoutes.put(
       return c.json({ error: "العهدة غير موجودة" }, 404);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     const updatePayload: Record<string, unknown> = {
       updatedAt: new Date(),
@@ -237,7 +237,7 @@ custodyRoutes.post(
       return c.json({ error: "العهدة غير موجودة" }, 404);
     }
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     if (!body.settlementDate) {
       return c.json({ error: "تاريخ التصفية مطلوب" }, 400);

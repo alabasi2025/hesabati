@@ -7,7 +7,7 @@ import { and, eq } from 'drizzle-orm';
 import { accounts, businessPartners, suppliers } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { partnerSchema, supplierSchema, validateBody } from '../../middleware/validation.ts';
-import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import {
   TYPE_PREFIXES,
   generateItemCode,
@@ -63,7 +63,7 @@ partnersRoutes.get('/businesses/:bizId/partners', bizAuthMiddleware(), safeHandl
 
 partnersRoutes.post('/businesses/:bizId/partners', bizAuthMiddleware(), safeHandler('إضافة شريك', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(partnerSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const d = validation.data as Record<string, unknown> & { fullName?: string | null; sharePercentage?: string | number | null; role?: string | null; notes?: string | null };
@@ -114,7 +114,7 @@ partnersRoutes.put('/partners/:id', safeHandler('تعديل شريك', async (c)
   const [partner] = await db.select().from(businessPartners).where(eq(businessPartners.id, id));
   const err = await requireResourceOwnership(c, partner ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.transaction(async (tx) => {
     const [u] = await tx
       .update(businessPartners)
@@ -163,7 +163,7 @@ partnersRoutes.get('/businesses/:bizId/suppliers', bizAuthMiddleware(), safeHand
 
 partnersRoutes.post('/businesses/:bizId/suppliers', bizAuthMiddleware(), safeHandler('إضافة مورد', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(supplierSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const d = validation.data as Record<string, unknown> & { category?: string | null; name?: string | null; notes?: string | null };
@@ -209,7 +209,7 @@ partnersRoutes.put('/suppliers/:id', safeHandler('تعديل مورد', async (c
   const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, id));
   const err = await requireResourceOwnership(c, supplier ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const supplierTypeId =
     typeof (body as { supplierTypeId?: unknown }).supplierTypeId === 'number'
       ? (body as { supplierTypeId: number }).supplierTypeId

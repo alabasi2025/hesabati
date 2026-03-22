@@ -5,7 +5,7 @@ import { accountingSubTypes, accountingTypes } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import { getNextSequence } from "../../middleware/sequencing.ts";
-import { normalizeBody, parseId, safeHandler } from "../../middleware/helpers.ts";
+import { parseId, safeHandler, getBody } from "../../middleware/helpers.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import type { AppContext } from "./_shared/types.ts";
 
@@ -31,7 +31,7 @@ accountingTypesRoutes.post(
   checkPermission("accounts", "create"),
   safeHandler("إنشاء نوع رئيسي مرن", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const subTypeKey = typeof body.subTypeKey === "string" ? body.subTypeKey.trim() : "";
@@ -80,7 +80,7 @@ accountingTypesRoutes.put(
       .limit(1);
     if (!existing) return c.json({ error: "النوع الرئيسي غير موجود" }, 404);
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     if (typeof body.subTypeKey === "string" && body.subTypeKey !== existing.subTypeKey) {
       const [dup] = await db
         .select({ id: accountingTypes.id })
@@ -176,7 +176,7 @@ accountingTypesRoutes.post(
   checkPermission("accounts", "create"),
   safeHandler("إنشاء تصنيف فرعي مرن", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const subTypeKey = typeof body.subTypeKey === "string" ? body.subTypeKey.trim() : "";
@@ -239,7 +239,7 @@ accountingTypesRoutes.put(
       .limit(1);
     if (!existing) return c.json({ error: "التصنيف غير موجود" }, 404);
 
-    const body = normalizeBody(await c.req.json()) as Record<string, unknown>;
+    const body = (await getBody(c)) as Record<string, unknown>;
     if (typeof body.subTypeKey === "string" && body.subTypeKey !== existing.subTypeKey) {
       const [dup] = await db
         .select({ id: accountingSubTypes.id })

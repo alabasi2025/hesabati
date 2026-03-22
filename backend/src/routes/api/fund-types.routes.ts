@@ -7,7 +7,9 @@ import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { fundTypes, bankTypes, exchangeTypes, eWalletTypes } from '../../db/schema/core.ts';
 import { eq, and } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../../middleware/auth.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 
 export const fundTypesRoutes = new Hono();
 const api = fundTypesRoutes;
@@ -34,7 +36,7 @@ api.get('/businesses/:bizId/fund-types', bizAuthMiddleware(), safeHandler('جل�
 
 api.post('/businesses/:bizId/fund-types', bizAuthMiddleware(), safeHandler('إضافة نوع صندوق', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
 
@@ -56,7 +58,7 @@ api.put('/fund-types/:id', safeHandler('تعديل نوع صندوق', async (c)
   const [rec] = await db.select().from(fundTypes).where(eq(fundTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (typeof (body as any).sequenceNumber !== 'undefined') {
     const nextSeq = Number((body as any).sequenceNumber);
     if (!Number.isInteger(nextSeq) || nextSeq <= 0) {
@@ -106,7 +108,7 @@ api.get('/businesses/:bizId/bank-types', bizAuthMiddleware(), safeHandler('جل�
 
 api.post('/businesses/:bizId/bank-types', bizAuthMiddleware(), safeHandler('إضافة نوع بنك', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const seqNum = await getNextCategorySequence(bizId, 'bank');
@@ -120,7 +122,7 @@ api.put('/bank-types/:id', safeHandler('تعديل نوع بنك', async (c) => 
   const [rec] = await db.select().from(bankTypes).where(eq(bankTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(bankTypes).set({ ...body, updatedAt: new Date() }).where(eq(bankTypes.id, id)).returning();
   if (!updated) return c.json({ error: 'نوع غير موجود' }, 404);
   return c.json(updated);
@@ -145,7 +147,7 @@ api.get('/businesses/:bizId/exchange-types', bizAuthMiddleware(), safeHandler('�
 
 api.post('/businesses/:bizId/exchange-types', bizAuthMiddleware(), safeHandler('إضافة نوع صراف', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const seqNum = await getNextCategorySequence(bizId, 'exchange');
@@ -159,7 +161,7 @@ api.put('/exchange-types/:id', safeHandler('تعديل نوع صراف', async (
   const [rec] = await db.select().from(exchangeTypes).where(eq(exchangeTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(exchangeTypes).set({ ...body, updatedAt: new Date() }).where(eq(exchangeTypes.id, id)).returning();
   if (!updated) return c.json({ error: 'نوع غير موجود' }, 404);
   return c.json(updated);
@@ -184,7 +186,7 @@ api.get('/businesses/:bizId/e-wallet-types', bizAuthMiddleware(), safeHandler('�
 
 api.post('/businesses/:bizId/e-wallet-types', bizAuthMiddleware(), safeHandler('إضافة نوع محفظة', async (c) => {
   const bizId = getBizId(c);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const validation = validateBody(typeSchema, body);
   if (!validation.success) return c.json({ error: validation.error }, 400);
   const seqNum = await getNextCategorySequence(bizId, 'e_wallet');
@@ -198,7 +200,7 @@ api.put('/e-wallet-types/:id', safeHandler('تعديل نوع محفظة', async
   const [rec] = await db.select().from(eWalletTypes).where(eq(eWalletTypes.id, id));
   const err = await requireResourceOwnership(c, rec ?? null);
   if (err) return err;
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const [updated] = await db.update(eWalletTypes).set({ ...body, updatedAt: new Date() }).where(eq(eWalletTypes.id, id)).returning();
   if (!updated) return c.json({ error: 'نوع غير موجود' }, 404);
   return c.json(updated);

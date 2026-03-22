@@ -3,15 +3,15 @@
  * عمليات المخزن: قراءة وتقارير
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import {
   businesses, warehouses, warehouseOperations, warehouseOperationItems,
   inventoryItems, inventoryStock, inventoryMovements,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../middleware/helpers.ts';
-import { getBizId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, parseId } from '../../middleware/helpers.ts';
+import { getBizId } from './_shared/context-helpers.ts';
 
 const warehouseOpsReadRoutes = new Hono();
 
