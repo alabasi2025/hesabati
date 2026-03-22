@@ -11,8 +11,8 @@ const authRoutes = new Hono();
 authRoutes.post('/login', async (c) => {
   try {
     const body = await getBody(c);
-    const username = body?.username;
-    const password = body?.password;
+    const username = body?.username?.trim();
+    const password = body?.password?.trim();
 
     if (!username || !password) {
       return c.json({ error: 'اسم المستخدم وكلمة المرور مطلوبان' }, 400);

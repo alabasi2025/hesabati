@@ -5,8 +5,6 @@
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
-
 // ===================== ENUMS =====================
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'accountant', 'manager', 'viewer']);

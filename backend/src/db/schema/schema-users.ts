@@ -4,6 +4,8 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { userRoleEnum, currencyCodeEnum } from './schema-base.ts';
+import { businesses } from './schema-business.ts';
 
 // ===================== USERS =====================
 
