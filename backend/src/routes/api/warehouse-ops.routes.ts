@@ -10,4 +10,4 @@ const warehouseRoutes = new Hono();
 warehouseRoutes.route('/', warehouseOpsWriteRoutes);
 warehouseRoutes.route('/', warehouseOpsReadRoutes);
 
-export { warehouseRoutes };
+export { warehouseRoutes, warehouseRoutes as warehouseOpsRoutes };

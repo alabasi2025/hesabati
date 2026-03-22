@@ -70,6 +70,8 @@
   cursor: pointer;
   .close-x { margin-right: auto; opacity: 0.6; }
 }
+
+.loading-state {
   .spin { animation: spin 1s linear infinite; }
   p { margin: 12px 0 0; font-size: 14px; }
 }

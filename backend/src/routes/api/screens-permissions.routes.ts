@@ -19,7 +19,9 @@ import {
   sidebarItems, sidebarSections, uiPages, uiComponents
 } from '../../db/schema/core.ts';
 import { eq, and, inArray, desc } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../../middleware/auth.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
 import * as ScreensEng from '../../engines/screens.engine.ts';
 
 export const screensRoutes = new Hono();
@@ -45,7 +47,7 @@ api.get('/screens/:screenId/permissions', safeHandler('جلب صلاحيات ا�
 api.post('/screens/:screenId/permissions', safeHandler('تعيين صلاحيات الشاشة', async (c) => {
   const screenId = parseId(c.req.param('screenId'));
   if (!screenId) return c.json({ error: 'معرّف الشاشة غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   if (!body.userId) return c.json({ error: 'معرّف المستخدم مطلوب' }, 400);
   const [created] = await db.insert(screenPermissions).values({
     screenId,
@@ -59,7 +61,7 @@ api.post('/screens/:screenId/permissions', safeHandler('تعيين صلاحيا�
 api.put('/screen-permissions/:id', safeHandler('تعديل صلاحية شاشة', async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف الصلاحية غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const updateData: any = {};
   if (body.permission !== undefined) updateData.permission = body.permission;
   if (body.sortOrder !== undefined) updateData.sortOrder = body.sortOrder;
@@ -83,7 +85,7 @@ api.delete('/screen-permissions/:id', safeHandler('حذف صلاحية شاشة'
 api.put('/screens/:screenId/permissions/batch', safeHandler('تحديث صلاحيات دفعة واحدة', async (c) => {
   const screenId = parseId(c.req.param('screenId'));
   if (!screenId) return c.json({ error: 'معرّف الشاشة غير صالح' }, 400);
-  const body = normalizeBody(await c.req.json());
+  const body = await getBody(c);
   const { permissions } = body;
   if (!permissions || !Array.isArray(permissions)) return c.json({ error: 'قائمة الصلاحيات مطلوبة' }, 400);
   

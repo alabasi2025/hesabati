@@ -39,8 +39,16 @@ export class RegisterComponent {
       this.error.set('يرجى تعبئة جميع الحقول المطلوبة');
       return;
     }
-    if (p.length < 6) {
-      this.error.set('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    if (p.length < 8) {
+      this.error.set('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      return;
+    }
+    if (!/[a-zA-Z]/.test(p)) {
+      this.error.set('كلمة المرور يجب أن تحتوي على حرف واحد على الأقل');
+      return;
+    }
+    if (!/\d/.test(p)) {
+      this.error.set('كلمة المرور يجب أن تحتوي على رقم واحد على الأقل');
       return;
     }
 

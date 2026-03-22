@@ -1,25 +1,25 @@
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   operationTypes, operationTypeAccounts, accounts, accountBalances,
   sidebarSections, sidebarItems, userSidebarConfig,
   screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
   users, vouchers, currencies, operationCategories,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, getBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence, getNextItemInCategorySequence } from '../middleware/sequencing.ts';
-import { normalizeDbResult } from '../utils/db-result.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { normalizeDbResult } from '../../utils/db-result.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 const screenEnhRouter = new Hono();
 
-// ===================== تحسينات الشاشات المخصصة =====================
+// ===================== طھط­ط³ظٹظ†ط§طھ ط§ظ„ط´ط§ط´ط§طھ ط§ظ„ظ…ط®طµطµط© =====================
 
-// 12. بحث متقدم في سجل العمليات
-screenEnhRouter.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), safeHandler('سجل العمليات المحسن', async (c) => {
+// 12. ط¨ط­ط« ظ…طھظ‚ط¯ظ… ظپظٹ ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
+screenEnhRouter.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(), safeHandler('ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ…ط­ط³ظ†', async (c) => {
   const bizId = getBizId(c);
   const dateFrom = c.req.query('dateFrom');
   const dateTo = c.req.query('dateTo');
@@ -64,8 +64,8 @@ screenEnhRouter.get('/businesses/:bizId/widget-log-enhanced', bizAuthMiddleware(
   });
 }));
 
-// 13. إحصائيات متقدمة مع مقارنة فترات
-screenEnhRouter.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware(), safeHandler('إحصائيات متقدمة', async (c) => {
+// 13. ط¥ط­طµط§ط¦ظٹط§طھ ظ…طھظ‚ط¯ظ…ط© ظ…ط¹ ظ…ظ‚ط§ط±ظ†ط© ظپطھط±ط§طھ
+screenEnhRouter.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddleware(), safeHandler('ط¥ط­طµط§ط¦ظٹط§طھ ظ…طھظ‚ط¯ظ…ط©', async (c) => {
   const bizId = getBizId(c);
   const period = c.req.query('period') || 'month'; // day, week, month, year
   const dateFrom = c.req.query('dateFrom');
@@ -114,7 +114,7 @@ screenEnhRouter.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddlewar
     }
   }
 
-  // الفترة الحالية
+  // ط§ظ„ظپطھط±ط© ط§ظ„ط­ط§ظ„ظٹط©
   const currentResult = await db.execute(sql`
     SELECT
       COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as receipts,
@@ -127,7 +127,7 @@ screenEnhRouter.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddlewar
   `);
   const currentRows = normalizeDbResult<PeriodStatsRow>(currentResult);
 
-  // الفترة السابقة
+  // ط§ظ„ظپطھط±ط© ط§ظ„ط³ط§ط¨ظ‚ط©
   const prevResult = await db.execute(sql`
     SELECT
       COALESCE(SUM(CASE WHEN ot.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as receipts,
@@ -143,7 +143,7 @@ screenEnhRouter.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddlewar
   const current = currentRows[0] || { receipts: 0, payments: 0, operations_count: 0 };
   const prev = prevRows[0] || { receipts: 0, payments: 0, operations_count: 0 };
 
-  // حساب نسب التغيير
+  // ط­ط³ط§ط¨ ظ†ط³ط¨ ط§ظ„طھط؛ظٹظٹط±
   const calcChange = (cur: number, prv: number) => prv === 0 ? (cur > 0 ? 100 : 0) : ((cur - prv) / prv * 100);
 
   return c.json({
@@ -169,8 +169,8 @@ screenEnhRouter.get('/businesses/:bizId/widget-stats-enhanced', bizAuthMiddlewar
   });
 }));
 
-// 14. رسم بياني متقدم مع فلترة فترات
-screenEnhRouter.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware(), safeHandler('رسم بياني متقدم', async (c) => {
+// 14. ط±ط³ظ… ط¨ظٹط§ظ†ظٹ ظ…طھظ‚ط¯ظ… ظ…ط¹ ظپظ„طھط±ط© ظپطھط±ط§طھ
+screenEnhRouter.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddleware(), safeHandler('ط±ط³ظ… ط¨ظٹط§ظ†ظٹ ظ…طھظ‚ط¯ظ…', async (c) => {
   const bizId = getBizId(c);
   const groupBy = c.req.query('groupBy') || 'month'; // day, week, month
   const months = parseInt(c.req.query('months') || '6');
@@ -232,21 +232,21 @@ screenEnhRouter.get('/businesses/:bizId/widget-chart-enhanced', bizAuthMiddlewar
   });
 }));
 
-// 15. إنشاء سند كمسودة
-screenEnhRouter.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safeHandler('إنشاء سند كمسودة', async (c) => {
+// 15. ط¥ظ†ط´ط§ط، ط³ظ†ط¯ ظƒظ…ط³ظˆط¯ط©
+screenEnhRouter.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), safeHandler('ط¥ظ†ط´ط§ط، ط³ظ†ط¯ ظƒظ…ط³ظˆط¯ط©', async (c) => {
   const bizId = getBizId(c);
   const userId = getUserId(c);
   const body = await getBody(c);
 
   const amount = parseFloat(body.amount);
-  if (isNaN(amount) || amount <= 0) return c.json({ error: 'المبلغ يجب أن يكون رقماً موجباً' }, 400);
+  if (isNaN(amount) || amount <= 0) return c.json({ error: 'ط§ظ„ظ…ط¨ظ„ط؛ ظٹط¬ط¨ ط£ظ† ظٹظƒظˆظ† ط±ظ‚ظ…ط§ظ‹ ظ…ظˆط¬ط¨ط§ظ‹' }, 400);
 
   const vType = body.voucherType || 'receipt';
   const voucherDate = body.voucherDate ? new Date(body.voucherDate) : new Date();
   const year = voucherDate.getFullYear();
 
   if (vType !== 'receipt' && vType !== 'payment') {
-    // fallback للأنواع الأخرى (transfer/journal) بترقيم معزول لكل businessId
+    // fallback ظ„ظ„ط£ظ†ظˆط§ط¹ ط§ظ„ط£ط®ط±ظ‰ (transfer/journal) ط¨طھط±ظ‚ظٹظ… ظ…ط¹ط²ظˆظ„ ظ„ظƒظ„ businessId
     const prefix = TYPE_PREFIXES[vType] || 'VCH';
     const counterType = `voucher_${vType}_fallback`;
     const seqVal = await getNextSequence(bizId, counterType, 0, year);
@@ -281,12 +281,12 @@ screenEnhRouter.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), s
   );
 
   if (!treasury) {
-    return c.json({ error: 'لا يمكن توليد رقم السند: تأكد من اختيار خزينة مرقمة بشكل صحيح' }, 400);
+    return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظˆظ„ظٹط¯ ط±ظ‚ظ… ط§ظ„ط³ظ†ط¯: طھط£ظƒط¯ ظ…ظ† ط§ط®طھظٹط§ط± ط®ط²ظٹظ†ط© ظ…ط±ظ‚ظ…ط© ط¨ط´ظƒظ„ طµط­ظٹط­' }, 400);
   }
 
   const counterType = `treasury_${treasury.kind}_${vType}`;
   const seq = await getNextSequence(bizId, counterType, treasury.treasuryId, year);
-  const voucherSeq = seq; // يبدأ من 1
+  const voucherSeq = seq; // ظٹط¨ط¯ط£ ظ…ظ† 1
   const voucherPrefix = TYPE_PREFIXES[vType] || 'VCH';
   const voucherNumber = `${voucherPrefix}-${treasury.treasuryCode}-${year}-${voucherSeq}`;
 
@@ -314,3 +314,5 @@ screenEnhRouter.post('/businesses/:bizId/vouchers-draft', bizAuthMiddleware(), s
 
 
 export default screenEnhRouter;
+
+
