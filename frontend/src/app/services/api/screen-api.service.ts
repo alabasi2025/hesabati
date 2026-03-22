@@ -129,4 +129,69 @@ export class ScreenApiService {
     return this.api.request<any>(`/reports/aggregated-profit-loss${q}`);
   }
   getAggregatedSummary() { return this.api.request<any>(`/reports/aggregated-summary`); }
+
+  // ===================== التقارير المتقدمة =====================
+  getProfitLossReport(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/reports/profit-loss${q}`);
+  }
+  getTrialBalance(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/reports/trial-balance${q}`);
+  }
+  getAccountStatement(bizId: number, accountId: number, dateFrom?: string, dateTo?: string, sourceType?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom)    params.set('dateFrom', dateFrom);
+    if (dateTo)      params.set('dateTo', dateTo);
+    if (sourceType)  params.set('sourceType', sourceType);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/reports/account-statement/${accountId}${q}`);
+  }
+  getDailySummary(bizId: number, date?: string) {
+    const q = date ? `?date=${date}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/reports/daily-summary${q}`);
+  }
+
+  // ===================== التحليل الجنائي =====================
+  getForensicSummary(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/forensic/summary${q}`);
+  }
+  getForensicSuspicious(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/forensic/suspicious${q}`);
+  }
+  getForensicDuplicates(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/forensic/duplicates${q}`);
+  }
+  getForensicLargeTransactions(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/forensic/large-transactions${q}`);
+  }
+  getForensicUnreviewed(bizId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    const q = params.toString() ? `?${params}` : '';
+    return this.api.request<any>(`/businesses/${bizId}/forensic/unreviewed${q}`);
+  }
 }

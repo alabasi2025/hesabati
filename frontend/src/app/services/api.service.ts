@@ -305,4 +305,17 @@ export class ApiService {
   getMonthlyRevenue(bizId: number, year?: number){ return this.scr.getMonthlyRevenue(bizId, year); }
   getAggregatedProfitLoss(dateFrom?: string, dateTo?: string){ return this.scr.getAggregatedProfitLoss(dateFrom, dateTo); }
   getAggregatedSummary()                         { return this.scr.getAggregatedSummary(); }
+
+  // ===================== التقارير المتقدمة =====================
+  getProfitLossReport(bizId: number, dateFrom?: string, dateTo?: string){ return this.scr.getProfitLossReport(bizId, dateFrom, dateTo); }
+  getTrialBalance(bizId: number, dateFrom?: string, dateTo?: string)    { return this.scr.getTrialBalance(bizId, dateFrom, dateTo); }
+  getAccountStatement(bizId: number, accountId: number, dateFrom?: string, dateTo?: string, sourceType?: string){ return this.scr.getAccountStatement(bizId, accountId, dateFrom, dateTo, sourceType); }
+  getDailySummary(bizId: number, date?: string)                         { return this.scr.getDailySummary(bizId, date); }
+
+  // ===================== التحليل الجنائي =====================
+  getForensicSummary(bizId: number, dateFrom?: string, dateTo?: string)            { return this.scr.getForensicSummary(bizId, dateFrom, dateTo); }
+  getForensicSuspicious(bizId: number, dateFrom?: string, dateTo?: string)         { return this.scr.getForensicSuspicious(bizId, dateFrom, dateTo); }
+  getForensicDuplicates(bizId: number, dateFrom?: string, dateTo?: string)         { return this.scr.getForensicDuplicates(bizId, dateFrom, dateTo); }
+  getForensicLargeTransactions(bizId: number, dateFrom?: string, dateTo?: string)  { return this.scr.getForensicLargeTransactions(bizId, dateFrom, dateTo); }
+  getForensicUnreviewed(bizId: number, dateFrom?: string, dateTo?: string)         { return this.scr.getForensicUnreviewed(bizId, dateFrom, dateTo); }
 }
