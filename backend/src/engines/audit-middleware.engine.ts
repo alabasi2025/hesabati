@@ -25,7 +25,7 @@ export async function auditCreate(
   try {
     await logAction({
       userId: ctx.userId,
-      businessId: ctx.bizId,
+      bizId: ctx.bizId,
       action: 'create',
       tableName: ctx.tableName,
       recordId,
@@ -50,7 +50,7 @@ export async function auditUpdate(
   try {
     await logAction({
       userId: ctx.userId,
-      businessId: ctx.bizId,
+      bizId: ctx.bizId,
       action: 'update',
       tableName: ctx.tableName,
       recordId,
@@ -75,7 +75,7 @@ export async function auditDelete(
   try {
     await logAction({
       userId: ctx.userId,
-      businessId: ctx.bizId,
+      bizId: ctx.bizId,
       action: 'delete',
       tableName: ctx.tableName,
       recordId,
@@ -100,7 +100,7 @@ export async function auditAction(
   try {
     await logAction({
       userId: ctx.userId,
-      businessId: ctx.bizId,
+      bizId: ctx.bizId,
       action,
       tableName: ctx.tableName,
       recordId,

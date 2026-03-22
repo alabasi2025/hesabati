@@ -3,21 +3,23 @@
  * تعديل + إضافة بنود + استلام + حذف فواتير الشراء
  */
 import { Hono } from 'hono';
-import { db } from '../db/index.ts';
+import { db } from '../../db/index.ts';
 import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
   businesses, purchaseInvoices, purchaseInvoiceItems,
   inventoryItems, warehouses, suppliers, supplierBalances,
   accounts, accountBalances, operationTypes, operationTypeAccounts,
   journalEntries, journalEntryLines, auditLog, currencies,
-} from '../db/schema/index.ts';
-import { bizAuthMiddleware } from '../middleware/bizAuth.ts';
-import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../middleware/helpers.ts';
-import { checkPermission } from '../middleware/permissions.ts';
-import { getNextSequence } from '../middleware/sequencing.ts';
-import { wsService } from '../services/websocket.service.ts';
-import { getBizId, getUserId } from './api/_shared/context-helpers.ts';
-import { logAction } from '../engines/audit.engine.ts';
+} from '../../db/schema/index.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { checkPermission } from '../../middleware/permissions.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { wsService } from '../../services/websocket.service.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { logAction } from '../../engines/audit.engine.ts';
+import { AppContext } from './_shared/types.ts';
+import { processStockMovement } from '../../services/inventory.service.ts';
 
 const piActionsRoutes = new Hono();
 
@@ -210,15 +212,14 @@ piActionsRoutes.post(
           if (item.inventoryItemId) {
             await processStockMovement(bizId, {
               warehouseId: existing.warehouseId,
-              inventoryItemId: item.inventoryItemId,
+              itemId: item.inventoryItemId,
               movementType: "in",
               quantity: parseFloat(String(item.quantity)),
               unitCost: parseFloat(String(item.unitCost)),
-              referenceType: "purchase_invoice",
-              referenceId: id,
-              notes: `تأكيد فاتورة مشتريات #${existing.invoiceNumber}`,
-              createdBy: userId,
-            }, tx as any);
+              reference: `purchase_invoice:${id}`,
+              description: `تأكيد فاتورة مشتريات #${existing.invoiceNumber}`,
+              createdBy: userId ?? undefined,
+            });
           }
         }
       }
@@ -301,15 +302,14 @@ piActionsRoutes.post(
             if (existing.warehouseId && invoiceItem.inventoryItemId) {
               await processStockMovement(bizId, {
                 warehouseId: existing.warehouseId,
-                inventoryItemId: invoiceItem.inventoryItemId,
+                itemId: invoiceItem.inventoryItemId,
                 movementType: "in",
                 quantity: receivedQty,
                 unitCost: parseFloat(String(invoiceItem.unitCost)),
-                referenceType: "purchase_invoice_receive",
-                referenceId: id,
-                notes: `استلام فاتورة مشتريات #${existing.invoiceNumber}`,
+                reference: `purchase_invoice_receive:${id}`,
+                description: `استلام فاتورة مشتريات #${existing.invoiceNumber}`,
                 createdBy: undefined,
-              }, tx as any);
+              });
             }
           }
         }
@@ -375,7 +375,7 @@ piActionsRoutes.delete(
   })
 );
 
-export default purchaseInvoicesRoutes;
+export default piActionsRoutes;
 
 
 export { piActionsRoutes };

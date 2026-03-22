@@ -34,7 +34,7 @@ export interface AuditLogInput {
 
 export interface AuditLogEntry {
   id: number;
-  businessId: number;
+  businessId: number | null;
   userId: number | null;
   action: string;
   tableName: string;

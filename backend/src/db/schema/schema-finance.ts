@@ -4,6 +4,14 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  voucherTypeEnum, voucherStatusEnum, expenseTypeEnum,
+  warehouseTypeEnum, movementTypeEnum, reconciliationTypeEnum,
+  reconciliationStatusEnum, pendingStatusEnum,
+} from './schema-base.ts';
+import { businesses, stations, employees, accounts, funds, billingSystemsConfig } from './schema-business.ts';
+import { currencies, users } from './schema-users.ts';
+import { operationTypes } from './schema-warehouse.ts';
 
 
 // ===================== SUPPLIERS =====================
@@ -93,11 +101,15 @@ export const voucherLines = pgTable('voucher_lines', {
 
 export const attachments = pgTable('attachments', {
   id: serial('id').primaryKey(),
-  entityType: varchar('entity_type', { length: 50 }).notNull(), // 'voucher' | 'collection' | 'delivery'
-  entityId: integer('entity_id').notNull(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  tableName: varchar('table_name', { length: 100 }).notNull(), // 'vouchers' | 'employees' | etc.
+  recordId: integer('record_id').notNull(),
+  entityType: varchar('entity_type', { length: 50 }), // legacy compat
+  entityId: integer('entity_id'), // legacy compat
   fileName: varchar('file_name', { length: 300 }).notNull(),
   filePath: varchar('file_path', { length: 500 }).notNull(),
   fileType: varchar('file_type', { length: 50 }),
+  mimeType: varchar('mime_type', { length: 100 }),
   fileSize: integer('file_size'),
   description: text('description'),
   uploadedBy: integer('uploaded_by').references(() => users.id),
@@ -311,6 +323,7 @@ export const auditLog = pgTable('audit_log', {
   recordId: integer('record_id'),
   oldData: jsonb('old_data'),
   newData: jsonb('new_data'),
+  description: text('description'),
   ipAddress: varchar('ip_address', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

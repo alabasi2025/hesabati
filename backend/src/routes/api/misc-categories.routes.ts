@@ -7,7 +7,12 @@ import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { warehouseTypes, journalEntryCategories } from '../../db/schema/core.ts';
 import { eq, and } from 'drizzle-orm';
-import { bizAuthMiddleware, getBizId, getUserId, safeHandler, normalizeBody, parseId } from '../helpers.ts';
+import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+import { safeHandler, normalizeBody, parseId } from '../../middleware/helpers.ts';
+import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
+import { validateBody, typeSchema, journalCategorySchema } from '../../middleware/validation.ts';
+import { getNextCategorySequence } from '../../middleware/sequencing.ts';
 
 export const miscCategoriesRoutes = new Hono();
 const api = miscCategoriesRoutes;
