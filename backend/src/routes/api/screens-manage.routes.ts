@@ -16,7 +16,8 @@ import { db } from '../../db/index.ts';
 import {
   screenTemplates, screenWidgets, screenWidgetTemplates,
   screenWidgetAccounts, screenPermissions, customScreenConfig,
-  sidebarItems, sidebarSections, uiPages, uiComponents
+  sidebarItems, sidebarSections, uiPages, uiComponents, userSidebarConfig,
+  operationTypes, accounts,
 } from '../../db/schema/core.ts';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';

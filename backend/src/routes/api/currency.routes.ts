@@ -8,7 +8,7 @@ import { db } from '../../db/index.ts';
 import { exchangeRates } from '../../db/schema/core.ts';
 import { eq, and } from 'drizzle-orm';
 import {
-  getExchangeRateHistory, addExchangeRate, clearRateCache, getUnifiedBalances
+  getExchangeRateHistory, addExchangeRate, clearRateCache, getUnifiedBalances, getExchangeRate
 } from '../../engines/currency.engine.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
@@ -26,7 +26,7 @@ api.get('/businesses/:bizId/exchange-rates', bizAuthMiddleware(), safeHandler('�
   // فلترة بالتاريخ إذا طُلب
   const result = dateParam
     ? rows.filter(r => {
-        const d = r.effectiveDate instanceof Date ? r.effectiveDate.toISOString().split('T')[0] : String(r.effectiveDate).split('T')[0];
+        const d = String(r.effectiveDate).split('T')[0];
         return d === dateParam;
       })
     : rows;

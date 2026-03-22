@@ -64,7 +64,7 @@ type ArchiveSettingsPayload = {
   importanceLevels: string[];
 };
 
-function getArchiveSettingsDefaults(): ArchiveSettingsPayload {
+export function getArchiveSettingsDefaults(): ArchiveSettingsPayload {
   return {
     basePath: 'D:\\Archive\\Attachments',
     folderByType: {
@@ -81,11 +81,11 @@ function getArchiveSettingsDefaults(): ArchiveSettingsPayload {
   };
 }
 
-function getArchiveSettingsFilePath(bizId: number): string {
+export function getArchiveSettingsFilePath(bizId: number): string {
   return path.join(process.cwd(), 'storage', 'attachments-archive', `${bizId}.json`);
 }
 
-function normalizeArchiveSettings(raw: any): ArchiveSettingsPayload {
+export function normalizeArchiveSettings(raw: any): ArchiveSettingsPayload {
   const defaults = getArchiveSettingsDefaults();
   const importance = Array.isArray(raw?.importanceLevels)
     ? raw.importanceLevels.map((v: any) => String(v || '').trim()).filter(Boolean)
@@ -106,7 +106,7 @@ function normalizeArchiveSettings(raw: any): ArchiveSettingsPayload {
   };
 }
 
-async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayload> {
+export async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayload> {
   const filePath = getArchiveSettingsFilePath(bizId);
   try {
     const raw = await readFile(filePath, 'utf8');
@@ -116,13 +116,13 @@ async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayloa
   }
 }
 
-function sanitizePathSegment(value: unknown): string {
+export function sanitizePathSegment(value: unknown): string {
   const s = typeof value === 'string' ? value.trim() : '';
   if (!s) return 'غير-محدد';
   return s.replaceAll(/[\\/:*?"<>|]/g, '-');
 }
 
-function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
+export function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
   const normalized = typeof filePath === 'string' ? filePath : '';
   const parts = new Set(normalized.split(/[\\/]/).map((p) => p.trim()).filter(Boolean));
   for (const level of levels) {
@@ -131,7 +131,7 @@ function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
   return levels.at(-1) || 'عادي';
 }
 
-async function resolveVoucherArchivePath(
+export async function resolveVoucherArchivePath(
   bizId: number,
   voucherId: number,
   importance: string | null | undefined,
@@ -197,7 +197,7 @@ async function resolveVoucherArchivePath(
   );
 }
 
-async function ensureArchiveTreeForBusiness(
+export async function ensureArchiveTreeForBusiness(
   bizId: number,
   settings: ArchiveSettingsPayload,
 ): Promise<{ directories: number }> {
@@ -258,7 +258,7 @@ async function ensureArchiveTreeForBusiness(
   return { directories: uniqueDirs.size };
 }
 
-async function listWindowsDrives(): Promise<string[]> {
+export async function listWindowsDrives(): Promise<string[]> {
   const drives: string[] = [];
   for (let code = 67; code <= 90; code += 1) {
     const letter = String.fromCharCode(code);

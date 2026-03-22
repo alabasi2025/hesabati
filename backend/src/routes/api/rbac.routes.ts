@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { roles, rolePermissions, userRoles, users } from '../../db/schema/core.ts';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray, count } from 'drizzle-orm';
 import { getUserMaxAmounts, checkResourceLimit } from '../../engines/permissions.engine.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';

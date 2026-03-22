@@ -53,21 +53,16 @@ export interface LowStockNotification {
   bizId: number;
 }
 
-// ── وظائف الإشعار المتخصصة ──────────────────────────────────────────────────
-import { wsService } from '../services/websocket.service.ts';
-
 /**
  * إشعار بسند جديد لجميع مستخدمي العمل
  */
 export async function notifyNewVoucher(payload: VoucherNotification): Promise<void> {
-  wsService.notifyBusiness(payload.bizId, {
-    type: 'new_voucher',
+  wsService.notifyBusiness(payload.bizId, 'new_voucher', {
     voucherId: payload.voucherId,
     voucherType: payload.voucherType,
     amount: payload.amount,
     currency: payload.currency,
     createdBy: payload.createdBy,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -75,13 +70,11 @@ export async function notifyNewVoucher(payload: VoucherNotification): Promise<vo
  * إشعار بتغيير حالة سند
  */
 export async function notifyStatusChange(payload: StatusChangeNotification): Promise<void> {
-  wsService.notifyBusiness(payload.bizId, {
-    type: 'status_change',
+  wsService.notifyBusiness(payload.bizId, 'status_change', {
     voucherId: payload.voucherId,
     fromStatus: payload.fromStatus,
     toStatus: payload.toStatus,
     changedBy: payload.changedBy,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -89,22 +82,20 @@ export async function notifyStatusChange(payload: StatusChangeNotification): Pro
  * إشعار بتحديث شاشة مخصصة
  */
 export async function notifyScreenUpdate(bizId: number, screenId: number): Promise<void> {
-  wsService.notifyScreenUpdate(bizId, screenId);
+  wsService.notifyScreenUpdate(bizId, screenId, 'screen_update');
 }
 
 /**
  * إشعار بمخزون منخفض
  */
 export async function notifyLowStock(payload: LowStockNotification): Promise<void> {
-  wsService.notifyBusiness(payload.bizId, {
-    type: 'low_stock',
+  wsService.notifyBusiness(payload.bizId, 'low_stock', {
     itemId: payload.itemId,
     itemName: payload.itemName,
     currentStock: payload.currentStock,
     minimumStock: payload.minimumStock,
     warehouseId: payload.warehouseId,
     priority: 'high',
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -112,13 +103,11 @@ export async function notifyLowStock(payload: LowStockNotification): Promise<voi
  * إشعار بموعد رواتب
  */
 export async function notifySalaryDue(bizId: number, month: number, year: number, count: number): Promise<void> {
-  wsService.notifyBusiness(bizId, {
-    type: 'salary_due',
+  wsService.notifyBusiness(bizId, 'salary_due', {
     month,
     year,
     unpaidCount: count,
     priority: 'normal',
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -126,11 +115,9 @@ export async function notifySalaryDue(bizId: number, month: number, year: number
  * إشعار نظامي عام
  */
 export async function notifySystem(bizId: number, message: string, priority: NotificationPayload['priority'] = 'normal'): Promise<void> {
-  wsService.notifyBusiness(bizId, {
-    type: 'system',
+  wsService.notifyBusiness(bizId, 'system', {
     message,
     priority,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -138,10 +125,7 @@ export async function notifySystem(bizId: number, message: string, priority: Not
  * إشعار مستخدم واحد بشكل مباشر
  */
 export async function notifyUser(userId: number, payload: Record<string, unknown>): Promise<void> {
-  wsService.notifyUser(userId, {
-    ...payload,
-    timestamp: new Date().toISOString(),
-  });
+  wsService.notifyUser(userId, 'notification', payload);
 }
 
 /**
@@ -159,6 +143,6 @@ export async function broadcastToBusinesses(
   payload: Omit<NotificationPayload, 'bizId'>
 ): Promise<void> {
   for (const bizId of bizIds) {
-    wsService.notifyBusiness(bizId, { ...payload, bizId });
+    wsService.notifyBusiness(bizId, payload.type, { ...payload, bizId });
   }
 }

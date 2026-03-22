@@ -5,4 +5,4 @@
  *  - warehouse-ops.routes.ts   (عمليات + جرد + ملخصات)
  */
 export { warehouseCrudRoutes } from './warehouse-crud.routes';
-export { warehouseOpsRoutes } from './warehouse-ops.routes';
+export { warehouseRoutes as warehouseOpsRoutes } from './warehouse-ops.routes';

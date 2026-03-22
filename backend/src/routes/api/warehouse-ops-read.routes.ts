@@ -202,7 +202,7 @@ warehouseOpsReadRoutes.get('/businesses/:bizId/warehouse-operations-summary', bi
   return c.json(rows);
 }));
 
-export default warehouseRoutes;
+export default warehouseOpsReadRoutes;
 
 
 

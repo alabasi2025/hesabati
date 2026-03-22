@@ -318,6 +318,7 @@ export const auditLog = pgTable('audit_log', {
   recordId: integer('record_id'),
   oldData: jsonb('old_data'),
   newData: jsonb('new_data'),
+  description: text('description'),
   ipAddress: varchar('ip_address', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

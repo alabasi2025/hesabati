@@ -210,15 +210,14 @@ piActionsRoutes.post(
           if (item.inventoryItemId) {
             await processStockMovement(bizId, {
               warehouseId: existing.warehouseId,
-              inventoryItemId: item.inventoryItemId,
+              itemId: item.inventoryItemId,
               movementType: "in",
               quantity: parseFloat(String(item.quantity)),
               unitCost: parseFloat(String(item.unitCost)),
-              referenceType: "purchase_invoice",
-              referenceId: id,
-              notes: `تأكيد فاتورة مشتريات #${existing.invoiceNumber}`,
-              createdBy: userId,
-            }, tx as any);
+              reference: `purchase_invoice:${id}`,
+              description: `تأكيد فاتورة مشتريات #${existing.invoiceNumber}`,
+              createdBy: userId ?? undefined,
+            });
           }
         }
       }
@@ -301,15 +300,14 @@ piActionsRoutes.post(
             if (existing.warehouseId && invoiceItem.inventoryItemId) {
               await processStockMovement(bizId, {
                 warehouseId: existing.warehouseId,
-                inventoryItemId: invoiceItem.inventoryItemId,
+                itemId: invoiceItem.inventoryItemId,
                 movementType: "in",
                 quantity: receivedQty,
                 unitCost: parseFloat(String(invoiceItem.unitCost)),
-                referenceType: "purchase_invoice_receive",
-                referenceId: id,
-                notes: `استلام فاتورة مشتريات #${existing.invoiceNumber}`,
+                reference: `purchase_invoice_receive:${id}`,
+                description: `استلام فاتورة مشتريات #${existing.invoiceNumber}`,
                 createdBy: undefined,
-              }, tx as any);
+              });
             }
           }
         }
@@ -375,7 +373,7 @@ piActionsRoutes.delete(
   })
 );
 
-export default purchaseInvoicesRoutes;
+export default piActionsRoutes;
 
 
 export { piActionsRoutes };

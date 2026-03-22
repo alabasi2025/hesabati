@@ -5,7 +5,7 @@
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { sidebarSections, sidebarItems, userSidebarConfig } from '../../db/schema/core.ts';
+import { sidebarSections, sidebarItems, userSidebarConfig, screenTemplates, users, businesses } from '../../db/schema/core.ts';
 import { eq, and, inArray } from 'drizzle-orm';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
