@@ -22,7 +22,7 @@
   "dependencies": {
     "@hono/node-server": "^1.19.11",
     "@orpc/openapi": "^1.4.0",
-    "@orpc/server": "^1.13.7",
+    "@orpc/server": "^1.13.9",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
