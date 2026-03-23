@@ -19,10 +19,10 @@ importers:
         version: 1.19.11(hono@4.12.7)
       '@orpc/openapi':
         specifier: ^1.4.0
-        version: 1.13.6(ws@8.19.0)
+        version: 1.13.6(ws@8.20.0)
       '@orpc/server':
         specifier: ^1.13.7
-        version: 1.13.7(ws@8.19.0)
+        version: 1.13.7(ws@8.20.0)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -42,8 +42,8 @@ importers:
         specifier: ^3.4.5
         version: 3.4.8
       ws:
-        specifier: ^8.19.0
-        version: 8.19.0
+        specifier: ^8.20.0
+        version: 8.20.0
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -955,8 +955,8 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
-  ws@8.19.0:
-    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+  ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -1117,13 +1117,13 @@ snapshots:
     transitivePeerDependencies:
       - '@opentelemetry/api'
 
-  '@orpc/openapi@1.13.6(ws@8.19.0)':
+  '@orpc/openapi@1.13.6(ws@8.20.0)':
     dependencies:
       '@orpc/client': 1.13.6
       '@orpc/contract': 1.13.6
       '@orpc/interop': 1.13.6
       '@orpc/openapi-client': 1.13.6
-      '@orpc/server': 1.13.6(ws@8.19.0)
+      '@orpc/server': 1.13.6(ws@8.20.0)
       '@orpc/shared': 1.13.6
       '@orpc/standard-server': 1.13.6
       json-schema-typed: 8.0.2
@@ -1134,7 +1134,7 @@ snapshots:
       - fastify
       - ws
 
-  '@orpc/server@1.13.6(ws@8.19.0)':
+  '@orpc/server@1.13.6(ws@8.20.0)':
     dependencies:
       '@orpc/client': 1.13.6
       '@orpc/contract': 1.13.6
@@ -1148,12 +1148,12 @@ snapshots:
       '@orpc/standard-server-peer': 1.13.6
       cookie: 1.1.1
     optionalDependencies:
-      ws: 8.19.0
+      ws: 8.20.0
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - fastify
 
-  '@orpc/server@1.13.7(ws@8.19.0)':
+  '@orpc/server@1.13.7(ws@8.20.0)':
     dependencies:
       '@orpc/client': 1.13.7
       '@orpc/contract': 1.13.7
@@ -1167,7 +1167,7 @@ snapshots:
       '@orpc/standard-server-peer': 1.13.7
       cookie: 1.1.1
     optionalDependencies:
-      ws: 8.19.0
+      ws: 8.20.0
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - fastify
@@ -1751,6 +1751,6 @@ snapshots:
       siginfo: 2.0.0
       stackback: 0.0.2
 
-  ws@8.19.0: {}
+  ws@8.20.0: {}
 
   zod@3.25.76: {}
