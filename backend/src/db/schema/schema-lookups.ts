@@ -269,32 +269,33 @@ export const purchaseInvoices = pgTable('purchase_invoices', {
   supplierAccountId: integer('supplier_account_id').references(() => accounts.id),
   warehouseId: integer('warehouse_id').references(() => warehouses.id),
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
-  
+
   subtotal: decimal('subtotal', { precision: 20, scale: 2 }).notNull().default('0'),
   tax: decimal('tax', { precision: 20, scale: 2 }).notNull().default('0'),
   discount: decimal('discount', { precision: 20, scale: 2 }).notNull().default('0'),
   totalAmount: decimal('total_amount', { precision: 20, scale: 2 }).notNull().default('0'),
-  
+
   paymentMethod: paymentMethodEnum('payment_method').notNull().default('credit'),
   paidAmount: decimal('paid_amount', { precision: 20, scale: 2 }).notNull().default('0'),
   remainingAmount: decimal('remaining_amount', { precision: 20, scale: 2 }).notNull().default('0'),
-  
+
   voucherId: integer('voucher_id').references(() => vouchers.id),
   warehouseOperationId: integer('warehouse_operation_id'),
-  
+
   status: purchaseInvoiceStatusEnum('status').notNull().default('draft'),
   invoiceDate: timestamp('invoice_date').notNull().defaultNow(),
   dueDate: timestamp('due_date'),
-  
+
   externalReference: varchar('external_reference', { length: 100 }),
   notes: text('notes'),
-  
+
   receivedQuantity: decimal('received_quantity', { precision: 20, scale: 4 }).notNull().default('0'),
   receivedStatus: varchar('received_status', { length: 20 }).notNull().default('pending'),
-  
+
   sequenceNumber: integer('sequence_number'),
   fullSequenceNumber: varchar('full_sequence_number', { length: 100 }),
-  
+  supplierSequenceNumber: varchar('supplier_sequence_number', { length: 100 }),
+
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

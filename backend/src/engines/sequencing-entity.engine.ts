@@ -3,54 +3,38 @@
  * ترقيم الكيانات: سندات + مخازن + قيود + قوالب + فواتير + الدوال الموحّدة
  * (مستخرجة من sequencing.engine.ts)
  */
-import { db } from '../db/index.ts';
-import { eq, and, sql } from 'drizzle-orm';
-import { type DbOrTx } from './sequencing.types.ts';
-import { getNextSequence, getNextCategorySequence, getNextItemInCategorySequence } from './sequencing-core.engine.ts';
+import { type DbOrTx, ARABIC_LABELS, TYPE_PREFIXES } from './sequencing.types.ts';
+import { getNextSequence, getCurrentSequence } from './sequencing-core.engine.ts';
 
 // ===================== ترقيم السندات (صرف/قبض) =====================
 
 /**
- * توليد الرقم المنسق الكامل لسند (صرف/قبض/تحويل)
- * الشكل: تصنيفX-خزينةY-سنة-نوع-ZZZZ
+ * توليد الرقم المنسق الكامل لسند (صرف/قبض)
+ * الشكل: PREFIX-XX-سنة-نوع-ZZZZ مثال: FND-01-2025-صرف-0001
  *
  * @param businessId - معرّف العمل
- * @param categorySeqNum - رقم التصنيف (sequenceNumber من جدول التصنيف)
- * @param treasurySeqNum - رقم الخزينة داخل التصنيف (sequenceNumber من جدول funds/accounts)
+ * @param treasurySeqNum - رقم الخزينة التسلسلي (sequenceNumber)
  * @param treasuryType - نوع الخزينة (fund/bank/exchange/e_wallet)
- * @param voucherType - نوع السند (receipt/payment/transfer)
- * @param treasuryId - معرّف الخزينة (fund_id أو account_id)
+ * @param voucherType - نوع السند (receipt/payment)
+ * @param treasuryId - معرّف الخزينة
  * @param year - السنة (اختياري)
  * @param tx - اختياري: كائن المعاملة
  */
 export async function generateVoucherFullSequence(
   businessId: number,
-  categorySeqNum: number,
   treasurySeqNum: number,
   treasuryType: string,
-  voucherType: "receipt" | "payment" | "transfer" | "journal",
+  voucherType: "receipt" | "payment",
   treasuryId: number,
   year?: number,
   tx?: DbOrTx,
 ): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
   const currentYear = year || new Date().getFullYear();
-
-  // المفتاح الفريد: نوع السند + خزينة محددة
-  const counterType = `voucher_${voucherType}`;
-  // entityId = treasuryId لأن الترقيم حسب الخزينة
-  const sequentialNumber = await getNextSequence(
-    businessId,
-    counterType,
-    treasuryId,
-    currentYear,
-    tx,
-  );
-
-  const treasuryLabel = ARABIC_LABELS[treasuryType] || treasuryType;
+  const counterType = `voucher_${voucherType}` as const;
+  const sequentialNumber = await getNextSequence(businessId, counterType, treasuryId, currentYear, tx);
+  const prefix = TYPE_PREFIXES[treasuryType] || treasuryType.toUpperCase().substring(0, 3);
   const voucherLabel = ARABIC_LABELS[voucherType] || voucherType;
-
-  const fullSequenceNumber = `${categorySeqNum}-${treasurySeqNum}-${currentYear}-${voucherLabel}-${String(sequentialNumber).padStart(4, "0")}`;
-
+  const fullSequenceNumber = `${prefix}-${String(treasurySeqNum).padStart(2, "0")}-${currentYear}-${voucherLabel}-${String(sequentialNumber).padStart(4, "0")}`;
   return { fullSequenceNumber, sequentialNumber };
 }
 
@@ -58,40 +42,28 @@ export async function generateVoucherFullSequence(
 
 /**
  * توليد الرقم المنسق الكامل لعملية مخزن
- * الشكل: تصنيفX-مخزنY-سنة-نوع-ZZZZ
+ * الشكل: WHS-XX-سنة-نوع-ZZZZ مثال: WHS-01-2025-صرف-0001
  *
  * @param businessId - معرّف العمل
- * @param categorySeqNum - رقم التصنيف
- * @param warehouseSeqNum - رقم المخزن داخل التصنيف
- * @param operationType - نوع العملية (supply_invoice/supply_order/dispatch/transfer_out/receive_transfer)
+ * @param warehouseSeqNum - رقم المخزن التسلسلي
+ * @param operationType - نوع العملية
  * @param warehouseId - معرّف المخزن
  * @param year - السنة (اختياري)
  * @param tx - اختياري: كائن المعاملة
  */
 export async function generateWarehouseOpFullSequence(
   businessId: number,
-  categorySeqNum: number,
   warehouseSeqNum: number,
-  operationType: string,
+  operationType: "receive_purchase" | "direct_supply" | "dispatch" | "transfer_out" | "receive_transfer",
   warehouseId: number,
   year?: number,
   tx?: DbOrTx,
 ): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
   const currentYear = year || new Date().getFullYear();
-
-  const counterType = `warehouse_${operationType}`;
-  const sequentialNumber = await getNextSequence(
-    businessId,
-    counterType,
-    warehouseId,
-    currentYear,
-    tx,
-  );
-
+  const counterType = `warehouse_${operationType}` as const;
+  const sequentialNumber = await getNextSequence(businessId, counterType, warehouseId, currentYear, tx);
   const opLabel = ARABIC_LABELS[operationType] || operationType;
-
-  const fullSequenceNumber = `${categorySeqNum}-${warehouseSeqNum}-${currentYear}-${opLabel}-${String(sequentialNumber).padStart(4, "0")}`;
-
+  const fullSequenceNumber = `WHS-${String(warehouseSeqNum).padStart(2, "0")}-${currentYear}-${opLabel}-${String(sequentialNumber).padStart(4, "0")}`;
   return { fullSequenceNumber, sequentialNumber };
 }
 
@@ -163,95 +135,6 @@ export async function generateOperationTemplateFullSequence(
   return { fullSequenceNumber, sequentialNumber };
 }
 
-// ===================== دوال مساعدة =====================
-
-/**
- * تنسيق الرقم التسلسلي بصيغة موحدة (للتوافق مع الكود القديم)
- */
-export function formatSequenceNumber(
-  year: number,
-  prefix: string,
-  sequence: number,
-  digits: number = 5,
-): string {
-  const paddedSeq = String(sequence).padStart(digits, "0");
-  return `${year}-${prefix}-${paddedSeq}`;
-}
-
-/**
- * توليد كود تلقائي لعنصر جديد داخل تصنيفه (للتوافق مع الكود القديم)
- */
-export function generateItemCode(
-  typePrefix: string,
-  sequenceNumber: number,
-  digits: number = 2,
-): string {
-  const paddedNum = String(sequenceNumber).padStart(digits, "0");
-  return `${typePrefix}${paddedNum}`;
-}
-
-/**
- * الحصول على الرقم التسلسلي التالي لعنصر جديد داخل تصنيفه
- * (صندوق جديد في تصنيف معين، حساب جديد في نوع معين، إلخ)
- *
- * @param businessId - معرّف العمل
- * @param counterType - نوع العداد
- * @param typeId - معرّف التصنيف/النوع
- * @param tx - اختياري: كائن المعاملة
- */
-export async function getNextItemSequence(
-  businessId: number,
-  counterType: string,
-  typeId: number,
-  tx?: DbOrTx,
-): Promise<{ sequenceNumber: number; code: string }> {
-  const seq = await getNextSequence(businessId, counterType, typeId, 0, tx);
-  return { sequenceNumber: seq, code: "" };
-}
-
-/**
- * توليد أرقام تسلسلية للسند/القيد/العملية المخزنية (للتوافق مع الكود القديم)
- *
- * @param businessId - معرّف العمل
- * @param accountId - معرّف الحساب
- * @param templateId - معرّف القالب (اختياري)
- * @param operationType - نوع العملية
- * @param year - السنة (اختياري)
- * @param tx - اختياري: كائن المعاملة
- */
-export async function generateOperationSequences(
-  businessId: number,
-  accountId: number,
-  templateId: number | null,
-  operationType: "voucher" | "journal" | "warehouse_op",
-  year?: number,
-  tx?: DbOrTx,
-): Promise<{ accountSequence: number; templateSequence: number | null }> {
-  const opYear = year || new Date().getFullYear();
-
-  const accountCounterType = `account_${operationType}`;
-  const accountSequence = await getNextSequence(
-    businessId,
-    accountCounterType,
-    accountId,
-    opYear,
-    tx,
-  );
-
-  let templateSequence: number | null = null;
-  if (templateId) {
-    const templateCounterType = `template_${operationType}`;
-    templateSequence = await getNextSequence(
-      businessId,
-      templateCounterType,
-      templateId,
-      opYear,
-      tx,
-    );
-  }
-
-  return { accountSequence, templateSequence };
-}
 
 // ===================== ترقيم تصنيفات العمليات =====================
 
@@ -286,43 +169,35 @@ export async function getNextOperationTypeSequence(
 // ===================== ترقيم فواتير المشتريات =====================
 
 /**
- * توليد الرقم المنسق الكامل لفاتورة مشتريات
- * الشكل: PI-سنة-ZZZZ
+ * توليد رقمَي فاتورة المشتريات: عام على مستوى العمل + خاص بالمورد
+ * الشكل العام:    PI-سنة-00001
+ * الشكل للمورد:  SUP-XX-سنة-0001
  *
  * @param businessId - معرّف العمل
+ * @param supplierId - معرّف المورد
+ * @param supplierSeqNum - رقم المورد التسلسلي
  * @param year - السنة (اختياري)
  * @param tx - اختياري: كائن المعاملة
  */
 export async function getNextPurchaseInvoiceSequence(
   businessId: number,
+  supplierId: number,
+  supplierSeqNum: number,
   year?: number,
   tx?: DbOrTx,
-): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
+): Promise<{ globalSequenceNumber: string; supplierSequenceNumber: string }> {
   const currentYear = year || new Date().getFullYear();
-
-  const sequentialNumber = await getNextSequence(
-    businessId,
-    "purchase_invoice",
-    0,
-    currentYear,
-    tx,
-  );
-
-  const fullSequenceNumber = `PI-${currentYear}-${String(sequentialNumber).padStart(5, "0")}`;
-
-  return { fullSequenceNumber, sequentialNumber };
+  const [globalSeq, supplierSeq] = await Promise.all([
+    getNextSequence(businessId, "purchase_invoice_global", 0, currentYear, tx),
+    getNextSequence(businessId, "purchase_invoice_supplier", supplierId, currentYear, tx),
+  ]);
+  return {
+    globalSequenceNumber: `PI-${currentYear}-${String(globalSeq).padStart(5, "0")}`,
+    supplierSequenceNumber: `SUP-${String(supplierSeqNum).padStart(2, "0")}-${currentYear}-${String(supplierSeq).padStart(4, "0")}`,
+  };
 }
 
 // ===================== دوال الترقيم الموحّدة للكيانات =====================
-
-export async function getNextAccountSequence(
-  businessId: number,
-  accountType: string,
-  subTypeId: number,
-  tx?: DbOrTx,
-): Promise<number> {
-  return getNextSequence(businessId, `account_in_${accountType}`, subTypeId || 0, 0, tx);
-}
 
 export async function getNextFundSequence(
   businessId: number,
@@ -364,22 +239,6 @@ export async function getNextEWalletSequence(
   return getNextSequence(businessId, "item_in_ewallet_type", eWalletTypeId, 0, tx);
 }
 
-export async function getNextSupplierSequence(
-  businessId: number,
-  supplierTypeId: number,
-  tx?: DbOrTx,
-): Promise<number> {
-  return getNextSequence(businessId, "supplier_in_type", supplierTypeId, 0, tx);
-}
-
-export async function getNextInventoryItemSequence(
-  businessId: number,
-  itemTypeId: number,
-  tx?: DbOrTx,
-): Promise<number> {
-  return getNextSequence(businessId, "inventory_item_in_type", itemTypeId, 0, tx);
-}
-
 export async function getNextEmployeeSequence(
   businessId: number,
   departmentId: number,
@@ -402,13 +261,6 @@ export async function getNextBusinessPartnerSequence(
   return getNextSequence(businessId, "business_partner", 0, 0, tx);
 }
 
-export async function getNextExpenseCategorySequence(
-  businessId: number,
-  tx?: DbOrTx,
-): Promise<number> {
-  return getNextSequence(businessId, "expense_category", 0, 0, tx);
-}
-
 export async function getNextCustodySequence(
   businessId: number,
   tx?: DbOrTx,
@@ -423,31 +275,57 @@ export async function getNextReconciliationSequence(
   return getNextSequence(businessId, "reconciliation", 0, 0, tx);
 }
 
-export async function getNextExpenseBudgetSequence(
-  businessId: number,
-  year?: number,
-  tx?: DbOrTx,
-): Promise<number> {
-  return getNextSequence(businessId, "expense_budget", 0, year || new Date().getFullYear(), tx);
+/**
+ * الرقم التسلسلي التالي للأعمال (منشآت)
+ * مفتاح العداد: (0, "business", 0, 0) — عالمي
+ * الكود الناتج: biz-01, biz-02, ...
+ */
+export async function getNextBusinessSequence(tx?: DbOrTx): Promise<number> {
+  return getNextSequence(0, "business", 0, 0, tx);
 }
 
-export async function getNextSubTypeSequence(
-  businessId: number,
-  mainType:
-    | "fund"
-    | "bank"
-    | "exchange"
-    | "e_wallet"
-    | "warehouse"
-    | "supplier"
-    | "item"
-    | "operation",
-  tx?: DbOrTx,
-): Promise<number> {
-  return getNextSequence(businessId, `category_${mainType}`, 0, 0, tx);
+/**
+ * الرقم الحالي لآخر عمل مُنشأ (للمعاينة بدون increment)
+ */
+export async function getCurrentBusinessSequence(): Promise<number> {
+  return getCurrentSequence(0, "business", 0, 0);
 }
 
-// ── Aliases للتوافق مع index.ts ─────────────────────────────────────────
-export const generateVoucherNumber = generateVoucherFullSequence;
-export const generateStockNumber = generateWarehouseOpFullSequence;
+// ===================== دوال التوافق (Compatibility Shims) =====================
+
+/**
+ * @deprecated استخدم generateItemCode أو generateLeafAccountCode بدلاً منها
+ * دالة قديمة لتوليد كود هرمي — تُعيد null دائماً (الـ fallback في مكان الاستدعاء يُطبَّق)
+ */
+export function buildAccountHierarchyCode(
+  _businessId: number,
+  _type: string,
+  _categorySeq: number,
+  _seqNum: number,
+): string | null {
+  return null;
+}
+
+/**
+ * @deprecated استخدم generateLeafAccountCode بدلاً منها
+ * رقم تسلسلي عام للحسابات (legacy)
+ */
+export async function getNextAccountSequence(
+  businessId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "account_general", 0, 0, tx);
+}
+
+/**
+ * رقم تسلسلي للمورد داخل تصنيفه
+ */
+export async function getNextSupplierSequence(
+  businessId: number,
+  supplierTypeId: number,
+  tx?: DbOrTx,
+): Promise<number> {
+  return getNextSequence(businessId, "item_in_supplier_type", supplierTypeId, 0, tx);
+}
+
 

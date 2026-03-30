@@ -264,6 +264,10 @@
         </div>
         <div class="modal-body">
           <div class="details-grid">
+            <div class="detail-item"><span class="label">الرقم العام</span><span class="value seq-num">{{ selectedInvoice()!.fullSequenceNumber || selectedInvoice()!.invoiceNumber }}</span></div>
+            @if (selectedInvoice()!.supplierSequenceNumber) {
+              <div class="detail-item"><span class="label">رقم المورد</span><span class="value seq-num supplier">{{ selectedInvoice()!.supplierSequenceNumber }}</span></div>
+            }
             <div class="detail-item"><span class="label">المورد</span><span class="value">{{ selectedInvoice()!.supplierName }}</span></div>
             <div class="detail-item"><span class="label">الحالة</span><span class="value"><span class="status-badge {{ getStatusClass(selectedInvoice()!.status) }}">{{ getStatusLabel(selectedInvoice()!.status) }}</span></span></div>
             <div class="detail-item"><span class="label">طريقة الدفع</span><span class="value">{{ getPaymentLabel(selectedInvoice()!.paymentMethod) }}</span></div>

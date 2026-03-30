@@ -4,8 +4,10 @@
  * (مستخرجة من sequencing.engine.ts)
  */
 import { db } from '../db/index.ts';
+import { sequenceCounters } from '../db/schema/index.ts';
 import { eq, and, sql } from 'drizzle-orm';
 import { type DbOrTx, type CounterType, ARABIC_LABELS, TYPE_PREFIXES } from './sequencing.types.ts';
+import { getFirstRow } from '../utils/db-result.ts';
 
 // ===================== الدوال الأساسية =====================
 

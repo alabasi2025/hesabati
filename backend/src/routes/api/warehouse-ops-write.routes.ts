@@ -14,7 +14,7 @@ import {
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { getNextSequence } from '../../middleware/sequencing.ts';
+import { generateWarehouseOpFullSequence } from '../../engines/sequencing-entity.engine.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
 
@@ -94,6 +94,13 @@ warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthM
   if (!validTypes.includes(body.operationType)) {
     return c.json({ error: `ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± طµط§ظ„ط­. ط§ظ„ط£ظ†ظˆط§ط¹ ط§ظ„ظ…طھط§ط­ط©: ${validTypes.join(', ')}` }, 400);
   }
+  const opTypeToCounterType: Record<string, 'receive_purchase' | 'direct_supply' | 'dispatch' | 'transfer_out' | 'receive_transfer'> = {
+    supply_invoice: 'receive_purchase',
+    supply_order: 'direct_supply',
+    dispatch: 'dispatch',
+    transfer_out: 'transfer_out',
+    receive_transfer: 'receive_transfer',
+  };
   if (body.operationType === 'receive_transfer' && !body.relatedOperationId) {
     return c.json({ error: 'ط§ط³طھظ„ط§ظ… ط§ظ„طھط­ظˆظٹظ„ ظٹطھط·ظ„ط¨ طھط­ط¯ظٹط¯ ط¹ظ…ظ„ظٹط© ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ظ…ط±طھط¨ط·ط© (relatedOperationId)' }, 400);
   }
@@ -108,24 +115,14 @@ warehouseOpsWriteRoutes.post('/businesses/:bizId/warehouse-operations', bizAuthM
   const year = new Date().getFullYear();
   const mainWarehouseId = body.sourceWarehouseId || body.destinationWarehouseId;
   const [mainWh] = await db.select().from(warehouses).where(eq(warehouses.id, mainWarehouseId));
-  let categorySeqNum = 1;
-  let warehouseSeqNum = mainWh?.sequenceNumber || 1;
-  if (mainWh?.subTypeId) {
-    const [whCategory] = await db.select({ sequenceNumber: warehouseTypes.sequenceNumber })
-      .from(warehouseTypes).where(eq(warehouseTypes.id, mainWh.subTypeId));
-    categorySeqNum = whCategory?.sequenceNumber || 1;
-  }
+  const warehouseSeqNum = mainWh?.sequenceNumber || 1;
 
+  const counterOpType = opTypeToCounterType[body.operationType] ?? 'dispatch';
   const whSeqResult = await generateWarehouseOpFullSequence(
-    bizId, categorySeqNum, warehouseSeqNum,
-    body.operationType, mainWarehouseId, year
+    bizId, warehouseSeqNum, counterOpType, mainWarehouseId, year
   );
   const operationNumber = whSeqResult.fullSequenceNumber;
   const whSeq = whSeqResult.sequentialNumber;
-  let tmplSeq: number | null = null;
-  if (body.operationTypeId) {
-    tmplSeq = await getNextSequence(bizId, 'template', body.operationTypeId, year);
-  }
 
   const [created] = await db.insert(warehouseOperations).values({
     businessId: bizId,

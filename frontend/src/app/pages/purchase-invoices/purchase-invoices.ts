@@ -23,6 +23,7 @@ interface PurchaseInvoice {
   id: number;
   invoiceNumber: string;
   fullSequenceNumber?: string;
+  supplierSequenceNumber?: string;
   supplierId: number;
   supplierName?: string;
   warehouseId?: number;
@@ -139,8 +140,8 @@ export class PurchaseInvoicesComponent extends BasePageComponent {
     const status = this.filterStatus();
     const q = this.searchQuery().toLowerCase();
     if (status !== 'all') list = list.filter(inv => inv.status === status);
-    if (q) list = list.filter(inv => 
-      inv.invoiceNumber.toLowerCase().includes(q) || 
+    if (q) list = list.filter(inv =>
+      inv.invoiceNumber.toLowerCase().includes(q) ||
       (inv.supplierName || '').toLowerCase().includes(q) ||
       (inv.externalReference || '').toLowerCase().includes(q)
     );

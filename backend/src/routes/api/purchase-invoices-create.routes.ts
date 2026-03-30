@@ -14,7 +14,7 @@ import {
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, parseId, toErrorMessage, getBody } from '../../middleware/helpers.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { getNextSequence } from '../../middleware/sequencing.ts';
+import { getNextPurchaseInvoiceSequence } from '../../engines/sequencing-entity.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
@@ -46,12 +46,19 @@ piCreateRoutes.post(
     }
 
     const result = await db.transaction(async (tx) => {
-      const { fullSequenceNumber, sequentialNumber } =
-        await getNextPurchaseInvoiceSequence(bizId, undefined, tx);
+      const [supplierRow] = await tx
+        .select({ sequenceNumber: suppliers.sequenceNumber })
+        .from(suppliers)
+        .where(and(eq(suppliers.id, Number(invoiceData.supplierId)), eq(suppliers.businessId, bizId)))
+        .limit(1);
+
+      const supplierSeqNum = supplierRow?.sequenceNumber ?? 0;
+      const { globalSequenceNumber, supplierSequenceNumber } =
+        await getNextPurchaseInvoiceSequence(bizId, Number(invoiceData.supplierId), supplierSeqNum, undefined, tx);
 
       const invoiceNumber = invoiceData.invoiceNumber
         ? String(invoiceData.invoiceNumber)
-        : fullSequenceNumber;
+        : globalSequenceNumber;
 
       let subtotal = 0;
       let totalTax = 0;
@@ -76,8 +83,9 @@ piCreateRoutes.post(
         .values({
           businessId: bizId,
           invoiceNumber,
-          fullSequenceNumber,
-          sequenceNumber: sequentialNumber,
+          fullSequenceNumber: globalSequenceNumber,
+          supplierSequenceNumber,
+          sequenceNumber: supplierSeqNum,
           supplierId: Number(invoiceData.supplierId),
           supplierAccountId: invoiceData.supplierAccountId
             ? Number(invoiceData.supplierAccountId)

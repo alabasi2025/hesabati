@@ -4,33 +4,18 @@
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import {
-  businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
-  accounts, accountBalances, funds, fundBalances,
-  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
-  operationCategories,
-  journalEntries, journalEntryLines,
-  users, auditLog,
+  operationTypes, accounts,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
-import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
+import { safeHandler, getBody, toErrorMessage } from '../../middleware/helpers.ts';
 import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
-import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
-import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
+import { postMultiTransaction } from '../../engines/transaction.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
-import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
+import { getFirstRow } from '../../utils/db-result.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
-import { logAction } from '../../engines/audit.engine.ts';
-import type { AppContext } from './_shared/types.ts';
-import { normalizeTreasuryCode, resolveVoucherTreasuryInfo } from './_vouchers-helpers.ts';
-
-interface PeriodStatsRow {
-  receipts: string | number;
-  payments: string | number;
-  operations_count: string | number;
-}
 
 const vouchersCreateRouter = new Hono();
 
@@ -131,11 +116,8 @@ vouchersCreateRouter.post(
       description: baseDesc || null,
     });
 
-    const requestedStatus = 'unreviewed';
-
     try {
-      if (requestedStatus === 'unreviewed') {
-        const result = await postMultiTransaction(bizId, userId, {
+      const result = await postMultiTransaction(bizId, userId, {
           voucherType: vType,
           currencyId,
           lines,
@@ -153,107 +135,8 @@ vouchersCreateRouter.post(
           fromAccountId: vType === 'payment' ? treasuryAccountId : null,
           toAccountId: vType === 'receipt' ? treasuryAccountId : null,
         });
-        try { wsService.notifyNewVoucher(bizId, result.voucher); } catch { /* optional */ }
-        return c.json(result.voucher, 201);
-      }
-
-      const seqYear = (voucherDate || new Date()).getFullYear();
-      const treasury = await resolveVoucherTreasuryInfo(
-        bizId,
-        vType,
-        vType === 'payment' ? treasuryFundId : null,
-        vType === 'receipt' ? treasuryFundId : null,
-        vType === 'payment' ? treasuryAccountId : null,
-        vType === 'receipt' ? treasuryAccountId : null,
-      );
-
-      let voucherNumber = '';
-      let accountSequence: string | null = null;
-      if (treasury) {
-        const seqVal = await getNextSequence(
-          bizId,
-          `treasury_${treasury.kind}_${vType}`,
-          treasury.treasuryId,
-          seqYear,
-        );
-        const voucherPrefix = TYPE_PREFIXES[vType] || 'VCH';
-        voucherNumber = `${voucherPrefix}-${treasury.treasuryCode}-${seqYear}-${seqVal}`;
-        accountSequence = `${treasury.treasuryCode}-${seqYear}-${seqVal}`;
-      } else {
-        const seqVal = await getNextSequence(bizId, `voucher_${vType}_fallback`, 0, seqYear);
-        const voucherPrefix = TYPE_PREFIXES[vType] || 'VCH';
-        voucherNumber = `${voucherPrefix}-${seqYear}-${String(seqVal).padStart(5, '0')}`;
-      }
-
-      const createdVoucher = await db.transaction(async (tx) => {
-        const [created] = await tx.insert(vouchers).values({
-          businessId: bizId,
-          voucherNumber,
-          voucherType: vType,
-          status: 'unreviewed',
-          amount: String(total),
-          currencyId,
-          fromAccountId: vType === 'payment' ? treasuryAccountId : null,
-          toAccountId: vType === 'receipt' ? treasuryAccountId : null,
-          fromFundId: vType === 'payment' ? treasuryFundId : null,
-          toFundId: vType === 'receipt' ? treasuryFundId : null,
-          stationId: data.stationId || null,
-          employeeId: data.employeeId || null,
-          supplierId: data.supplierId || null,
-          operationTypeId: data.operationTypeId || null,
-          description: baseDesc || opType?.name || '',
-          reference: data.reference || null,
-          voucherDate: voucherDate || new Date(),
-          createdBy: userId,
-          hasMultipleLines: true,
-          accountSequence,
-          fullSequenceNumber: voucherNumber,
-        }).returning();
-
-        const entryDate = created.voucherDate
-          ? new Date(created.voucherDate).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0];
-
-        const [entry] = await tx.insert(journalEntries).values({
-          businessId: bizId,
-          entryNumber: `JE-${created.voucherNumber}`,
-          entryDate,
-          description: baseDesc || opType?.name || '',
-          reference: created.voucherNumber,
-          operationTypeId: data.operationTypeId || null,
-          totalDebit: String(total),
-          totalCredit: String(total),
-          isBalanced: true,
-          createdBy: userId,
-        }).returning({ id: journalEntries.id });
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          await tx.insert(journalEntryLines).values({
-            journalEntryId: entry.id,
-            accountId: line.accountId,
-            lineType: line.lineType,
-            amount: String(line.amount),
-            description: line.description,
-            sortOrder: i,
-          });
-        }
-
-        await tx.insert(auditLog).values({
-          userId,
-          businessId: bizId,
-          action: 'create_voucher_draft',
-          tableName: 'vouchers',
-          recordId: created.id,
-          oldData: null,
-          newData: { status: 'unreviewed', voucherType: vType, linesCount: lines.length },
-        });
-
-        return created;
-      });
-
-      try { wsService.notifyNewVoucher(bizId, createdVoucher); } catch { /* optional */ }
-      return c.json(createdVoucher, 201);
+      try { wsService.notifyNewVoucher(bizId, result.voucher); } catch { /* optional */ }
+      return c.json(result.voucher, 201);
     } catch (err: unknown) {
       return c.json({ error: toErrorMessage(err) || 'ظپط´ظ„ ظپظٹ طھظ†ظپظٹط° ط§ظ„ظ…ط¹ط§ظ…ظ„ط©' }, 400);
     }

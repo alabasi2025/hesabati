@@ -37,9 +37,7 @@
  */
 
 import { db } from "../db/index.ts";
-import { sequenceCounters } from "../db/schema/core.ts";
-import { eq, and, sql } from "drizzle-orm";
-import { getFirstRow } from "../utils/db-result.ts";
+import { getNextSequence } from "./sequencing-core.engine.ts";
 
 // ===================== الأنواع والثوابت =====================
 
@@ -48,34 +46,59 @@ export type DbOrTx = { execute: typeof db.execute };
 
 /** أنواع العدادات */
 export type CounterType =
-  // ترقيم التصنيفات (بدون سنة)
-  | "category_fund_type" // تصنيفات الصناديق
-  | "category_bank_type" // تصنيفات البنوك
-  | "category_exchange_type" // تصنيفات الصرافين
-  | "category_ewallet_type" // تصنيفات المحافظ
-  | "category_warehouse_type" // تصنيفات المخازن
-  | "category_journal" // تصنيفات قيود اليومية
-  // ترقيم العناصر داخل التصنيف (بدون سنة)
-  | "item_in_fund_type" // صندوق داخل تصنيف
-  | "item_in_bank_type" // بنك داخل تصنيف
-  | "item_in_exchange_type" // صراف داخل تصنيف
-  | "item_in_ewallet_type" // محفظة داخل تصنيف
-  | "item_in_warehouse_type" // مخزن داخل تصنيف
-  | "item_in_operation_category" // قالب عملية داخل تصنيف
-  // ترقيم السندات (سنوي) — المفتاح: تصنيف+خزينة+نوع
-  | "voucher_receipt" // سند قبض
-  | "voucher_payment" // سند صرف
-  | "voucher_transfer" // سند تحويل
-  // ترقيم عمليات المخازن (سنوي) — المفتاح: تصنيف+مخزن+نوع
-  | "warehouse_supply_invoice"
-  | "warehouse_supply_order"
-  | "warehouse_dispatch"
-  | "warehouse_transfer_out"
-  | "warehouse_receive_transfer"
-  // ترقيم قيود اليومية (سنوي) — المفتاح: تصنيف
+  // ===== ترقيم الحسابات الفرعية (بدون سنة) =====
+  | "account_fund"         // صندوق  FND-01
+  | "account_bank"         // بنك    BNK-01
+  | "account_e_wallet"     // محفظة  WLT-01
+  | "account_exchange"     // صراف   EXC-01
+  | "account_warehouse"    // مخزن   WHS-01
+  | "account_supplier"     // مورد   SUP-01
+  | "account_employee"     // موظف   EMP-01
+  | "account_partner"      // شريك   PRT-01
+  | "account_custody"      // عهدة   CUS-01
+  | "account_billing"      // فوترة  BIL-01
+  | "account_intermediary" // وسيط   INT-01
+  | "account_budget"       // ميزانية BDG-01
+  | "account_settlement"   // تسوية  STL-01
+  | "account_pending"      // انتقالي PNG-01
+  | "account_accounting"   // محاسبة ACC-01
+  // ===== ترقيم الحسابات الرئيسية الشجرية (بدون سنة) =====
+  | "account_child"        // حساب رئيسي تحت أبيه 1 / 1.1 / 1.1.2
+  // ===== ترقيم التصنيفات الهرمية (بدون سنة) =====
+  | "category_child"       // تصنيف فرعي تحت أبيه
+  // ===== ترقيم العناصر داخل نوعها (بدون سنة) =====
+  | "item_in_fund_type"        // صندوق داخل نوع صناديق
+  | "item_in_bank_type"        // بنك داخل نوع بنوك
+  | "item_in_exchange_type"    // صراف داخل نوع صرافين
+  | "item_in_ewallet_type"     // محفظة داخل نوع محافظ
+  | "item_in_warehouse_type"   // مخزن داخل نوع مخازن
+  | "item_in_operation_category" // قالب داخل نوع قوالب
+  // ===== ترقيم المحطات والكيانات البسيطة (بدون سنة) =====
+  | "station"              // محطة/فرع
+  | "business_partner"     // شريك
+  | "custody"              // عهدة
+  | "reconciliation"       // مطابقة
+  | "employee_in_department" // موظف داخل قسمه
+  // ===== ترقيم أنواع القوالب (بدون سنة) =====
+  | "operation_type_in_category" // قالب داخل تصنيفه
+  // ===== ترقيم السندات (سنوي) — المفتاح: entityId=fundId/accountId =====
+  | "voucher_receipt"      // سند قبض
+  | "voucher_payment"      // سند صرف
+  // ===== ترقيم عمليات المخازن (سنوي) — المفتاح: entityId=warehouseId =====
+  | "warehouse_receive_purchase" // استلام فاتورة مشتريات
+  | "warehouse_direct_supply"    // توريد مباشر
+  | "warehouse_dispatch"         // صرف مخزن
+  | "warehouse_transfer_out"     // تحويل خارج (entityId=sourceWarehouseId)
+  | "warehouse_receive_transfer" // استلام تحويل (entityId=destWarehouseId)
+  // ===== ترقيم فواتير المشتريات (سنوي) =====
+  | "purchase_invoice_global"    // رقم عام على مستوى العمل (entityId=0)
+  | "purchase_invoice_supplier"  // رقم خاص بالمورد (entityId=supplierId)
+  // ===== ترقيم القيود المحاسبية (سنوي) — المفتاح: entityId=journalTypeId =====
   | "journal_entry"
-  // ترقيم قوالب العمليات (سنوي) — المفتاح: تصنيف
-  | "operation_template";
+  // ===== ترقيم قوالب العمليات عند الإنشاء (سنوي) — المفتاح: entityId=categoryId =====
+  | "operation_template"
+  // ===== ترقيم الأعمال (المنشآت) — بدون سنة =====
+  | "business";
 
 /** بادئات الأنواع بالعربي */
 export const ARABIC_LABELS: Record<string, string> = {
@@ -89,11 +112,11 @@ export const ARABIC_LABELS: Record<string, string> = {
   payment: "صرف",
   transfer: "تحويل",
   // أنواع عمليات المخازن
-  supply_invoice: "توريد",
-  supply_order: "طلب",
-  dispatch: "صرف-مخزن",
-  transfer_out: "تحويل-مخزن",
-  receive_transfer: "استلام",
+  receive_purchase: "استلام",
+  direct_supply: "توريد",
+  dispatch: "صرف",
+  transfer_out: "تحويل",
+  receive_transfer: "استلام-تحويل",
   // قيود ومخازن
   journal: "قيد",
   warehouse: "مخزن",
@@ -142,6 +165,14 @@ export function generateTreeAccountCode(
   return `${parentCode}.${sequenceNumber}`;
 }
 
+/**
+ * توليد كود بسيط من prefix ورقم تسلسلي
+ * مثال: generateItemCode('PRT', 3) → 'PRT-03'
+ */
+export function generateItemCode(prefix: string, sequenceNumber: number): string {
+  return `${prefix}-${String(sequenceNumber).padStart(2, "0")}`;
+}
+
 export async function getNextChildAccountSequence(
   businessId: number,
   parentId: number | null,
@@ -153,12 +184,12 @@ export async function getNextChildAccountSequence(
 /**
  * توليد كود للحساب الفرعي بناءً على نوع الحساب الفرعي
  * يُستخدم للحسابات الفرعية فقط (isLeafAccount = true)
- * 
+ *
  * الآلية:
  * - الحسابات الفرعية تأخذ كود حسب النوع الفرعي (fund → FND-01, bank → BNK-01, إلخ)
  * - التصنيفات (fund_types, bank_types) للتنظيم فقط وليس لها علاقة بالترقيم
  * - أنواع الحسابات الفرعية (account_sub_natures) هي التي تحدد الكود
- * 
+ *
  * @param businessId - معرّف العمل
  * @param natureKey - مفتاح النوع الفرعي (fund, bank, e_wallet, warehouse, supplier, إلخ)
  * @param tx - اختياري: كائن المعاملة
@@ -176,10 +207,4 @@ export async function generateLeafAccountCode(
   return { code, sequenceNumber };
 }
 
-/**
- * @deprecated - Legacy hierarchical code builder (kept for compatibility)
- */
-export const MAIN_ACCOUNT_TYPE_SEQUENCE: Record<string, number> = {};
-export function getMainAccountTypeSequence(_accountType: string): number { return 0; }
-export function buildAccountHierarchyCode(_a: number, _b: string, _c: number, _d: number): string { return ""; }
 

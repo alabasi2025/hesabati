@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
 async function checkTableExists(tableName: string): Promise<boolean> {
   const result = await db.execute(sql`
     SELECT EXISTS (
-      SELECT FROM information_schema.tables 
+      SELECT FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name = ${tableName}
     )
   `);
@@ -20,7 +20,7 @@ async function checkTableExists(tableName: string): Promise<boolean> {
 async function checkColumnExists(tableName: string, columnName: string): Promise<boolean> {
   const result = await db.execute(sql`
     SELECT EXISTS (
-      SELECT FROM information_schema.columns 
+      SELECT FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = ${tableName} AND column_name = ${columnName}
     )
   `);
@@ -31,7 +31,7 @@ async function checkColumnExists(tableName: string, columnName: string): Promise
 async function checkConstraintExists(tableName: string, constraintName: string): Promise<boolean> {
   const result = await db.execute(sql`
     SELECT EXISTS (
-      SELECT FROM information_schema.table_constraints 
+      SELECT FROM information_schema.table_constraints
       WHERE table_schema = 'public' AND table_name = ${tableName} AND constraint_name = ${constraintName}
     )
   `);
@@ -176,6 +176,7 @@ async function main() {
     { table: 'suppliers', column: 'sequence_number', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "sequence_number" integer' },
     { table: 'suppliers', column: 'code', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "code" varchar(30)' },
     { table: 'suppliers', column: 'account_id', sql: 'ALTER TABLE "suppliers" ADD COLUMN IF NOT EXISTS "account_id" integer' },
+    { table: 'purchase_invoices', column: 'supplier_sequence_number', sql: 'ALTER TABLE "purchase_invoices" ADD COLUMN IF NOT EXISTS "supplier_sequence_number" varchar(100)' },
   ];
 
   console.log("\n📝 إضافة الأعمدة الجديدة...");

@@ -10,8 +10,11 @@ export class BusinessApiService {
   getDashboardStats() { return this.api.request<DashboardStats>('/dashboard/stats'); }
 
   // ===================== الأعمال =====================
-  getBusinesses()         { return this.api.request<Business[]>('/businesses'); }
-  getBusiness(id: number) { return this.api.request<Business>(`/businesses/${id}`); }
+  getBusinesses()               { return this.api.request<Business[]>('/businesses'); }
+  getBusiness(id: number)       { return this.api.request<Business>(`/businesses/${id}`); }
+  createBusiness(d: any)        { return this.api.request<Business>('/businesses', { method: 'POST', body: JSON.stringify(d) }); }
+  updateBusiness(id: number, d: any) { return this.api.request<Business>(`/businesses/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteBusiness(id: number)     { return this.api.request<{ success: boolean; message: string }>(`/businesses/${id}`, { method: 'DELETE' }); }
 
   // ===================== المحطات =====================
   getStations(bizId: number)                   { return this.api.request<any[]>(`/businesses/${bizId}/stations`); }

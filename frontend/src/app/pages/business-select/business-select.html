@@ -46,7 +46,7 @@
   <!-- Business Cards -->
   @if (!loading() && !loadError()) {
     <div class="businesses-grid">
-      @for (biz of businesses(); track biz.id) {
+      @for (biz of businesses(); track biz.id; let i = $index) {
         <div class="business-card" [style.--biz-color]="biz.color" (click)="enterBusiness(biz)">
           <div class="card-glow" [style.background]="biz.color + '22'"></div>
           <div class="card-content">
@@ -59,6 +59,19 @@
               </div>
             </div>
 
+            <div class="card-code-row">
+              <span class="card-code">{{ biz.code }}</span>
+              <div class="card-actions" (click)="$event.stopPropagation()">
+                <button class="action-btn edit-btn" title="تعديل" (click)="openEditModal(biz, $event)">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                @if (isEmptyBusiness(biz)) {
+                  <button class="action-btn delete-btn" title="حذف" (click)="openDeleteConfirm(biz, $event)">
+                    <span class="material-icons-round">delete</span>
+                  </button>
+                }
+              </div>
+            </div>
             <h2 class="card-title">{{ biz.name }}</h2>
             <p class="card-desc">{{ biz.description }}</p>
 
@@ -112,15 +125,221 @@
       }
 
       <!-- Add New Business Card -->
-      <div class="business-card add-card">
+      <div class="business-card add-card" role="button" tabindex="0"
+        (click)="openAddModal()" (keydown.enter)="openAddModal()">
         <div class="card-content add-content">
           <div class="add-icon">
             <span class="material-icons-round">add_circle_outline</span>
           </div>
           <h3>إضافة عمل جديد</h3>
-          <p>قريباً...</p>
+          <p>انقر لإضافة عمل</p>
         </div>
       </div>
     </div>
   }
 </div>
+
+<!-- Modal تعديل عمل -->
+@if (showEditModal() && editingBiz()) {
+  <div class="modal-overlay" (click)="closeEditModal()">
+    <div class="modal-3d" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons-round">edit</span> تعديل عمل</h3>
+        <button class="close-btn" (click)="closeEditModal()"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>رمز العمل</label>
+          <div class="code-preview">
+            <span class="material-icons-round">tag</span>
+            <span class="code-value">{{ editingBiz()!.code }}</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-name">اسم العمل <span class="required">*</span></label>
+          <input id="edit-name" type="text" [value]="editingBiz()!.name"
+            (input)="updateEditBiz('name', $any($event.target).value)" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-type">نوع العمل</label>
+            <select id="edit-type" title="نوع العمل" [value]="editingBiz()!.type"
+              (change)="updateEditBiz('type', $any($event.target).value)">
+              @for (t of bizTypes; track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-desc">الوصف</label>
+            <input id="edit-desc" type="text" [value]="editingBiz()!.description"
+              (input)="updateEditBiz('description', $any($event.target).value)" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-color">اللون</label>
+            <div class="color-row">
+              <input id="edit-color" type="color" title="لون العمل" [value]="editingBiz()!.color"
+                (input)="updateEditBiz('color', $any($event.target).value)" />
+              <span class="color-swatch" [style.background]="editingBiz()!.color"></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <div class="icon-grid">
+              @for (ic of iconOptions; track ic) {
+                <button class="icon-opt" [class.active]="editingBiz()!.icon === ic"
+                  [style.color]="editingBiz()!.icon === ic ? editingBiz()!.color : ''"
+                  (click)="updateEditBiz('icon', ic)">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+        @if (editError()) {
+          <div class="alert alert-error">
+            <div class="alert-icon"><span class="material-icons-round">error</span></div>
+            <div class="alert-content"><span class="alert-text">{{ editError() }}</span></div>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" [disabled]="saving()" (click)="submitEditBusiness()">
+          @if (saving()) { <span class="material-icons-round animate-spin">sync</span> جاري الحفظ... }
+          @else { <span class="material-icons-round">save</span> حفظ }
+        </button>
+        <button class="btn-ghost" (click)="closeEditModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal تأكيد الحذف -->
+@if (showDeleteConfirm() && deletingBiz()) {
+  <div class="modal-overlay" (click)="closeDeleteConfirm()">
+    <div class="modal-3d modal-sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons-round" style="color:#ef4444">warning</span> تأكيد الحذف</h3>
+        <button class="close-btn" (click)="closeDeleteConfirm()"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="modal-body">
+        <p class="delete-msg">هل تريد حذف العمل <strong>{{ deletingBiz()!.name }}</strong> ({{ deletingBiz()!.code }}) نهائياً؟</p>
+        <p class="delete-hint">هذا الإجراء لا يمكن التراجع عنه.</p>
+        @if (deleteError()) {
+          <div class="alert alert-error">
+            <div class="alert-icon"><span class="material-icons-round">error</span></div>
+            <div class="alert-content"><span class="alert-text">{{ deleteError() }}</span></div>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger" [disabled]="deleting()" (click)="confirmDelete()">
+          @if (deleting()) { <span class="material-icons-round animate-spin">sync</span> جاري الحذف... }
+          @else { <span class="material-icons-round">delete</span> حذف نهائي }
+        </button>
+        <button class="btn-ghost" (click)="closeDeleteConfirm()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal إضافة عمل جديد -->
+@if (showAddModal()) {
+  <div class="modal-overlay" (click)="closeAddModal()">
+    <div class="modal-3d" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons-round">add_business</span> إضافة عمل جديد</h3>
+        <button class="close-btn" (click)="closeAddModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- اسم العمل -->
+        <div class="form-group">
+          <label for="biz-name">اسم العمل <span class="required">*</span></label>
+          <input id="biz-name" type="text" placeholder="مثال: محطات الشمال"
+            [value]="newBiz().name"
+            (input)="updateNewBiz('name', $any($event.target).value)"
+            (blur)="autoFillCode()" />
+        </div>
+
+        <!-- الرمز — يُولَّد تلقائياً -->
+        <div class="form-group">
+          <label>رمز العمل</label>
+          <div class="code-preview">
+            <span class="material-icons-round">tag</span>
+            <span class="code-value">{{ nextCode() }}</span>
+          </div>
+          <span class="form-hint">يُولَّد تلقائياً من محرك الترقيم — لا تكرار مضمون</span>
+        </div>
+
+        <div class="form-row">
+          <!-- نوع العمل -->
+          <div class="form-group">
+            <label for="biz-type">نوع العمل</label>
+            <select id="biz-type" title="نوع العمل" [value]="newBiz().type"
+              (change)="updateNewBiz('type', $any($event.target).value)">
+              @for (t of bizTypes; track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- الوصف -->
+          <div class="form-group">
+            <label for="biz-desc">الوصف</label>
+            <input id="biz-desc" type="text" placeholder="وصف مختصر للعمل"
+              [value]="newBiz().description"
+              (input)="updateNewBiz('description', $any($event.target).value)" />
+          </div>
+        </div>
+
+        <!-- اللون والأيقونة -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="biz-color">اللون</label>
+            <div class="color-row">
+              <input id="biz-color" type="color" title="لون العمل"
+                [value]="newBiz().color"
+                (input)="updateNewBiz('color', $any($event.target).value)" />
+              <span class="color-swatch" [style.background]="newBiz().color"></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الأيقونة</label>
+            <div class="icon-grid">
+              @for (ic of iconOptions; track ic) {
+                <button class="icon-opt" [class.active]="newBiz().icon === ic"
+                  [style.color]="newBiz().icon === ic ? newBiz().color : ''"
+                  (click)="updateNewBiz('icon', ic)">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (saveError()) {
+          <div class="alert alert-error">
+            <div class="alert-icon"><span class="material-icons-round">error</span></div>
+            <div class="alert-content"><span class="alert-text">{{ saveError() }}</span></div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-primary" [disabled]="saving()" (click)="submitAddBusiness()">
+          @if (saving()) {
+            <span class="material-icons-round animate-spin">sync</span> جاري الحفظ...
+          } @else {
+            <span class="material-icons-round">save</span> حفظ
+          }
+        </button>
+        <button class="btn-ghost" (click)="closeAddModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

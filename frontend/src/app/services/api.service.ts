@@ -1,6 +1,6 @@
 /**
  * ApiService — Facade رئيسي يجمع كل خدمات API
- * 
+ *
  * Phase 3: تم تقسيم الـ 867 سطر إلى 6 ملفات متخصصة:
  *   - base-api.service.ts     — HTTP core + error handling
  *   - business-api.service.ts — businesses, stations, dashboard
@@ -9,7 +9,7 @@
  *   - voucher-api.service.ts  — vouchers, collections, journal, custody
  *   - inventory-api.service.ts — warehouses, items, operations, purchases
  *   - screen-api.service.ts   — screens, widgets, workflow, sidebar, reports
- * 
+ *
  * هذا الـ Facade يبقي التوافق الكامل مع كل الصفحات الحالية
  * لا حاجة لتغيير أي import في الصفحات
  */
@@ -45,6 +45,9 @@ export class ApiService {
   // ===================== الأعمال =====================
   getBusinesses()              { return this.biz.getBusinesses(); }
   getBusiness(id: number)      { return this.biz.getBusiness(id); }
+  createBusiness(d: any)       { return this.biz.createBusiness(d); }
+  updateBusiness(id: number, d: any) { return this.biz.updateBusiness(id, d); }
+  deleteBusiness(id: number)   { return this.biz.deleteBusiness(id); }
 
   // ===================== المحطات =====================
   getStations(bizId: number)                   { return this.biz.getStations(bizId); }
@@ -308,32 +311,32 @@ export class ApiService {
 
   // ===================== توافق خلفي (واجهات مطلوبة من الصفحات) =====================
   getAttachmentsArchiveSettings(bizId: number) {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/settings`);
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-settings`);
   }
   browseAttachmentsArchiveFs(bizId: number, dirPath = '') {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/fs?dir=${encodeURIComponent(dirPath)}`);
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-fs?dir=${encodeURIComponent(dirPath)}`);
   }
   createAttachmentsArchiveFolder(bizId: number, currentPath: string, folderName: string) {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/folders`, {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-fs/mkdir`, {
       method: 'POST',
       body: JSON.stringify({ currentPath, folderName }),
     });
   }
   saveAttachmentsArchiveSettings(bizId: number, data: any) {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/settings`, {
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-settings`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
   getAttachmentsArchiveItems(bizId: number, filters?: any) {
     const q = new URLSearchParams(filters || {}).toString();
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/items${q ? `?${q}` : ''}`);
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-items${q ? `?${q}` : ''}`);
   }
   rebuildAttachmentArchivePath(bizId: number, attachmentId: number, importance?: string) {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/rebuild-path/${attachmentId}`, { method: 'POST' });
+    return this.request<any>(`/businesses/${bizId}/attachments/${attachmentId}/rebuild-path`, { method: 'POST' });
   }
   buildAttachmentsArchiveTree(bizId: number) {
-    return this.request<any>(`/businesses/${bizId}/attachments-archive/tree/build`, { method: 'POST' });
+    return this.request<any>(`/businesses/${bizId}/attachments-archive-build`, { method: 'POST' });
   }
 
   getCollectionStyleConfig(bizId: number, screenId: number) {

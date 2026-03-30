@@ -6,10 +6,15 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { sidebarSections, sidebarItems, userSidebarConfig } from '../../db/schema/core.ts';
-import { eq, and, inArray } from 'drizzle-orm';
+import { users } from '../../db/schema/index.ts';
+import { screenTemplates } from '../../db/schema/schema-warehouse.ts';
+import { businesses } from '../../db/schema/schema-business.ts';
+import { eq, and } from 'drizzle-orm';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
+import { validateBody, sidebarSectionSchema } from '../../middleware/validation.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
 
 export const sidebarRoutes = new Hono();
 const api = sidebarRoutes;
@@ -77,7 +82,7 @@ api.get('/businesses/:bizId/sidebar-items', bizAuthMiddleware(), safeHandler('ج
 
 api.post('/sidebar-items', safeHandler('إضافة عنصر سايدبار', async (c) => {
   const body = await getBody(c);
-  
+
   // إصلاح #1: التحقق من sectionId (حقل إلزامي)
   if (!body.sectionId) {
     return c.json({ error: 'معرّف القسم (sectionId) مطلوب - يجب تحديد القسم الذي سيُضاف إليه العنصر' }, 400);
@@ -86,15 +91,15 @@ api.post('/sidebar-items', safeHandler('إضافة عنصر سايدبار', asy
   if (!body.label) return c.json({ error: 'التسمية (label) مطلوبة' }, 400);
   if (!body.icon) return c.json({ error: 'الأيقونة (icon) مطلوبة' }, 400);
   if (!body.route) return c.json({ error: 'المسار (route) مطلوب' }, 400);
-  
+
   // التحقق من وجود القسم وملكيته
   const [section] = await db.select().from(sidebarSections).where(eq(sidebarSections.id, body.sectionId));
   if (!section) return c.json({ error: 'القسم المحدد غير موجود' }, 404);
   const sectionErr = await requireResourceOwnership(c, section);
   if (sectionErr) return sectionErr;
-  
+
   const [created] = await db.insert(sidebarItems).values(body).returning();
-  
+
   // إضافة العنصر لجميع المستخدمين المرتبطين بالعمل
   const bizId = section.businessId;
   const configs = await db.select().from(userSidebarConfig).where(eq(userSidebarConfig.businessId, bizId));
@@ -105,7 +110,7 @@ api.post('/sidebar-items', safeHandler('إضافة عنصر سايدبار', asy
       isVisible: false, customSortOrder: body.sortOrder || 0,
     });
   }
-  
+
   return c.json(created, 201);
 }));
 
@@ -204,7 +209,7 @@ api.get('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHan
   const existingScreens = await db.select({ id: screenTemplates.id }).from(screenTemplates)
     .where(eq(screenTemplates.businessId, bizId));
   const existingScreenIds = new Set(existingScreens.map(s => s.id));
-  
+
   let filteredConfigs = configs.filter((cfg: any) => {
     if (!cfg.screenKey?.startsWith('custom-screen-')) return true;
     const screenId = Number.parseInt(cfg.screenKey.replace('custom-screen-', ''));
@@ -228,11 +233,11 @@ api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHan
   if (!userId) return c.json({ error: 'معرّف المستخدم غير صالح' }, 400);
   const body = await getBody(c);
   const { items } = body;
-  
+
   if (!items || !Array.isArray(items)) {
     return c.json({ error: 'قائمة العناصر (items) مطلوبة' }, 400);
   }
-  
+
   for (const item of items) {
     if (item.id) {
       await db.update(userSidebarConfig).set({
@@ -241,7 +246,18 @@ api.put('/businesses/:bizId/users/:userId/sidebar', bizAuthMiddleware(), safeHan
       }).where(eq(userSidebarConfig.id, item.id));
     }
   }
-  
+
   return c.json({ success: true });
 }));
 
+// ===================== جلب جميع المستخدمين =====================
+api.get('/users', safeHandler('جلب المستخدمين', async (c) => {
+  const rows = await db.select({
+    id: users.id,
+    username: users.username,
+    fullName: users.fullName,
+    role: users.role,
+    isActive: users.isActive,
+  }).from(users).orderBy(users.username);
+  return c.json(rows);
+}));

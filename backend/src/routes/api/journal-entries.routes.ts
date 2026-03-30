@@ -15,7 +15,8 @@ import {
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
-import { getNextSequence, generateJournalEntryFullSequence } from '../../middleware/sequencing.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
+import { generateJournalEntryFullSequence } from '../../engines/sequencing-entity.engine.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';

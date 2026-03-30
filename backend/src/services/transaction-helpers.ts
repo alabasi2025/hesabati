@@ -1,7 +1,8 @@
-import { db } from '../db/index.ts';
-import { eq, and, sql } from 'drizzle-orm';
-import { accounts, funds, operationTypes, vouchers, journalEntries, journalEntryLines, auditLog } from '../db/schema/index.ts';
-import { getNextSequence, TYPE_PREFIXES } from '../middleware/sequencing.ts';
+import { eq, and } from 'drizzle-orm';
+import { accounts, funds, operationTypes } from '../db/schema/index.ts';
+import { TYPE_PREFIXES } from '../middleware/sequencing.ts';
+import { generateVoucherFullSequence } from '../engines/sequencing-entity.engine.ts';
+import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
 import type { TransactionData, TransactionLine, MultiTransactionData } from './transaction.types.ts';
 
 export async function validateTransactionOwnership(
@@ -108,7 +109,7 @@ export function requireVaultNumber(
   const n =
     typeof sequenceNumber === "number"
       ? sequenceNumber
-      : Number.parseInt(String(sequenceNumber ?? ""), 10);
+      : Number(sequenceNumber ?? 0);
   if (!Number.isInteger(n) || n <= 0) {
     throw new Error(
       `رقم الخزينة إلزامي ولا يمكن تركّه فارغاً. من فضلك عيّن رقماً تسلسلياً صحيحاً (عدد صحيح أكبر من 0) من صفحة «${fromPage}» للحساب/الصندوق «${accountOrFundName}».`,
@@ -124,11 +125,11 @@ export function resolveTreasuryCode(
   treasuryName: string,
   fromPage: string,
 ): { kindCode: string; treasuryCode: string } {
-  const normalizedCode = String(code ?? "").trim().toUpperCase();
-  const matched = normalizedCode.match(/^([A-Z]+)-(\d+)$/);
+  const normalizedCode = (typeof code === "string" ? code : "").trim().toUpperCase();
+  const matched = /^([A-Z]+)-(\d+)$/.exec(normalizedCode);
   if (matched) {
     return {
-      kindCode: matched[1]!,
+      kindCode: matched[1],
       treasuryCode: `${matched[1]}-${matched[2]}`,
     };
   }
@@ -202,13 +203,13 @@ export async function resolveAccountTreasury(
     );
   }
   const vaultNo = requireVaultNumber(acc.sequenceNumber, acc.name, "الحسابات");
-  let kind: TreasuryKind = "bank";
-  if (acc.accountType === "bank") {
-    kind = "bank";
-  } else if (acc.accountType === "exchange") {
+  let kind: TreasuryKind;
+  if (acc.accountType === "exchange") {
     kind = "exchange";
-  } else {
+  } else if (acc.accountType === "e_wallet") {
     kind = "e_wallet";
+  } else {
+    kind = "bank";
   }
 
   const { kindCode, treasuryCode } = resolveTreasuryCode(
@@ -267,20 +268,11 @@ export async function generateVoucherNumberByTreasury(
 ): Promise<{ voucherNumber: string; accountSequence: string }> {
   const year = getSequenceYear(data.voucherDate);
   const treasury = await resolveTreasuryForVoucher(tx, bizId, data);
-  const counterType = `treasury_${treasury.kind}_${data.voucherType}`;
-  const seq = await getNextSequence(
-    bizId,
-    counterType,
-    treasury.treasuryId,
-    year,
-    tx,
-  );
-  const voucherSeq = seq; // يبدأ من 1
-  const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
-  return {
-    voucherNumber: `${vPrefix}-${treasury.treasuryCode}-${year}-${voucherSeq}`,
-    accountSequence: `${treasury.treasuryCode}-${year}-${voucherSeq}`,
-  };
+  const vType = data.voucherType as "receipt" | "payment";
+  const seqMatch = /-(\d+)$/.exec(treasury.treasuryCode);
+  const treasurySeqNum = seqMatch ? Number.parseInt(seqMatch[1], 10) : 0;
+  const { fullSequenceNumber } = await generateVoucherFullSequence(bizId, treasurySeqNum, treasury.kind, vType, treasury.treasuryId, year, tx);
+  return { voucherNumber: fullSequenceNumber, accountSequence: fullSequenceNumber };
 }
 
 export async function generateVoucherNumberByTreasuryMulti(
@@ -290,19 +282,11 @@ export async function generateVoucherNumberByTreasuryMulti(
 ): Promise<{ voucherNumber: string; accountSequence: string }> {
   const year = getSequenceYear(data.voucherDate);
   const treasury = await resolveTreasuryForMulti(tx, bizId, data);
-  const counterType = `treasury_${treasury.kind}_${data.voucherType}`;
-  const seq = await getNextSequence(
-    bizId,
-    counterType,
-    treasury.treasuryId,
-    year,
-    tx,
-  );
-  const voucherSeq = seq; // يبدأ من 1
-  const vPrefix = TYPE_PREFIXES[data.voucherType] || "VCH";
+  const vType = data.voucherType as "receipt" | "payment";
+  const { fullSequenceNumber } = await generateVoucherFullSequence(bizId, treasury.treasuryId, treasury.kind, vType, treasury.treasuryId, year, tx);
   return {
-    voucherNumber: `${vPrefix}-${treasury.treasuryCode}-${year}-${voucherSeq}`,
-    accountSequence: `${treasury.treasuryCode}-${year}-${voucherSeq}`,
+    voucherNumber: fullSequenceNumber,
+    accountSequence: fullSequenceNumber,
   };
 }
 

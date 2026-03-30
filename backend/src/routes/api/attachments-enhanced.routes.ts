@@ -6,15 +6,36 @@
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { attachments } from '../../db/schema/core.ts';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import {
   getAttachments, saveAttachment, deleteAttachment,
   getAttachmentById, resolveStoragePath, validateFile
 } from '../../engines/attachment.engine.ts';
+import {
+  getArchiveSettingsFilePath, normalizeArchiveSettings, getArchiveSettingsDefaults,
+  readArchiveSettings, writeArchiveSettings, ensureArchiveTreeForBusiness,
+  listWindowsDrives, sanitizePathSegment, resolveVoucherArchivePath,
+} from '../../engines/archive.engine.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
+import { normalizeDbResult } from './_shared/db-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
+import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
+
+function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
+  const normalized = typeof filePath === 'string' ? filePath : '';
+  const parts = new Set(normalized.split(/[\\/]/).map((p) => p.trim()).filter(Boolean));
+  for (const level of levels) {
+    if (parts.has(level)) return level;
+  }
+  return levels.at(-1) || 'عادي';
+}
 
 export const attachmentsEnhancedRoutes = new Hono();
 const api = attachmentsEnhancedRoutes;
