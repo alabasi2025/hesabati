@@ -102,12 +102,16 @@ describe("API Integration Tests", () => {
     it("GET /api/businesses/1/widget-log-enhanced يجب أن يعيد سجل", async () => {
       if (!TOKEN) return;
       const res = await fetch(
-        `${BASE_URL}/api/businesses/1/widget-log-enhanced?accountIds=1&page=1&pageSize=10`,
+        `${BASE_URL}/api/businesses/1/widget-log-enhanced?limit=10&offset=0`,
         {
           method: "GET",
           headers: authHeaders(),
         }
       );
+      if (res.status !== 200) {
+        const errorText = await res.text();
+        console.log("Error response:", errorText);
+      }
       expect(res.status).toBe(200);
     });
 

@@ -4,7 +4,7 @@ import { eq, isNull } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema/index.ts';
 import bcrypt from 'bcryptjs';
-import { generateLeafAccountCode } from '../middleware/sequencing.ts';
+import { generateLeafAccountCode, getNextSequence, generateItemCode } from '../middleware/sequencing.ts';
 
 const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:774424555@localhost:5432/hesabati';
 const client = postgres(connectionString);
@@ -12,11 +12,10 @@ const db = drizzle(client, { schema });
 
 /**
  * تهيئة البيانات الأولية للنظام
- * 
- * ملاحظة: تم تحديث آلية الترقيم لتعكس النظام الصحيح:
+ *
+ * ملاحظة: نظام الترقيم الموحد:
  * - الحسابات الفرعية: تأخذ كود حسب النوع (FND-01, BNK-01, WHS-01, SUP-01, إلخ)
- * - التصنيفات (fund_types, bank_types): للتنظيم والفلترة فقط
- * - الترقيم يعتمد على أنواع الحسابات الفرعية (account_sub_natures)
+ * - الترقيم يعتمد على أنواع الحسابات الفرعية (account_sub_natures) فقط
  */
 async function seed() {
   console.log('🌱 بدء تهيئة البيانات الأولية...');
@@ -38,9 +37,9 @@ async function seed() {
   console.log('✅ العملات');
 
   // ===================== الأعمال (المحور الرئيسي) =====================
-  const [b1] = await db.insert(schema.businesses).values({ name: 'المحطات', code: 'stations', description: 'شراكة المحطات الأربع مع محمد المراني - الدهمية، الصبالية وجمال، غليل، الساحل الغربي', icon: 'bolt', color: '#f59e0b', sortOrder: 1 }).returning();
-  const [b2] = await db.insert(schema.businesses).values({ name: 'محطة معبر', code: 'mabar', description: 'شراكة محطة معبر مع عمر إسحاق وإبراهيم نجم الدين', icon: 'flash_on', color: '#22c55e', sortOrder: 2 }).returning();
-  const [b3] = await db.insert(schema.businesses).values({ name: 'أعمال شخصية', code: 'personal', description: 'حسابات المالك الشخصية وأعماله الخاصة', icon: 'account_circle', color: '#6366f1', sortOrder: 3 }).returning();
+  const [b1] = await db.insert(schema.businesses).values({ name: 'المحطات', code: 'biz-01', description: 'شراكة المحطات الأربع مع محمد المراني - الدهمية، الصبالية وجمال، غليل، الساحل الغربي', icon: 'bolt', color: '#f59e0b', sortOrder: 1 }).returning();
+  const [b2] = await db.insert(schema.businesses).values({ name: 'محطة معبر', code: 'biz-02', description: 'شراكة محطة معبر مع عمر إسحاق وإبراهيم نجم الدين', icon: 'flash_on', color: '#22c55e', sortOrder: 2 }).returning();
+  const [b3] = await db.insert(schema.businesses).values({ name: 'أعمال شخصية', code: 'biz-03', description: 'حسابات المالك الشخصية وأعماله الخاصة', icon: 'account_circle', color: '#6366f1', sortOrder: 3 }).returning();
   console.log('✅ الأعمال:', b1.id, b2.id, b3.id);
 
   // ===================== أنواع الحسابات الفرعية الوظيفية =====================
@@ -167,12 +166,18 @@ async function seed() {
   console.log('✅ الشركاء');
 
   // ===================== المحطات =====================
-  const [s1] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الدهمية', code: 'DHM', location: 'الدهمية', billingSystems: ['moghrabi_v1', 'support_fund', 'prepaid'] }).returning();
-  const [s2] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الصبالية وجمال', code: 'SBL', location: 'الصبالية وجمال', billingSystems: ['moghrabi_v2', 'support_fund', 'prepaid'] }).returning();
-  const [s3] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'غليل', code: 'GHL', location: 'غليل', billingSystems: ['moghrabi_v3', 'support_fund', 'prepaid'] }).returning();
-  const [s4] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الساحل الغربي', code: 'WST', location: 'الساحل الغربي', billingSystems: ['support_fund_west'], hasEmployees: false, notes: 'نقطة مولعة من محطة الشريك' }).returning();
-  const [s5] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الإدارة', code: 'ADM', location: 'المكتب الرئيسي', billingSystems: [], notes: 'المكتب الإداري' }).returning();
-  const [s6] = await db.insert(schema.stations).values({ businessId: b2.id, name: 'محطة معبر', code: 'MBR', location: 'معبر', billingSystems: ['moghrabi_v3'] }).returning();
+  const seq1 = await getNextSequence(b1.id, 'station', 0, 0, db as any);
+  const [s1] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الدهمية', code: generateItemCode('STN', seq1), location: 'الدهمية', billingSystems: ['moghrabi_v1', 'support_fund', 'prepaid'], sequenceNumber: seq1 }).returning();
+  const seq2 = await getNextSequence(b1.id, 'station', 0, 0, db as any);
+  const [s2] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الصبالية وجمال', code: generateItemCode('STN', seq2), location: 'الصبالية وجمال', billingSystems: ['moghrabi_v2', 'support_fund', 'prepaid'], sequenceNumber: seq2 }).returning();
+  const seq3 = await getNextSequence(b1.id, 'station', 0, 0, db as any);
+  const [s3] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'غليل', code: generateItemCode('STN', seq3), location: 'غليل', billingSystems: ['moghrabi_v3', 'support_fund', 'prepaid'], sequenceNumber: seq3 }).returning();
+  const seq4 = await getNextSequence(b1.id, 'station', 0, 0, db as any);
+  const [s4] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الساحل الغربي', code: generateItemCode('STN', seq4), location: 'الساحل الغربي', billingSystems: ['support_fund_west'], hasEmployees: false, notes: 'نقطة مولعة من محطة الشريك', sequenceNumber: seq4 }).returning();
+  const seq5 = await getNextSequence(b1.id, 'station', 0, 0, db as any);
+  const [s5] = await db.insert(schema.stations).values({ businessId: b1.id, name: 'الإدارة', code: generateItemCode('STN', seq5), location: 'المكتب الرئيسي', billingSystems: [], notes: 'المكتب الإداري', sequenceNumber: seq5 }).returning();
+  const seqMabar = await getNextSequence(b2.id, 'station', 0, 0, db as any);
+  const [s6] = await db.insert(schema.stations).values({ businessId: b2.id, name: 'محطة معبر', code: generateItemCode('STN', seqMabar), location: 'معبر', billingSystems: ['moghrabi_v3'], sequenceNumber: seqMabar }).returning();
   console.log('✅ المحطات');
 
   // ===================== الموظفين =====================
@@ -228,25 +233,25 @@ async function seed() {
   // ===================== الحسابات والمحافظ =====================
   const accountSeedRows: (typeof schema.accounts.$inferInsert)[] = [
     // محافظ إلكترونية - المحطات
-    { businessId: b1.id, name: 'جوالي 1 - شخصي', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', subType: 'شخصي', receivesFromStations: true },
-    { businessId: b1.id, name: 'جوالي 2 - شخصي', accountType: 'e_wallet' as const, accountNumber: '771506017', provider: 'جوالي', subType: 'شخصي' },
-    { businessId: b1.id, name: 'جوالي 3 - وكيل', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', subType: 'وكيل' },
+    { businessId: b1.id, name: 'جوالي 1 - شخصي', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', receivesFromStations: true },
+    { businessId: b1.id, name: 'جوالي 2 - شخصي', accountType: 'e_wallet' as const, accountNumber: '771506017', provider: 'جوالي' },
+    { businessId: b1.id, name: 'جوالي 3 - وكيل', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي' },
     { businessId: b1.id, name: 'جيب', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جيب', receivesFromStations: true },
     { businessId: b1.id, name: 'ون كاش', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'ون كاش', receivesFromStations: true },
     // بنوك
-    { businessId: b1.id, name: 'كريمي الحديدة - جاري', accountType: 'bank' as const, provider: 'الكريمي', subType: 'جاري', receivesFromStations: true },
-    { businessId: b1.id, name: 'كريمي الحديدة - توفير', accountType: 'bank' as const, provider: 'الكريمي', subType: 'توفير' },
-    { businessId: b1.id, name: 'كريمي صنعاء - جاري', accountType: 'bank' as const, provider: 'الكريمي', subType: 'جاري' },
-    { businessId: b1.id, name: 'كريمي صنعاء - توفير', accountType: 'bank' as const, provider: 'الكريمي', subType: 'توفير' },
+    { businessId: b1.id, name: 'كريمي الحديدة - جاري', accountType: 'bank' as const, provider: 'الكريمي', receivesFromStations: true },
+    { businessId: b1.id, name: 'كريمي الحديدة - توفير', accountType: 'bank' as const, provider: 'الكريمي' },
+    { businessId: b1.id, name: 'كريمي صنعاء - جاري', accountType: 'bank' as const, provider: 'الكريمي' },
+    { businessId: b1.id, name: 'كريمي صنعاء - توفير', accountType: 'bank' as const, provider: 'الكريمي' },
     // خدمة حاسب (محفظة إلكترونية)
-    { businessId: b1.id, name: 'حاسب - رئيسي', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'رئيسي', supportedCurrencies: ['YER'], receivesFromStations: true },
-    { businessId: b1.id, name: 'حاسب - نقطة 1', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 2', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 3', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 4', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 5', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 6', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 7', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', subType: 'نقطة', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - رئيسي', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'], receivesFromStations: true },
+    { businessId: b1.id, name: 'حاسب - نقطة 1', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 2', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 3', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 4', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 5', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 6', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
+    { businessId: b1.id, name: 'حاسب - نقطة 7', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
     // الصرافين
     { businessId: b1.id, name: 'الحوشبي - باسم المحطات', accountType: 'exchange' as const, provider: 'الحوشبي', receivesFromStations: true },
     { businessId: b1.id, name: 'الحوشبي - باسم المالك', accountType: 'exchange' as const, provider: 'الحوشبي' },
@@ -256,16 +261,16 @@ async function seed() {
     { businessId: b1.id, name: 'النهمي - محمد المراني', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
     { businessId: b1.id, name: 'النهمي - الرئيسي', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
     // نقد وخزائن (تحت نوع fund)
-    { businessId: b1.id, name: 'خزنة المالك الشخصية', accountType: 'fund' as const, subType: 'خزنة' },
-    { businessId: b1.id, name: 'النقد الشخصي (كاش)', accountType: 'fund' as const, subType: 'كاش' },
+    { businessId: b1.id, name: 'خزنة المالك الشخصية', accountType: 'fund' as const },
+    { businessId: b1.id, name: 'النقد الشخصي (كاش)', accountType: 'fund' as const },
     // عهد
     { businessId: b1.id, name: 'عهدة أكرم العباسي', accountType: 'custody' as const },
     { businessId: b1.id, name: 'عهدة كمال العباسي', accountType: 'custody' as const },
     // مخازن
-    { businessId: b1.id, name: 'حساب المخزن الرئيسي', accountType: 'warehouse' as const, subType: 'رئيسي', responsiblePerson: 'علي الصعدي' },
-    { businessId: b1.id, name: 'حساب مخزن الدهمية', accountType: 'warehouse' as const, subType: 'محطة' },
-    { businessId: b1.id, name: 'حساب مخزن الصبالية وجمال', accountType: 'warehouse' as const, subType: 'محطة' },
-    { businessId: b1.id, name: 'حساب مخزن غليل', accountType: 'warehouse' as const, subType: 'محطة' },
+    { businessId: b1.id, name: 'حساب المخزن الرئيسي', accountType: 'warehouse' as const, responsiblePerson: 'علي الصعدي' },
+    { businessId: b1.id, name: 'حساب مخزن الدهمية', accountType: 'warehouse' as const },
+    { businessId: b1.id, name: 'حساب مخزن الصبالية وجمال', accountType: 'warehouse' as const },
+    { businessId: b1.id, name: 'حساب مخزن غليل', accountType: 'warehouse' as const },
     // معبر
     { businessId: b2.id, name: 'جوالي - معبر', accountType: 'e_wallet' as const, provider: 'جوالي', receivesFromStations: true },
     { businessId: b2.id, name: 'ون كاش - معبر', accountType: 'e_wallet' as const, provider: 'ون كاش', receivesFromStations: true },
@@ -307,23 +312,23 @@ async function seed() {
   // ===================== الصناديق =====================
   await db.insert(schema.funds).values([
     // المحطات
-    { businessId: b1.id, name: 'صندوق التحصيل - الدهمية', fundType: 'collection', stationId: s1.id, responsiblePerson: 'رايد العباسي' },
-    { businessId: b1.id, name: 'صندوق التحصيل - الصبالية وجمال', fundType: 'collection', stationId: s2.id, responsiblePerson: 'علي المجهلي' },
-    { businessId: b1.id, name: 'صندوق التحصيل - غليل', fundType: 'collection', stationId: s3.id, responsiblePerson: 'قايد حسن العباسي' },
-    { businessId: b1.id, name: 'صندوق سلف الموظفين - الدهمية', fundType: 'salary_advance', stationId: s1.id },
-    { businessId: b1.id, name: 'صندوق سلف الموظفين - الصبالية وجمال', fundType: 'salary_advance', stationId: s2.id },
-    { businessId: b1.id, name: 'صندوق سلف الموظفين - غليل', fundType: 'salary_advance', stationId: s3.id },
-    { businessId: b1.id, name: 'صندوق العهدة - الدهمية', fundType: 'custody', stationId: s1.id },
-    { businessId: b1.id, name: 'صندوق العهدة - الصبالية وجمال', fundType: 'custody', stationId: s2.id },
-    { businessId: b1.id, name: 'صندوق العهدة - غليل', fundType: 'custody', stationId: s3.id },
+    { businessId: b1.id, name: 'صندوق رئيسي - الدهمية', stationId: s1.id },
+    { businessId: b1.id, name: 'صندوق رئيسي - الصبالية وجمال', stationId: s2.id },
+    { businessId: b1.id, name: 'صندوق غليل', stationId: s3.id },
+    { businessId: b1.id, name: 'صندوق سلف الموظفين - الدهمية', stationId: s1.id },
+    { businessId: b1.id, name: 'صندوق سلف الموظفين - الصبالية وجمال', stationId: s2.id },
+    { businessId: b1.id, name: 'صندوق سلف الموظفين - غليل', stationId: s3.id },
+    { businessId: b1.id, name: 'صندوق العهدة - الدهمية', stationId: s1.id },
+    { businessId: b1.id, name: 'صندوق العهدة - الصبالية وجمال', stationId: s2.id },
+    { businessId: b1.id, name: 'صندوق العهدة - غليل', stationId: s3.id },
     // صناديق علي صعدي
-    { businessId: b1.id, name: 'صندوق 2023 - علي صعدي', fundType: 'deposit', responsiblePerson: 'علي الصعدي', description: 'صندوق مخلوط - معلق يحتاج تصفية', isActive: false },
-    { businessId: b1.id, name: 'الخزنة - علي صعدي', fundType: 'safe', responsiblePerson: 'علي الصعدي' },
-    { businessId: b1.id, name: 'صندوق الخرج - علي صعدي', fundType: 'expense', responsiblePerson: 'علي الصعدي' },
-    { businessId: b1.id, name: 'صندوق التوريدات - علي صعدي', fundType: 'deposit', responsiblePerson: 'علي الصعدي' },
+    { businessId: b1.id, name: 'صندوق 2023 - علي صعدي', responsiblePerson: 'علي الصعدي', description: 'صندوق مخلوط - معلق يحتاج تصفية', isActive: false },
+    { businessId: b1.id, name: 'الخزنة - علي صعدي', responsiblePerson: 'علي الصعدي' },
+    { businessId: b1.id, name: 'صندوق الخرج - علي صعدي', responsiblePerson: 'علي الصعدي' },
+    { businessId: b1.id, name: 'صندوق التوريدات - علي صعدي', responsiblePerson: 'علي الصعدي' },
     // معبر
-    { businessId: b2.id, name: 'صندوق تحصيل معبر', fundType: 'collection', stationId: s6.id, responsiblePerson: 'حسن المعبري' },
-    { businessId: b2.id, name: 'خزنة معبر', fundType: 'safe', responsiblePerson: 'حسن المعبري' },
+    { businessId: b2.id, name: 'صندوق تحصيل معبر', stationId: s6.id, responsiblePerson: 'حسن المعبري' },
+    { businessId: b2.id, name: 'خزنة معبر', responsiblePerson: 'حسن المعبري' },
   ]);
   console.log('✅ الصناديق');
 
@@ -353,17 +358,27 @@ async function seed() {
   console.log('✅ المخازن');
 
   // ===================== أصناف المخزون =====================
+  const itemSeq1 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq2 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq3 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq4 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq5 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq6 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq7 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq8 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq9 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
+  const itemSeq10 = await getNextSequence(b1.id, 'inventory_item', 0, 0, db as any);
   await db.insert(schema.inventoryItems).values([
-    { businessId: b1.id, name: 'ديزل', code: 'DSL', category: 'وقود', unit: 'لتر' },
-    { businessId: b1.id, name: 'زيت مولد - لوتس', code: 'OIL-LTS', category: 'زيوت', unit: 'برميل' },
-    { businessId: b1.id, name: 'زيت مولد - إيني أجيب', code: 'OIL-ENI', category: 'زيوت', unit: 'برميل' },
-    { businessId: b1.id, name: 'زيت مولد - بيل ون', code: 'OIL-BLN', category: 'زيوت', unit: 'برميل' },
-    { businessId: b1.id, name: 'فلتر زيت', code: 'FLT-OIL', category: 'فلاتر', unit: 'حبة' },
-    { businessId: b1.id, name: 'فلتر هواء', code: 'FLT-AIR', category: 'فلاتر', unit: 'حبة' },
-    { businessId: b1.id, name: 'عداد توماس', code: 'MTR-TMS', category: 'عدادات', unit: 'حبة' },
-    { businessId: b1.id, name: 'بطارية مولد', code: 'BAT', category: 'بطاريات', unit: 'حبة' },
-    { businessId: b1.id, name: 'كيبل كهربائي', code: 'CBL', category: 'مواد كهربائية', unit: 'متر' },
-    { businessId: b1.id, name: 'قاطع كهربائي', code: 'BRK', category: 'مواد كهربائية', unit: 'حبة' },
+    { businessId: b1.id, name: 'ديزل', code: generateItemCode('ITM', itemSeq1), category: 'وقود', unit: 'لتر' },
+    { businessId: b1.id, name: 'زيت مولد - لوتس', code: generateItemCode('ITM', itemSeq2), category: 'زيوت', unit: 'برميل' },
+    { businessId: b1.id, name: 'زيت مولد - إيني أجيب', code: generateItemCode('ITM', itemSeq3), category: 'زيوت', unit: 'برميل' },
+    { businessId: b1.id, name: 'زيت مولد - بيل ون', code: generateItemCode('ITM', itemSeq4), category: 'زيوت', unit: 'برميل' },
+    { businessId: b1.id, name: 'فلتر زيت', code: generateItemCode('ITM', itemSeq5), category: 'فلاتر', unit: 'حبة' },
+    { businessId: b1.id, name: 'فلتر هواء', code: generateItemCode('ITM', itemSeq6), category: 'فلاتر', unit: 'حبة' },
+    { businessId: b1.id, name: 'عداد توماس', code: generateItemCode('ITM', itemSeq7), category: 'عدادات', unit: 'حبة' },
+    { businessId: b1.id, name: 'بطارية مولد', code: generateItemCode('ITM', itemSeq8), category: 'بطاريات', unit: 'حبة' },
+    { businessId: b1.id, name: 'كيبل كهربائي', code: generateItemCode('ITM', itemSeq9), category: 'مواد كهربائية', unit: 'متر' },
+    { businessId: b1.id, name: 'قاطع كهربائي', code: generateItemCode('ITM', itemSeq10), category: 'مواد كهربائية', unit: 'حبة' },
   ]);
   console.log('✅ أصناف المخزون');
 
@@ -373,7 +388,7 @@ async function seed() {
     { businessId: b1.id, personOrEntity: 'أمجد الصلوي', description: 'حساب العدادات والمواد الكهربائية فيه شعبطة كبيرة', status: 'pending' },
     { businessId: b1.id, personOrEntity: 'المهندس محمد حسن', description: 'شاشات وقواطع دمج - له سنة ما كمل', status: 'pending' },
   ];
-  
+
   for (const item of pendingItems) {
     // إنشاء حساب مالي فعلي لكل حساب معلق
     const account = await createLinkedAccount(
@@ -382,7 +397,7 @@ async function seed() {
       'pending',
       getNatureId(item.businessId, 'pending'),
     );
-    
+
     // إنشاء سجل في pending_accounts مع ربطه بالحساب
     await db.insert(schema.pendingAccounts).values({
       businessId: item.businessId,
@@ -476,11 +491,11 @@ async function seed() {
     // تحديث الصندوق بالكود والترقيم من الحساب المنشأ
     await db
       .update(schema.funds)
-      .set({ 
+      .set({
         accountId: account.id,
         code: account.code,
         sequenceNumber: account.sequenceNumber,
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(schema.funds.id, fund.id));
   }
@@ -498,11 +513,11 @@ async function seed() {
     // تحديث المورد بالكود والترقيم من الحساب المنشأ
     await db
       .update(schema.suppliers)
-      .set({ 
+      .set({
         accountId: account.id,
         code: account.code,
         sequenceNumber: account.sequenceNumber,
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(schema.suppliers.id, supplier.id));
   }
@@ -520,11 +535,11 @@ async function seed() {
     // تحديث المخزن بالكود والترقيم من الحساب المنشأ
     await db
       .update(schema.warehouses)
-      .set({ 
+      .set({
         accountId: account.id,
         code: account.code,
         sequenceNumber: account.sequenceNumber,
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(schema.warehouses.id, warehouse.id));
   }
@@ -539,7 +554,7 @@ async function seed() {
       'employee',
       getNatureId(employee.businessId, 'employee'),
     );
-    
+
     // ربط الحساب بالموظف
     await db
       .update(schema.accounts)
@@ -752,7 +767,7 @@ async function seed() {
       .where(eq(schema.sidebarSections.businessId, biz.id));
 
     const allUsers = await db.select({ id: schema.users.id }).from(schema.users);
-    
+
     const userConfigsToInsert: any[] = [];
     for (const user of allUsers) {
       for (const item of allItemsInBiz) {
@@ -765,7 +780,7 @@ async function seed() {
         });
       }
     }
-    
+
     if (userConfigsToInsert.length > 0) {
       await db.insert(schema.userSidebarConfig).values(userConfigsToInsert);
     }

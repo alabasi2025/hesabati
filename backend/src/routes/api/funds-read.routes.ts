@@ -12,7 +12,6 @@ import {
   fundBalances,
   stations,
   currencies,
-  fundTypes,
 } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { fundSchema, validateBody } from "../../middleware/validation.ts";
@@ -34,12 +33,12 @@ const fundsRoutes = new Hono();
 
 /**
  * توليد كود الصندوق
- * 
+ *
  * آلية الترقيم:
  * - الكود: FND-01, FND-02, FND-03...
  * - التصنيفات (fund_types) للتنظيم والفلترة فقط وليس لها علاقة بالترقيم
  * - الترقيم يعتمد على النوع الفرعي "صندوق" من account_sub_natures
- * 
+ *
  * @param businessId - معرف العمل (غير مستخدم حالياً)
  * @param categorySequence - رقم التصنيف (غير مستخدم في الكود الفعلي)
  * @param sequenceNumber - رقم الصندوق التسلسلي
@@ -75,34 +74,6 @@ async function ensureCounterAtLeast(
   `);
 }
 
-async function resolveFundTypeInfo(bizId: number, fundTypeKey: string) {
-  const [ft] = await db
-    .select({ id: fundTypes.id, sequenceNumber: fundTypes.sequenceNumber })
-    .from(fundTypes)
-    .where(
-      and(
-        eq(fundTypes.businessId, bizId),
-        eq(fundTypes.subTypeKey, fundTypeKey),
-      ),
-    )
-    .limit(1);
-
-  if (!ft?.id) return null;
-  return {
-    id: Number(ft.id),
-    categorySequence: Number(ft.sequenceNumber) || 0,
-  };
-}
-
-async function hasAnyFundTypes(bizId: number): Promise<boolean> {
-  const [row] = await db
-    .select({ id: fundTypes.id })
-    .from(fundTypes)
-    .where(eq(fundTypes.businessId, bizId))
-    .limit(1);
-  return !!row?.id;
-}
-
 function parsePositiveIntOrNull(raw: unknown): number | null {
   if (typeof raw === "number") return raw;
   if (typeof raw === "string") return Number.parseInt(raw, 10);
@@ -115,17 +86,15 @@ fundsRoutes.get(
   bizAuthMiddleware(),
   safeHandler("جلب الصناديق", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const includeCustody = c.req.query("includeCustody") === "true";
-    const whereCondition = includeCustody
-      ? eq(funds.businessId, bizId)
-      : and(eq(funds.businessId, bizId), ne(funds.fundType, "custody"));
+    const whereCondition = eq(funds.businessId, bizId);
     const rows = await db
       .select({
         id: funds.id,
         name: funds.name,
-        fundType: funds.fundType,
         sequenceNumber: funds.sequenceNumber,
         code: funds.code,
+        accountId: funds.accountId,
+        accountSubNatureId: accounts.accountSubNatureId,
         stationId: funds.stationId,
         responsiblePerson: funds.responsiblePerson,
         description: funds.description,
@@ -135,9 +104,10 @@ fundsRoutes.get(
         stationName: stations.name,
       })
       .from(funds)
+      .leftJoin(accounts, eq(funds.accountId, accounts.id))
       .leftJoin(stations, eq(funds.stationId, stations.id))
       .where(whereCondition)
-      .orderBy(funds.fundType, funds.sequenceNumber, funds.name);
+      .orderBy(funds.sequenceNumber, funds.name);
 
     const fundIds = rows.map((f) => f.id);
     let balancesArr: {

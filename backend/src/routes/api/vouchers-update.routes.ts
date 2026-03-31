@@ -8,7 +8,6 @@ import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
   accounts, accountBalances, funds, fundBalances,
-  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
   operationCategories,
   journalEntries, journalEntryLines,
   users, auditLog,

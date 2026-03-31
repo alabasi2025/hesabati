@@ -15,10 +15,6 @@ export const accountTypeEnum = pgEnum('account_type', [
   'budget', 'supplier', 'employee', 'partner', 'intermediary', 'settlement', 'pending',
 ]);
 
-export const fundTypeEnum = pgEnum('fund_type', [
-  'collection', 'salary_advance', 'custody', 'safe', 'expense', 'deposit',
-]);
-
 export const voucherTypeEnum = pgEnum('voucher_type', [
   'receipt', 'payment', 'transfer', 'journal', 'collection', 'delivery',
   'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer',

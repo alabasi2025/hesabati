@@ -24,25 +24,7 @@ export const sequenceCounters = pgTable('sequence_counters', {
   uniqueCounter: unique('sequence_counters_unique').on(table.businessId, table.counterType, table.entityId, table.year),
 }));
 
-// ===================== WAREHOUSE TYPES (أنواع/تصنيفات المخازن) =====================
-
-export const warehouseTypes = pgTable('warehouse_types', {
-  id: serial('id').primaryKey(),
-  businessId: integer('business_id').notNull().references(() => businesses.id),
-  name: varchar('name', { length: 200 }).notNull(),
-  subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
-  sequenceNumber: integer('sequence_number'),
-  description: text('description'),
-  icon: varchar('icon', { length: 100 }).default('warehouse'),
-  color: varchar('color', { length: 50 }).default('#4CAF50'),
-  sortOrder: integer('sort_order').default(0),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => ({
-  keyUnique: unique('warehouse_types_biz_key_unique').on(table.businessId, table.subTypeKey),
-  seqUnique: unique('warehouse_types_biz_seq_unique').on(table.businessId, table.sequenceNumber),
-}));
+// ملاحظة: تم حذف warehouse_types - نعتمد على account_sub_natures فقط
 
 // ===================== ACCOUNTING TYPES (أنواع رئيسية مرنة) =====================
 export const accountingTypes = pgTable('accounting_types', {

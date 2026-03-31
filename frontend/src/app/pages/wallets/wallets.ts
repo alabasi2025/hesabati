@@ -20,8 +20,6 @@ export class WalletsComponent extends BasePageComponent {
   private readonly toast = inject(ToastService);
 
   accounts = signal<any[]>([]);
-  walletTypes = signal<any[]>([]);
-  accountSubNatures = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
 
@@ -49,44 +47,30 @@ export class WalletsComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [accs, types, subNatures] = await Promise.all([
-        this.api.getAccounts(this.bizId),
-        this.api.getEWalletTypes(this.bizId),
-        this.api.getAccountSubNatures(this.bizId),
-      ]);
+      const accs = await this.api.getAccounts(this.bizId);
       this.accounts.set(accs.filter((a: any) => a.accountType === 'e_wallet'));
-      this.walletTypes.set(types);
-      this.accountSubNatures.set(subNatures || []);
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }
 
   getFilterTabs() {
-    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
-      ...this.walletTypes().map(t => ({
-        value: t.subTypeKey, label: t.name, icon: t.icon,
-        count: this.accounts().filter(a => a.subType === t.subTypeKey).length,
-      }))
+    return [
+      { value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
+      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.accounts().filter(a => a.isActive).length },
+      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.accounts().filter(a => !a.isActive).length },
     ];
   }
 
-  filteredAccounts() {
-    const f = this.activeFilter();
-    if (f === 'all') return this.accounts();
-    return this.accounts().filter(a => a.subType === f);
-  }
-
-  getTypeInfo(subType: string) {
-    const t = this.walletTypes().find(wt => wt.subTypeKey === subType);
-    return t || { name: subType || 'غير مصنف', icon: 'account_balance_wallet', color: '#607D8B' };
+  get filteredData() {
+    const filter = this.activeFilter();
+    if (filter === 'all') return this.accounts();
+    if (filter === 'active') return this.accounts().filter(a => a.isActive);
+    if (filter === 'inactive') return this.accounts().filter(a => !a.isActive);
+    return this.accounts();
   }
 
   openAddAccount(subType?: string) {
-    if (!this.walletTypes().length) {
-      this.toast.error('لا يمكن إضافة محفظة بدون تصنيف. أضف تصنيف محفظة أولاً.');
-      return;
-    }
-    this.accountForm = { name: '', subType: subType || (this.walletTypes().length ? this.walletTypes()[0].subTypeKey : ''), accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
+    this.accountForm = { name: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
     this.editingAccountId.set(null);
     this.showAccountForm.set(true);
   }
@@ -99,19 +83,12 @@ export class WalletsComponent extends BasePageComponent {
 
   async saveAccount() {
     try {
-      const walletSubNatureId = this.accountSubNatures().find((n: any) => n.natureKey === 'e_wallet')?.id;
-      if (!walletSubNatureId) {
-        this.toast.error('نوع الحساب الفرعي "محفظة" غير موجود. أضفه من أنواع الحسابات الفرعية أولاً.');
-        return;
-      }
-      const selectedSubType = String(this.accountForm?.subType || '').trim();
-      const validSubType = this.walletTypes().some((t: any) => String(t.subTypeKey) === selectedSubType);
-      if (!selectedSubType || !validSubType) {
-        this.toast.error('اختيار تصنيف محفظة صحيح إلزامي قبل الحفظ.');
+      if (!this.accountForm.name?.trim()) {
+        this.toast.error('اسم المحفظة مطلوب');
         return;
       }
 
-      const data = { ...this.accountForm, accountType: 'e_wallet', accountSubNatureId: walletSubNatureId, isLeafAccount: true };
+      const data = { ...this.accountForm, accountType: 'e_wallet', isLeafAccount: true };
       if (this.editingAccountId()) {
         await this.api.updateAccount(this.bizId, this.editingAccountId()!, data);
       } else {

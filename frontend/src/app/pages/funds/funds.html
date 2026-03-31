@@ -5,13 +5,10 @@
       <div class="page-icon green"><span class="material-icons-round">inventory_2</span></div>
       <div>
         <h2>إدارة الصناديق</h2>
-        <p class="page-subtitle">{{ accounts().length }} صندوق في {{ fundTypes().length }} تصنيف</p>
+        <p class="page-subtitle">{{ accounts().length }} صندوق</p>
       </div>
     </div>
     <div class="header-actions">
-      <button class="add-btn secondary" (click)="openAddType()">
-        <span class="material-icons-round">category</span> تصنيف جديد
-      </button>
       <button class="add-btn" (click)="openAddAccount()">
         <span class="material-icons-round">add</span> صندوق جديد
       </button>
@@ -29,29 +26,12 @@
     }
   </div>
 
-  <!-- Types Management Bar -->
-  <div class="types-bar">
-    <div class="types-bar-title"><span class="material-icons-round">category</span> التصنيفات</div>
-    <div class="types-list">
-      @for (t of fundTypes(); track t.id) {
-        <div class="type-chip" [style.border-color]="t.color">
-          <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
-          @if (t.sequenceNumber) {
-            <span class="type-chip-seq" [style.background]="t.color + '20'" [style.color]="t.color">#{{ t.sequenceNumber }}</span>
-          }
-          <span class="type-chip-name">{{ t.name }}</span>
-          <span class="type-chip-key">({{ t.subTypeKey }})</span>
-          <button class="chip-action" (click)="openEditType(t)" title="تعديل"><span class="material-icons-round">edit</span></button>
-          <button class="chip-action delete" (click)="confirmDelete('type', t.id, t.name)" title="حذف"><span class="material-icons-round">close</span></button>
-        </div>
-      }
-    </div>
-  </div>
+  <!-- Types Management Bar: تم إخفاؤه - لم نعد نستخدم fund types -->
 
   <!-- Content -->
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!filteredAccounts().length) {
+  } @else if (!filteredData.length) {
     <div class="empty-state">
       <span class="material-icons-round">inventory_2</span>
       <p>لا توجد صناديق</p>
@@ -59,11 +39,11 @@
     </div>
   } @else {
     <div class="accounts-grid">
-      @for (acc of filteredAccounts(); track acc.id) {
-        <div class="account-card" [style.border-right-color]="getTypeInfo(acc.fundType).color">
+      @for (acc of filteredData; track acc.id) {
+        <div class="account-card" style="border-right-color: #4CAF50">
           <div class="card-header">
-            <div class="card-icon" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.fundType).color + ', ' + getTypeInfo(acc.fundType).color + '99)'">
-              <span class="material-icons-round">{{ getTypeInfo(acc.fundType).icon }}</span>
+            <div class="card-icon" style="background: linear-gradient(135deg, #4CAF50, #4CAF5099)">
+              <span class="material-icons-round">savings</span>
             </div>
             <div class="card-actions">
               <button class="action-btn edit" (click)="openEditAccount(acc)" title="تعديل"><span class="material-icons-round">edit</span></button>
@@ -72,7 +52,6 @@
           </div>
           <h3 class="card-name">{{ acc.name }}</h3>
           <div class="card-badges">
-            <span class="card-type-badge" [style.color]="getTypeInfo(acc.fundType).color" [style.background]="getTypeInfo(acc.fundType).color + '20'">{{ getTypeInfo(acc.fundType).name }}</span>
             @if (acc.sequenceNumber) {
               <span class="card-seq-badge">#{{ acc.sequenceNumber }}</span>
             }
@@ -118,14 +97,6 @@
             <div class="form-group">
               <label>اسم الصندوق</label>
               <input [(ngModel)]="fundForm.name" placeholder="مثال: صندوق التحصيل - الدهمية" />
-            </div>
-            <div class="form-group">
-              <label>التصنيف</label>
-              <select [(ngModel)]="fundForm.fundType">
-                @for (t of fundTypes(); track t.id) {
-                  <option [value]="t.subTypeKey">{{ t.name }}</option>
-                }
-              </select>
             </div>
           </div>
           <div class="form-row">

@@ -11,7 +11,7 @@ import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/helpers.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getNextSequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
-import { normalizeDbResult } from '../../utils/db-result.ts';
+import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 
 const screenEnhRouter = new Hono();

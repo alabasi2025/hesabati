@@ -2,7 +2,7 @@
  * API Routes Index — نقطة الدخول الموحدة للمسارات
  * ══════════════════════════════════════════════════════════════
  * Phase 3: تم فصل المسارات إلى ملفات مخصصة
- * 
+ *
  * الإحصائيات:
  *   - Phase 1+2: 22 ملف route
  *   - Phase 3: +4 ملفات جديدة (currency, rbac, attachments-enhanced, misc-categories)
@@ -47,7 +47,6 @@ import { attachmentsEnhancedRoutes }  from './attachments-enhanced.routes.ts';
 import { miscCategoriesRoutes }       from './misc-categories.routes.ts';
 
 // ── مسارات Phase 4 (مستخرجة من api.rest.ts) ─────────────────────────────────
-import { fundTypesRoutes }   from './fund-types.routes.ts';
 import { sidebarRoutes }     from './sidebar.routes.ts';
 import { screensManageRoutes, screensPermRoutes } from './screens.routes.ts';
 import { billingEmployeesRoutes } from './billing-employees.routes.ts';
@@ -97,7 +96,6 @@ api.route('/', attachmentsEnhancedRoutes);
 api.route('/', miscCategoriesRoutes);
 
 // ── Phase 4: مسارات مستخرجة من api.rest.ts ────────────────────────────────
-api.route('/', fundTypesRoutes);
 api.route('/', sidebarRoutes);
 api.route('/', screensManageRoutes);
 api.route('/', screensPermRoutes);

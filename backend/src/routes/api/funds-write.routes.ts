@@ -12,7 +12,6 @@ import {
   fundBalances,
   stations,
   currencies,
-  fundTypes,
 } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { fundSchema, validateBody } from "../../middleware/validation.ts";
@@ -35,28 +34,10 @@ const fundsRoutes = new Hono();
 
 /**
  * توليد كود الصندوق
- * 
- * آلية الترقيم:
- * - الكود: FND-01, FND-02, FND-03...
- * - التصنيفات (fund_types) للتنظيم والفلترة فقط وليس لها علاقة بالترقيم
- * - الترقيم يعتمد على النوع الفرعي "صندوق" من account_sub_natures
- * 
- * @param businessId - معرف العمل (غير مستخدم حالياً)
- * @param categorySequence - رقم التصنيف (غير مستخدم في الكود الفعلي)
- * @param sequenceNumber - رقم الصندوق التسلسلي
+ * الكود: FND-01, FND-02, FND-03...
  */
-function buildFundCode(
-  businessId: number,
-  categorySequence: number,
-  sequenceNumber: number,
-): string {
-  const hierarchy = buildAccountHierarchyCode(
-    businessId,
-    "fund",
-    categorySequence,
-    sequenceNumber,
-  );
-  return hierarchy || `${TYPE_PREFIXES.fund || "FND"}-${String(sequenceNumber).padStart(2, "0")}`;
+function buildFundCode(sequenceNumber: number): string {
+  return `${TYPE_PREFIXES.fund || "FND"}-${String(sequenceNumber).padStart(2, "0")}`;
 }
 
 async function ensureCounterAtLeast(
@@ -76,33 +57,6 @@ async function ensureCounterAtLeast(
   `);
 }
 
-async function resolveFundTypeInfo(bizId: number, fundTypeKey: string) {
-  const [ft] = await db
-    .select({ id: fundTypes.id, sequenceNumber: fundTypes.sequenceNumber })
-    .from(fundTypes)
-    .where(
-      and(
-        eq(fundTypes.businessId, bizId),
-        eq(fundTypes.subTypeKey, fundTypeKey),
-      ),
-    )
-    .limit(1);
-
-  if (!ft?.id) return null;
-  return {
-    id: Number(ft.id),
-    categorySequence: Number(ft.sequenceNumber) || 0,
-  };
-}
-
-async function hasAnyFundTypes(bizId: number): Promise<boolean> {
-  const [row] = await db
-    .select({ id: fundTypes.id })
-    .from(fundTypes)
-    .where(eq(fundTypes.businessId, bizId))
-    .limit(1);
-  return !!row?.id;
-}
 
 function parsePositiveIntOrNull(raw: unknown): number | null {
   if (typeof raw === "number") return raw;
@@ -125,28 +79,9 @@ fundsRoutes.post(
       businessId: bizId,
     };
 
-    // آلية الترقيم:
-    // - الكود: FND-01, FND-02, FND-03...
-    // - التصنيف (fundType) للتنظيم فقط وليس له علاقة بالكود
-    // - يمكن إدخال رقم يدوي (sequenceNumber) أو تلقائي
-    const fundTypeKey = String((validation.data as any).fundType || "");
-    const typeInfo = await resolveFundTypeInfo(bizId, fundTypeKey);
-    if (!typeInfo) {
-      const anyTypes = await hasAnyFundTypes(bizId);
-      return c.json(
-        {
-          error: anyTypes
-            ? "التصنيف المختار غير موجود. اختر تصنيفاً من القائمة."
-            : "لا توجد تصنيفات صناديق. أنشئ تصنيفاً أولاً ثم أضف الصندوق.",
-        },
-        400,
-      );
-    }
-    const typeRefId = typeInfo.id;
-    const categorySequence = typeInfo.categorySequence;
+    // آلية الترقيم المبسطة: FND-01, FND-02, FND-03...
     const manualSeq = parsePositiveIntOrNull(body.sequenceNumber);
 
-    insertPayload.subTypeId = typeRefId;
     if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0) {
       const existing = await db
         .select({ id: funds.id })
@@ -154,30 +89,29 @@ fundsRoutes.post(
         .where(
           and(
             eq(funds.businessId, bizId),
-            eq(funds.fundType, fundTypeKey as any),
             eq(funds.sequenceNumber, manualSeq),
           ),
         )
         .limit(1);
       if (existing.length > 0)
         return c.json(
-          { error: "رقم الصندوق مستخدم مسبقاً داخل نفس التصنيف" },
+          { error: "رقم الصندوق مستخدم مسبقاً" },
           400,
         );
 
       insertPayload.sequenceNumber = manualSeq;
-      insertPayload.code = buildFundCode(bizId, categorySequence, manualSeq);
+      insertPayload.code = buildFundCode(manualSeq);
       await ensureCounterAtLeast(
         bizId,
-        "item_in_fund_type",
-        typeRefId,
+        "fund",
+        0,
         0,
         manualSeq,
       );
     } else {
-      const seq = await getNextSequence(bizId, "item_in_fund_type", typeRefId, 0);
+      const seq = await getNextSequence(bizId, "fund", 0, 0);
       insertPayload.sequenceNumber = seq;
-      insertPayload.code = buildFundCode(bizId, categorySequence, seq);
+      insertPayload.code = buildFundCode(seq);
     }
 
     const [created] = await db
@@ -186,10 +120,23 @@ fundsRoutes.post(
       .returning();
 
     // ربط الصندوق بحساب مالي تلقائياً
-    const [fundNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures).where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
-    if (created && fundNature) {
+    // إذا أرسل المستخدم accountSubNatureId نستخدمه، وإلا نأخذ أول تصنيف fund
+    const requestedSubNatureId = body.accountSubNatureId ? Number(body.accountSubNatureId) : null;
+    let accountSubNatureId: number | null = null;
+
+    if (requestedSubNatureId) {
+      const [subNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures).where(and(eq(accountSubNatures.id, requestedSubNatureId), eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
+      if (subNature) accountSubNatureId = subNature.id;
+    }
+
+    if (!accountSubNatureId) {
+      const [defaultNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures).where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
+      if (defaultNature) accountSubNatureId = defaultNature.id;
+    }
+
+    if (created && accountSubNatureId) {
       const [createdAccount] = await db.insert(accounts).values({
-        businessId: bizId, name: created.name, accountType: 'fund', accountSubNatureId: fundNature.id,
+        businessId: bizId, name: created.name, accountType: 'fund', accountSubNatureId,
         isLeafAccount: true, code: created.code, sequenceNumber: created.sequenceNumber,
         notes: created.notes, isActive: created.isActive,
       }).returning();
@@ -216,50 +163,28 @@ fundsRoutes.put(
     if (!existing)
       return c.json({ error: "صندوق غير موجود أو لا ينتمي لهذا العمل" }, 404);
     const body = (await getBody(c)) as Record<string, unknown>;
-    let nextFundType = "";
-    if (typeof body.fundType === "string") nextFundType = body.fundType;
-    else if (typeof existing.fundType === "string") nextFundType = existing.fundType;
-    const typeInfo = await resolveFundTypeInfo(bizId, nextFundType);
-    if (!typeInfo) {
-      const anyTypes = await hasAnyFundTypes(bizId);
-      return c.json(
-        {
-          error: anyTypes
-            ? "التصنيف المختار غير موجود. اختر تصنيفاً من القائمة."
-            : "لا توجد تصنيفات صناديق. أنشئ تصنيفاً أولاً ثم أضف الصندوق.",
-        },
-        400,
-      );
-    }
-
-    const payload: Record<string, unknown> = { ...body, subTypeId: typeInfo.id, updatedAt: new Date() };
+    const payload: Record<string, unknown> = { ...body, updatedAt: new Date() };
 
     const manualSeq = parsePositiveIntOrNull(body.sequenceNumber);
 
-    if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0) {
+    if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0 && manualSeq !== existing.sequenceNumber) {
       const dup = await db
         .select({ id: funds.id })
         .from(funds)
         .where(
           and(
             eq(funds.businessId, bizId),
-            eq(funds.fundType, nextFundType as any),
             eq(funds.sequenceNumber, manualSeq),
             ne(funds.id, id),
           ),
         )
         .limit(1);
       if (dup.length > 0) {
-        return c.json({ error: "رقم الصندوق مستخدم مسبقاً داخل نفس التصنيف" }, 400);
+        return c.json({ error: "رقم الصندوق مستخدم مسبقاً" }, 400);
       }
       payload.sequenceNumber = manualSeq;
-      payload.code = buildFundCode(bizId, typeInfo.categorySequence, manualSeq);
-      await ensureCounterAtLeast(bizId, "item_in_fund_type", typeInfo.id, 0, manualSeq);
-    } else if (body.fundType !== undefined && typeof body.fundType === "string" && body.fundType !== existing.fundType) {
-      // عند نقل الصندوق لتصنيف آخر بدون رقم يدوي: أعطه تسلسلاً جديداً داخل التصنيف الجديد.
-      const seq = await getNextSequence(bizId, "item_in_fund_type", typeInfo.id, 0);
-      payload.sequenceNumber = seq;
-      payload.code = buildFundCode(bizId, typeInfo.categorySequence, seq);
+      payload.code = buildFundCode(manualSeq);
+      await ensureCounterAtLeast(bizId, "fund", 0, 0, manualSeq);
     }
 
     const [updated] = await db
@@ -271,8 +196,6 @@ fundsRoutes.put(
     if (updated.accountId) {
       await db.update(accounts).set({
         name: updated.name,
-        subTypeId: typeInfo.id,
-        subType: nextFundType,
         code: updated.code,
         sequenceNumber: updated.sequenceNumber,
         responsiblePerson: updated.responsiblePerson,
@@ -314,24 +237,7 @@ fundsRoutes.put(
     const err = await requireResourceOwnership(c, existing ?? null);
     if (err) return err;
     const body = (await getBody(c)) as Record<string, unknown>;
-    let nextFundType = "";
-    if (typeof body.fundType === "string") nextFundType = body.fundType;
-    else if (typeof existing.fundType === "string") nextFundType = existing.fundType;
-
-    const typeInfo = await resolveFundTypeInfo(existing.businessId, nextFundType);
-    if (!typeInfo) {
-      const anyTypes = await hasAnyFundTypes(existing.businessId);
-      return c.json(
-        {
-          error: anyTypes
-            ? "التصنيف المختار غير موجود. اختر تصنيفاً من القائمة."
-            : "لا توجد تصنيفات صناديق. أنشئ تصنيفاً أولاً ثم أضف الصندوق.",
-        },
-        400,
-      );
-    }
-
-    const payload: Record<string, unknown> = { ...body, subTypeId: typeInfo.id, updatedAt: new Date() };
+    const payload: Record<string, unknown> = { ...body, updatedAt: new Date() };
     const manualSeq = parsePositiveIntOrNull(body.sequenceNumber);
     if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0) {
       const dup = await db
@@ -340,22 +246,15 @@ fundsRoutes.put(
         .where(
           and(
             eq(funds.businessId, existing.businessId),
-            eq(funds.fundType, nextFundType as any),
             eq(funds.sequenceNumber, manualSeq),
             ne(funds.id, id),
           ),
         )
         .limit(1);
       if (dup.length > 0) {
-        return c.json({ error: "رقم الصندوق مستخدم مسبقاً داخل نفس التصنيف" }, 400);
+        return c.json({ error: "رقم الصندوق مستخدم مسبقاً" }, 400);
       }
       payload.sequenceNumber = manualSeq;
-      payload.code = buildFundCode(existing.businessId, typeInfo.categorySequence, manualSeq);
-      await ensureCounterAtLeast(existing.businessId, "item_in_fund_type", typeInfo.id, 0, manualSeq);
-    } else if (body.fundType !== undefined && typeof body.fundType === "string" && body.fundType !== existing.fundType) {
-      const seq = await getNextSequence(existing.businessId, "item_in_fund_type", typeInfo.id, 0);
-      payload.sequenceNumber = seq;
-      payload.code = buildFundCode(existing.businessId, typeInfo.categorySequence, seq);
     }
 
     const [updated] = await db

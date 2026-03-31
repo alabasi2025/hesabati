@@ -227,7 +227,6 @@ export const widgetSchema = z.object({
 
 export const fundSchema = z.object({
   name: z.string({ required_error: 'اسم الصندوق مطلوب' }).min(1, 'اسم الصندوق لا يمكن أن يكون فارغاً').max(200, 'اسم الصندوق طويل جداً'),
-  fundType: z.string({ required_error: 'تصنيف الصندوق مطلوب' }).min(1, 'تصنيف الصندوق لا يمكن أن يكون فارغاً').max(100, 'تصنيف الصندوق طويل جداً'),
   stationId: z.number({ invalid_type_error: 'معرّف المحطة يجب أن يكون رقماً' }).int().positive().optional().nullable(),
   responsiblePerson: z.string().max(200, 'اسم المسؤول طويل جداً').optional().nullable(),
   description: z.string().optional().nullable(),
@@ -312,7 +311,6 @@ export const FIELD_LABELS: Record<string, string> = {
   voucherType: 'نوع السند',
   paymentMethod: 'وسيلة الدفع',
   accountType: 'نوع الحساب',
-  fundType: 'نوع الصندوق',
   warehouseType: 'نوع المخزن',
   supplierTypeId: 'تصنيف المورد',
   departmentId: 'القسم',

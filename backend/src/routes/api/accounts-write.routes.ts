@@ -10,7 +10,6 @@ import {
   accounts,
   accountSubNatures,
   funds,
-  fundTypes,
   suppliers,
   warehouses,
   employeeBillingAccounts,
@@ -109,7 +108,7 @@ accountsWriteRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), che
       generatedCode = available.code;
     }
   }
-  
+
   let created: typeof accounts.$inferSelect | undefined;
   const payload: Record<string, unknown> = {
     ...body,
@@ -132,7 +131,7 @@ accountsWriteRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), che
     const pgError = error as PostgresError;
     const isCodeConflict = pgError?.code === '23505' && String(pgError?.constraint_name || '').includes('accounts_biz_code_unique');
     if (!isCodeConflict || hasManualCode) throw error;
-    
+
     // في حالة التكرار (نادر جداً مع آلية التسلسل الجديدة)، ارجع خطأ واضح
     return c.json({ error: 'حدث تعارض في الكود، يرجى المحاولة مرة أخرى' }, 409);
   }
@@ -141,149 +140,64 @@ accountsWriteRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), che
   // إنشاء صندوق تلقائي عند إنشاء حساب فرعي من طبيعة "fund" من صفحة الدليل مباشرة
   const hasLinkedEntityPayload = body.linkedEntityId != null && body.linkedEntityType != null;
   if (created && subNature?.natureKey === 'fund' && !hasLinkedEntityPayload) {
-    let chosenFundType = '';
-    let chosenFundTypeId: number | null = null;
-    const requestedFundTypeId = Number(created.subTypeId);
-    if (Number.isInteger(requestedFundTypeId) && requestedFundTypeId > 0) {
-      const [requestedType] = await db
-        .select({ id: fundTypes.id, subTypeKey: fundTypes.subTypeKey })
-        .from(fundTypes)
-        .where(and(eq(fundTypes.businessId, bizId), eq(fundTypes.id, requestedFundTypeId)))
-        .limit(1);
-      if (requestedType) {
-        chosenFundType = String(requestedType.subTypeKey || '').trim();
-        chosenFundTypeId = Number(requestedType.id);
-      }
-    }
-    if (!chosenFundType && typeof created.subType === 'string' && created.subType.trim().length > 0) {
-      const [requestedTypeByKey] = await db
-        .select({ id: fundTypes.id, subTypeKey: fundTypes.subTypeKey })
-        .from(fundTypes)
-        .where(and(eq(fundTypes.businessId, bizId), eq(fundTypes.subTypeKey, created.subType.trim())))
-        .limit(1);
-      if (requestedTypeByKey) {
-        chosenFundType = String(requestedTypeByKey.subTypeKey || '').trim();
-        chosenFundTypeId = Number(requestedTypeByKey.id);
-      }
-    }
 
-    let [preferredType] = await db
-      .select({ subTypeKey: fundTypes.subTypeKey })
-      .from(fundTypes)
-      .where(and(eq(fundTypes.businessId, bizId), eq(fundTypes.isActive, true)))
-      .orderBy(fundTypes.sequenceNumber, fundTypes.sortOrder, fundTypes.id)
-      .limit(1);
-    if (!preferredType) {
-      [preferredType] = await db
-        .select({ subTypeKey: fundTypes.subTypeKey })
-        .from(fundTypes)
-        .where(eq(fundTypes.businessId, bizId))
-        .orderBy(fundTypes.sequenceNumber, fundTypes.sortOrder, fundTypes.id)
-        .limit(1);
-    }
-
-    if (!chosenFundType) {
-      chosenFundType = String(preferredType?.subTypeKey || '').trim();
-    }
-    if (!chosenFundType) {
-      const [createdType] = await db
-        .insert(fundTypes)
-        .values({
-          businessId: bizId,
-          name: 'صندوق',
-          subTypeKey: 'default_fund',
-          sequenceNumber: 1,
-          sortOrder: 1,
-          icon: 'savings',
-          color: '#4CAF50',
-          isActive: true,
-        })
-        .returning({ id: fundTypes.id, subTypeKey: fundTypes.subTypeKey });
-      chosenFundType = String(createdType?.subTypeKey || 'default_fund');
-      chosenFundTypeId = Number(createdType?.id || 0) || null;
-    }
-    if (!chosenFundTypeId) {
-      const [resolvedType] = await db
-        .select({ id: fundTypes.id })
-        .from(fundTypes)
-        .where(and(eq(fundTypes.businessId, bizId), eq(fundTypes.subTypeKey, chosenFundType)))
-        .limit(1);
-      chosenFundTypeId = Number(resolvedType?.id || 0) || null;
-    }
-
-    const [lastInType] = await db
+    const [lastFund] = await db
       .select({ seq: funds.sequenceNumber })
       .from(funds)
-      .where(
-        and(
-          eq(funds.businessId, bizId),
-          chosenFundTypeId ? eq(funds.subTypeId, chosenFundTypeId) : eq(funds.fundType, chosenFundType as any),
-        ),
-      )
+      .where(eq(funds.businessId, bizId))
       .orderBy(desc(funds.sequenceNumber), desc(funds.id))
       .limit(1);
-    const nextFundSeq = (Number(lastInType?.seq) || 0) + 1;
+    const nextFundSeq = (Number(lastFund?.seq) || 0) + 1;
 
     await db.insert(funds).values({
       businessId: bizId,
       name: created.name,
-      fundType: chosenFundType,
-      subType: chosenFundType,
-      subTypeId: chosenFundTypeId,
       sequenceNumber: nextFundSeq,
       accountId: created.id,
       responsiblePerson: created.responsiblePerson,
       notes: created.notes,
       isActive: created.isActive,
     });
-
-    await db.update(accounts).set({ subTypeId: chosenFundTypeId, subType: chosenFundType, updatedAt: new Date() }).where(eq(accounts.id, created.id));
   }
   if (created && subNature?.natureKey === 'supplier' && !hasLinkedEntityPayload) {
-    const supplierTypeId = Number(created.subTypeId);
-    const hasSupplierTypeId = Number.isInteger(supplierTypeId) && supplierTypeId > 0;
-    const supplierSequence = hasSupplierTypeId ? await getNextSupplierSequence(bizId, supplierTypeId, db) : null;
+    const [lastSupplier] = await db
+      .select({ seq: suppliers.sequenceNumber })
+      .from(suppliers)
+      .where(eq(suppliers.businessId, bizId))
+      .orderBy(desc(suppliers.sequenceNumber), desc(suppliers.id))
+      .limit(1);
+    const nextSeq = (Number(lastSupplier?.seq) || 0) + 1;
 
     await db.insert(suppliers).values({
       businessId: bizId,
       name: created.name,
-      supplierTypeId: hasSupplierTypeId ? supplierTypeId : null,
-      category: typeof created.subType === 'string' && created.subType.trim().length > 0 ? created.subType.trim() : null,
-      sequenceNumber: supplierSequence,
-      code: supplierSequence ? generateItemCode(TYPE_PREFIXES.supplier || 'SUP', supplierSequence) : null,
+      sequenceNumber: nextSeq,
+      code: generateItemCode(TYPE_PREFIXES.supplier || 'SUP', nextSeq),
       accountId: created.id,
       notes: created.notes,
       isActive: created.isActive,
     });
-
-    if (hasSupplierTypeId) {
-      await db.update(accounts).set({ subTypeId: supplierTypeId, updatedAt: new Date() }).where(eq(accounts.id, created.id));
-    }
   }
   if (created && subNature?.natureKey === 'warehouse' && !hasLinkedEntityPayload) {
-    const warehouseSubTypeId = Number(created.subTypeId);
-    const hasWarehouseSubTypeId = Number.isInteger(warehouseSubTypeId) && warehouseSubTypeId > 0;
-    const warehouseNumbering = hasWarehouseSubTypeId
-      ? await getNextItemInCategorySequence(bizId, 'warehouse', warehouseSubTypeId, db)
-      : null;
+    const [lastWarehouse] = await db
+      .select({ seq: warehouses.sequenceNumber })
+      .from(warehouses)
+      .where(eq(warehouses.businessId, bizId))
+      .orderBy(desc(warehouses.sequenceNumber), desc(warehouses.id))
+      .limit(1);
+    const nextSeq = (Number(lastWarehouse?.seq) || 0) + 1;
 
     await db.insert(warehouses).values({
       businessId: bizId,
       name: created.name,
       accountId: created.id,
       warehouseType: 'sub',
-      subType: typeof created.subType === 'string' && created.subType.trim().length > 0 ? created.subType.trim() : null,
-      subTypeId: hasWarehouseSubTypeId ? warehouseSubTypeId : null,
-      sequenceNumber: warehouseNumbering?.sequenceNumber ?? null,
-      code: warehouseNumbering?.code ?? null,
+      sequenceNumber: nextSeq,
+      code: generateItemCode(TYPE_PREFIXES.warehouse || 'WHS', nextSeq),
       responsiblePerson: created.responsiblePerson,
       notes: created.notes,
       isActive: created.isActive,
     });
-
-    if (hasWarehouseSubTypeId) {
-      await db.update(accounts).set({ subTypeId: warehouseSubTypeId, updatedAt: new Date() }).where(eq(accounts.id, created.id));
-    }
   }
 
   if (created && body.linkedEntityId && body.linkedEntityType) {

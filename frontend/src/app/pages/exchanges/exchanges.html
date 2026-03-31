@@ -4,11 +4,10 @@
       <div class="page-icon amber"><span class="material-icons-round">currency_exchange</span></div>
       <div>
         <h2>إدارة الصرافين</h2>
-        <p class="page-subtitle">{{ accounts().length }} صراف في {{ exchangeTypes().length }} تصنيف</p>
+        <p class="page-subtitle">{{ accounts().length }} صراف</p>
       </div>
     </div>
     <div class="header-actions">
-      <button class="add-btn secondary" (click)="openAddType()"><span class="material-icons-round">category</span> تصنيف جديد</button>
       <button class="add-btn" (click)="openAddAccount()"><span class="material-icons-round">add</span> صراف جديد</button>
     </div>
   </div>
@@ -23,34 +22,21 @@
     }
   </div>
 
-  <div class="types-bar">
-    <div class="types-bar-title"><span class="material-icons-round">category</span> التصنيفات</div>
-    <div class="types-list">
-      @for (t of exchangeTypes(); track t.id) {
-        <div class="type-chip" [style.border-color]="t.color">
-          <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
-          @if (t.sequenceNumber) { <span class="type-chip-seq" [style.background]="t.color + '20'" [style.color]="t.color">#{{ t.sequenceNumber }}</span> } <span class="type-chip-name">{{ t.name }}</span>
-          <span class="type-chip-key">({{ t.subTypeKey }})</span>
-          <button class="chip-action" (click)="openEditType(t)"><span class="material-icons-round">edit</span></button>
-          <button class="chip-action delete" (click)="confirmDelete('type', t.id, t.name)"><span class="material-icons-round">close</span></button>
-        </div>
-      }
-    </div>
-  </div>
+  <!-- Types Management Bar: تم إخفاؤه -->
 
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!filteredAccounts().length) {
+  } @else if (!filteredData.length) {
     <div class="empty-state"><span class="material-icons-round">currency_exchange</span><p>لا يوجد صرافين</p>
       <button class="add-btn small" (click)="openAddAccount()"><span class="material-icons-round">add</span> إضافة صراف</button>
     </div>
   } @else {
     <div class="accounts-grid">
-      @for (acc of filteredAccounts(); track acc.id) {
-        <div class="account-card" [style.border-right-color]="getTypeInfo(acc.subType).color">
+      @for (acc of filteredData; track acc.id) {
+        <div class="account-card" style="border-right-color: #FF9800">
           <div class="card-header">
-            <div class="card-icon" [style.background]="'linear-gradient(135deg, ' + getTypeInfo(acc.subType).color + ', ' + getTypeInfo(acc.subType).color + '99)'">
-              <span class="material-icons-round">{{ getTypeInfo(acc.subType).icon }}</span>
+            <div class="card-icon" style="background: linear-gradient(135deg, #FF9800, #FF980099)">
+              <span class="material-icons-round">currency_exchange</span>
             </div>
             <div class="card-actions">
               <button class="action-btn edit" (click)="openEditAccount(acc)"><span class="material-icons-round">edit</span></button>
@@ -59,7 +45,6 @@
           </div>
           <h3 class="card-name">{{ acc.name }}</h3>
           <div class="card-badges">
-          <span class="card-type-badge" [style.color]="getTypeInfo(acc.subType).color" [style.background]="getTypeInfo(acc.subType).color + '20'">{{ getTypeInfo(acc.subType).name }}</span>
             @if (acc.sequenceNumber) { <span class="card-seq-badge">#{{ acc.sequenceNumber }}</span> }
             @if (acc.code) { <span class="card-code-badge">{{ acc.code }}</span> }
           </div>
@@ -86,11 +71,6 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group"><label>اسم الصراف</label><input [(ngModel)]="accountForm.name" placeholder="مثال: النهمي - حساب 1" /></div>
-            <div class="form-group"><label>التصنيف</label>
-              <select [(ngModel)]="accountForm.subType">
-                @for (t of exchangeTypes(); track t.id) { <option [value]="t.subTypeKey">{{ t.name }}</option> }
-              </select>
-            </div>
           </div>
           <div class="form-row">
             <div class="form-group"><label>رقم الحساب</label><input [(ngModel)]="accountForm.accountNumber" placeholder="رقم الحساب" dir="ltr" /></div>

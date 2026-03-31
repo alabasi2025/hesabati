@@ -21,7 +21,6 @@ export class FundsComponent extends BasePageComponent {
 
   // إصلاح #4: استخدام funds بدلاً من accounts
   fundsData = signal<any[]>([]);
-  fundTypes = signal<any[]>([]);
   stations = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
@@ -60,61 +59,42 @@ export class FundsComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      // إصلاح #4: جلب الصناديق من endpoint الصحيح (GET /api/businesses/:bizId/funds)
-      const [fundsList, types, sts] = await Promise.all([
+      // جلب الصناديق والمحطات
+      const [fundsList, sts] = await Promise.all([
         this.api.getFunds(this.bizId, true),
-        this.api.getFundTypes(this.bizId),
         this.api.getStations(this.bizId),
       ]);
       this.fundsData.set(fundsList);
-      this.fundTypes.set(types);
       this.stations.set(sts);
       this.activeFilter.set('all');
-      const allowedFilters = new Set<string>([
-        'all',
-        ...types
-          .filter((t: any) => t.subTypeKey !== 'custody')
-          .map((t: any) => String(t.subTypeKey)),
-      ]);
-      if (!allowedFilters.has(this.activeFilter())) {
-        this.activeFilter.set('all');
-      }
     } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
 
   getFilterTabs() {
-    return [{ value: 'all', label: 'الكل', icon: 'apps', count: this.fundsData().length },
-      ...this.fundTypes().map(t => ({
-        value: t.subTypeKey, label: t.name, icon: t.icon,
-        count: this.fundsData().filter(f => f.fundType === t.subTypeKey).length,
-      }))
+    return [
+      { value: 'all', label: 'الكل', icon: 'apps', count: this.fundsData().length },
+      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.fundsData().filter(f => f.isActive).length },
+      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.fundsData().filter(f => !f.isActive).length },
     ];
   }
 
-  filteredAccounts() {
-    const f = this.activeFilter();
-    if (f === 'all') return this.fundsData();
-    return this.fundsData().filter(fund => fund.fundType === f);
-  }
-
-  getTypeInfo(fundType: string) {
-    const t = this.fundTypes().find(ft => ft.subTypeKey === fundType);
-    return t || { name: fundType || 'غير مصنف', icon: 'inventory_2', color: '#607D8B' };
+  get filteredData() {
+    const filter = this.activeFilter();
+    if (filter === 'all') return this.fundsData();
+    if (filter === 'active') return this.fundsData().filter(f => f.isActive);
+    if (filter === 'inactive') return this.fundsData().filter(f => !f.isActive);
+    return this.fundsData();
   }
 
   // ============ Fund CRUD ============
   openAddAccount(subType?: string) {
-    if (!this.fundTypes().length) {
-      this.toast.error('لا يمكن إضافة صندوق بدون تصنيف. أضف تصنيف صندوق أولاً.');
-      return;
-    }
     this.fundForm = {
       name: '',
-      fundType: subType || (this.fundTypes().length ? this.fundTypes()[0].subTypeKey : ''),
       sequenceNumber: '',
       responsiblePerson: '',
       stationId: null,
+      accountSubNatureId: null,
       description: '',
       notes: '',
     };
@@ -139,10 +119,8 @@ export class FundsComponent extends BasePageComponent {
   async saveAccount() {
     try {
       const data = { ...this.fundForm };
-      const selectedType = String(data.fundType || '').trim();
-      const hasType = this.fundTypes().some((t) => String(t.subTypeKey) === selectedType);
-      if (!selectedType || !hasType) {
-        this.toast.error('اختيار تصنيف صندوق صحيح إلزامي قبل الحفظ');
+      if (!data.name?.trim()) {
+        this.toast.error('اسم الصندوق مطلوب');
         return;
       }
       if (data.stationId === '' || data.stationId === null) delete data.stationId;

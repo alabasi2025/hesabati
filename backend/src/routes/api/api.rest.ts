@@ -1,7 +1,7 @@
 /**
  * api.rest.ts — Phase 10 (significantly reduced)
  * الكود الأساسي للـ API: الأنواع + المشتركات + البناء
- * 
+ *
  * تم استخراج الأجزاء في Phase 10 إلى:
  *  - billing-employees.routes.ts (حسابات الموظفين في الفوترة)
  *  - legacy-compat.routes.ts     (مسارات التوافق القديمة)
@@ -23,7 +23,6 @@ import {
   sidebarSections, sidebarItems, userSidebarConfig,
   users, businesses,
   billingSystemsConfig,
-  fundTypes, bankTypes, exchangeTypes, eWalletTypes,
   screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
   customScreenConfig,
   auditLog,

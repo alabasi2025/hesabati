@@ -47,17 +47,20 @@ export const stations = pgTable('stations', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
-  code: varchar('code', { length: 50 }).notNull().unique(),
+  code: varchar('code', { length: 50 }).notNull(),
   sequenceNumber: integer('sequence_number'),
   location: varchar('location', { length: 300 }),
   managerId: integer('manager_id'),
-  billingSystems: jsonb('billing_systems').$type<string[]>().default([]),
+  billingSystems: jsonb('billing_systems').default([]),
   hasEmployees: boolean('has_employees').notNull().default(true),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  codeUnique: unique('stations_biz_code_unique').on(table.businessId, table.code),
+  seqUnique: unique('stations_biz_seq_unique').on(table.businessId, table.sequenceNumber),
+}));
 
 // ===================== EMPLOYEES =====================
 
@@ -94,8 +97,6 @@ export const accounts = pgTable('accounts', {
   accountSubNatureId: integer('account_sub_nature_id'),
   accountNumber: varchar('account_number', { length: 100 }),
   provider: varchar('provider', { length: 200 }),
-  subType: varchar('sub_type', { length: 100 }),
-  subTypeId: integer('sub_type_id'),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   responsiblePerson: varchar('responsible_person', { length: 200 }),
@@ -103,15 +104,15 @@ export const accounts = pgTable('accounts', {
   isLeafAccount: boolean('is_leaf_account').notNull().default(true),
   linkedEmployeeId: integer('linked_employee_id'),
   supportedCurrencies: jsonb('supported_currencies').$type<string[]>().default(['YER', 'SAR', 'USD']),
-  
+
   canInitiateReceipt: boolean('can_initiate_receipt').notNull().default(true),
   canInitiatePayment: boolean('can_initiate_payment').notNull().default(true),
   canReceivePayment: boolean('can_receive_payment').notNull().default(true),
   canBeDebitedByReceipt: boolean('can_be_debited_by_receipt').notNull().default(true),
-  
+
   canCreateVoucher: boolean('can_create_voucher').notNull().default(false),
   canApproveVoucher: boolean('can_approve_voucher').notNull().default(false),
-  
+
   receivesFromStations: boolean('receives_from_stations').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
@@ -203,10 +204,6 @@ export const funds = pgTable('funds', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   accountId: integer('account_id').references(() => accounts.id),
-  // ديناميكي: يعتمد على fund_types.sub_type_key وليس enum ثابت.
-  fundType: varchar('fund_type', { length: 100 }).notNull(),
-  subType: varchar('sub_type', { length: 100 }),
-  subTypeId: integer('sub_type_id'),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   stationId: integer('station_id').references(() => stations.id),
@@ -218,7 +215,7 @@ export const funds = pgTable('funds', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
   codeUnique: unique('funds_biz_code_unique').on(table.businessId, table.code),
-  seqUnique: unique('funds_biz_subtype_seq_unique').on(table.businessId, table.subTypeId, table.sequenceNumber),
+  seqUnique: unique('funds_biz_seq_unique').on(table.businessId, table.sequenceNumber),
 }));
 
 // ===================== FUND BALANCES =====================

@@ -159,8 +159,6 @@ export const warehouses = pgTable('warehouses', {
   name: varchar('name', { length: 200 }).notNull(),
   accountId: integer('account_id').references(() => accounts.id),
   warehouseType: warehouseTypeEnum('warehouse_type').notNull(),
-  subType: varchar('sub_type', { length: 100 }),
-  subTypeId: integer('sub_type_id'),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   stationId: integer('station_id').references(() => stations.id),
@@ -172,7 +170,7 @@ export const warehouses = pgTable('warehouses', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
   codeUnique: unique('warehouses_biz_code_unique').on(table.businessId, table.code),
-  seqUnique: unique('warehouses_biz_subtype_seq_unique').on(table.businessId, table.subTypeId, table.sequenceNumber),
+  seqUnique: unique('warehouses_biz_seq_unique').on(table.businessId, table.sequenceNumber),
 }));
 
 // ===================== INVENTORY ITEMS =====================

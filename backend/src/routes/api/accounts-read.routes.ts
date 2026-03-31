@@ -10,7 +10,6 @@ import {
   accounts,
   accountSubNatures,
   funds,
-  fundTypes,
   suppliers,
   warehouses,
   employeeBillingAccounts,
