@@ -22,7 +22,15 @@
     }
   </div>
 
-  <!-- Types Management Bar: تم إخفاؤه -->
+  <!-- فلترة حسب الحساب -->
+  <div class="account-filter-row">
+    <select class="account-filter-select" [ngModel]="accountFilter()" (ngModelChange)="accountFilter.set($event ? +$event : null)">
+      <option [ngValue]="null">كل الحسابات</option>
+      @for (acc of uniqueAccounts; track acc.id) {
+        <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+      }
+    </select>
+  </div>
 
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
@@ -39,13 +47,12 @@
               <span class="material-icons-round">account_balance_wallet</span>
             </div>
             <div class="card-actions">
-              <button class="action-btn edit" (click)="openEditAccount(acc)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="confirmDelete('account', acc.id, acc.name)"><span class="material-icons-round">delete</span></button>
+              <button class="action-btn edit" (click)="openEditAccount(acc)" title="تعديل"><span class="material-icons-round">edit</span></button>
+              <button class="action-btn delete" (click)="confirmDelete('wallet', acc.id, acc.name)" title="حذف"><span class="material-icons-round">delete</span></button>
             </div>
           </div>
           <h3 class="card-name">{{ acc.name }}</h3>
           <div class="card-badges">
-            @if (acc.sequenceNumber) { <span class="card-seq-badge">#{{ acc.sequenceNumber }}</span> }
             @if (acc.code) { <span class="card-code-badge">{{ acc.code }}</span> }
           </div>
           @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
@@ -58,60 +65,43 @@
     </div>
   }
 
-  @if (showAccountForm()) {
-    <div class="modal-overlay" (click)="showAccountForm.set(false)">
+  @if (showWalletForm()) {
+    <div class="modal-overlay" (click)="showWalletForm.set(false)">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
             <div class="modal-icon teal"><span class="material-icons-round">account_balance_wallet</span></div>
-            <div><h2>{{ editingAccountId() ? 'تعديل محفظة' : 'إضافة محفظة جديدة' }}</h2><p>ستظهر تلقائياً في صفحة الحسابات</p></div>
+            <div><h2>{{ editingWalletId() ? 'تعديل محفظة' : 'إضافة محفظة جديدة' }}</h2><p>يجب ربطها بحساب من الدليل</p></div>
           </div>
-          <button class="close-btn" (click)="showAccountForm.set(false)"><span class="material-icons-round">close</span></button>
+          <button class="close-btn" (click)="showWalletForm.set(false)"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
-            <div class="form-group"><label>اسم المحفظة</label><input [(ngModel)]="accountForm.name" placeholder="مثال: جوالي - حساب 1" /></div>
+            <div class="form-group"><label>اسم المحفظة</label><input [(ngModel)]="walletForm.name" placeholder="مثال: جوالي - حساب 1" /></div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>رقم الحساب / الهاتف</label><input [(ngModel)]="accountForm.accountNumber" placeholder="رقم الحساب أو الهاتف" dir="ltr" /></div>
-            <div class="form-group"><label>مزود الخدمة</label><input [(ngModel)]="accountForm.provider" placeholder="اسم مزود الخدمة" /></div>
+            <div class="form-group">
+              <label>الحساب المرتبط</label>
+              <select [(ngModel)]="walletForm.accountId" required>
+                <option [ngValue]="null" disabled>-- اختر الحساب --</option>
+                @for (acc of walletAccounts(); track acc.id) {
+                  <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+                }
+              </select>
+            </div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>المسؤول</label><input [(ngModel)]="accountForm.responsiblePerson" placeholder="اسم المسؤول" /></div>
+            <div class="form-group"><label>رقم الحساب / الهاتف</label><input [(ngModel)]="walletForm.accountNumber" placeholder="رقم الحساب أو الهاتف" dir="ltr" /></div>
+            <div class="form-group"><label>مزود الخدمة</label><input [(ngModel)]="walletForm.provider" placeholder="اسم مزود الخدمة" /></div>
           </div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="accountForm.notes" rows="2"></textarea></div>
+          <div class="form-row">
+            <div class="form-group"><label>المسؤول</label><input [(ngModel)]="walletForm.responsiblePerson" placeholder="اسم المسؤول" /></div>
+          </div>
+          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="walletForm.notes" rows="2"></textarea></div>
         </div>
         <div class="modal-footer">
-          <button class="btn-save" (click)="saveAccount()"><span class="material-icons-round">{{ editingAccountId() ? 'save' : 'add' }}</span> {{ editingAccountId() ? 'حفظ التعديلات' : 'إضافة المحفظة' }}</button>
-          <button class="btn-cancel" (click)="showAccountForm.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (showTypeForm()) {
-    <div class="modal-overlay" (click)="showTypeForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon purple"><span class="material-icons-round">category</span></div><div><h2>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h2><p>تصنيفات المحافظ تظهر كفلاتر فرعية</p></div></div>
-          <button class="close-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group"><label>اسم التصنيف</label><input [(ngModel)]="typeForm.name" placeholder="مثال: محافظ محلية" /></div>
-            <div class="form-group"><label>المفتاح (بالإنجليزي)</label><input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: local" dir="ltr" /></div>
-          </div>
-          <div class="form-group"><label>الوصف</label><textarea [(ngModel)]="typeForm.description" rows="2"></textarea></div>
-          <div class="form-group"><label>الأيقونة</label>
-            <div class="icon-picker">@for (icon of iconOptions; track icon) { <button class="icon-option" [class.selected]="typeForm.icon === icon" (click)="typeForm.icon = icon"><span class="material-icons-round">{{ icon }}</span></button> }</div>
-          </div>
-          <div class="form-group"><label>اللون</label>
-            <div class="color-picker">@for (c of ['#4CAF50','#2196F3','#FF9800','#9C27B0','#607D8B','#E91E63','#00BCD4','#F44336','#795548','#3F51B5']; track c) { <button class="color-option" [style.background]="c" [class.selected]="typeForm.color === c" (click)="typeForm.color = c"></button> }</div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="saveType()"><span class="material-icons-round">{{ editingTypeId() ? 'save' : 'add' }}</span> {{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
-          <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
+          <button class="btn-save" (click)="saveAccount()"><span class="material-icons-round">{{ editingWalletId() ? 'save' : 'add' }}</span> {{ editingWalletId() ? 'حفظ التعديلات' : 'إضافة المحفظة' }}</button>
+          <button class="btn-cancel" (click)="showWalletForm.set(false)">إلغاء</button>
         </div>
       </div>
     </div>

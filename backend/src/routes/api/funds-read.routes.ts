@@ -102,12 +102,14 @@ fundsRoutes.get(
         notes: funds.notes,
         createdAt: funds.createdAt,
         stationName: stations.name,
+        accountName: accounts.name,
+        accountCode: accounts.code,
       })
       .from(funds)
       .leftJoin(accounts, eq(funds.accountId, accounts.id))
       .leftJoin(stations, eq(funds.stationId, stations.id))
       .where(whereCondition)
-      .orderBy(funds.sequenceNumber, funds.name);
+      .orderBy(accounts.sequenceNumber, funds.code);
 
     const fundIds = rows.map((f) => f.id);
     let balancesArr: {

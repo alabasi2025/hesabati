@@ -197,6 +197,105 @@ export const billingAccountTypes = pgTable('billing_account_types', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// ===================== WALLETS (المحافظ الإلكترونية) =====================
+
+export const wallets = pgTable('wallets', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
+  sequenceNumber: integer('sequence_number'),
+  code: varchar('code', { length: 30 }),
+  accountNumber: varchar('account_number', { length: 100 }),
+  provider: varchar('provider', { length: 200 }),
+  responsiblePerson: varchar('responsible_person', { length: 200 }),
+  description: text('description'),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  codeUnique: unique('wallets_biz_code_unique').on(table.businessId, table.code),
+}));
+
+// ===================== WALLET BALANCES =====================
+
+export const walletBalances = pgTable('wallet_balances', {
+  id: serial('id').primaryKey(),
+  walletId: integer('wallet_id').notNull().references(() => wallets.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  walletCurrencyUnique: uniqueIndex('wallet_balances_wallet_currency_unique').on(table.walletId, table.currencyId),
+}));
+
+// ===================== EXCHANGES (الصرافين) =====================
+
+export const exchanges = pgTable('exchanges', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
+  sequenceNumber: integer('sequence_number'),
+  code: varchar('code', { length: 30 }),
+  accountNumber: varchar('account_number', { length: 100 }),
+  provider: varchar('provider', { length: 200 }),
+  responsiblePerson: varchar('responsible_person', { length: 200 }),
+  description: text('description'),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  codeUnique: unique('exchanges_biz_code_unique').on(table.businessId, table.code),
+}));
+
+// ===================== EXCHANGE BALANCES =====================
+
+export const exchangeBalances = pgTable('exchange_balances', {
+  id: serial('id').primaryKey(),
+  exchangeId: integer('exchange_id').notNull().references(() => exchanges.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  exchangeCurrencyUnique: uniqueIndex('exchange_balances_exchange_currency_unique').on(table.exchangeId, table.currencyId),
+}));
+
+// ===================== BANKS =====================
+
+export const banks = pgTable('banks', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  name: varchar('name', { length: 200 }).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
+  sequenceNumber: integer('sequence_number'),
+  code: varchar('code', { length: 30 }),
+  accountNumber: varchar('account_number', { length: 100 }),
+  provider: varchar('provider', { length: 200 }),
+  responsiblePerson: varchar('responsible_person', { length: 200 }),
+  description: text('description'),
+  isActive: boolean('is_active').notNull().default(true),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  codeUnique: unique('banks_biz_code_unique').on(table.businessId, table.code),
+}));
+
+// ===================== BANK BALANCES =====================
+
+export const bankBalances = pgTable('bank_balances', {
+  id: serial('id').primaryKey(),
+  bankId: integer('bank_id').notNull().references(() => banks.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  bankCurrencyUnique: uniqueIndex('bank_balances_bank_currency_unique').on(table.bankId, table.currencyId),
+}));
+
 // ===================== FUNDS =====================
 
 export const funds = pgTable('funds', {
@@ -215,7 +314,6 @@ export const funds = pgTable('funds', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
   codeUnique: unique('funds_biz_code_unique').on(table.businessId, table.code),
-  seqUnique: unique('funds_biz_seq_unique').on(table.businessId, table.sequenceNumber),
 }));
 
 // ===================== FUND BALANCES =====================

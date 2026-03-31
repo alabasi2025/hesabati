@@ -19,26 +19,25 @@ export class WalletsComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
 
-  accounts = signal<any[]>([]);
+  walletsData = signal<any[]>([]);
+  walletAccounts = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
+  accountFilter = signal<number | null>(null);
 
-  showAccountForm = signal(false);
-  editingAccountId = signal<number | null>(null);
-  accountForm: any = { name: '', subType: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
-
-  showTypeForm = signal(false);
-  editingTypeId = signal<number | null>(null);
-  typeForm: any = { name: '', subTypeKey: '', description: '', icon: 'account_balance_wallet', color: '#00BCD4' };
+  showWalletForm = signal(false);
+  editingWalletId = signal<number | null>(null);
+  walletForm: any = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
 
   showDeleteConfirm = signal(false);
-  deleteTarget = signal<{ type: 'account' | 'type'; id: number; name: string } | null>(null);
+  deleteTarget = signal<{ type: 'wallet'; id: number; name: string } | null>(null);
 
-  iconOptions = [
-    'account_balance_wallet', 'wallet', 'phone_android', 'smartphone', 'qr_code',
-    'contactless', 'nfc', 'language', 'public', 'payments',
-    'credit_card', 'attach_money', 'monetization_on', 'toll', 'local_atm',
-  ];
+  // Backward compatibility
+  get accounts() { return this.walletsData; }
+  showAccountForm = this.showWalletForm;
+  editingAccountId = this.editingWalletId;
+  get accountForm() { return this.walletForm; }
+  set accountForm(v: any) { this.walletForm = v; }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -47,85 +46,86 @@ export class WalletsComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const accs = await this.api.getAccounts(this.bizId);
-      this.accounts.set(accs.filter((a: any) => a.accountType === 'e_wallet'));
-    } catch (e) { console.error(e); }
+      const walletsList = await this.api.getWallets(this.bizId);
+      this.walletsData.set(walletsList);
+      this.activeFilter.set('all');
+      try {
+        const allAccounts = await this.api.getAccounts(this.bizId);
+        this.walletAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'e_wallet'));
+      } catch { this.walletAccounts.set([]); }
+    } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
-      { value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.accounts().filter(a => a.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.accounts().filter(a => !a.isActive).length },
+      { value: 'all', label: 'الكل', icon: 'apps', count: this.walletsData().length },
+      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.walletsData().filter(w => w.isActive).length },
+      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.walletsData().filter(w => !w.isActive).length },
     ];
   }
 
   get filteredData() {
+    let data = this.walletsData();
     const filter = this.activeFilter();
-    if (filter === 'all') return this.accounts();
-    if (filter === 'active') return this.accounts().filter(a => a.isActive);
-    if (filter === 'inactive') return this.accounts().filter(a => !a.isActive);
-    return this.accounts();
+    if (filter === 'active') data = data.filter(w => w.isActive);
+    else if (filter === 'inactive') data = data.filter(w => !w.isActive);
+    const accId = this.accountFilter();
+    if (accId) data = data.filter(w => w.accountId === accId);
+    return data;
+  }
+
+  get uniqueAccounts() {
+    const seen = new Map<number, { id: number; name: string; code: string }>();
+    for (const w of this.walletsData()) {
+      if (w.accountId && !seen.has(w.accountId)) {
+        seen.set(w.accountId, { id: w.accountId, name: w.accountName || w.name, code: w.accountCode || w.code });
+      }
+    }
+    return Array.from(seen.values());
   }
 
   openAddAccount(subType?: string) {
-    this.accountForm = { name: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
-    this.editingAccountId.set(null);
-    this.showAccountForm.set(true);
+    this.walletForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.editingWalletId.set(null);
+    this.showWalletForm.set(true);
   }
 
-  openEditAccount(acc: any) {
-    this.accountForm = { name: acc.name, subType: acc.subType || '', accountNumber: acc.accountNumber || '', provider: acc.provider || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '' };
-    this.editingAccountId.set(acc.id);
-    this.showAccountForm.set(true);
+  openEditAccount(wallet: any) {
+    this.walletForm = {
+      name: wallet.name,
+      accountId: wallet.accountId || null,
+      accountNumber: wallet.accountNumber || '',
+      provider: wallet.provider || '',
+      responsiblePerson: wallet.responsiblePerson || '',
+      description: wallet.description || '',
+      notes: wallet.notes || '',
+    };
+    this.editingWalletId.set(wallet.id);
+    this.showWalletForm.set(true);
   }
 
   async saveAccount() {
     try {
-      if (!this.accountForm.name?.trim()) {
+      if (!this.walletForm.name?.trim()) {
         this.toast.error('اسم المحفظة مطلوب');
         return;
       }
 
-      const data = { ...this.accountForm, accountType: 'e_wallet', isLeafAccount: true };
-      if (this.editingAccountId()) {
-        await this.api.updateAccount(this.bizId, this.editingAccountId()!, data);
+      const data = { ...this.walletForm };
+      delete data.sequenceNumber;
+      if (this.editingWalletId()) {
+        await this.api.updateWallet(this.bizId, this.editingWalletId()!, data);
       } else {
-        await this.api.createAccount(this.bizId, data);
+        await this.api.createWallet(this.bizId, data);
       }
-      this.showAccountForm.set(false);
-      this.toast.success(this.editingAccountId() ? 'تم تحديث المحفظة بنجاح' : 'تم إنشاء المحفظة بنجاح');
+      this.showWalletForm.set(false);
+      this.toast.success(this.editingWalletId() ? 'تم تحديث المحفظة بنجاح' : 'تم إنشاء المحفظة بنجاح');
       await this.load();
     } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ المحفظة'); }
   }
 
-  openAddType() {
-    this.typeForm = { name: '', subTypeKey: '', description: '', icon: 'account_balance_wallet', color: '#00BCD4' };
-    this.editingTypeId.set(null);
-    this.showTypeForm.set(true);
-  }
-
-  openEditType(t: any) {
-    this.typeForm = { name: t.name, subTypeKey: t.subTypeKey, description: t.description || '', icon: t.icon || 'account_balance_wallet', color: t.color || '#00BCD4' };
-    this.editingTypeId.set(t.id);
-    this.showTypeForm.set(true);
-  }
-
-  async saveType() {
-    try {
-      if (this.editingTypeId()) {
-        await this.api.updateEWalletType(this.editingTypeId()!, this.typeForm);
-      } else {
-        await this.api.createEWalletType(this.bizId, this.typeForm);
-      }
-      this.showTypeForm.set(false);
-      this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
-      await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع'); }
-  }
-
-  confirmDelete(type: 'account' | 'type', id: number, name: string) {
+  confirmDelete(type: 'wallet', id: number, name: string) {
     this.deleteTarget.set({ type, id, name });
     this.showDeleteConfirm.set(true);
   }
@@ -134,8 +134,7 @@ export class WalletsComponent extends BasePageComponent {
     const target = this.deleteTarget();
     if (!target) return;
     try {
-      if (target.type === 'account') await this.api.deleteAccount(this.bizId, target.id);
-      else await this.api.deleteEWalletType(target.id);
+      await this.api.deleteWallet(this.bizId, target.id);
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');

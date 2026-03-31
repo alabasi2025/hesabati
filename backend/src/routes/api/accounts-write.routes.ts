@@ -10,6 +10,9 @@ import {
   accounts,
   accountSubNatures,
   funds,
+  banks,
+  wallets,
+  exchanges,
   suppliers,
   warehouses,
   employeeBillingAccounts,
@@ -137,28 +140,8 @@ accountsWriteRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), che
   }
   if (!created) return c.json({ error: 'تعذر إنشاء الحساب' }, 500);
 
-  // إنشاء صندوق تلقائي عند إنشاء حساب فرعي من طبيعة "fund" من صفحة الدليل مباشرة
+  // الصناديق تُنشأ من صفحة الصناديق فقط وتُربط بحساب موجود
   const hasLinkedEntityPayload = body.linkedEntityId != null && body.linkedEntityType != null;
-  if (created && subNature?.natureKey === 'fund' && !hasLinkedEntityPayload) {
-
-    const [lastFund] = await db
-      .select({ seq: funds.sequenceNumber })
-      .from(funds)
-      .where(eq(funds.businessId, bizId))
-      .orderBy(desc(funds.sequenceNumber), desc(funds.id))
-      .limit(1);
-    const nextFundSeq = (Number(lastFund?.seq) || 0) + 1;
-
-    await db.insert(funds).values({
-      businessId: bizId,
-      name: created.name,
-      sequenceNumber: nextFundSeq,
-      accountId: created.id,
-      responsiblePerson: created.responsiblePerson,
-      notes: created.notes,
-      isActive: created.isActive,
-    });
-  }
   if (created && subNature?.natureKey === 'supplier' && !hasLinkedEntityPayload) {
     const [lastSupplier] = await db
       .select({ seq: suppliers.sequenceNumber })
@@ -226,6 +209,33 @@ accountsWriteRoutes.put('/businesses/:bizId/accounts/:id', bizAuthMiddleware(), 
   const [existing] = await db.select().from(accounts).where(and(eq(accounts.id, id), eq(accounts.businessId, bizId)));
   if (!existing) return c.json({ error: 'حساب غير موجود أو لا ينتمي لهذا العمل' }, 404);
   const body = ((await getBody(c)) || {}) as Record<string, unknown>;
+
+  // حماية عامة: منع تغيير isLeafAccount بعد الإنشاء
+  if ('isLeafAccount' in body && Boolean(body.isLeafAccount) !== (existing.isLeafAccount !== false)) {
+    return c.json({ error: 'لا يمكن تغيير نوع الحساب (رئيسي/فرعي) بعد الإنشاء' }, 400);
+  }
+
+  // حماية: منع تغيير النوع الفرعي و الكود للحسابات الفرعية
+  if (existing.isLeafAccount !== false) {
+    if ('accountSubNatureId' in body && body.accountSubNatureId != null && Number(body.accountSubNatureId) !== existing.accountSubNatureId) {
+      return c.json({ error: 'لا يمكن تغيير النوع الفرعي للحساب بعد الإنشاء' }, 400);
+    }
+    if ('accountType' in body && body.accountType !== existing.accountType) {
+      return c.json({ error: 'لا يمكن تغيير نوع الحساب بعد الإنشاء' }, 400);
+    }
+  }
+
+  // حماية: منع تغيير الكود بعد الإنشاء
+  if ('code' in body && existing.code && body.code !== existing.code) {
+    return c.json({ error: 'لا يمكن تغيير الكود بعد الإنشاء' }, 400);
+  }
+
+  // حذف الحقول المحمية من body لضمان عدم تسربها
+  delete body.isLeafAccount;
+  delete body.accountSubNatureId;
+  delete body.accountType;
+  delete body.code;
+
   const [updated] = await db.update(accounts).set({ ...body, updatedAt: new Date() }).where(eq(accounts.id, id)).returning();
   return c.json(updated);
 }));
@@ -236,6 +246,20 @@ accountsWriteRoutes.delete('/businesses/:bizId/accounts/:id', bizAuthMiddleware(
   if (!id) return c.json({ error: 'معرّف الحساب غير صالح' }, 400);
   const [existing] = await db.select().from(accounts).where(and(eq(accounts.id, id), eq(accounts.businessId, bizId)));
   if (!existing) return c.json({ error: 'حساب غير موجود أو لا ينتمي لهذا العمل' }, 404);
+
+  // حماية: لا يمكن حذف حساب مرتبط بكيانات
+  const [linkedFund] = await db.select({ id: funds.id }).from(funds).where(eq(funds.accountId, id)).limit(1);
+  if (linkedFund) return c.json({ error: 'لا يمكن حذف الحساب لأنه مرتبط بصندوق. احذف الصندوق أولاً' }, 400);
+
+  const [linkedBank] = await db.select({ id: banks.id }).from(banks).where(eq(banks.accountId, id)).limit(1);
+  if (linkedBank) return c.json({ error: 'لا يمكن حذف الحساب لأنه مرتبط ببنك. احذف البنك أولاً' }, 400);
+
+  const [linkedWallet] = await db.select({ id: wallets.id }).from(wallets).where(eq(wallets.accountId, id)).limit(1);
+  if (linkedWallet) return c.json({ error: 'لا يمكن حذف الحساب لأنه مرتبط بمحفظة. احذف المحفظة أولاً' }, 400);
+
+  const [linkedExchange] = await db.select({ id: exchanges.id }).from(exchanges).where(eq(exchanges.accountId, id)).limit(1);
+  if (linkedExchange) return c.json({ error: 'لا يمكن حذف الحساب لأنه مرتبط بصراف. احذف الصراف أولاً' }, 400);
+
   await db.delete(accounts).where(eq(accounts.id, id));
   return c.json({ success: true });
 }));

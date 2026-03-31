@@ -16,6 +16,7 @@ import { postMultiTransaction } from '../../engines/transaction.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getFirstRow } from '../../utils/db-result.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
+import { validateEntityAccountLinks } from './_shared/account-guards.ts';
 
 const vouchersCreateRouter = new Hono();
 
@@ -94,6 +95,12 @@ vouchersCreateRouter.post(
       .filter((e: any) => Number.isFinite(e.amount) && e.amount > 0);
 
     if (entries.length === 0) return c.json({ error: 'ط£ط¯ط®ظ„ ظ…ط¨ظ„ط؛ط§ظ‹ ظˆط§ط­ط¯ط§ظ‹ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„' }, 400);
+
+    // حماية: منع تنفيذ عملية على حسابات فرعية بدون كيان مرتبط
+    const allAccountIds = entries.map((e: any) => e.accountId).filter(Boolean);
+    if (treasuryAccountId) allAccountIds.push(treasuryAccountId);
+    const guardError = await validateEntityAccountLinks(allAccountIds);
+    if (guardError) return c.json({ error: guardError }, 400);
 
     const total = entries.reduce((s: number, e: any) => s + e.amount, 0);
     const entryLineType: 'debit' | 'credit' = vType === 'receipt' ? 'credit' : 'debit';

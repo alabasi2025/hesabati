@@ -138,3 +138,35 @@
 .nature-btn span:not(.material-icons-round):not(.badge-sys) { font-size: 13px; font-weight: 600; }
 .badge-sys { padding: 2px 8px; border-radius: 999px; background: rgba(100, 116, 139, 0.15); color: var(--text-secondary); font-size: 10px; font-weight: 700; }
 .required { color: #ef4444; margin-left: 2px; }
+
+.header-actions { display: flex; gap: 10px; }
+.parent-btn {
+  background: linear-gradient(135deg, #0d9488, #14b8a6) !important;
+  &:hover { background: linear-gradient(135deg, #0f766e, #0d9488) !important; }
+}
+.folder-icon { background: linear-gradient(135deg, #0d9488, #14b8a6) !important; }
+
+.guard-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f59e0b 12%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, #f59e0b 40%, var(--border-color));
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+  .material-icons-round { font-size: 20px; color: #d97706; }
+}
+
+.disabled-grid {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.nature-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

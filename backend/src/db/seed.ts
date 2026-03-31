@@ -232,37 +232,9 @@ async function seed() {
 
   // ===================== الحسابات والمحافظ =====================
   const accountSeedRows: (typeof schema.accounts.$inferInsert)[] = [
-    // محافظ إلكترونية - المحطات
-    { businessId: b1.id, name: 'جوالي 1 - شخصي', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي', receivesFromStations: true },
-    { businessId: b1.id, name: 'جوالي 2 - شخصي', accountType: 'e_wallet' as const, accountNumber: '771506017', provider: 'جوالي' },
-    { businessId: b1.id, name: 'جوالي 3 - وكيل', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جوالي' },
-    { businessId: b1.id, name: 'جيب', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'جيب', receivesFromStations: true },
-    { businessId: b1.id, name: 'ون كاش', accountType: 'e_wallet' as const, accountNumber: '774424555', provider: 'ون كاش', receivesFromStations: true },
-    // بنوك
-    { businessId: b1.id, name: 'كريمي الحديدة - جاري', accountType: 'bank' as const, provider: 'الكريمي', receivesFromStations: true },
-    { businessId: b1.id, name: 'كريمي الحديدة - توفير', accountType: 'bank' as const, provider: 'الكريمي' },
-    { businessId: b1.id, name: 'كريمي صنعاء - جاري', accountType: 'bank' as const, provider: 'الكريمي' },
-    { businessId: b1.id, name: 'كريمي صنعاء - توفير', accountType: 'bank' as const, provider: 'الكريمي' },
-    // خدمة حاسب (محفظة إلكترونية)
-    { businessId: b1.id, name: 'حاسب - رئيسي', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'], receivesFromStations: true },
-    { businessId: b1.id, name: 'حاسب - نقطة 1', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 2', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 3', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 4', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 5', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 6', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    { businessId: b1.id, name: 'حاسب - نقطة 7', accountType: 'e_wallet' as const, provider: 'خدمة حاسب', supportedCurrencies: ['YER'] },
-    // الصرافين
-    { businessId: b1.id, name: 'الحوشبي - باسم المحطات', accountType: 'exchange' as const, provider: 'الحوشبي', receivesFromStations: true },
-    { businessId: b1.id, name: 'الحوشبي - باسم المالك', accountType: 'exchange' as const, provider: 'الحوشبي' },
-    { businessId: b1.id, name: 'النجم', accountType: 'exchange' as const, provider: 'النجم', receivesFromStations: true },
-    { businessId: b1.id, name: 'ابن عامر', accountType: 'exchange' as const, provider: 'ابن عامر', isActive: false },
-    { businessId: b1.id, name: 'النهمي - المحطات', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
-    { businessId: b1.id, name: 'النهمي - محمد المراني', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
-    { businessId: b1.id, name: 'النهمي - الرئيسي', accountType: 'exchange' as const, provider: 'النهمي', isActive: false },
-    // نقد وخزائن (تحت نوع fund)
-    { businessId: b1.id, name: 'خزنة المالك الشخصية', accountType: 'fund' as const },
-    { businessId: b1.id, name: 'النقد الشخصي (كاش)', accountType: 'fund' as const },
+    // محافظ إلكترونية — تُنشأ من walletSeedData أدناه
+    // بنوك — تُنشأ من bankSeedData أدناه
+    // صرافين — تُنشأ من exchangeSeedData أدناه
     // عهد
     { businessId: b1.id, name: 'عهدة أكرم العباسي', accountType: 'custody' as const },
     { businessId: b1.id, name: 'عهدة كمال العباسي', accountType: 'custody' as const },
@@ -271,14 +243,6 @@ async function seed() {
     { businessId: b1.id, name: 'حساب مخزن الدهمية', accountType: 'warehouse' as const },
     { businessId: b1.id, name: 'حساب مخزن الصبالية وجمال', accountType: 'warehouse' as const },
     { businessId: b1.id, name: 'حساب مخزن غليل', accountType: 'warehouse' as const },
-    // معبر
-    { businessId: b2.id, name: 'جوالي - معبر', accountType: 'e_wallet' as const, provider: 'جوالي', receivesFromStations: true },
-    { businessId: b2.id, name: 'ون كاش - معبر', accountType: 'e_wallet' as const, provider: 'ون كاش', receivesFromStations: true },
-    { businessId: b2.id, name: 'خزنة معبر', accountType: 'fund' as const },
-    // شخصي
-    { businessId: b3.id, name: 'حساب شخصي - جوالي', accountType: 'e_wallet' as const, provider: 'جوالي' },
-    { businessId: b3.id, name: 'حساب شخصي - كريمي', accountType: 'bank' as const, provider: 'بنك الكريمي' },
-    { businessId: b3.id, name: 'خزنة شخصية', accountType: 'fund' as const },
   ];
 
   // إنشاء الحسابات باستخدام آلية الترقيم الصحيحة
@@ -310,7 +274,11 @@ async function seed() {
   console.log('✅ الحسابات');
 
   // ===================== الصناديق =====================
-  await db.insert(schema.funds).values([
+  // المنطق الجديد: لكل صندوق يُنشأ حساب fund في الدليل أولاً ثم يُنشأ الصندوق مرتبطاً به
+  const fundSeedData: { businessId: number; name: string; stationId?: number; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
+    // حسابات عامة
+    { businessId: b1.id, name: 'خزنة المالك الشخصية' },
+    { businessId: b1.id, name: 'النقد الشخصي (كاش)' },
     // المحطات
     { businessId: b1.id, name: 'صندوق رئيسي - الدهمية', stationId: s1.id },
     { businessId: b1.id, name: 'صندوق رئيسي - الصبالية وجمال', stationId: s2.id },
@@ -329,8 +297,144 @@ async function seed() {
     // معبر
     { businessId: b2.id, name: 'صندوق تحصيل معبر', stationId: s6.id, responsiblePerson: 'حسن المعبري' },
     { businessId: b2.id, name: 'خزنة معبر', responsiblePerson: 'حسن المعبري' },
-  ]);
-  console.log('✅ الصناديق');
+    // شخصي
+    { businessId: b3.id, name: 'خزنة شخصية' },
+  ];
+
+  const accountFundCount = new Map<number, number>();
+  for (const fd of fundSeedData) {
+    // 1) إنشاء حساب fund في الدليل
+    const fundNatureId = getNatureId(fd.businessId, 'fund');
+    const account = await createLinkedAccount(fd.businessId, fd.name, 'fund', fundNatureId);
+
+    // 2) كود مركّب: كود الحساب/رقم فرعي (FND-01/1, FND-01/2)
+    const subSeq = (accountFundCount.get(account.id) ?? 0) + 1;
+    accountFundCount.set(account.id, subSeq);
+
+    await db.insert(schema.funds).values({
+      businessId: fd.businessId,
+      name: fd.name,
+      accountId: account.id,
+      sequenceNumber: account.sequenceNumber,
+      code: `${account.code}/${subSeq}`,
+      stationId: fd.stationId ?? null,
+      responsiblePerson: fd.responsiblePerson ?? null,
+      description: fd.description ?? null,
+      isActive: fd.isActive ?? true,
+    });
+  }
+  console.log('✅ الصناديق (مع حساباتها المرتبطة)');
+
+  // ===================== البنوك =====================
+  const bankSeedData: { businessId: number; name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
+    { businessId: b1.id, name: 'كريمي الحديدة - جاري', provider: 'الكريمي' },
+    { businessId: b1.id, name: 'كريمي الحديدة - توفير', provider: 'الكريمي' },
+    { businessId: b1.id, name: 'كريمي صنعاء - جاري', provider: 'الكريمي' },
+    { businessId: b1.id, name: 'كريمي صنعاء - توفير', provider: 'الكريمي' },
+    { businessId: b3.id, name: 'حساب شخصي - كريمي', provider: 'بنك الكريمي' },
+  ];
+
+  const accountBankCount = new Map<number, number>();
+  for (const bk of bankSeedData) {
+    // 1) إنشاء حساب bank في الدليل
+    const bankNatureId = getNatureId(bk.businessId, 'bank');
+    const account = await createLinkedAccount(bk.businessId, bk.name, 'bank', bankNatureId);
+
+    // 2) كود مركّب: كود الحساب/رقم فرعي (BNK-01/1, BNK-01/2)
+    const subSeq = (accountBankCount.get(account.id) ?? 0) + 1;
+    accountBankCount.set(account.id, subSeq);
+
+    await db.insert(schema.banks).values({
+      businessId: bk.businessId,
+      name: bk.name,
+      accountId: account.id,
+      sequenceNumber: account.sequenceNumber,
+      code: `${account.code}/${subSeq}`,
+      provider: bk.provider ?? null,
+      accountNumber: bk.accountNumber ?? null,
+      responsiblePerson: bk.responsiblePerson ?? null,
+      description: bk.description ?? null,
+      isActive: bk.isActive ?? true,
+    });
+  }
+  console.log('✅ البنوك (مع حساباتها المرتبطة)');
+
+  // ===================== المحافظ الإلكترونية =====================
+  const walletSeedData: { businessId: number; name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
+    { businessId: b1.id, name: 'جوالي 1 - شخصي', provider: 'جوالي', accountNumber: '774424555' },
+    { businessId: b1.id, name: 'جوالي 2 - شخصي', provider: 'جوالي', accountNumber: '771506017' },
+    { businessId: b1.id, name: 'جوالي 3 - وكيل', provider: 'جوالي', accountNumber: '774424555' },
+    { businessId: b1.id, name: 'جيب', provider: 'جيب', accountNumber: '774424555' },
+    { businessId: b1.id, name: 'ون كاش', provider: 'ون كاش', accountNumber: '774424555' },
+    { businessId: b1.id, name: 'حاسب - رئيسي', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 1', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 2', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 3', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 4', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 5', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 6', provider: 'خدمة حاسب' },
+    { businessId: b1.id, name: 'حاسب - نقطة 7', provider: 'خدمة حاسب' },
+    { businessId: b2.id, name: 'جوالي - معبر', provider: 'جوالي' },
+    { businessId: b2.id, name: 'ون كاش - معبر', provider: 'ون كاش' },
+    { businessId: b3.id, name: 'حساب شخصي - جوالي', provider: 'جوالي' },
+  ];
+
+  const accountWalletCount = new Map<number, number>();
+  for (const wl of walletSeedData) {
+    const walletNatureId = getNatureId(wl.businessId, 'e_wallet');
+    const account = await createLinkedAccount(wl.businessId, wl.name, 'e_wallet', walletNatureId);
+
+    const subSeq = (accountWalletCount.get(account.id) ?? 0) + 1;
+    accountWalletCount.set(account.id, subSeq);
+
+    await db.insert(schema.wallets).values({
+      businessId: wl.businessId,
+      name: wl.name,
+      accountId: account.id,
+      sequenceNumber: account.sequenceNumber,
+      code: `${account.code}/${subSeq}`,
+      provider: wl.provider ?? null,
+      accountNumber: wl.accountNumber ?? null,
+      responsiblePerson: wl.responsiblePerson ?? null,
+      description: wl.description ?? null,
+      isActive: wl.isActive ?? true,
+    });
+  }
+  console.log('✅ المحافظ الإلكترونية (مع حساباتها المرتبطة)');
+
+  // ===================== الصرافين =====================
+  const exchangeSeedData: { businessId: number; name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
+    { businessId: b1.id, name: 'الحوشبي - باسم المحطات', provider: 'الحوشبي' },
+    { businessId: b1.id, name: 'الحوشبي - باسم المالك', provider: 'الحوشبي' },
+    { businessId: b1.id, name: 'النجم', provider: 'النجم' },
+    { businessId: b1.id, name: 'ابن عامر', provider: 'ابن عامر', isActive: false },
+    { businessId: b1.id, name: 'النهمي - المحطات', provider: 'النهمي', isActive: false },
+    { businessId: b1.id, name: 'النهمي - محمد المراني', provider: 'النهمي', isActive: false },
+    { businessId: b1.id, name: 'النهمي - الرئيسي', provider: 'النهمي', isActive: false },
+  ];
+
+  const accountExchangeCount = new Map<number, number>();
+  for (const ex of exchangeSeedData) {
+    const exchangeNatureId = getNatureId(ex.businessId, 'exchange');
+    const account = await createLinkedAccount(ex.businessId, ex.name, 'exchange', exchangeNatureId);
+
+    const subSeq = (accountExchangeCount.get(account.id) ?? 0) + 1;
+    accountExchangeCount.set(account.id, subSeq);
+
+    await db.insert(schema.exchanges).values({
+      businessId: ex.businessId,
+      name: ex.name,
+      accountId: account.id,
+      sequenceNumber: account.sequenceNumber,
+      code: `${account.code}/${subSeq}`,
+      provider: ex.provider ?? null,
+      accountNumber: ex.accountNumber ?? null,
+      responsiblePerson: ex.responsiblePerson ?? null,
+      description: ex.description ?? null,
+      isActive: ex.isActive ?? true,
+    });
+  }
+  console.log('✅ الصرافين (مع حساباتهم المرتبطة)');
 
   // ===================== الموردين =====================
   await db.insert(schema.suppliers).values([

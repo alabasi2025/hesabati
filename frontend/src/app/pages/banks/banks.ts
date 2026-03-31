@@ -19,26 +19,25 @@ export class BanksComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
 
-  accounts = signal<any[]>([]);
+  banksData = signal<any[]>([]);
+  bankAccounts = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
+  accountFilter = signal<number | null>(null);
 
-  showAccountForm = signal(false);
-  editingAccountId = signal<number | null>(null);
-  accountForm: any = { name: '', subType: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
-
-  showTypeForm = signal(false);
-  editingTypeId = signal<number | null>(null);
-  typeForm: any = { name: '', subTypeKey: '', description: '', icon: 'account_balance', color: '#4CAF50' };
+  showBankForm = signal(false);
+  editingBankId = signal<number | null>(null);
+  bankForm: any = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
 
   showDeleteConfirm = signal(false);
-  deleteTarget = signal<{ type: 'account' | 'type'; id: number; name: string } | null>(null);
+  deleteTarget = signal<{ type: 'bank'; id: number; name: string } | null>(null);
 
-  iconOptions = [
-    'account_balance', 'credit_card', 'savings', 'local_atm', 'payments',
-    'attach_money', 'monetization_on', 'toll', 'currency_exchange', 'language',
-    'public', 'store', 'business', 'corporate_fare', 'domain',
-  ];
+  // Backward compatibility
+  get accounts() { return this.banksData; }
+  showAccountForm = this.showBankForm;
+  editingAccountId = this.editingBankId;
+  get accountForm() { return this.bankForm; }
+  set accountForm(v: any) { this.bankForm = v; }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -47,85 +46,88 @@ export class BanksComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const accs = await this.api.getAccounts(this.bizId);
-      this.accounts.set(accs.filter((a: any) => a.accountType === 'bank'));
-    } catch (e) { console.error(e); }
+      const [banksList] = await Promise.all([
+        this.api.getBanks(this.bizId),
+      ]);
+      this.banksData.set(banksList);
+      this.activeFilter.set('all');
+      try {
+        const allAccounts = await this.api.getAccounts(this.bizId);
+        this.bankAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'bank'));
+      } catch { this.bankAccounts.set([]); }
+    } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
-      { value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.accounts().filter(a => a.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.accounts().filter(a => !a.isActive).length },
+      { value: 'all', label: 'الكل', icon: 'apps', count: this.banksData().length },
+      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.banksData().filter(b => b.isActive).length },
+      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.banksData().filter(b => !b.isActive).length },
     ];
   }
 
   get filteredData() {
+    let data = this.banksData();
     const filter = this.activeFilter();
-    if (filter === 'all') return this.accounts();
-    if (filter === 'active') return this.accounts().filter(a => a.isActive);
-    if (filter === 'inactive') return this.accounts().filter(a => !a.isActive);
-    return this.accounts();
+    if (filter === 'active') data = data.filter(b => b.isActive);
+    else if (filter === 'inactive') data = data.filter(b => !b.isActive);
+    const accId = this.accountFilter();
+    if (accId) data = data.filter(b => b.accountId === accId);
+    return data;
+  }
+
+  get uniqueAccounts() {
+    const seen = new Map<number, { id: number; name: string; code: string }>();
+    for (const b of this.banksData()) {
+      if (b.accountId && !seen.has(b.accountId)) {
+        seen.set(b.accountId, { id: b.accountId, name: b.accountName || b.name, code: b.accountCode || b.code });
+      }
+    }
+    return Array.from(seen.values());
   }
 
   openAddAccount(subType?: string) {
-    this.accountForm = { name: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
-    this.editingAccountId.set(null);
-    this.showAccountForm.set(true);
+    this.bankForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.editingBankId.set(null);
+    this.showBankForm.set(true);
   }
 
-  openEditAccount(acc: any) {
-    this.accountForm = { name: acc.name, subType: acc.subType || '', accountNumber: acc.accountNumber || '', provider: acc.provider || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '' };
-    this.editingAccountId.set(acc.id);
-    this.showAccountForm.set(true);
+  openEditAccount(bank: any) {
+    this.bankForm = {
+      name: bank.name,
+      accountId: bank.accountId || null,
+      accountNumber: bank.accountNumber || '',
+      provider: bank.provider || '',
+      responsiblePerson: bank.responsiblePerson || '',
+      description: bank.description || '',
+      notes: bank.notes || '',
+    };
+    this.editingBankId.set(bank.id);
+    this.showBankForm.set(true);
   }
 
   async saveAccount() {
     try {
-      if (!this.accountForm.name?.trim()) {
-        this.toast.error('اسم الحساب مطلوب');
+      if (!this.bankForm.name?.trim()) {
+        this.toast.error('اسم البنك مطلوب');
         return;
       }
 
-      const data = { ...this.accountForm, accountType: 'bank', isLeafAccount: true };
-      if (this.editingAccountId()) {
-        await this.api.updateAccount(this.bizId, this.editingAccountId()!, data);
+      const data = { ...this.bankForm };
+      delete data.sequenceNumber;
+      if (this.editingBankId()) {
+        await this.api.updateBank(this.bizId, this.editingBankId()!, data);
       } else {
-        await this.api.createAccount(this.bizId, data);
+        await this.api.createBank(this.bizId, data);
       }
-      this.showAccountForm.set(false);
-      this.toast.success(this.editingAccountId() ? 'تم تحديث الحساب بنجاح' : 'تم إنشاء الحساب بنجاح');
+      this.showBankForm.set(false);
+      this.toast.success(this.editingBankId() ? 'تم تحديث البنك بنجاح' : 'تم إنشاء البنك بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الحساب'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ البنك'); }
   }
 
-  openAddType() {
-    this.typeForm = { name: '', subTypeKey: '', description: '', icon: 'account_balance', color: '#4CAF50' };
-    this.editingTypeId.set(null);
-    this.showTypeForm.set(true);
-  }
-
-  openEditType(t: any) {
-    this.typeForm = { name: t.name, subTypeKey: t.subTypeKey, description: t.description || '', icon: t.icon || 'account_balance', color: t.color || '#4CAF50' };
-    this.editingTypeId.set(t.id);
-    this.showTypeForm.set(true);
-  }
-
-  async saveType() {
-    try {
-      if (this.editingTypeId()) {
-        await this.api.updateBankType(this.editingTypeId()!, this.typeForm);
-      } else {
-        await this.api.createBankType(this.bizId, this.typeForm);
-      }
-      this.showTypeForm.set(false);
-      this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
-      await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع'); }
-  }
-
-  confirmDelete(type: 'account' | 'type', id: number, name: string) {
+  confirmDelete(type: 'bank', id: number, name: string) {
     this.deleteTarget.set({ type, id, name });
     this.showDeleteConfirm.set(true);
   }
@@ -134,8 +136,7 @@ export class BanksComponent extends BasePageComponent {
     const target = this.deleteTarget();
     if (!target) return;
     try {
-      if (target.type === 'account') await this.api.deleteAccount(this.bizId, target.id);
-      else await this.api.deleteBankType(target.id);
+      await this.api.deleteBank(this.bizId, target.id);
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');

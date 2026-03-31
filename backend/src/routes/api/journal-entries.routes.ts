@@ -19,6 +19,7 @@ import { getNextSequence } from '../../middleware/sequencing.ts';
 import { generateJournalEntryFullSequence } from '../../engines/sequencing-entity.engine.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
+import { validateEntityAccountLinks } from './_shared/account-guards.ts';
 import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
 
 const journalEntriesRoutes = new Hono();
@@ -80,6 +81,11 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
     else totalCredit += amt;
   }
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
+  // حماية: منع تنفيذ قيد على حسابات فرعية بدون كيان مرتبط
+  const lineAccountIds = lines.map((l: any) => l.accountId).filter(Boolean);
+  const guardError = await validateEntityAccountLinks(lineAccountIds);
+  if (guardError) return c.json({ error: guardError }, 400);
 
   const year = new Date().getFullYear();
   let journalFullSeqNum: string | null = null;

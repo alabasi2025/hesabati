@@ -22,13 +22,15 @@ export class FundsComponent extends BasePageComponent {
   // إصلاح #4: استخدام funds بدلاً من accounts
   fundsData = signal<any[]>([]);
   stations = signal<any[]>([]);
+  fundAccounts = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
+  accountFilter = signal<number | null>(null);
 
   // Fund form
   showFundForm = signal(false);
   editingFundId = signal<number | null>(null);
-  fundForm: any = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, description: '', notes: '' };
+  fundForm: any = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, accountId: null, description: '', notes: '' };
 
   // Type form
   showTypeForm = signal(false);
@@ -67,6 +69,11 @@ export class FundsComponent extends BasePageComponent {
       this.fundsData.set(fundsList);
       this.stations.set(sts);
       this.activeFilter.set('all');
+      // جلب الحسابات نوع صندوق (منفصل حتى لا يؤثر فشله على عرض الصناديق)
+      try {
+        const allAccounts = await this.api.getAccounts(this.bizId);
+        this.fundAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'fund'));
+      } catch { this.fundAccounts.set([]); }
     } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
@@ -80,11 +87,23 @@ export class FundsComponent extends BasePageComponent {
   }
 
   get filteredData() {
+    let data = this.fundsData();
     const filter = this.activeFilter();
-    if (filter === 'all') return this.fundsData();
-    if (filter === 'active') return this.fundsData().filter(f => f.isActive);
-    if (filter === 'inactive') return this.fundsData().filter(f => !f.isActive);
-    return this.fundsData();
+    if (filter === 'active') data = data.filter(f => f.isActive);
+    else if (filter === 'inactive') data = data.filter(f => !f.isActive);
+    const accId = this.accountFilter();
+    if (accId) data = data.filter(f => f.accountId === accId);
+    return data;
+  }
+
+  get uniqueAccounts() {
+    const seen = new Map<number, { id: number; name: string; code: string }>();
+    for (const f of this.fundsData()) {
+      if (f.accountId && !seen.has(f.accountId)) {
+        seen.set(f.accountId, { id: f.accountId, name: f.accountName || f.name, code: f.accountCode || f.code });
+      }
+    }
+    return Array.from(seen.values());
   }
 
   // ============ Fund CRUD ============
@@ -94,7 +113,7 @@ export class FundsComponent extends BasePageComponent {
       sequenceNumber: '',
       responsiblePerson: '',
       stationId: null,
-      accountSubNatureId: null,
+      accountId: null,
       description: '',
       notes: '',
     };
@@ -109,6 +128,7 @@ export class FundsComponent extends BasePageComponent {
       sequenceNumber: fund.sequenceNumber ?? '',
       responsiblePerson: fund.responsiblePerson || '',
       stationId: fund.stationId || null,
+      accountId: fund.accountId || null,
       description: fund.description || '',
       notes: fund.notes || '',
     };
@@ -124,16 +144,7 @@ export class FundsComponent extends BasePageComponent {
         return;
       }
       if (data.stationId === '' || data.stationId === null) delete data.stationId;
-      if (data.sequenceNumber === '' || data.sequenceNumber === null || data.sequenceNumber === undefined) {
-        delete data.sequenceNumber;
-      } else {
-        const n = Number.parseInt(String(data.sequenceNumber), 10);
-        if (!Number.isInteger(n) || n <= 0) {
-          this.toast.error('رقم الصندوق غير صالح');
-          return;
-        }
-        data.sequenceNumber = n;
-      }
+      delete data.sequenceNumber;
 
       if (this.editingFundId()) {
         await this.api.updateFund(this.bizId, this.editingFundId()!, data);

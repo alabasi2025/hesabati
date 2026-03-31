@@ -10,6 +10,9 @@ import {
   accountSubNatures,
   funds,
   fundBalances,
+  vouchers,
+  voucherLines,
+  journalEntryLines,
   stations,
   currencies,
 } from "../../db/schema/index.ts";
@@ -74,76 +77,40 @@ fundsRoutes.post(
     const body = (await getBody(c)) as Record<string, unknown>;
     const validation = validateBody(fundSchema, body);
     if (!validation.success) return c.json({ error: validation.error }, 400);
-    const insertPayload: Record<string, unknown> = {
-      ...validation.data,
+    const vd = validation.data as Record<string, unknown>;
+    // الحساب المرتبط إلزامي — يُنشأ أولاً من صفحة الحسابات
+    const accountId = body.accountId != null && Number(body.accountId) > 0 ? Number(body.accountId) : null;
+    if (!accountId) return c.json({ error: 'يجب اختيار حساب مرتبط بالصندوق' }, 400);
+
+    const [acc] = await db.select({ id: accounts.id, sequenceNumber: accounts.sequenceNumber, code: accounts.code })
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)))
+      .limit(1);
+    if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
+
+    // كود مركّب: كود الحساب/رقم فرعي (FND-01/1, FND-01/2)
+    const existingFunds = await db.select({ id: funds.id }).from(funds)
+      .where(and(eq(funds.businessId, bizId), eq(funds.accountId, accountId)));
+    const subSeq = existingFunds.length + 1;
+    const fundCode = `${acc.code}/${subSeq}`;
+
+    const insertPayload: typeof funds.$inferInsert = {
       businessId: bizId,
+      name: String(vd.name),
+      accountId: accountId,
+      sequenceNumber: acc.sequenceNumber,
+      code: fundCode,
+      stationId: vd.stationId != null && Number(vd.stationId) > 0 ? Number(vd.stationId) : null,
+      responsiblePerson: typeof vd.responsiblePerson === 'string' && vd.responsiblePerson.trim() ? vd.responsiblePerson.trim() : null,
+      description: typeof vd.description === 'string' && vd.description.trim() ? vd.description.trim() : null,
+      notes: typeof vd.notes === 'string' && vd.notes.trim() ? vd.notes.trim() : null,
+      isActive: vd.isActive !== false,
     };
-
-    // آلية الترقيم المبسطة: FND-01, FND-02, FND-03...
-    const manualSeq = parsePositiveIntOrNull(body.sequenceNumber);
-
-    if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0) {
-      const existing = await db
-        .select({ id: funds.id })
-        .from(funds)
-        .where(
-          and(
-            eq(funds.businessId, bizId),
-            eq(funds.sequenceNumber, manualSeq),
-          ),
-        )
-        .limit(1);
-      if (existing.length > 0)
-        return c.json(
-          { error: "رقم الصندوق مستخدم مسبقاً" },
-          400,
-        );
-
-      insertPayload.sequenceNumber = manualSeq;
-      insertPayload.code = buildFundCode(manualSeq);
-      await ensureCounterAtLeast(
-        bizId,
-        "fund",
-        0,
-        0,
-        manualSeq,
-      );
-    } else {
-      const seq = await getNextSequence(bizId, "fund", 0, 0);
-      insertPayload.sequenceNumber = seq;
-      insertPayload.code = buildFundCode(seq);
-    }
 
     const [created] = await db
       .insert(funds)
       .values(insertPayload as typeof funds.$inferInsert)
       .returning();
-
-    // ربط الصندوق بحساب مالي تلقائياً
-    // إذا أرسل المستخدم accountSubNatureId نستخدمه، وإلا نأخذ أول تصنيف fund
-    const requestedSubNatureId = body.accountSubNatureId ? Number(body.accountSubNatureId) : null;
-    let accountSubNatureId: number | null = null;
-
-    if (requestedSubNatureId) {
-      const [subNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures).where(and(eq(accountSubNatures.id, requestedSubNatureId), eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
-      if (subNature) accountSubNatureId = subNature.id;
-    }
-
-    if (!accountSubNatureId) {
-      const [defaultNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures).where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
-      if (defaultNature) accountSubNatureId = defaultNature.id;
-    }
-
-    if (created && accountSubNatureId) {
-      const [createdAccount] = await db.insert(accounts).values({
-        businessId: bizId, name: created.name, accountType: 'fund', accountSubNatureId,
-        isLeafAccount: true, code: created.code, sequenceNumber: created.sequenceNumber,
-        notes: created.notes, isActive: created.isActive,
-      }).returning();
-      if (createdAccount) {
-        await db.update(funds).set({ accountId: createdAccount.id, updatedAt: new Date() }).where(eq(funds.id, created.id));
-      }
-    }
 
     return c.json(created, 201);
   }),
@@ -223,6 +190,28 @@ fundsRoutes.delete(
       .where(and(eq(funds.id, id), eq(funds.businessId, bizId)));
     if (!existing)
       return c.json({ error: "صندوق غير موجود أو لا ينتمي لهذا العمل" }, 404);
+
+    // حماية: لا يمكن حذف صندوق تم تنفيذ عمليات فيه
+    const [linkedVoucher] = await db.select({ id: vouchers.id }).from(vouchers)
+      .where(and(eq(vouchers.businessId, bizId), sql`(${vouchers.fromFundId} = ${id} OR ${vouchers.toFundId} = ${id})`))
+      .limit(1);
+    if (linkedVoucher) return c.json({ error: 'لا يمكن حذف الصندوق لأنه مرتبط بسندات. احذف السندات أولاً' }, 400);
+
+    const [nonZeroBalance] = await db.select({ id: fundBalances.id }).from(fundBalances)
+      .where(and(eq(fundBalances.fundId, id), ne(fundBalances.balance, '0')))
+      .limit(1);
+    if (nonZeroBalance) return c.json({ error: 'لا يمكن حذف الصندوق لأنه يحتوي على رصيد غير صفري' }, 400);
+
+    if (existing.accountId) {
+      const [linkedVoucherLine] = await db.select({ id: voucherLines.id }).from(voucherLines)
+        .where(eq(voucherLines.accountId, existing.accountId)).limit(1);
+      if (linkedVoucherLine) return c.json({ error: 'لا يمكن حذف الصندوق لأن حسابه المرتبط يحتوي على قيود' }, 400);
+
+      const [linkedJournal] = await db.select({ id: journalEntryLines.id }).from(journalEntryLines)
+        .where(eq(journalEntryLines.accountId, existing.accountId)).limit(1);
+      if (linkedJournal) return c.json({ error: 'لا يمكن حذف الصندوق لأن حسابه المرتبط يحتوي على قيود يومية' }, 400);
+    }
+
     await db.delete(funds).where(eq(funds.id, id));
     return c.json({ success: true });
   }),

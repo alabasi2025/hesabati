@@ -115,6 +115,18 @@ export class ApiService {
   createFundType(bizId: number, d: any)          { return this.acc.createFundType(bizId, d); }
   updateFundType(id: number, d: any)             { return this.acc.updateFundType(id, d); }
   deleteFundType(id: number)                     { return this.acc.deleteFundType(id); }
+  getBanks(bizId: number)                         { return this.acc.getBanks(bizId); }
+  createBank(bizId: number, d: any)               { return this.acc.createBank(bizId, d); }
+  updateBank(bizId: number, id: number, d: any)   { return this.acc.updateBank(bizId, id, d); }
+  deleteBank(bizId: number, id: number)            { return this.acc.deleteBank(bizId, id); }
+  getWallets(bizId: number)                         { return this.acc.getWallets(bizId); }
+  createWallet(bizId: number, d: any)               { return this.acc.createWallet(bizId, d); }
+  updateWallet(bizId: number, id: number, d: any)   { return this.acc.updateWallet(bizId, id, d); }
+  deleteWallet(bizId: number, id: number)            { return this.acc.deleteWallet(bizId, id); }
+  getExchanges(bizId: number)                        { return this.acc.getExchanges(bizId); }
+  createExchange(bizId: number, d: any)              { return this.acc.createExchange(bizId, d); }
+  updateExchange(bizId: number, id: number, d: any)  { return this.acc.updateExchange(bizId, id, d); }
+  deleteExchange(bizId: number, id: number)           { return this.acc.deleteExchange(bizId, id); }
   getBankTypes(bizId: number)                    { return this.acc.getBankTypes(bizId); }
   createBankType(bizId: number, d: any)          { return this.acc.createBankType(bizId, d); }
   updateBankType(id: number, d: any)             { return this.acc.updateBankType(id, d); }

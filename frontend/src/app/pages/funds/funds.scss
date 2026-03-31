@@ -24,6 +24,22 @@
 }
 .add-btn.small { padding: 8px 16px; font-size: 13px; margin-top: 12px; }
 
+/* ============ Account Filter ============ */
+.account-filter-row {
+  display: flex; gap: 8px; margin-bottom: 16px; align-items: center;
+}
+.account-filter-select {
+  padding: 8px 14px; border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-primary);
+  font-size: 13px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+  min-width: 220px; cursor: pointer;
+  transition: all 0.2s;
+  &:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
+  &:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
+  option { background: var(--bg-surface); color: var(--text-primary); }
+}
+
 /* ============ Filter Tabs ============ */
 .filter-tabs {
   display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;

@@ -19,26 +19,25 @@ export class ExchangesComponent extends BasePageComponent {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
 
-  accounts = signal<any[]>([]);
+  exchangesData = signal<any[]>([]);
+  exchangeAccounts = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
+  accountFilter = signal<number | null>(null);
 
-  showAccountForm = signal(false);
-  editingAccountId = signal<number | null>(null);
-  accountForm: any = { name: '', subType: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
-
-  showTypeForm = signal(false);
-  editingTypeId = signal<number | null>(null);
-  typeForm: any = { name: '', subTypeKey: '', description: '', icon: 'currency_exchange', color: '#FF9800' };
+  showExchangeForm = signal(false);
+  editingExchangeId = signal<number | null>(null);
+  exchangeForm: any = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
 
   showDeleteConfirm = signal(false);
-  deleteTarget = signal<{ type: 'account' | 'type'; id: number; name: string } | null>(null);
+  deleteTarget = signal<{ type: 'exchange'; id: number; name: string } | null>(null);
 
-  iconOptions = [
-    'currency_exchange', 'swap_horiz', 'sync_alt', 'compare_arrows', 'public',
-    'language', 'store', 'storefront', 'local_atm', 'payments',
-    'attach_money', 'monetization_on', 'toll', 'credit_card', 'account_balance',
-  ];
+  // Backward compatibility
+  get accounts() { return this.exchangesData; }
+  showAccountForm = this.showExchangeForm;
+  editingAccountId = this.editingExchangeId;
+  get accountForm() { return this.exchangeForm; }
+  set accountForm(v: any) { this.exchangeForm = v; }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -47,85 +46,86 @@ export class ExchangesComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const accs = await this.api.getAccounts(this.bizId);
-      this.accounts.set(accs.filter((a: any) => a.accountType === 'exchange'));
-    } catch (e) { console.error(e); }
+      const exchangesList = await this.api.getExchanges(this.bizId);
+      this.exchangesData.set(exchangesList);
+      this.activeFilter.set('all');
+      try {
+        const allAccounts = await this.api.getAccounts(this.bizId);
+        this.exchangeAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'exchange'));
+      } catch { this.exchangeAccounts.set([]); }
+    } catch (e: unknown) { console.error(e); }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
-      { value: 'all', label: 'الكل', icon: 'apps', count: this.accounts().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.accounts().filter(a => a.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.accounts().filter(a => !a.isActive).length },
+      { value: 'all', label: 'الكل', icon: 'apps', count: this.exchangesData().length },
+      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.exchangesData().filter(e => e.isActive).length },
+      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.exchangesData().filter(e => !e.isActive).length },
     ];
   }
 
   get filteredData() {
+    let data = this.exchangesData();
     const filter = this.activeFilter();
-    if (filter === 'all') return this.accounts();
-    if (filter === 'active') return this.accounts().filter(a => a.isActive);
-    if (filter === 'inactive') return this.accounts().filter(a => !a.isActive);
-    return this.accounts();
+    if (filter === 'active') data = data.filter(e => e.isActive);
+    else if (filter === 'inactive') data = data.filter(e => !e.isActive);
+    const accId = this.accountFilter();
+    if (accId) data = data.filter(e => e.accountId === accId);
+    return data;
+  }
+
+  get uniqueAccounts() {
+    const seen = new Map<number, { id: number; name: string; code: string }>();
+    for (const e of this.exchangesData()) {
+      if (e.accountId && !seen.has(e.accountId)) {
+        seen.set(e.accountId, { id: e.accountId, name: e.accountName || e.name, code: e.accountCode || e.code });
+      }
+    }
+    return Array.from(seen.values());
   }
 
   openAddAccount(subType?: string) {
-    this.accountForm = { name: '', accountNumber: '', provider: '', responsiblePerson: '', notes: '' };
-    this.editingAccountId.set(null);
-    this.showAccountForm.set(true);
+    this.exchangeForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.editingExchangeId.set(null);
+    this.showExchangeForm.set(true);
   }
 
-  openEditAccount(acc: any) {
-    this.accountForm = { name: acc.name, subType: acc.subType || '', accountNumber: acc.accountNumber || '', provider: acc.provider || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '' };
-    this.editingAccountId.set(acc.id);
-    this.showAccountForm.set(true);
+  openEditAccount(exchange: any) {
+    this.exchangeForm = {
+      name: exchange.name,
+      accountId: exchange.accountId || null,
+      accountNumber: exchange.accountNumber || '',
+      provider: exchange.provider || '',
+      responsiblePerson: exchange.responsiblePerson || '',
+      description: exchange.description || '',
+      notes: exchange.notes || '',
+    };
+    this.editingExchangeId.set(exchange.id);
+    this.showExchangeForm.set(true);
   }
 
   async saveAccount() {
     try {
-      if (!this.accountForm.name?.trim()) {
+      if (!this.exchangeForm.name?.trim()) {
         this.toast.error('اسم الصراف مطلوب');
         return;
       }
 
-      const data = { ...this.accountForm, accountType: 'exchange', isLeafAccount: true };
-      if (this.editingAccountId()) {
-        await this.api.updateAccount(this.bizId, this.editingAccountId()!, data);
+      const data = { ...this.exchangeForm };
+      delete data.sequenceNumber;
+      if (this.editingExchangeId()) {
+        await this.api.updateExchange(this.bizId, this.editingExchangeId()!, data);
       } else {
-        await this.api.createAccount(this.bizId, data);
+        await this.api.createExchange(this.bizId, data);
       }
-      this.showAccountForm.set(false);
-      this.toast.success(this.editingAccountId() ? 'تم تحديث الحساب بنجاح' : 'تم إنشاء الحساب بنجاح');
+      this.showExchangeForm.set(false);
+      this.toast.success(this.editingExchangeId() ? 'تم تحديث الصراف بنجاح' : 'تم إنشاء الصراف بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الحساب'); }
+    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الصراف'); }
   }
 
-  openAddType() {
-    this.typeForm = { name: '', subTypeKey: '', description: '', icon: 'currency_exchange', color: '#FF9800' };
-    this.editingTypeId.set(null);
-    this.showTypeForm.set(true);
-  }
-
-  openEditType(t: any) {
-    this.typeForm = { name: t.name, subTypeKey: t.subTypeKey, description: t.description || '', icon: t.icon || 'currency_exchange', color: t.color || '#FF9800' };
-    this.editingTypeId.set(t.id);
-    this.showTypeForm.set(true);
-  }
-
-  async saveType() {
-    try {
-      if (this.editingTypeId()) {
-        await this.api.updateExchangeType(this.editingTypeId()!, this.typeForm);
-      } else {
-        await this.api.createExchangeType(this.bizId, this.typeForm);
-      }
-      this.showTypeForm.set(false);
-      this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
-      await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع'); }
-  }
-
-  confirmDelete(type: 'account' | 'type', id: number, name: string) {
+  confirmDelete(type: 'exchange', id: number, name: string) {
     this.deleteTarget.set({ type, id, name });
     this.showDeleteConfirm.set(true);
   }
@@ -134,8 +134,7 @@ export class ExchangesComponent extends BasePageComponent {
     const target = this.deleteTarget();
     if (!target) return;
     try {
-      if (target.type === 'account') await this.api.deleteAccount(this.bizId, target.id);
-      else await this.api.deleteExchangeType(target.id);
+      await this.api.deleteExchange(this.bizId, target.id);
       this.showDeleteConfirm.set(false);
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');

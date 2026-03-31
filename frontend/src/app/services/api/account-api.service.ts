@@ -45,6 +45,24 @@ export class AccountApiService {
   updateFundType(id: number, d: any)               { return this.api.request<any>(`/fund-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteFundType(id: number)                       { return this.api.request<any>(`/fund-types/${id}`, { method: 'DELETE' }); }
 
+  // ===================== البنوك =====================
+  getBanks(bizId: number)                           { return this.api.request<any[]>(`/businesses/${bizId}/banks`); }
+  createBank(bizId: number, d: any)                 { return this.api.request<any>(`/businesses/${bizId}/banks`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateBank(bizId: number, id: number, d: any)     { return this.api.request<any>(`/businesses/${bizId}/banks/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteBank(bizId: number, id: number)              { return this.api.request<any>(`/businesses/${bizId}/banks/${id}`, { method: 'DELETE' }); }
+
+  // ===================== المحافظ الإلكترونية =====================
+  getWallets(bizId: number)                           { return this.api.request<any[]>(`/businesses/${bizId}/wallets`); }
+  createWallet(bizId: number, d: any)                 { return this.api.request<any>(`/businesses/${bizId}/wallets`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateWallet(bizId: number, id: number, d: any)     { return this.api.request<any>(`/businesses/${bizId}/wallets/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteWallet(bizId: number, id: number)              { return this.api.request<any>(`/businesses/${bizId}/wallets/${id}`, { method: 'DELETE' }); }
+
+  // ===================== الصرافين =====================
+  getExchanges(bizId: number)                           { return this.api.request<any[]>(`/businesses/${bizId}/exchanges`); }
+  createExchange(bizId: number, d: any)                 { return this.api.request<any>(`/businesses/${bizId}/exchanges`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateExchange(bizId: number, id: number, d: any)     { return this.api.request<any>(`/businesses/${bizId}/exchanges/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteExchange(bizId: number, id: number)              { return this.api.request<any>(`/businesses/${bizId}/exchanges/${id}`, { method: 'DELETE' }); }
+
   // ===================== أنواع البنوك =====================
   getBankTypes(bizId: number)                      { return this.api.request<any[]>(`/businesses/${bizId}/bank-types`); }
   createBankType(bizId: number, d: any)            { return this.api.request<any>(`/businesses/${bizId}/bank-types`, { method: 'POST', body: JSON.stringify(d) }); }

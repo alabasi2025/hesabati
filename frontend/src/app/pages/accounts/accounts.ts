@@ -32,6 +32,8 @@ export class AccountsComponent extends BasePageComponent {
   stations = signal<any[]>([]);
   showForm = signal(false);
   editingId = signal<number | null>(null);
+  formMode = signal<'create-parent' | 'create-leaf' | 'edit-parent' | 'edit-leaf'>('create-leaf');
+  editingLinkedEntity = signal(false);
   searchQuery = signal('');
   activeNatureFilter = signal<number | null>(null);
   collapsedIds = signal<Set<number>>(new Set<number>());
@@ -210,21 +212,39 @@ export class AccountsComponent extends BasePageComponent {
     finally { this.loading.set(false); }
   }
 
-  openCreate() {
+  openCreateParent() {
     this.editingId.set(null);
+    this.formMode.set('create-parent');
+    this.editingLinkedEntity.set(false);
+    this.form.set({ isLeafAccount: false, parentAccountId: null, accountSubNatureId: null, subTypeId: null, name: '', code: '', stationId: null, provider: '', accountNumber: '', responsiblePerson: '', notes: '', isActive: true });
+    this.showForm.set(true);
+  }
+
+  openCreateLeaf() {
+    this.editingId.set(null);
+    this.formMode.set('create-leaf');
+    this.editingLinkedEntity.set(false);
     this.form.set({ isLeafAccount: true, parentAccountId: null, accountSubNatureId: null, subTypeId: null, name: '', code: '', stationId: null, provider: '', accountNumber: '', responsiblePerson: '', notes: '', isActive: true });
     this.showForm.set(true);
   }
 
   openEdit(acc: any) {
+    const isLeaf = acc.isLeafAccount !== false;
     this.editingId.set(acc.id);
-    this.form.set({ isLeafAccount: acc.isLeafAccount !== false, parentAccountId: acc.parentAccountId || null, accountSubNatureId: acc.accountSubNatureId || null, subTypeId: acc.subTypeId || null, name: acc.name || '', code: acc.code || '', stationId: acc.stationId || null, provider: acc.provider || '', accountNumber: acc.accountNumber || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '', isActive: acc.isActive !== false });
+    this.formMode.set(isLeaf ? 'edit-leaf' : 'edit-parent');
+    // فحص إذا الحساب مرتبط بكيان (صندوق/بنك/محفظة/صراف)
+    const entityTypes = ['fund', 'bank', 'e_wallet', 'exchange'];
+    this.editingLinkedEntity.set(isLeaf && entityTypes.includes(acc.accountType || ''));
+    this.form.set({ isLeafAccount: isLeaf, parentAccountId: acc.parentAccountId || null, accountSubNatureId: acc.accountSubNatureId || null, subTypeId: acc.subTypeId || null, name: acc.name || '', code: acc.code || '', stationId: acc.stationId || null, provider: acc.provider || '', accountNumber: acc.accountNumber || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '', isActive: acc.isActive !== false });
     this.showForm.set(true);
   }
 
   async saveForm() {
     const f = this.form();
     if (!f.name?.trim()) { this.toast.error('اسم الحساب مطلوب'); return; }
+    if (!f.isLeafAccount && !this.editingId() && !f.code?.trim()) {
+      this.toast.error('الرمز/الكود مطلوب للحساب الرئيسي'); return;
+    }
     if (f.isLeafAccount && (!f.accountSubNatureId || !Number.isInteger(f.accountSubNatureId) || f.accountSubNatureId <= 0)) {
       this.toast.error('يجب اختيار نوع الحساب الفرعي'); return;
     }
@@ -232,7 +252,8 @@ export class AccountsComponent extends BasePageComponent {
       this.toast.error('يجب اختيار التصنيف قبل حفظ الحساب'); return;
     }
     try {
-      const payload: any = { name: f.name, isLeafAccount: f.isLeafAccount, parentAccountId: f.parentAccountId || null, accountSubNatureId: f.accountSubNatureId || null, code: f.code || null, stationId: f.stationId || null, provider: f.provider || null, accountNumber: f.accountNumber || null, responsiblePerson: f.responsiblePerson || null, notes: f.notes || null, isActive: f.isActive !== false };
+      const payload: any = { name: f.name, isLeafAccount: f.isLeafAccount, parentAccountId: f.parentAccountId || null, accountSubNatureId: f.accountSubNatureId || null, notes: f.notes || null, isActive: f.isActive !== false };
+      if (!f.isLeafAccount && f.code?.trim()) { payload.code = f.code.trim(); }
       if (f.isLeafAccount && Number.isInteger(f.subTypeId) && f.subTypeId > 0) {
         payload.subTypeId = Number(f.subTypeId);
         payload.subType = this.selectedSubType()?.subTypeKey || null;
