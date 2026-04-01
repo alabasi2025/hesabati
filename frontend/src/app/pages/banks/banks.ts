@@ -28,6 +28,9 @@ export class BanksComponent extends BasePageComponent {
   showBankForm = signal(false);
   editingBankId = signal<number | null>(null);
   bankForm: any = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+  accountCurrencies = signal<any[]>([]);
+  selectedCurrencyIds = signal<number[]>([]);
+  defaultCurrencyId = signal<number | null>(null);
 
   showDeleteConfirm = signal(false);
   deleteTarget = signal<{ type: 'bank'; id: number; name: string } | null>(null);
@@ -89,6 +92,9 @@ export class BanksComponent extends BasePageComponent {
 
   openAddAccount(subType?: string) {
     this.bankForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
     this.editingBankId.set(null);
     this.showBankForm.set(true);
   }
@@ -103,6 +109,15 @@ export class BanksComponent extends BasePageComponent {
       description: bank.description || '',
       notes: bank.notes || '',
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
+    if (bank.accountId) {
+      this.onAccountChange(bank.accountId);
+      if (bank.defaultCurrencyId) {
+        setTimeout(() => this.defaultCurrencyId.set(bank.defaultCurrencyId), 300);
+      }
+    }
     this.editingBankId.set(bank.id);
     this.showBankForm.set(true);
   }
@@ -113,8 +128,22 @@ export class BanksComponent extends BasePageComponent {
         this.toast.error('اسم البنك مطلوب');
         return;
       }
+      if (this.selectedCurrencyIds().length === 0) {
+        this.toast.error('يجب اختيار عملة واحدة على الأقل');
+        return;
+      }
+      if (!this.defaultCurrencyId()) {
+        this.toast.error('يجب اختيار العملة الافتراضية');
+        return;
+      }
+      if (!this.selectedCurrencyIds().includes(this.defaultCurrencyId()!)) {
+        this.toast.error('العملة الافتراضية يجب أن تكون من العملات المحددة');
+        return;
+      }
 
       const data = { ...this.bankForm };
+      data.currencyIds = this.selectedCurrencyIds();
+      data.defaultCurrencyId = this.defaultCurrencyId();
       delete data.sequenceNumber;
       if (this.editingBankId()) {
         await this.api.updateBank(this.bizId, this.editingBankId()!, data);
@@ -147,5 +176,46 @@ export class BanksComponent extends BasePageComponent {
   getBalanceDisplay(acc: any): string {
     if (!acc.balances || acc.balances.length === 0) return '0';
     return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+  }
+
+  async loadAccountCurrencies(accountId: number) {
+    try {
+      const currencies = await this.api.getAccountCurrencies(accountId);
+      this.accountCurrencies.set(currencies || []);
+    } catch (e) {
+      console.error(e);
+      this.accountCurrencies.set([]);
+    }
+  }
+
+  async onAccountChange(accountId: number) {
+    if (accountId) {
+      await this.loadAccountCurrencies(accountId);
+      const allCurrencyIds = this.accountCurrencies().map((c: any) => c.currencyId);
+      this.selectedCurrencyIds.set(allCurrencyIds);
+      this.defaultCurrencyId.set(null);
+    } else {
+      this.accountCurrencies.set([]);
+      this.selectedCurrencyIds.set([]);
+      this.defaultCurrencyId.set(null);
+    }
+  }
+
+  toggleCurrency(currencyId: number) {
+    const current = this.selectedCurrencyIds();
+    if (current.includes(currencyId)) {
+      this.selectedCurrencyIds.set(current.filter(id => id !== currencyId));
+      if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(null);
+    } else {
+      this.selectedCurrencyIds.set([...current, currencyId]);
+    }
+  }
+
+  isCurrencySelected(currencyId: number): boolean {
+    return this.selectedCurrencyIds().includes(currencyId);
+  }
+
+  setDefaultCurrency(currencyId: number) {
+    this.defaultCurrencyId.set(currencyId);
   }
 }

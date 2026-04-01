@@ -8,6 +8,7 @@ import { eq, and, inArray, ne, sql } from "drizzle-orm";
 import {
   accounts,
   accountSubNatures,
+  accountCurrencies,
   funds,
   fundBalances,
   vouchers,
@@ -94,10 +95,17 @@ fundsRoutes.post(
     const subSeq = existingFunds.length + 1;
     const fundCode = `${acc.code}/${subSeq}`;
 
+    // تحديد العملة الافتراضية
+    let defaultCurrencyId: number | null = null;
+    if (body.defaultCurrencyId && Number(body.defaultCurrencyId) > 0) {
+      defaultCurrencyId = Number(body.defaultCurrencyId);
+    }
+
     const insertPayload: typeof funds.$inferInsert = {
       businessId: bizId,
       name: String(vd.name),
       accountId: accountId,
+      defaultCurrencyId: defaultCurrencyId,
       sequenceNumber: acc.sequenceNumber,
       code: fundCode,
       stationId: vd.stationId != null && Number(vd.stationId) > 0 ? Number(vd.stationId) : null,
@@ -111,6 +119,31 @@ fundsRoutes.post(
       .insert(funds)
       .values(insertPayload as typeof funds.$inferInsert)
       .returning();
+
+    // نسخ العملات المحددة أو جميع عملات الحساب إلى fund_balances
+    let currencyIdsToAdd: number[] = [];
+
+    if (body.currencyIds && Array.isArray(body.currencyIds) && body.currencyIds.length > 0) {
+      // استخدام العملات المحددة من المستخدم
+      currencyIdsToAdd = body.currencyIds.map((id: any) => Number(id)).filter((id: number) => id > 0);
+    } else {
+      // نسخ جميع عملات الحساب افتراضياً
+      const accountCurrenciesRows = await db
+        .select({ currencyId: accountCurrencies.currencyId })
+        .from(accountCurrencies)
+        .where(eq(accountCurrencies.accountId, accountId));
+      currencyIdsToAdd = accountCurrenciesRows.map((ac) => ac.currencyId);
+    }
+
+    if (currencyIdsToAdd.length > 0) {
+      const balanceValues = currencyIdsToAdd.map((currencyId) => ({
+        fundId: created.id,
+        currencyId: currencyId,
+        balance: '0',
+        updatedAt: new Date(),
+      }));
+      await db.insert(fundBalances).values(balanceValues);
+    }
 
     return c.json(created, 201);
   }),

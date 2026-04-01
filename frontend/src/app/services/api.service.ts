@@ -387,6 +387,7 @@ export class ApiService {
   closeFiscalYear(bizId: number, yearId: number) { return this.request<any>(`/businesses/${bizId}/fiscal-years/${yearId}/close`, { method: 'POST' }); }
   getAccountCurrencies(accountId: number) { return this.request<any[]>(`/accounts/${accountId}/currencies`); }
   setAccountCurrencies(accountId: number, currencyIds: number[], defaultCurrencyId?: number) { return this.request<any>(`/accounts/${accountId}/currencies/bulk`, { method: 'POST', body: JSON.stringify({ currencyIds, defaultCurrencyId }) }); }
+  setFundCurrencies(fundId: number, currencyIds: number[]) { return this.request<any>(`/funds/${fundId}/currencies`, { method: 'POST', body: JSON.stringify({ currencyIds }) }); }
   previewRevaluation(bizId: number, date?: string) { return this.request<any>(`/businesses/${bizId}/revaluation/preview${date ? '?date=' + date : ''}`); }
   executeRevaluation(bizId: number, date?: string) { return this.request<any>(`/businesses/${bizId}/revaluation/execute`, { method: 'POST', body: JSON.stringify({ date }) }); }
   batchUpdateScreenPermissions(screenId: number, permissions: any[]) {

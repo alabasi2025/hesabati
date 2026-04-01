@@ -58,7 +58,7 @@
           @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
           @if (acc.provider) { <div class="card-detail"><span class="material-icons-round">phone_android</span> {{ acc.provider }}</div> }
           @if (acc.responsiblePerson) { <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }
-          @if (acc.balances?.length > 1) {
+          @if (acc.balances?.length > 0) {
             <div class="card-currencies">
               @for (b of acc.balances; track b.currencyId) {
                 <span class="currency-mini-badge">{{ b.currencySymbol || b.currencyCode }} {{ b.balance | number:'1.0-2' }}</span>
@@ -90,7 +90,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>الحساب المرتبط</label>
-              <select [(ngModel)]="walletForm.accountId" required>
+              <select [(ngModel)]="walletForm.accountId" (ngModelChange)="onAccountChange($event)" required>
                 <option [ngValue]="null" disabled>-- اختر الحساب --</option>
                 @for (acc of walletAccounts(); track acc.id) {
                   <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
@@ -98,6 +98,29 @@
               </select>
             </div>
           </div>
+          @if (accountCurrencies().length > 0) {
+            <div class="form-group">
+              <label>العملات المسموحة</label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip" [class.selected]="isCurrencySelected(curr.currencyId)" [class.is-default]="defaultCurrencyId() === curr.currencyId" (click)="toggleCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+              @if (selectedCurrencyIds().length > 0) {
+                <div class="default-currency-row">
+                  <label>الافتراضية:</label>
+                  @for (cid of selectedCurrencyIds(); track cid) {
+                    <button type="button" class="default-chip" [class.active]="defaultCurrencyId() === cid" (click)="setDefaultCurrency(cid)" title="تعيين كافتراضية">
+                      {{ (accountCurrencies().find(c => c.currencyId === cid))?.code || (accountCurrencies().find(c => c.currencyId === cid))?.currencyCode }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
           <div class="form-row">
             <div class="form-group"><label>رقم الحساب / الهاتف</label><input [(ngModel)]="walletForm.accountNumber" placeholder="رقم الحساب أو الهاتف" dir="ltr" /></div>
             <div class="form-group"><label>مزود الخدمة</label><input [(ngModel)]="walletForm.provider" placeholder="اسم مزود الخدمة" /></div>

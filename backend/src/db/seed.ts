@@ -29,12 +29,16 @@ async function seed() {
   console.log('✅ المستخدمين');
 
   // ===================== العملات =====================
-  await db.insert(schema.currencies).values([
+  const insertedCurrencies = await db.insert(schema.currencies).values([
     { code: 'YER', nameAr: 'ريال يمني', symbol: 'ر.ي', exchangeRate: '1', isDefault: true },
     { code: 'SAR', nameAr: 'ريال سعودي', symbol: 'ر.س', exchangeRate: '140', minRate: '130', maxRate: '250' },
     { code: 'USD', nameAr: 'دولار أمريكي', symbol: '$', exchangeRate: '535', minRate: '500', maxRate: '600' },
-  ]);
-  console.log('✅ العملات');
+  ]).returning();
+  const yerCurrencyId = insertedCurrencies.find(c => c.code === 'YER')!.id;
+  const sarCurrencyId = insertedCurrencies.find(c => c.code === 'SAR')!.id;
+  const usdCurrencyId = insertedCurrencies.find(c => c.code === 'USD')!.id;
+  const allThreeCurrencyIds = [yerCurrencyId, sarCurrencyId, usdCurrencyId];
+  console.log('✅ العملات (YER=' + yerCurrencyId + ', SAR=' + sarCurrencyId + ', USD=' + usdCurrencyId + ')');
 
   // ===================== الأعمال (المحور الرئيسي) =====================
   const [b1] = await db.insert(schema.businesses).values({ name: 'المحطات', code: 'biz-01', description: 'شراكة المحطات الأربع مع محمد المراني - الدهمية، الصبالية وجمال، غليل، الساحل الغربي', icon: 'bolt', color: '#f59e0b', sortOrder: 1 }).returning();
@@ -311,19 +315,25 @@ async function seed() {
     const subSeq = (accountFundCount.get(account.id) ?? 0) + 1;
     accountFundCount.set(account.id, subSeq);
 
-    await db.insert(schema.funds).values({
+    const [createdFund] = await db.insert(schema.funds).values({
       businessId: fd.businessId,
       name: fd.name,
       accountId: account.id,
+      defaultCurrencyId: yerCurrencyId,
       sequenceNumber: account.sequenceNumber,
       code: `${account.code}/${subSeq}`,
       stationId: fd.stationId ?? null,
       responsiblePerson: fd.responsiblePerson ?? null,
       description: fd.description ?? null,
       isActive: fd.isActive ?? true,
-    });
+    }).returning();
+
+    // إضافة أرصدة للعملات الثلاث
+    await db.insert(schema.fundBalances).values(
+      allThreeCurrencyIds.map(cid => ({ fundId: createdFund.id, currencyId: cid, balance: '0', updatedAt: new Date() }))
+    );
   }
-  console.log('✅ الصناديق (مع حساباتها المرتبطة)');
+  console.log('✅ الصناديق (مع حساباتها المرتبطة + أرصدة 3 عملات)');
 
   // ===================== البنوك =====================
   const bankSeedData: { businessId: number; name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
@@ -344,10 +354,11 @@ async function seed() {
     const subSeq = (accountBankCount.get(account.id) ?? 0) + 1;
     accountBankCount.set(account.id, subSeq);
 
-    await db.insert(schema.banks).values({
+    const [createdBank] = await db.insert(schema.banks).values({
       businessId: bk.businessId,
       name: bk.name,
       accountId: account.id,
+      defaultCurrencyId: yerCurrencyId,
       sequenceNumber: account.sequenceNumber,
       code: `${account.code}/${subSeq}`,
       provider: bk.provider ?? null,
@@ -355,9 +366,14 @@ async function seed() {
       responsiblePerson: bk.responsiblePerson ?? null,
       description: bk.description ?? null,
       isActive: bk.isActive ?? true,
-    });
+    }).returning();
+
+    // إضافة أرصدة للعملات الثلاث
+    await db.insert(schema.bankBalances).values(
+      allThreeCurrencyIds.map(cid => ({ bankId: createdBank.id, currencyId: cid, balance: '0', updatedAt: new Date() }))
+    );
   }
-  console.log('✅ البنوك (مع حساباتها المرتبطة)');
+  console.log('✅ البنوك (مع حساباتها المرتبطة + أرصدة 3 عملات)');
 
   // ===================== المحافظ الإلكترونية =====================
   const walletSeedData: { businessId: number; name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
@@ -387,10 +403,11 @@ async function seed() {
     const subSeq = (accountWalletCount.get(account.id) ?? 0) + 1;
     accountWalletCount.set(account.id, subSeq);
 
-    await db.insert(schema.wallets).values({
+    const [createdWallet] = await db.insert(schema.wallets).values({
       businessId: wl.businessId,
       name: wl.name,
       accountId: account.id,
+      defaultCurrencyId: yerCurrencyId,
       sequenceNumber: account.sequenceNumber,
       code: `${account.code}/${subSeq}`,
       provider: wl.provider ?? null,
@@ -398,9 +415,14 @@ async function seed() {
       responsiblePerson: wl.responsiblePerson ?? null,
       description: wl.description ?? null,
       isActive: wl.isActive ?? true,
-    });
+    }).returning();
+
+    // إضافة أرصدة للعملات الثلاث
+    await db.insert(schema.walletBalances).values(
+      allThreeCurrencyIds.map(cid => ({ walletId: createdWallet.id, currencyId: cid, balance: '0', updatedAt: new Date() }))
+    );
   }
-  console.log('✅ المحافظ الإلكترونية (مع حساباتها المرتبطة)');
+  console.log('✅ المحافظ الإلكترونية (مع حساباتها المرتبطة + أرصدة 3 عملات)');
 
   // ===================== الصرافين =====================
   const exchangeSeedData: { businessId: number; name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[] = [
@@ -421,10 +443,11 @@ async function seed() {
     const subSeq = (accountExchangeCount.get(account.id) ?? 0) + 1;
     accountExchangeCount.set(account.id, subSeq);
 
-    await db.insert(schema.exchanges).values({
+    const [createdExchange] = await db.insert(schema.exchanges).values({
       businessId: ex.businessId,
       name: ex.name,
       accountId: account.id,
+      defaultCurrencyId: yerCurrencyId,
       sequenceNumber: account.sequenceNumber,
       code: `${account.code}/${subSeq}`,
       provider: ex.provider ?? null,
@@ -432,9 +455,14 @@ async function seed() {
       responsiblePerson: ex.responsiblePerson ?? null,
       description: ex.description ?? null,
       isActive: ex.isActive ?? true,
-    });
+    }).returning();
+
+    // إضافة أرصدة للعملات الثلاث
+    await db.insert(schema.exchangeBalances).values(
+      allThreeCurrencyIds.map(cid => ({ exchangeId: createdExchange.id, currencyId: cid, balance: '0', updatedAt: new Date() }))
+    );
   }
-  console.log('✅ الصرافين (مع حساباتهم المرتبطة)');
+  console.log('✅ الصرافين (مع حساباتهم المرتبطة + أرصدة 3 عملات)');
 
   // ===================== الموردين =====================
   await db.insert(schema.suppliers).values([
@@ -545,17 +573,12 @@ async function seed() {
   console.log('✅ حسابات فروقات العملة');
 
   // ===================== أسعار الصرف الافتراضية =====================
-  const allCurrencies = await db.select().from(schema.currencies);
-  const yerCurrency = allCurrencies.find(c => c.code === 'YER');
-  const sarCurrency = allCurrencies.find(c => c.code === 'SAR');
-  const usdCurrency = allCurrencies.find(c => c.code === 'USD');
-
-  if (yerCurrency && sarCurrency && usdCurrency) {
+  {
     const today = new Date().toISOString().split('T')[0];
     for (const biz of [b1, b2, b3]) {
       await db.insert(schema.exchangeRates).values([
-        { businessId: biz.id, fromCurrencyId: sarCurrency.id, toCurrencyId: yerCurrency.id, rate: '140', effectiveDate: today, source: 'seed' },
-        { businessId: biz.id, fromCurrencyId: usdCurrency.id, toCurrencyId: yerCurrency.id, rate: '535', effectiveDate: today, source: 'seed' },
+        { businessId: biz.id, fromCurrencyId: sarCurrencyId, toCurrencyId: yerCurrencyId, rate: '140', effectiveDate: today, source: 'seed' },
+        { businessId: biz.id, fromCurrencyId: usdCurrencyId, toCurrencyId: yerCurrencyId, rate: '535', effectiveDate: today, source: 'seed' },
       ]);
     }
     console.log('✅ أسعار الصرف الافتراضية');
@@ -567,15 +590,15 @@ async function seed() {
 
     const accountCurrencyRows: { accountId: number; currencyId: number; isDefault: boolean }[] = [];
     for (const acc of leafAccounts) {
-      // كل حساب يدعم الريال اليمني كعملة افتراضية
-      accountCurrencyRows.push({ accountId: acc.id, currencyId: yerCurrency.id, isDefault: true });
-      // حسابات الصرافين والبنوك تدعم SAR و USD أيضاً
-      // (اختياري: يمكن تعديله لاحقاً من واجهة المستخدم)
+      // كل حساب يدعم العملات الثلاث — الريال اليمني افتراضي
+      accountCurrencyRows.push({ accountId: acc.id, currencyId: yerCurrencyId, isDefault: true });
+      accountCurrencyRows.push({ accountId: acc.id, currencyId: sarCurrencyId, isDefault: false });
+      accountCurrencyRows.push({ accountId: acc.id, currencyId: usdCurrencyId, isDefault: false });
     }
     if (accountCurrencyRows.length > 0) {
       await db.insert(schema.accountCurrencies).values(accountCurrencyRows);
     }
-    console.log('✅ ربط العملات بالحسابات (' + accountCurrencyRows.length + ' سجل)');
+    console.log('✅ ربط العملات الثلاث بالحسابات (' + accountCurrencyRows.length + ' سجل = ' + leafAccounts.length + ' حساب × 3 عملات)');
   }
 
   // ===================== أنظمة الفوترة (5 أنظمة) =====================

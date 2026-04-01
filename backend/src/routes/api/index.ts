@@ -52,11 +52,13 @@ import { attachmentsEnhancedRoutes }  from './attachments-enhanced.routes.ts';
 import { miscCategoriesRoutes }       from './misc-categories.routes.ts';
 
 // ── مسارات Phase 4 (مستخرجة من api.rest.ts) ─────────────────────────────────
-import { sidebarRoutes }     from './sidebar.routes.ts';
-import { screensManageRoutes, screensPermRoutes } from './screens.routes.ts';
-import { billingEmployeesRoutes } from './billing-employees.routes.ts';
-import { billingAccountsApi } from './billing-accounts.routes.ts';
-import { legacyCompatRoutes }     from './legacy-compat.routes.ts';
+import { sidebarRoutes }     from './sidebar.routes.js';
+import { screensManageRoutes, screensPermRoutes } from './screens.routes.js';
+import { billingEmployeesRoutes } from './billing-employees.routes.js';
+import { billingAccountsApi } from './billing-accounts.routes.js';
+import { legacyCompatRoutes }     from './legacy-compat.routes.js';
+import { syncRoutes }             from './sync-currencies.routes.js';
+import { fundCurrenciesRoutes }   from './fund-currencies.routes.js';
 
 const api = new Hono();
 
@@ -115,5 +117,7 @@ api.route('/', screensPermRoutes);
 api.route('/', billingEmployeesRoutes);
 api.route('/', billingAccountsApi);
 api.route('/', legacyCompatRoutes);
+api.route('/', syncRoutes);
+api.route('/', fundCurrenciesRoutes);
 
 export default api;

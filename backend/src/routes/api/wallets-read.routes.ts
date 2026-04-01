@@ -34,6 +34,7 @@ walletsRoutes.get(
         provider: wallets.provider,
         responsiblePerson: wallets.responsiblePerson,
         description: wallets.description,
+        defaultCurrencyId: wallets.defaultCurrencyId,
         isActive: wallets.isActive,
         notes: wallets.notes,
         createdAt: wallets.createdAt,

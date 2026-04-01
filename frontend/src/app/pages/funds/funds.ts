@@ -23,6 +23,7 @@ export class FundsComponent extends BasePageComponent {
   fundsData = signal<any[]>([]);
   stations = signal<any[]>([]);
   fundAccounts = signal<any[]>([]);
+  accountCurrencies = signal<any[]>([]);
   loading = signal(true);
   activeFilter = signal<string>('all');
   accountFilter = signal<number | null>(null);
@@ -31,6 +32,8 @@ export class FundsComponent extends BasePageComponent {
   showFundForm = signal(false);
   editingFundId = signal<number | null>(null);
   fundForm: any = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, accountId: null, description: '', notes: '' };
+  selectedCurrencyIds = signal<number[]>([]);
+  defaultCurrencyId = signal<number | null>(null);
 
   // Type form
   showTypeForm = signal(false);
@@ -117,11 +120,14 @@ export class FundsComponent extends BasePageComponent {
       description: '',
       notes: '',
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
     this.editingFundId.set(null);
     this.showFundForm.set(true);
   }
 
-  openEditAccount(fund: any) {
+  async openEditAccount(fund: any) {
     this.fundForm = {
       name: fund.name,
       fundType: fund.fundType || '',
@@ -133,6 +139,12 @@ export class FundsComponent extends BasePageComponent {
       notes: fund.notes || '',
     };
     this.editingFundId.set(fund.id);
+    // جلب العملات المرتبطة بالحساب والعملات الحالية للصندوق
+    if (fund.accountId) {
+      await this.loadAccountCurrencies(fund.accountId);
+      const currentCurrencies = fund.balances?.map((b: any) => b.currencyId) || [];
+      this.selectedCurrencyIds.set(currentCurrencies);
+    }
     this.showFundForm.set(true);
   }
 
@@ -143,11 +155,38 @@ export class FundsComponent extends BasePageComponent {
         this.toast.error('اسم الصندوق مطلوب');
         return;
       }
+
+      // التحقق من اختيار العملات
+      if (this.selectedCurrencyIds().length === 0) {
+        this.toast.error('يجب اختيار عملة واحدة على الأقل');
+        return;
+      }
+
+      // التحقق من اختيار العملة الافتراضية (إجباري)
+      if (!this.defaultCurrencyId()) {
+        this.toast.error('يجب اختيار العملة الافتراضية');
+        return;
+      }
+
+      // التحقق من أن العملة الافتراضية موجودة ضمن العملات المحددة
+      if (!this.selectedCurrencyIds().includes(this.defaultCurrencyId()!)) {
+        this.toast.error('العملة الافتراضية يجب أن تكون من العملات المحددة');
+        return;
+      }
+
       if (data.stationId === '' || data.stationId === null) delete data.stationId;
       delete data.sequenceNumber;
 
+      // إضافة العملات المحددة والعملة الافتراضية
+      data.currencyIds = this.selectedCurrencyIds();
+      data.defaultCurrencyId = this.defaultCurrencyId();
+
       if (this.editingFundId()) {
         await this.api.updateFund(this.bizId, this.editingFundId()!, data);
+        // تحديث عملات الصندوق
+        if (data.currencyIds && data.currencyIds.length > 0) {
+          await this.api.setFundCurrencies(this.editingFundId()!, data.currencyIds);
+        }
       } else {
         await this.api.createFund(this.bizId, data);
       }
@@ -204,6 +243,48 @@ export class FundsComponent extends BasePageComponent {
       this.toast.success('تم الحذف بنجاح');
       await this.load();
     } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
+  }
+
+  async loadAccountCurrencies(accountId: number) {
+    try {
+      const currencies = await this.api.getAccountCurrencies(accountId);
+      this.accountCurrencies.set(currencies || []);
+    } catch (e) {
+      console.error(e);
+      this.accountCurrencies.set([]);
+    }
+  }
+
+  async onAccountChange(accountId: number) {
+    if (accountId) {
+      await this.loadAccountCurrencies(accountId);
+      // تحديد جميع العملات افتراضياً
+      const allCurrencyIds = this.accountCurrencies().map((c: any) => c.currencyId);
+      this.selectedCurrencyIds.set(allCurrencyIds);
+      // لا يتم تعيين عملة افتراضية تلقائياً - يجب على المستخدم اختيارها
+      this.defaultCurrencyId.set(null);
+    } else {
+      this.accountCurrencies.set([]);
+      this.selectedCurrencyIds.set([]);
+      this.defaultCurrencyId.set(null);
+    }
+  }
+
+  toggleCurrency(currencyId: number) {
+    const current = this.selectedCurrencyIds();
+    if (current.includes(currencyId)) {
+      this.selectedCurrencyIds.set(current.filter(id => id !== currencyId));
+    } else {
+      this.selectedCurrencyIds.set([...current, currencyId]);
+    }
+  }
+
+  isCurrencySelected(currencyId: number): boolean {
+    return this.selectedCurrencyIds().includes(currencyId);
+  }
+
+  setDefaultCurrency(currencyId: number) {
+    this.defaultCurrencyId.set(currencyId);
   }
 
   getBalanceDisplay(fund: any): string {

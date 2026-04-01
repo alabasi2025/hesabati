@@ -98,6 +98,7 @@ fundsRoutes.get(
         stationId: funds.stationId,
         responsiblePerson: funds.responsiblePerson,
         description: funds.description,
+        defaultCurrencyId: funds.defaultCurrencyId,
         isActive: funds.isActive,
         notes: funds.notes,
         createdAt: funds.createdAt,

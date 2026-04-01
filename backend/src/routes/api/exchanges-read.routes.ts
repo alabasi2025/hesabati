@@ -34,6 +34,7 @@ exchangesRoutes.get(
         provider: exchanges.provider,
         responsiblePerson: exchanges.responsiblePerson,
         description: exchanges.description,
+        defaultCurrencyId: exchanges.defaultCurrencyId,
         isActive: exchanges.isActive,
         notes: exchanges.notes,
         createdAt: exchanges.createdAt,

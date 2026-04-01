@@ -7,6 +7,7 @@ import { db } from "../../db/index.ts";
 import { eq, and, ne } from "drizzle-orm";
 import {
   accounts,
+  accountCurrencies,
   exchanges,
   exchangeBalances,
   voucherLines,
@@ -51,10 +52,17 @@ exchangesRoutes.post(
     const subSeq = existingExchanges.length + 1;
     const exchangeCode = `${acc.code}/${subSeq}`;
 
+    // تحديد العملة الافتراضية
+    let defaultCurrencyId: number | null = null;
+    if (body.defaultCurrencyId && Number(body.defaultCurrencyId) > 0) {
+      defaultCurrencyId = Number(body.defaultCurrencyId);
+    }
+
     const insertPayload: typeof exchanges.$inferInsert = {
       businessId: bizId,
       name: String(body.name).trim(),
       accountId: accountId,
+      defaultCurrencyId: defaultCurrencyId,
       sequenceNumber: acc.sequenceNumber,
       code: exchangeCode,
       accountNumber: typeof body.accountNumber === 'string' && body.accountNumber.trim() ? body.accountNumber.trim() : null,
@@ -69,6 +77,29 @@ exchangesRoutes.post(
       .insert(exchanges)
       .values(insertPayload as typeof exchanges.$inferInsert)
       .returning();
+
+    // نسخ العملات المحددة أو جميع عملات الحساب إلى exchange_balances
+    let currencyIdsToAdd: number[] = [];
+
+    if (body.currencyIds && Array.isArray(body.currencyIds) && body.currencyIds.length > 0) {
+      currencyIdsToAdd = body.currencyIds.map((id: any) => Number(id)).filter((id: number) => id > 0);
+    } else {
+      const accountCurrenciesRows = await db
+        .select({ currencyId: accountCurrencies.currencyId })
+        .from(accountCurrencies)
+        .where(eq(accountCurrencies.accountId, accountId));
+      currencyIdsToAdd = accountCurrenciesRows.map((ac) => ac.currencyId);
+    }
+
+    if (currencyIdsToAdd.length > 0) {
+      const balanceValues = currencyIdsToAdd.map((currencyId) => ({
+        exchangeId: created.id,
+        currencyId: currencyId,
+        balance: '0',
+        updatedAt: new Date(),
+      }));
+      await db.insert(exchangeBalances).values(balanceValues);
+    }
 
     return c.json(created, 201);
   }),

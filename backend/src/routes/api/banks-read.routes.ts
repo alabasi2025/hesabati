@@ -36,6 +36,7 @@ banksRoutes.get(
         provider: banks.provider,
         responsiblePerson: banks.responsiblePerson,
         description: banks.description,
+        defaultCurrencyId: banks.defaultCurrencyId,
         isActive: banks.isActive,
         notes: banks.notes,
         createdAt: banks.createdAt,
