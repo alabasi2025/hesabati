@@ -3,7 +3,7 @@
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { eq, desc, and, inArray } from 'drizzle-orm';
+import { eq, desc, and, inArray, sql } from 'drizzle-orm';
 import {
   journalEntries,
   journalEntryLines,
@@ -21,6 +21,7 @@ import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { requireResourceOwnership } from './_shared/ownership.ts';
 import { validateEntityAccountLinks } from './_shared/account-guards.ts';
 import { auditCreate, auditUpdate, auditDelete, makeAuditCtx } from '../../engines/audit-middleware.engine.ts';
+import { isForeignCurrency, requireExchangeDiffAccount } from '../../engines/currency.engine.ts';
 
 const journalEntriesRoutes = new Hono();
 
@@ -57,13 +58,23 @@ journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware
 
 journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إضافة قيد محاسبي', async (c) => {
   const bizId = getBizId(c);
-  const body = await getBody(c) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string };
+  const body = await getBody(c) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string; currencyId?: number };
   const { lines, ...entryData } = body;
   if (!lines || !Array.isArray(lines) || lines.length < 2) {
     return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل (مدين ودائن)' }, 400);
   }
   if (!entryData.operationTypeId) {
     return c.json({ error: 'معرّف نوع العملية (القالب) مطلوب - operationTypeId' }, 400);
+  }
+
+  const currencyId = entryData.currencyId || 1;
+
+  // ⛔ حماية حرجة: منع العمليات بعملة أجنبية بدون حساب فروقات عملة
+  if (await isForeignCurrency(currencyId)) {
+    const diffCheck = await requireExchangeDiffAccount(bizId);
+    if (!diffCheck.exists) {
+      return c.json({ error: 'لا يمكن تنفيذ قيد بعملة أجنبية بدون وجود حساب فروقات العملة. يرجى إنشاء حساب وسيط باسم "فروقات عملة" أولاً.' }, 400);
+    }
   }
 
   const entryDate = entryData.entryDate || entryData.date || new Date().toISOString().split('T')[0];
@@ -146,6 +157,7 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineType = line.lineType || line.type;
+    const amt = Number.parseFloat(String(line.amount));
     await db.insert(journalEntryLines).values({
       journalEntryId: entry.id,
       accountId: line.accountId,
@@ -154,6 +166,16 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
       description: (line.description as string) ?? '',
       sortOrder: i,
     });
+
+    // تحديث رصيد الحساب (مدين = +، دائن = -)
+    const delta = lineType === 'debit' ? amt : -amt;
+    await db.execute(sql`
+      INSERT INTO account_balances (account_id, currency_id, balance)
+      VALUES (${line.accountId}, ${currencyId}, ${delta})
+      ON CONFLICT (account_id, currency_id) DO UPDATE SET
+        balance = account_balances.balance + ${delta},
+        updated_at = NOW()
+    `);
   }
 
   return c.json(entry, 201);

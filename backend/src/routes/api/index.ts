@@ -45,6 +45,8 @@ import accountSubNaturesRoutes  from './account-sub-natures.routes.ts';
 
 // ── مسارات Phase 3 (مستخرجة من api.rest.ts) ─────────────────────────────────
 import { currencyRoutes }             from './currency.routes.ts';
+import { fiscalRoutes }               from './fiscal.routes.ts';
+import { accountCurrenciesRoutes }    from './account-currencies.routes.ts';
 import { rbacRoutes }                 from './rbac.routes.ts';
 import { attachmentsEnhancedRoutes }  from './attachments-enhanced.routes.ts';
 import { miscCategoriesRoutes }       from './misc-categories.routes.ts';
@@ -100,6 +102,8 @@ api.route('/', accountSubNaturesRoutes);
 
 // ── Phase 3: المسارات الجديدة ─────────────────────────────────────────────
 api.route('/', currencyRoutes);
+api.route('/', fiscalRoutes);
+api.route('/', accountCurrenciesRoutes);
 api.route('/', rbacRoutes);
 api.route('/', attachmentsEnhancedRoutes);
 api.route('/', miscCategoriesRoutes);

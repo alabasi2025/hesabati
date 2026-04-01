@@ -31,6 +31,7 @@ export class JournalComponent extends BasePageComponent {
   accounts = signal<any[]>([]);
   operationTypes = signal<any[]>([]);
   journalCategories = signal<any[]>([]);
+  currencies = signal<any[]>([]);
   loading = signal(true);
   saving = signal(false);
   showForm = signal(false);
@@ -51,6 +52,7 @@ export class JournalComponent extends BasePageComponent {
     reference: '',
     date: new Date().toISOString().split('T')[0],
     operationTypeId: null as number | null,
+    currencyId: 1 as number,
   };
 
   // Compound form
@@ -62,6 +64,7 @@ export class JournalComponent extends BasePageComponent {
     reference: '',
     date: new Date().toISOString().split('T')[0],
     operationTypeId: null as number | null,
+    currencyId: 1 as number,
     lines: [{ accountId: null as number | null, amount: 0, description: '' }],
   };
 
@@ -78,16 +81,18 @@ export class JournalComponent extends BasePageComponent {
     this.loading.set(true);
     this.error.set('');
     try {
-      const [entries, accounts, opTypes, cats] = await Promise.all([
+      const [entries, accounts, opTypes, cats, currs] = await Promise.all([
         this.api.getJournalEntries(this.bizId),
         this.api.getAccounts(this.bizId),
         this.api.getOperationTypes(this.bizId),
         this.api.getJournalEntryCategories(this.bizId),
+        this.api.getAllCurrencies(),
       ]);
       this.entries.set(entries);
       this.accounts.set(accounts);
       this.operationTypes.set(opTypes);
       this.journalCategories.set(cats);
+      this.currencies.set((currs || []).filter((c: any) => c.isActive !== false));
     } catch (e: unknown) {
       this.error.set(e instanceof Error ? e.message : 'حدث خطأ في تحميل البيانات');
     }
@@ -136,6 +141,7 @@ export class JournalComponent extends BasePageComponent {
       description: '', reference: '',
       date: new Date().toISOString().split('T')[0],
       operationTypeId: null,
+      currencyId: 1,
     };
     this.error.set('');
     this.showForm.set(true);
@@ -149,6 +155,7 @@ export class JournalComponent extends BasePageComponent {
       description: '', reference: '',
       date: new Date().toISOString().split('T')[0],
       operationTypeId: null,
+      currencyId: 1,
       lines: [{ accountId: null, amount: 0, description: '' }],
     };
     this.error.set('');
@@ -172,6 +179,7 @@ export class JournalComponent extends BasePageComponent {
         date: this.simpleForm.date,
         reference: this.simpleForm.reference,
         operationTypeId: this.simpleForm.operationTypeId,
+        currencyId: this.simpleForm.currencyId,
         lines: [
           { accountId: this.simpleForm.creditAccountId, lineType: 'credit', amount: this.simpleForm.amount, description: 'دائن' },
           { accountId: this.simpleForm.debitAccountId, lineType: 'debit', amount: this.simpleForm.amount, description: 'مدين' },
@@ -224,6 +232,7 @@ export class JournalComponent extends BasePageComponent {
         date: this.compoundForm.date,
         reference: this.compoundForm.reference,
         operationTypeId: this.compoundForm.operationTypeId,
+        currencyId: this.compoundForm.currencyId,
         lines,
       });
       this.showForm.set(false);

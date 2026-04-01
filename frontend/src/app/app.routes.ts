@@ -53,6 +53,7 @@ export const routes: Routes = [
       { path: 'custom-screens', loadComponent: () => import('./pages/custom-screens/custom-screens').then(m => m.CustomScreensComponent) },
       { path: 'ui-builder', loadComponent: () => import('./pages/ui-builder/ui-builder').then(m => m.UiBuilderComponent) },
       { path: 'exchange-rates', loadComponent: () => import('./pages/exchange-rates/exchange-rates').then(m => m.ExchangeRatesComponent) },
+      { path: 'fiscal-periods', loadComponent: () => import('./pages/fiscal-periods/fiscal-periods').then(m => m.FiscalPeriodsComponent) },
       { path: 'roles', loadComponent: () => import('./pages/roles/roles').then(m => m.RolesComponent) },
       { path: 'reports-advanced', loadComponent: () => import('./pages/reports-advanced/reports-advanced').then(m => m.ReportsAdvancedComponent) },
       { path: 'journal-categories', loadComponent: () => import('./pages/journal-categories/journal-categories').then(m => m.JournalCategoriesComponent) },

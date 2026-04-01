@@ -30,6 +30,9 @@ export class AccountsComponent extends BasePageComponent {
   warehouseTypes = signal<any[]>([]);
   departments = signal<any[]>([]);
   stations = signal<any[]>([]);
+  currencies = signal<any[]>([]);
+  accountCurrencyIds = signal<number[]>([]);
+  accountDefaultCurrencyId = signal<number | null>(null);
   showForm = signal(false);
   editingId = signal<number | null>(null);
   formMode = signal<'create-parent' | 'create-leaf' | 'edit-parent' | 'edit-leaf'>('create-leaf');
@@ -181,7 +184,7 @@ export class AccountsComponent extends BasePageComponent {
     if (this.bizId <= 0) { this.loading.set(false); return; }
     this.loading.set(true);
     try {
-      const [accountsData, naturesData, stationsData, fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, supplierTypesData, warehouseTypesData, departmentsData] = await Promise.all([
+      const [accountsData, naturesData, stationsData, fundTypesData, bankTypesData, exchangeTypesData, eWalletTypesData, supplierTypesData, warehouseTypesData, departmentsData, currenciesData] = await Promise.all([
         this.api.getAccounts(this.bizId),
         this.api.getAccountSubNatures(this.bizId),
         this.api.getStations(this.bizId).catch(() => []),
@@ -192,6 +195,7 @@ export class AccountsComponent extends BasePageComponent {
         this.api.getSupplierTypes(this.bizId).catch(() => []),
         this.api.getWarehouseTypes(this.bizId).catch(() => []),
         this.api.getDepartments(this.bizId).catch(() => []),
+        this.api.getCurrencies().catch(() => []),
       ]);
       this.accounts.set(
         (accountsData || []).map((a: any) => ({
@@ -208,6 +212,7 @@ export class AccountsComponent extends BasePageComponent {
       this.supplierTypes.set(supplierTypesData || []);
       this.warehouseTypes.set(warehouseTypesData || []);
       this.departments.set(departmentsData || []);
+      this.currencies.set(currenciesData || []);
     } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'فشل التحميل'); this.accounts.set([]); }
     finally { this.loading.set(false); }
   }
@@ -224,11 +229,12 @@ export class AccountsComponent extends BasePageComponent {
     this.editingId.set(null);
     this.formMode.set('create-leaf');
     this.editingLinkedEntity.set(false);
+    this.accountCurrencyIds.set([]); this.accountDefaultCurrencyId.set(null);
     this.form.set({ isLeafAccount: true, parentAccountId: null, accountSubNatureId: null, subTypeId: null, name: '', code: '', stationId: null, provider: '', accountNumber: '', responsiblePerson: '', notes: '', isActive: true });
     this.showForm.set(true);
   }
 
-  openEdit(acc: any) {
+  async openEdit(acc: any) {
     const isLeaf = acc.isLeafAccount !== false;
     this.editingId.set(acc.id);
     this.formMode.set(isLeaf ? 'edit-leaf' : 'edit-parent');
@@ -236,6 +242,17 @@ export class AccountsComponent extends BasePageComponent {
     const entityTypes = ['fund', 'bank', 'e_wallet', 'exchange'];
     this.editingLinkedEntity.set(isLeaf && entityTypes.includes(acc.accountType || ''));
     this.form.set({ isLeafAccount: isLeaf, parentAccountId: acc.parentAccountId || null, accountSubNatureId: acc.accountSubNatureId || null, subTypeId: acc.subTypeId || null, name: acc.name || '', code: acc.code || '', stationId: acc.stationId || null, provider: acc.provider || '', accountNumber: acc.accountNumber || '', responsiblePerson: acc.responsiblePerson || '', notes: acc.notes || '', isActive: acc.isActive !== false });
+    // تحميل عملات الحساب
+    if (isLeaf) {
+      try {
+        const accCurrencies = await this.api.getAccountCurrencies(acc.id);
+        this.accountCurrencyIds.set((accCurrencies || []).map((c: any) => c.currencyId));
+        const def = (accCurrencies || []).find((c: any) => c.isDefault);
+        this.accountDefaultCurrencyId.set(def ? def.currencyId : null);
+      } catch { this.accountCurrencyIds.set([]); this.accountDefaultCurrencyId.set(null); }
+    } else {
+      this.accountCurrencyIds.set([]); this.accountDefaultCurrencyId.set(null);
+    }
     this.showForm.set(true);
   }
 
@@ -258,8 +275,21 @@ export class AccountsComponent extends BasePageComponent {
         payload.subTypeId = Number(f.subTypeId);
         payload.subType = this.selectedSubType()?.subTypeKey || null;
       }
-      if (this.editingId()) { await this.api.updateAccount(this.bizId, this.editingId()!, payload); this.toast.success('تم تحديث الحساب'); }
-      else { await this.api.createAccount(this.bizId, payload); this.toast.success('تم إنشاء الحساب'); }
+      if (this.editingId()) {
+        await this.api.updateAccount(this.bizId, this.editingId()!, payload);
+        // حفظ عملات الحساب
+        if (f.isLeafAccount && this.accountCurrencyIds().length > 0) {
+          await this.api.setAccountCurrencies(this.editingId()!, this.accountCurrencyIds(), this.accountDefaultCurrencyId() ?? undefined);
+        }
+        this.toast.success('تم تحديث الحساب');
+      } else {
+        const created = await this.api.createAccount(this.bizId, payload);
+        // حفظ عملات الحساب الجديد
+        if (f.isLeafAccount && this.accountCurrencyIds().length > 0 && created?.id) {
+          await this.api.setAccountCurrencies(created.id, this.accountCurrencyIds(), this.accountDefaultCurrencyId() ?? undefined);
+        }
+        this.toast.success('تم إنشاء الحساب');
+      }
       this.showForm.set(false); await this.loadAccounts();
     } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'فشل الحفظ'); }
   }
@@ -272,6 +302,23 @@ export class AccountsComponent extends BasePageComponent {
   }
 
   selectSubNature(id: number) { this.form.update(f => ({ ...f, accountSubNatureId: id, subTypeId: null })); }
+
+  toggleCurrency(currencyId: number) {
+    this.accountCurrencyIds.update(ids => {
+      if (ids.includes(currencyId)) {
+        const next = ids.filter(id => id !== currencyId);
+        if (this.accountDefaultCurrencyId() === currencyId) this.accountDefaultCurrencyId.set(next[0] ?? null);
+        return next;
+      }
+      return [...ids, currencyId];
+    });
+  }
+
+  setDefaultCurrency(currencyId: number) {
+    if (this.accountCurrencyIds().includes(currencyId)) {
+      this.accountDefaultCurrencyId.set(currencyId);
+    }
+  }
   setNatureFilter(id: number | null) { this.activeNatureFilter.set(id); }
   trackById(_: number, item: any) { return item?.id; }
   toggleNode(id: number) {

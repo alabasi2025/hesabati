@@ -1,0 +1,215 @@
+<div class="page-container">
+
+  <!-- ===== Page Header ===== -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="page-icon-3d green">
+        <span class="material-icons-round">date_range</span>
+      </div>
+      <div>
+        <h1 class="page-title">الفترات المحاسبية</h1>
+        <p class="page-subtitle">إدارة السنوات المالية والفترات الشهرية وإقفالها</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button type="button" class="btn-3d btn-ghost" (click)="showBulkForm = true" title="إنشاء دفعة">
+        <span class="material-icons-round">playlist_add</span>
+        إنشاء دفعة
+      </button>
+      <button type="button" class="btn-3d btn-primary" (click)="showCreateForm = true" title="سنة مالية جديدة">
+        <span class="material-icons-round">add</span>
+        سنة مالية جديدة
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Stats Cards ===== -->
+  <div class="stats-row">
+    <div class="stat-card-3d blue">
+      <div class="sc-icon"><span class="material-icons-round">calendar_month</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ fiscalYears.length }}</div>
+        <div class="sc-label">سنوات مالية</div>
+      </div>
+    </div>
+    <div class="stat-card-3d green">
+      <div class="sc-icon"><span class="material-icons-round">lock_open</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ openPeriodsCount }}</div>
+        <div class="sc-label">فترات مفتوحة</div>
+      </div>
+    </div>
+    <div class="stat-card-3d amber">
+      <div class="sc-icon"><span class="material-icons-round">lock</span></div>
+      <div class="sc-body">
+        <div class="sc-num">{{ closedPeriodsCount }}</div>
+        <div class="sc-label">فترات مقفلة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== قائمة السنوات المالية ===== -->
+  @if (fiscalYears.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-3d"><span class="material-icons-round">date_range</span></div>
+      <h3>لا توجد سنوات مالية</h3>
+      <p>أنشئ سنة مالية جديدة للبدء بإدارة الفترات المحاسبية</p>
+      <button type="button" class="btn-3d btn-primary" (click)="showCreateForm = true" title="سنة مالية جديدة">
+        <span class="material-icons-round">add</span> سنة مالية جديدة
+      </button>
+    </div>
+  } @else {
+    <!-- شريط السنوات -->
+    <div class="years-bar">
+      @for (fy of fiscalYears; track fy.id) {
+        <button type="button" class="year-chip" [class.active]="selectedYear?.id === fy.id" [class.closed]="fy.isClosed" (click)="loadPeriods(fy)" [title]="'سنة ' + fy.year">
+          <span class="material-icons-round">{{ fy.isClosed ? 'lock' : 'calendar_month' }}</span>
+          {{ fy.year }}
+        </button>
+      }
+    </div>
+
+    <!-- معلومات السنة المحددة -->
+    @if (selectedYear) {
+      <div class="year-info-bar">
+        <div class="year-info-main">
+          <span class="year-badge" [class.closed]="selectedYear.isClosed">
+            {{ selectedYear.year }}
+          </span>
+          <span class="year-range">{{ selectedYear.startDate }} ← {{ selectedYear.endDate }}</span>
+          @if (selectedYear.isClosed) {
+            <span class="status-badge badge-closed">مقفلة</span>
+          } @else {
+            <span class="status-badge badge-open">مفتوحة</span>
+          }
+        </div>
+        @if (!selectedYear.isClosed) {
+          <button type="button" class="btn-3d btn-danger-outline" (click)="closeYear()" title="إقفال السنة">
+            <span class="material-icons-round">lock</span>
+            إقفال السنة
+          </button>
+        }
+      </div>
+
+      <!-- جدول الفترات -->
+      <div class="table-container-3d">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الشهر</th>
+              <th>من</th>
+              <th>إلى</th>
+              <th>الحالة</th>
+              <th>تاريخ الإقفال</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of periods; track p.id) {
+              <tr [class.closed-row]="p.isClosed">
+                <td class="num-cell">{{ p.month }}</td>
+                <td>
+                  <span class="month-name">{{ getMonthName(p.month) }}</span>
+                </td>
+                <td class="date-cell">{{ p.startDate }}</td>
+                <td class="date-cell">{{ p.endDate }}</td>
+                <td>
+                  @if (p.isClosed) {
+                    <span class="status-badge badge-closed">
+                      <span class="material-icons-round">lock</span> مقفلة
+                    </span>
+                  } @else {
+                    <span class="status-badge badge-open">
+                      <span class="material-icons-round">lock_open</span> مفتوحة
+                    </span>
+                  }
+                </td>
+                <td class="date-cell">{{ p.closedAt ? (p.closedAt | date:'yyyy-MM-dd') : '—' }}</td>
+                <td>
+                  @if (!p.isClosed && !selectedYear.isClosed) {
+                    <button type="button" class="btn-3d btn-sm btn-danger-outline" (click)="closePeriod(p)" title="إقفال الفترة">
+                      <span class="material-icons-round">lock</span>
+                      إقفال
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- ===== نموذج إنشاء سنة مالية ===== -->
+  @if (showCreateForm) {
+    <div class="modal-overlay" (click)="showCreateForm = false">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header green-header">
+          <div class="modal-icon green">
+            <span class="material-icons-round">add_circle</span>
+          </div>
+          <div>
+            <h2>سنة مالية جديدة</h2>
+            <p class="modal-subtitle">سيتم إنشاء 12 فترة شهرية تلقائياً</p>
+          </div>
+          <button type="button" class="modal-close" (click)="showCreateForm = false" title="إغلاق">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="new-year">السنة <span class="required">*</span></label>
+            <input id="new-year" type="number" class="form-input" [(ngModel)]="newYear" min="2000" max="2100" placeholder="2025">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-3d btn-ghost" (click)="showCreateForm = false">إلغاء</button>
+          <button type="button" class="btn-3d btn-primary" (click)="createYear()">
+            <span class="material-icons-round">add</span> إنشاء
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===== نموذج إنشاء دفعة ===== -->
+  @if (showBulkForm) {
+    <div class="modal-overlay" (click)="showBulkForm = false">
+      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header green-header">
+          <div class="modal-icon green">
+            <span class="material-icons-round">playlist_add</span>
+          </div>
+          <div>
+            <h2>إنشاء سنوات مالية دفعة واحدة</h2>
+            <p class="modal-subtitle">سيتم تجاوز السنوات الموجودة مسبقاً</p>
+          </div>
+          <button type="button" class="modal-close" (click)="showBulkForm = false" title="إغلاق">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="bulk-start">من سنة <span class="required">*</span></label>
+              <input id="bulk-start" type="number" class="form-input" [(ngModel)]="bulkStartYear" min="2000" max="2100">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bulk-end">إلى سنة <span class="required">*</span></label>
+              <input id="bulk-end" type="number" class="form-input" [(ngModel)]="bulkEndYear" min="2000" max="2100">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-3d btn-ghost" (click)="showBulkForm = false">إلغاء</button>
+          <button type="button" class="btn-3d btn-primary" (click)="createBulkYears()">
+            <span class="material-icons-round">playlist_add</span> إنشاء
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

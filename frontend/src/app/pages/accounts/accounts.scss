@@ -161,6 +161,35 @@
   .material-icons-round { font-size: 20px; color: #d97706; }
 }
 
+/* ===================== Currency Chips ===================== */
+.currency-chips {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;
+}
+.currency-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 14px; border-radius: 10px; border: 1.5px solid var(--border-color, #e2e8f0);
+  background: var(--bg-surface, #f8fafc); color: var(--text-secondary, #64748b);
+  font-size: 13px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+  &:hover { border-color: #3b82f6; background: rgba(59,130,246,0.04); }
+  &.selected { background: rgba(59,130,246,0.1); border-color: #3b82f6; color: #2563eb; }
+  &.is-default { background: linear-gradient(135deg, #3b82f6, #6366f1); border-color: #3b82f6; color: white; }
+  .chip-symbol { font-size: 15px; font-weight: 800; }
+  .chip-code { font-size: 11px; opacity: 0.8; }
+}
+.default-currency-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+  label { font-size: 12px; font-weight: 700; color: var(--text-secondary, #64748b); }
+}
+.default-chip {
+  padding: 4px 10px; border-radius: 8px; border: 1.5px solid var(--border-color, #e2e8f0);
+  background: var(--bg-surface, #f8fafc); color: var(--text-secondary, #64748b);
+  font-size: 12px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+  &:hover { border-color: #f59e0b; }
+  &.active { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #f59e0b; color: white; }
+}
+
 .disabled-grid {
   opacity: 0.5;
   pointer-events: none;

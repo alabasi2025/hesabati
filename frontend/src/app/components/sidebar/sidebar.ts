@@ -72,6 +72,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     title: '4. العمليات المالية',
     items: [
       { icon: 'receipt_long', label: 'سندات الصرف والقبض', path: 'vouchers', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'add_circle', label: 'تسجيل عملية', path: 'register-operation', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'folder_open', label: 'الأرشفة الإلكترونية', path: 'attachments-archive', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'menu_book', label: 'القيود المحاسبية', path: 'journal', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'label', label: 'تصنيفات القيود', path: 'journal-categories', showFor: ['stations', 'single_station', 'personal'] },
@@ -120,6 +121,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
     items: [
       { icon: 'assessment', label: 'التقارير', path: 'reports', showFor: ['stations', 'single_station', 'personal'] },
       { icon: 'analytics', label: 'التقارير المتقدمة', path: 'reports-advanced', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'date_range', label: 'الفترات المالية', path: 'fiscal-periods', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
   {
@@ -132,7 +134,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
   {
     title: '12. العملات وأسعار الصرف',
     items: [
-      { icon: 'currency_exchange', label: 'أسعار الصرف', path: 'exchange-rates', showFor: ['stations', 'single_station', 'personal'] },
+      { icon: 'currency_exchange', label: 'العملات وأسعار الصرف', path: 'exchange-rates', showFor: ['stations', 'single_station', 'personal'] },
     ],
   },
   {

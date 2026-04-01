@@ -58,7 +58,15 @@
           @if (acc.accountNumber) { <div class="card-detail"><span class="material-icons-round">tag</span> {{ acc.accountNumber }}</div> }
           @if (acc.provider) { <div class="card-detail"><span class="material-icons-round">phone_android</span> {{ acc.provider }}</div> }
           @if (acc.responsiblePerson) { <div class="card-detail"><span class="material-icons-round">person</span> {{ acc.responsiblePerson }}</div> }
-          <div class="card-balance"><span class="material-icons-round">account_balance_wallet</span><span class="balance-text">{{ getBalanceDisplay(acc) }}</span></div>
+          @if (acc.balances?.length > 1) {
+            <div class="card-currencies">
+              @for (b of acc.balances; track b.currencyId) {
+                <span class="currency-mini-badge">{{ b.currencySymbol || b.currencyCode }} {{ b.balance | number:'1.0-2' }}</span>
+              }
+            </div>
+          } @else {
+            <div class="card-balance"><span class="material-icons-round">account_balance_wallet</span><span class="balance-text">{{ getBalanceDisplay(acc) }}</span></div>
+          }
           <div class="card-status"><span class="status-dot" [class.active]="acc.isActive"></span> {{ acc.isActive ? 'نشط' : 'متوقف' }}</div>
         </div>
       }

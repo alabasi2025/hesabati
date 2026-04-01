@@ -204,6 +204,7 @@ export const wallets = pgTable('wallets', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   accountId: integer('account_id').references(() => accounts.id),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   accountNumber: varchar('account_number', { length: 100 }),
@@ -237,6 +238,7 @@ export const exchanges = pgTable('exchanges', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   accountId: integer('account_id').references(() => accounts.id),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   accountNumber: varchar('account_number', { length: 100 }),
@@ -270,6 +272,7 @@ export const banks = pgTable('banks', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   accountId: integer('account_id').references(() => accounts.id),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   accountNumber: varchar('account_number', { length: 100 }),
@@ -303,6 +306,7 @@ export const funds = pgTable('funds', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   accountId: integer('account_id').references(() => accounts.id),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   sequenceNumber: integer('sequence_number'),
   code: varchar('code', { length: 30 }),
   stationId: integer('station_id').references(() => stations.id),
@@ -326,4 +330,49 @@ export const fundBalances = pgTable('fund_balances', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
   fundCurrencyUnique: uniqueIndex('fund_balances_fund_currency_unique').on(table.fundId, table.currencyId),
+}));
+
+// ===================== ACCOUNT CURRENCIES (العملات المسموحة لكل حساب) =====================
+
+export const accountCurrencies = pgTable('account_currencies', {
+  id: serial('id').primaryKey(),
+  accountId: integer('account_id').notNull().references(() => accounts.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  isDefault: boolean('is_default').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  accountCurrencyUnique: uniqueIndex('account_currencies_unique').on(table.accountId, table.currencyId),
+}));
+
+// ===================== FISCAL YEARS (السنوات المالية) =====================
+
+export const fiscalYears = pgTable('fiscal_years', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  year: integer('year').notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  isClosed: boolean('is_closed').notNull().default(false),
+  closedAt: timestamp('closed_at'),
+  closedBy: integer('closed_by'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  bizYearUnique: uniqueIndex('fiscal_years_biz_year_unique').on(table.businessId, table.year),
+}));
+
+// ===================== FISCAL PERIODS (الفترات المحاسبية الشهرية) =====================
+
+export const fiscalPeriods = pgTable('fiscal_periods', {
+  id: serial('id').primaryKey(),
+  businessId: integer('business_id').notNull().references(() => businesses.id),
+  fiscalYearId: integer('fiscal_year_id').notNull().references(() => fiscalYears.id),
+  month: integer('month').notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  isClosed: boolean('is_closed').notNull().default(false),
+  closedAt: timestamp('closed_at'),
+  closedBy: integer('closed_by'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  yearMonthUnique: uniqueIndex('fiscal_periods_year_month_unique').on(table.fiscalYearId, table.month),
 }));

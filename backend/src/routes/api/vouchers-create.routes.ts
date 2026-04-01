@@ -13,6 +13,7 @@ import { safeHandler, getBody, toErrorMessage } from '../../middleware/helpers.t
 import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { postMultiTransaction } from '../../engines/transaction.engine.ts';
+import { isForeignCurrency, requireExchangeDiffAccount } from '../../engines/currency.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getFirstRow } from '../../utils/db-result.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
@@ -46,6 +47,15 @@ vouchersCreateRouter.post(
     if (opType?.isActive === false) return c.json({ error: 'ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط© ط؛ظٹط± ظ…ظپط¹ظ‘ظ„' }, 400);
 
     const currencyId = data.currencyId || 1;
+
+    // ⛔ حماية حرجة: منع العمليات بعملة أجنبية بدون حساب فروقات عملة
+    if (await isForeignCurrency(currencyId)) {
+      const diffCheck = await requireExchangeDiffAccount(bizId);
+      if (!diffCheck.exists) {
+        return c.json({ error: 'لا يمكن تنفيذ عملية بعملة أجنبية بدون وجود حساب فروقات العملة. يرجى إنشاء حساب وسيط باسم "فروقات عملة" أولاً من صفحة الحسابات.' }, 400);
+      }
+    }
+
     const vType = (opType?.voucherType as any) || data.voucherType || 'receipt';
 
     const treasuryFundId = vType === 'receipt'

@@ -159,6 +159,14 @@
               <label>التاريخ</label>
               <input type="date" [(ngModel)]="simpleForm.date" />
             </div>
+            <div class="form-group">
+              <label>العملة</label>
+              <select [(ngModel)]="simpleForm.currencyId" title="العملة">
+                @for (c of currencies(); track c.id) {
+                  <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.symbol }})</option>
+                }
+              </select>
+            </div>
           </div>
 
           <div class="form-group">
@@ -325,6 +333,14 @@
             <div class="form-group">
               <label>التاريخ</label>
               <input type="date" [(ngModel)]="compoundForm.date" />
+            </div>
+            <div class="form-group">
+              <label>العملة</label>
+              <select [(ngModel)]="compoundForm.currencyId" title="العملة">
+                @for (c of currencies(); track c.id) {
+                  <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.symbol }})</option>
+                }
+              </select>
             </div>
           </div>
           <div class="form-group">

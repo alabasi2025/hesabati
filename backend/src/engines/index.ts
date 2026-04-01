@@ -2,11 +2,11 @@
  * Engines Index – نقطة الدخول الموحدة لجميع محركات النظام
  * ==========================================================
  * Phase 2 — اكتمال الـ 15 محرك
- * 
+ *
  * الاستخدام:
  *   import { TransactionEngine, HREngine, BillingEngine } from '../engines';
  *   import { postTransaction, getSalaryRecords } from '../engines';
- * 
+ *
  * ─────────────────────────────────────────────────────────────
  * المحركات المكتملة (15/15):
  * ─────────────────────────────────────────────────────────────
@@ -147,4 +147,11 @@ export {
   getUnifiedBalances,
   validateCurrency,
   clearRateCache,
+  validateRateBounds,
+  getAccountCurrencies,
+  getBaseCurrency,
+  getAllActiveCurrencies,
+  getForeignCurrencies,
+  requireExchangeDiffAccount,
+  isForeignCurrency,
 } from './currency.engine.ts';

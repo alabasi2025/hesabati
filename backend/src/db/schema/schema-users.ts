@@ -4,7 +4,7 @@
  * (مستخرجة من schema/core.ts)
  */
 import { pgTable, serial, varchar, text, timestamp, boolean, integer, decimal, pgEnum, jsonb, date, unique, uniqueIndex } from 'drizzle-orm/pg-core';
-import { userRoleEnum, currencyCodeEnum } from './schema-base.ts';
+import { userRoleEnum } from './schema-base.ts';
 import { businesses } from './schema-business.ts';
 
 // ===================== USERS =====================
@@ -24,11 +24,14 @@ export const users = pgTable('users', {
 
 export const currencies = pgTable('currencies', {
   id: serial('id').primaryKey(),
-  code: currencyCodeEnum('code').notNull().unique(),
+  code: varchar('code', { length: 10 }).notNull().unique(),
   nameAr: varchar('name_ar', { length: 100 }).notNull(),
   symbol: varchar('symbol', { length: 10 }).notNull(),
   exchangeRate: decimal('exchange_rate', { precision: 15, scale: 4 }).notNull().default('1'),
+  minRate: decimal('min_rate', { precision: 15, scale: 4 }),
+  maxRate: decimal('max_rate', { precision: 15, scale: 4 }),
   isDefault: boolean('is_default').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

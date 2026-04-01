@@ -38,15 +38,23 @@
               <span class="code-badge intermediary">{{ acc.code }}</span>
             </div>
           </div>
-          
+
           <div class="card-body">
-            <div class="balance-display">
-              <span class="material-icons-round">account_balance_wallet</span>
-              <div class="balance-info">
-                <span class="balance-label">الرصيد الحالي:</span>
-                <span class="balance-value">{{ getBalanceDisplay(acc) }}</span>
+            @if (acc.balances?.length > 1) {
+              <div class="card-currencies">
+                @for (b of acc.balances; track b.currencyId) {
+                  <span class="currency-mini-badge">{{ b.currencySymbol || b.currencyCode }} {{ b.balance | number:'1.0-2' }}</span>
+                }
               </div>
-            </div>
+            } @else {
+              <div class="balance-display">
+                <span class="material-icons-round">account_balance_wallet</span>
+                <div class="balance-info">
+                  <span class="balance-label">الرصيد الحالي:</span>
+                  <span class="balance-value">{{ getBalanceDisplay(acc) }}</span>
+                </div>
+              </div>
+            }
 
             @if (acc.notes) {
               <div class="notes">

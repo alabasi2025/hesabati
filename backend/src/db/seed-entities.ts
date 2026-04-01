@@ -359,7 +359,7 @@ async function seed() {
     { businessId: b1.id, personOrEntity: 'أمجد الصلوي', description: 'حساب العدادات والمواد الكهربائية فيه شعبطة كبيرة', status: 'pending' },
     { businessId: b1.id, personOrEntity: 'المهندس محمد حسن', description: 'شاشات وقواطع دمج - له سنة ما كمل', status: 'pending' },
   ];
-  
+
   for (const item of pendingItems) {
     // إنشاء حساب مالي فعلي لكل حساب معلق
     const account = await createLinkedAccount(
@@ -368,7 +368,7 @@ async function seed() {
       'pending',
       getNatureId(item.businessId, 'pending'),
     );
-    
+
     // إنشاء سجل في pending_accounts مع ربطه بالحساب
     await db.insert(schema.pendingAccounts).values({
       businessId: item.businessId,
@@ -397,6 +397,35 @@ async function seed() {
     );
   }
   console.log('✅ الحسابات الوسيطة');
+
+  // ===================== حساب فروقات العملة (مطلوب للعمليات بعملات أجنبية) =====================
+  for (const biz of [b1, b2, b3]) {
+    await createLinkedAccount(biz.id, 'فروقات عملة', 'intermediary', getNatureId(biz.id, 'intermediary'));
+  }
+  console.log('✅ حسابات فروقات العملة');
+
+  // ===================== أسعار الصرف الافتراضية =====================
+  const allCurrencies = await db.select().from(schema.currencies);
+  const yerCurrency = allCurrencies.find(c => c.code === 'YER');
+  const sarCurrency = allCurrencies.find(c => c.code === 'SAR');
+  const usdCurrency = allCurrencies.find(c => c.code === 'USD');
+  if (yerCurrency && sarCurrency && usdCurrency) {
+    const today = new Date().toISOString().split('T')[0];
+    for (const biz of [b1, b2, b3]) {
+      await db.insert(schema.exchangeRates).values([
+        { businessId: biz.id, fromCurrencyId: sarCurrency.id, toCurrencyId: yerCurrency.id, rate: '140', effectiveDate: today, source: 'seed' },
+        { businessId: biz.id, fromCurrencyId: usdCurrency.id, toCurrencyId: yerCurrency.id, rate: '535', effectiveDate: today, source: 'seed' },
+      ]);
+    }
+    console.log('✅ أسعار الصرف الافتراضية');
+
+    // ربط العملات بالحسابات (YER كعملة افتراضية لكل حساب فرعي)
+    const leafAccounts = await db.select({ id: schema.accounts.id })
+      .from(schema.accounts).where(eq(schema.accounts.isLeafAccount, true));
+    const rows = leafAccounts.map(a => ({ accountId: a.id, currencyId: yerCurrency.id, isDefault: true }));
+    if (rows.length > 0) await db.insert(schema.accountCurrencies).values(rows);
+    console.log('✅ ربط العملات بالحسابات');
+  }
 
   // ===================== أنظمة الفوترة (5 أنظمة) =====================
   const billingConfigs = await db.insert(schema.billingSystemsConfig).values([

@@ -16,7 +16,7 @@
  */
 
 import { db } from "../db/index.ts";
-import { eq, and, desc, lte, sql } from "drizzle-orm";
+import { eq, and, desc, lte, sql, ne } from "drizzle-orm";
 import {
   currencies,
   exchangeRates,
@@ -24,6 +24,13 @@ import {
   accounts,
   fundBalances,
   funds,
+  bankBalances,
+  banks,
+  walletBalances,
+  wallets,
+  exchangeBalances,
+  exchanges,
+  accountCurrencies,
 } from "../db/schema/index.ts";
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
@@ -148,7 +155,7 @@ export async function getAmountInBaseCurrency(
   const [baseCurrency] = await db
     .select({ id: currencies.id })
     .from(currencies)
-    .where(and(eq(currencies.businessId, bizId), eq(currencies.isBase, true)))
+    .where(eq(currencies.isDefault, true))
     .limit(1);
 
   if (!baseCurrency) return amount;
@@ -164,73 +171,60 @@ export async function getUnifiedBalances(
 ): Promise<UnifiedBalance[]> {
   const accountRows = await db
     .select({
-      accountId: accounts.id,
+      accountId: accountBalances.accountId,
       name: accounts.name,
       type: accounts.accountType,
       balance: accountBalances.balance,
-      currencyId: accounts.currencyId,
+      currencyId: accountBalances.currencyId,
     })
-    .from(accounts)
-    .leftJoin(
-      accountBalances,
-      and(
-        eq(accountBalances.accountId, accounts.id),
-        eq(accountBalances.businessId, bizId)
-      )
-    )
+    .from(accountBalances)
+    .innerJoin(accounts, eq(accounts.id, accountBalances.accountId))
     .where(eq(accounts.businessId, bizId));
 
   const fundRows = await db
     .select({
-      fundId: funds.id,
+      fundId: fundBalances.fundId,
       name: funds.name,
-      type: funds.fundType,
       balance: fundBalances.balance,
-      currencyId: funds.currencyId,
+      currencyId: fundBalances.currencyId,
     })
-    .from(funds)
-    .leftJoin(
-      fundBalances,
-      and(
-        eq(fundBalances.fundId, funds.id),
-        eq(fundBalances.businessId, bizId)
-      )
-    )
+    .from(fundBalances)
+    .innerJoin(funds, eq(funds.id, fundBalances.fundId))
     .where(eq(funds.businessId, bizId));
 
-  const currencyCodesMap = await getCurrencyCodesMap(bizId);
+  const currencyCodesMap = await getCurrencyCodesMap();
 
   const results: UnifiedBalance[] = [];
 
   for (const row of accountRows) {
     const balance = parseFloat(String(row.balance ?? 0));
-    const currencyId = row.currencyId ?? targetCurrencyId;
-    const exchangeRate = await getExchangeRate(bizId, currencyId, targetCurrencyId);
+    const currencyId = row.currencyId;
+    const rate = await getExchangeRate(bizId, currencyId, targetCurrencyId);
     results.push({
       accountId: row.accountId,
       name: row.name ?? "",
       type: String(row.type ?? ""),
       balance,
       originalCurrencyCode: currencyCodesMap[currencyId] ?? "—",
-      convertedBalance: balance * exchangeRate,
+      convertedBalance: balance * rate,
       targetCurrencyCode: currencyCodesMap[targetCurrencyId] ?? "—",
-      exchangeRate,
+      exchangeRate: rate,
     });
   }
 
   for (const row of fundRows) {
     const balance = parseFloat(String(row.balance ?? 0));
-    const currencyId = row.currencyId ?? targetCurrencyId;
-    const exchangeRate = await getExchangeRate(bizId, currencyId, targetCurrencyId);
+    const currencyId = row.currencyId;
+    const rate = await getExchangeRate(bizId, currencyId, targetCurrencyId);
     results.push({
       fundId: row.fundId,
       name: row.name ?? "",
-      type: String(row.type ?? ""),
+      type: "fund",
       balance,
       originalCurrencyCode: currencyCodesMap[currencyId] ?? "—",
-      convertedBalance: balance * exchangeRate,
+      convertedBalance: balance * rate,
       targetCurrencyCode: currencyCodesMap[targetCurrencyId] ?? "—",
-      exchangeRate,
+      exchangeRate: rate,
     });
   }
 
@@ -319,8 +313,8 @@ export async function getLatestRates(bizId: number) {
     )
     .where(
       sql`(${exchangeRates.businessId} = ${bizId}) AND ${exchangeRates.effectiveDate} = (
-        SELECT MAX(er2.effective_date) 
-        FROM exchange_rates er2 
+        SELECT MAX(er2.effective_date)
+        FROM exchange_rates er2
         WHERE er2.business_id = ${bizId}
           AND er2.from_currency_id = ${exchangeRates.fromCurrencyId}
           AND er2.to_currency_id = ${exchangeRates.toCurrencyId}
@@ -334,13 +328,12 @@ export async function getLatestRates(bizId: number) {
  * [جديد] التحقق من صحة عملة لعمل تجاري
  */
 export async function validateCurrency(
-  bizId: number,
   currencyId: number
 ): Promise<boolean> {
   const [currency] = await db
     .select({ id: currencies.id })
     .from(currencies)
-    .where(and(eq(currencies.id, currencyId), eq(currencies.businessId, bizId)))
+    .where(and(eq(currencies.id, currencyId), eq(currencies.isActive, true)))
     .limit(1);
 
   return !!currency;
@@ -349,11 +342,10 @@ export async function validateCurrency(
 /**
  * مساعد داخلي: خريطة id → code للعملات
  */
-async function getCurrencyCodesMap(bizId: number): Promise<Record<number, string>> {
+async function getCurrencyCodesMap(): Promise<Record<number, string>> {
   const rows = await db
     .select({ id: currencies.id, code: currencies.code })
-    .from(currencies)
-    .where(eq(currencies.businessId, bizId));
+    .from(currencies);
 
   return Object.fromEntries(rows.map((r) => [r.id, r.code]));
 }
@@ -363,4 +355,121 @@ async function getCurrencyCodesMap(bizId: number): Promise<Record<number, string
  */
 export function clearRateCache() {
   rateCache.clear();
+}
+
+/**
+ * التحقق أن سعر الصرف ضمن السقف والأرضية
+ */
+export async function validateRateBounds(
+  currencyId: number,
+  rate: number
+): Promise<{ valid: boolean; minRate?: number; maxRate?: number }> {
+  const [currency] = await db
+    .select({
+      minRate: currencies.minRate,
+      maxRate: currencies.maxRate,
+      isDefault: currencies.isDefault,
+    })
+    .from(currencies)
+    .where(eq(currencies.id, currencyId))
+    .limit(1);
+
+  if (!currency || currency.isDefault) return { valid: true };
+
+  const min = currency.minRate ? parseFloat(String(currency.minRate)) : null;
+  const max = currency.maxRate ? parseFloat(String(currency.maxRate)) : null;
+
+  if (min !== null && rate < min) return { valid: false, minRate: min, maxRate: max ?? undefined };
+  if (max !== null && rate > max) return { valid: false, minRate: min ?? undefined, maxRate: max };
+
+  return { valid: true, minRate: min ?? undefined, maxRate: max ?? undefined };
+}
+
+/**
+ * جلب العملات المسموحة لحساب معين
+ */
+export async function getAccountCurrencies(accountId: number) {
+  const rows = await db
+    .select({
+      currencyId: accountCurrencies.currencyId,
+      isDefault: accountCurrencies.isDefault,
+      code: currencies.code,
+      nameAr: currencies.nameAr,
+      symbol: currencies.symbol,
+    })
+    .from(accountCurrencies)
+    .innerJoin(currencies, eq(currencies.id, accountCurrencies.currencyId))
+    .where(eq(accountCurrencies.accountId, accountId));
+
+  return rows;
+}
+
+/**
+ * جلب العملة الأساسية (الافتراضية)
+ */
+export async function getBaseCurrency() {
+  const [base] = await db
+    .select()
+    .from(currencies)
+    .where(eq(currencies.isDefault, true))
+    .limit(1);
+  return base ?? null;
+}
+
+/**
+ * جلب جميع العملات النشطة
+ */
+export async function getAllActiveCurrencies() {
+  return db
+    .select()
+    .from(currencies)
+    .where(eq(currencies.isActive, true));
+}
+
+/**
+ * جلب العملات الأجنبية فقط (غير الأساسية)
+ */
+export async function getForeignCurrencies() {
+  return db
+    .select()
+    .from(currencies)
+    .where(and(eq(currencies.isActive, true), eq(currencies.isDefault, false)));
+}
+
+/**
+ * ⛔ حماية حرجة: التحقق من وجود حساب فروقات العملة للعمل التجاري
+ * يجب استدعاء هذه الدالة قبل أي عملية بعملة أجنبية
+ */
+export async function requireExchangeDiffAccount(bizId: number): Promise<{ exists: boolean; accountId?: number }> {
+  const { accountSubNatures } = await import("../db/schema/index.ts");
+
+  const rows = await db
+    .select({ id: accounts.id, name: accounts.name })
+    .from(accounts)
+    .innerJoin(accountSubNatures, eq(accounts.accountSubNatureId, accountSubNatures.id))
+    .where(and(
+      eq(accounts.businessId, bizId),
+      eq(accountSubNatures.natureKey, 'intermediary'),
+      eq(accounts.isLeafAccount, true),
+      sql`LOWER(${accounts.name}) LIKE '%فروقات عملة%' OR LOWER(${accounts.name}) LIKE '%فروقات صرف%' OR LOWER(${accounts.name}) LIKE '%exchange diff%'`
+    ))
+    .limit(1);
+
+  if (rows.length > 0) {
+    return { exists: true, accountId: rows[0].id };
+  }
+  return { exists: false };
+}
+
+/**
+ * التحقق مما إذا كانت العملة أجنبية (غير أساسية)
+ */
+export async function isForeignCurrency(currencyId: number): Promise<boolean> {
+  const [currency] = await db
+    .select({ isDefault: currencies.isDefault })
+    .from(currencies)
+    .where(eq(currencies.id, currencyId))
+    .limit(1);
+
+  return currency ? !currency.isDefault : false;
 }

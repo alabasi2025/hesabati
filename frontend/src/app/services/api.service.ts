@@ -373,6 +373,22 @@ export class ApiService {
     return this.request<any>(`/businesses/${bizId}/widgets/accounts?accountIds=${encodeURIComponent(ids)}`);
   }
   getCurrencies() { return this.request<any[]>('/currencies'); }
+  getAllCurrencies() { return this.request<any[]>('/currencies/all'); }
+  createCurrency(data: any) { return this.request<any>('/currencies', { method: 'POST', body: JSON.stringify(data) }); }
+  updateCurrency(id: number, data: any) { return this.request<any>(`/currencies/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+  deleteCurrency(id: number) { return this.request<any>(`/currencies/${id}`, { method: 'DELETE' }); }
+  validateRate(currencyId: number, rate: number) { return this.request<any>(`/currencies/${currencyId}/validate-rate`, { method: 'POST', body: JSON.stringify({ rate }) }); }
+  getExchangeDiffAccount(bizId: number) { return this.request<any>(`/businesses/${bizId}/exchange-diff-account`); }
+  getFiscalYears(bizId: number) { return this.request<any[]>(`/businesses/${bizId}/fiscal-years`); }
+  createFiscalYear(bizId: number, data: any) { return this.request<any>(`/businesses/${bizId}/fiscal-years`, { method: 'POST', body: JSON.stringify(data) }); }
+  createFiscalYearsBulk(bizId: number, data: any) { return this.request<any>(`/businesses/${bizId}/fiscal-years/bulk`, { method: 'POST', body: JSON.stringify(data) }); }
+  getFiscalPeriods(bizId: number, yearId: number) { return this.request<any[]>(`/businesses/${bizId}/fiscal-years/${yearId}/periods`); }
+  closeFiscalPeriod(bizId: number, periodId: number) { return this.request<any>(`/businesses/${bizId}/fiscal-periods/${periodId}/close`, { method: 'POST' }); }
+  closeFiscalYear(bizId: number, yearId: number) { return this.request<any>(`/businesses/${bizId}/fiscal-years/${yearId}/close`, { method: 'POST' }); }
+  getAccountCurrencies(accountId: number) { return this.request<any[]>(`/accounts/${accountId}/currencies`); }
+  setAccountCurrencies(accountId: number, currencyIds: number[], defaultCurrencyId?: number) { return this.request<any>(`/accounts/${accountId}/currencies/bulk`, { method: 'POST', body: JSON.stringify({ currencyIds, defaultCurrencyId }) }); }
+  previewRevaluation(bizId: number, date?: string) { return this.request<any>(`/businesses/${bizId}/revaluation/preview${date ? '?date=' + date : ''}`); }
+  executeRevaluation(bizId: number, date?: string) { return this.request<any>(`/businesses/${bizId}/revaluation/execute`, { method: 'POST', body: JSON.stringify({ date }) }); }
   batchUpdateScreenPermissions(screenId: number, permissions: any[]) {
     return this.request<any>(`/screens/${screenId}/permissions/batch`, {
       method: 'PUT',

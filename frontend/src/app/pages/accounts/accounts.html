@@ -138,6 +138,30 @@
               </div>
             }
 
+            @if (currencies().length > 0) {
+              <div class="form-group">
+                <label>العملات المسموحة</label>
+                <div class="currency-chips">
+                  @for (cur of currencies(); track cur.id) {
+                    <button type="button" class="currency-chip" [class.selected]="accountCurrencyIds().includes(cur.id)" [class.is-default]="accountDefaultCurrencyId() === cur.id" (click)="toggleCurrency(cur.id)" [title]="cur.nameAr">
+                      <span class="chip-symbol">{{ cur.symbol }}</span>
+                      <span class="chip-code">{{ cur.code }}</span>
+                    </button>
+                  }
+                </div>
+                @if (accountCurrencyIds().length > 1) {
+                  <div class="default-currency-row">
+                    <label>العملة الافتراضية:</label>
+                    @for (cid of accountCurrencyIds(); track cid) {
+                      <button type="button" class="default-chip" [class.active]="accountDefaultCurrencyId() === cid" (click)="setDefaultCurrency(cid)" [title]="'تعيين كافتراضية'">
+                        {{ (currencies().find(c => c.id === cid))?.code }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
           }
 
           @if (!form().isLeafAccount) {

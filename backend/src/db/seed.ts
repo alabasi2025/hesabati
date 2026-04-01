@@ -31,8 +31,8 @@ async function seed() {
   // ===================== العملات =====================
   await db.insert(schema.currencies).values([
     { code: 'YER', nameAr: 'ريال يمني', symbol: 'ر.ي', exchangeRate: '1', isDefault: true },
-    { code: 'SAR', nameAr: 'ريال سعودي', symbol: 'ر.س', exchangeRate: '165' },
-    { code: 'USD', nameAr: 'دولار أمريكي', symbol: '$', exchangeRate: '540' },
+    { code: 'SAR', nameAr: 'ريال سعودي', symbol: 'ر.س', exchangeRate: '140', minRate: '130', maxRate: '250' },
+    { code: 'USD', nameAr: 'دولار أمريكي', symbol: '$', exchangeRate: '535', minRate: '500', maxRate: '600' },
   ]);
   console.log('✅ العملات');
 
@@ -531,6 +531,53 @@ async function seed() {
   }
   console.log('✅ الحسابات الوسيطة');
 
+  // ===================== حساب فروقات العملة (مطلوب للعمليات بعملات أجنبية) =====================
+  const exchangeDiffAccounts: Record<number, number> = {};
+  for (const biz of [b1, b2, b3]) {
+    const diffAccount = await createLinkedAccount(
+      biz.id,
+      'فروقات عملة',
+      'intermediary',
+      getNatureId(biz.id, 'intermediary'),
+    );
+    exchangeDiffAccounts[biz.id] = diffAccount.id;
+  }
+  console.log('✅ حسابات فروقات العملة');
+
+  // ===================== أسعار الصرف الافتراضية =====================
+  const allCurrencies = await db.select().from(schema.currencies);
+  const yerCurrency = allCurrencies.find(c => c.code === 'YER');
+  const sarCurrency = allCurrencies.find(c => c.code === 'SAR');
+  const usdCurrency = allCurrencies.find(c => c.code === 'USD');
+
+  if (yerCurrency && sarCurrency && usdCurrency) {
+    const today = new Date().toISOString().split('T')[0];
+    for (const biz of [b1, b2, b3]) {
+      await db.insert(schema.exchangeRates).values([
+        { businessId: biz.id, fromCurrencyId: sarCurrency.id, toCurrencyId: yerCurrency.id, rate: '140', effectiveDate: today, source: 'seed' },
+        { businessId: biz.id, fromCurrencyId: usdCurrency.id, toCurrencyId: yerCurrency.id, rate: '535', effectiveDate: today, source: 'seed' },
+      ]);
+    }
+    console.log('✅ أسعار الصرف الافتراضية');
+
+    // ===================== ربط العملات بالحسابات الفرعية =====================
+    const leafAccounts = await db.select({ id: schema.accounts.id, businessId: schema.accounts.businessId })
+      .from(schema.accounts)
+      .where(eq(schema.accounts.isLeafAccount, true));
+
+    const accountCurrencyRows: { accountId: number; currencyId: number; isDefault: boolean }[] = [];
+    for (const acc of leafAccounts) {
+      // كل حساب يدعم الريال اليمني كعملة افتراضية
+      accountCurrencyRows.push({ accountId: acc.id, currencyId: yerCurrency.id, isDefault: true });
+      // حسابات الصرافين والبنوك تدعم SAR و USD أيضاً
+      // (اختياري: يمكن تعديله لاحقاً من واجهة المستخدم)
+    }
+    if (accountCurrencyRows.length > 0) {
+      await db.insert(schema.accountCurrencies).values(accountCurrencyRows);
+    }
+    console.log('✅ ربط العملات بالحسابات (' + accountCurrencyRows.length + ' سجل)');
+  }
+
   // ===================== أنظمة الفوترة (5 أنظمة) =====================
   const billingConfigs = await db.insert(schema.billingSystemsConfig).values([
     { businessId: b1.id, name: 'المغربي نسخة 1 (الدهمية)', systemKey: 'moghrabi_v1', icon: 'receipt', color: '#10b981', stationMode: 'per_station', sortOrder: 1 },
@@ -792,13 +839,19 @@ async function seed() {
     // --- الوحدة 4: العمليات المالية ---
     await db.insert(schema.sidebarItems).values([
       { sectionId: sec4.id, screenKey: 'vouchers', label: 'سندات الصرف والقبض', icon: 'receipt_long', route: '/biz/{bizId}/vouchers', sortOrder: 1 },
-      { sectionId: sec4.id, screenKey: 'journal', label: 'القيود المحاسبية', icon: 'menu_book', route: '/biz/{bizId}/journal', sortOrder: 2 },
-      { sectionId: sec4.id, screenKey: 'journal_categories', label: 'تصنيفات القيود', icon: 'label', route: '/biz/{bizId}/journal-categories', sortOrder: 3 },
+      { sectionId: sec4.id, screenKey: 'register_operation', label: 'تسجيل عملية', icon: 'add_circle', route: '/biz/{bizId}/register-operation', sortOrder: 2 },
+      { sectionId: sec4.id, screenKey: 'journal', label: 'القيود المحاسبية', icon: 'menu_book', route: '/biz/{bizId}/journal', sortOrder: 3 },
+      { sectionId: sec4.id, screenKey: 'journal_categories', label: 'تصنيفات القيود', icon: 'label', route: '/biz/{bizId}/journal-categories', sortOrder: 4 },
+      { sectionId: sec4.id, screenKey: 'attachments_archive', label: 'الأرشفة الإلكترونية', icon: 'folder_open', route: '/biz/{bizId}/attachments-archive', sortOrder: 5 },
     ]);
 
     // --- الوحدة 5: القوالب والترقيم ---
     await db.insert(schema.sidebarItems).values([
-      { sectionId: sec5.id, screenKey: 'operation_types', label: 'أنواع العمليات', icon: 'category', route: '/biz/{bizId}/operation-types', sortOrder: 1 },
+      { sectionId: sec5.id, screenKey: 'operation_categories', label: 'أصناف العمليات', icon: 'folder_special', route: '/biz/{bizId}/operation-categories', sortOrder: 1 },
+      { sectionId: sec5.id, screenKey: 'operation_types', label: 'أنواع العمليات', icon: 'category', route: '/biz/{bizId}/operation-types', sortOrder: 2 },
+      { sectionId: sec5.id, screenKey: 'inventory_item_types', label: 'أنواع الأصناف', icon: 'inventory_2', route: '/biz/{bizId}/inventory-item-types', sortOrder: 3 },
+      { sectionId: sec5.id, screenKey: 'departments', label: 'الأقسام', icon: 'groups', route: '/biz/{bizId}/departments', sortOrder: 4 },
+      { sectionId: sec5.id, screenKey: 'job_titles', label: 'المسميات الوظيفية', icon: 'badge', route: '/biz/{bizId}/job-titles', sortOrder: 5 },
     ]);
 
     // --- الوحدة 6: المخزون والمخازن ---
@@ -826,6 +879,7 @@ async function seed() {
     const reportItems: any[] = [
       { sectionId: sec9.id, screenKey: 'reports', label: 'التقارير', icon: 'assessment', route: '/biz/{bizId}/reports', sortOrder: 1 },
       { sectionId: sec9.id, screenKey: 'reports_advanced', label: 'التقارير المتقدمة', icon: 'analytics', route: '/biz/{bizId}/reports-advanced', sortOrder: 2 },
+      { sectionId: sec9.id, screenKey: 'fiscal_periods', label: 'الفترات المالية', icon: 'date_range', route: '/biz/{bizId}/fiscal-periods', sortOrder: 3 },
     ];
     await db.insert(schema.sidebarItems).values(reportItems);
 
@@ -837,7 +891,7 @@ async function seed() {
 
     // --- الوحدة 11: العملات وأسعار الصرف ---
     await db.insert(schema.sidebarItems).values([
-      { sectionId: sec11.id, screenKey: 'exchange_rates', label: 'أسعار الصرف', icon: 'currency_exchange', route: '/biz/{bizId}/exchange-rates', sortOrder: 1 },
+      { sectionId: sec11.id, screenKey: 'exchange_rates', label: 'العملات وأسعار الصرف', icon: 'currency_exchange', route: '/biz/{bizId}/exchange-rates', sortOrder: 1 },
     ]);
 
     // --- الوحدة 12: المعلقات والتصفيات ---
@@ -891,6 +945,38 @@ async function seed() {
   }
 
   console.log('✅ أقسام وعناصر القائمة الجانبية (sidebar_sections + sidebar_items + user_sidebar_config)');
+
+  // ===================== السنوات المالية والفترات =====================
+  const fiscalConfig = [
+    { bizId: b1.id, startYear: 2018, endYear: 2026 }, // المحطات
+    { bizId: b2.id, startYear: 2022, endYear: 2026 }, // محطة معبر
+    { bizId: b3.id, startYear: 2016, endYear: 2026 }, // أعمال شخصية
+  ];
+
+  for (const cfg of fiscalConfig) {
+    for (let y = cfg.startYear; y <= cfg.endYear; y++) {
+      const [fy] = await db.insert(schema.fiscalYears).values({
+        businessId: cfg.bizId,
+        year: y,
+        startDate: `${y}-01-01`,
+        endDate: `${y}-12-31`,
+      }).returning();
+
+      const periods = [];
+      for (let m = 1; m <= 12; m++) {
+        const lastDay = new Date(y, m, 0).getDate();
+        periods.push({
+          businessId: cfg.bizId,
+          fiscalYearId: fy.id,
+          month: m,
+          startDate: `${y}-${String(m).padStart(2, '0')}-01`,
+          endDate: `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+        });
+      }
+      await db.insert(schema.fiscalPeriods).values(periods);
+    }
+  }
+  console.log('✅ السنوات المالية والفترات');
 
   console.log('\n🎉 تم تهيئة جميع البيانات بنجاح!');
   process.exit(0);
