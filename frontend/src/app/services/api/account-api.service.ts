@@ -29,6 +29,9 @@ export class AccountApiService {
   createAccountLink(d: any)                               { return this.api.request<any>(`/account-links`, { method: 'POST', body: JSON.stringify(d) }); }
   deleteAccountLink(id: number)                           { return this.api.request<any>(`/account-links/${id}`, { method: 'DELETE' }); }
 
+  // ===================== عملات الحساب =====================
+  getAccountCurrencies(accountId: number)                  { return this.api.request<any[]>(`/accounts/${accountId}/currencies`); }
+
   // ===================== الصناديق =====================
   getFunds(bizId: number, includeCustody = false) {
     const query = includeCustody ? '?includeCustody=true' : '';

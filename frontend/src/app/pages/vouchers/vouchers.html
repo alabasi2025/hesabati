@@ -441,6 +441,14 @@
                   }
                 </select>
               </div>
+              @if (form().currencyId && form().currencyId !== 1) {
+                <div class="form-group">
+                  <label class="form-label">سعر الصرف</label>
+                  <input class="form-input" type="number" step="0.0001" min="0" placeholder="سعر الصرف مقابل الريال"
+                         [value]="form().exchangeRate"
+                         (input)="setFormField('exchangeRate', +$any($event.target).value || null)">
+                </div>
+              }
             </div>
             @if (!isEditing()) {
               <!-- السند الجديد يُنشأ دائماً بحالة "غير مراجع" تلقائياً -->

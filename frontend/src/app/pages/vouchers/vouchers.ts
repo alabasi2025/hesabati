@@ -135,6 +135,7 @@ export class VouchersComponent extends BasePageComponent {
     voucherDate: new Date().toISOString().split('T')[0],
     reference: '',
     currencyId: 1,
+    exchangeRate: null,
     status: 'unreviewed',
   });
 
@@ -1230,6 +1231,7 @@ export class VouchersComponent extends BasePageComponent {
         reference: String(f.reference || '').trim() || null,
         voucherDate: f.voucherDate,
         currencyId: f.currencyId || 1,
+        exchangeRate: f.exchangeRate || null,
         status: requestedStatus,
         entries: entries.map((row) => ({
           accountId: row.accountId,
@@ -1963,7 +1965,36 @@ export class VouchersComponent extends BasePageComponent {
       // Load balance in background; do not block voucher number preview.
       void this.loadAccountBalance(selectedId);
     }
+
+    // تعيين العملة تلقائياً حسب الخزينة المختارة
+    if (selectedId && selectedItem) {
+      void this.autoSetCurrencyFromTreasury(selectedItem);
+    }
+
     void this.refreshVoucherNumberPreview();
+  }
+
+  private async autoSetCurrencyFromTreasury(selectedItem: any) {
+    try {
+      if (this.treasuryType() === 'fund') {
+        // الصناديق: defaultCurrencyId متاح مباشرة
+        const defaultCurrencyId = selectedItem?.defaultCurrencyId || selectedItem?.default_currency_id;
+        if (defaultCurrencyId) {
+          this.form.update(f => ({ ...f, currencyId: Number(defaultCurrencyId) }));
+        }
+      } else {
+        // بنك / صراف / محفظة: جلب عملات الحساب واختيار الافتراضية
+        const accountId = selectedItem?.id;
+        if (!accountId) return;
+        const currencies = await this.api.getAccountCurrencies(accountId);
+        if (!Array.isArray(currencies) || currencies.length === 0) return;
+        const defaultCurrency = currencies.find((c: any) => c.isDefault || c.is_default);
+        const currencyId = defaultCurrency?.currencyId || defaultCurrency?.currency_id || currencies[0]?.currencyId || currencies[0]?.currency_id;
+        if (currencyId) {
+          this.form.update(f => ({ ...f, currencyId: Number(currencyId) }));
+        }
+      }
+    } catch { /* non-critical: keep current currency */ }
   }
 
   private normalizeTreasurySearchText(value: any): string {

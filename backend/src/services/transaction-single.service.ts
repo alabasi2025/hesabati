@@ -45,6 +45,7 @@ import {
 
 import { validateTransactionOwnership, getSequenceYear, generateVoucherNumberByTreasury, resolveTemplatePrefix, resolveTreasuryForVoucher } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types';
+import { updateSubledgerBalance } from '../engines/subledger.engine.ts';
 
 // ===================== الدالة الرئيسية: تنفيذ المعاملة =====================
 
@@ -131,6 +132,7 @@ export async function postTransaction(
         description: data.description || "",
         reference: data.reference || null,
         voucherDate: data.voucherDate || new Date(),
+        exchangeRate: data.exchangeRate ? String(data.exchangeRate) : null,
         createdBy: userId,
         accountSequence,
         templateSequence,
@@ -192,6 +194,8 @@ export async function postTransaction(
         balance = account_balances.balance + ${data.amount},
         updated_at = NOW()
     `);
+    // تحديث الدفتر الفرعي (subledger) للحساب المدين
+    await updateSubledgerBalance(tx, data.debitAccountId, data.currencyId, data.amount);
 
     if (data.creditAccountId) {
       await tx.execute(sql`
@@ -201,6 +205,8 @@ export async function postTransaction(
           balance = account_balances.balance - ${data.amount},
           updated_at = NOW()
       `);
+      // تحديث الدفتر الفرعي (subledger) للحساب الدائن
+      await updateSubledgerBalance(tx, data.creditAccountId, data.currencyId, -data.amount);
     }
 
     // --- 7. تحديث أرصدة الصناديق إن وجدت ---

@@ -35,6 +35,8 @@ export interface TransactionData {
   description?: string;
   /** المرجع */
   reference?: string | null;
+  /** سعر الصرف (للعملة الأجنبية مقابل العملة الأساسية) */
+  exchangeRate?: number | null;
   /** تاريخ السند */
   voucherDate?: Date | null;
   /** رقم السند (إذا كان محدداً مسبقاً) */
@@ -85,6 +87,8 @@ export interface MultiTransactionData {
   voucherDate?: Date | null;
   /** رقم السند (إذا كان محدداً مسبقاً) */
   voucherNumber?: string | null;
+  /** سعر الصرف (للعملة الأجنبية مقابل العملة الأساسية) */
+  exchangeRate?: number | null;
   /** حقول عرضية داخل جدول vouchers (قد تكون متعددة في الواقع) */
   fromAccountId?: number | null;
   toAccountId?: number | null;

@@ -146,6 +146,7 @@ vouchersCreateRouter.post(
           stationId: data.stationId || null,
           employeeId: data.employeeId || null,
           supplierId: data.supplierId || null,
+          exchangeRate: data.exchangeRate || null,
           // ط±ط¨ط· ط§ظ„ط®ط²ظٹظ†ط© ط¨ط§ظ„طµظ†ط¯ظˆظ‚/ط§ظ„ط­ط³ط§ط¨ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ط³ظ†ط¯
           toFundId: vType === 'receipt' ? treasuryFundId : null,
           fromFundId: vType === 'payment' ? treasuryFundId : null,

@@ -45,6 +45,7 @@ import {
 
 import { validateMultiTransactionOwnership, computeBalancedTotals, getSequenceYear, generateVoucherNumberByTreasuryMulti, resolveTemplatePrefix, resolveTreasuryForMulti } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types';
+import { updateSubledgerBalance } from '../engines/subledger.engine.ts';
 
 // ===================== الدالة الرئيسية: تنفيذ المعاملة =====================
 
@@ -140,6 +141,7 @@ export async function postMultiTransaction(
         description: data.description || "",
         reference: data.reference || null,
         voucherDate: data.voucherDate || new Date(),
+        exchangeRate: data.exchangeRate ? String(data.exchangeRate) : null,
         createdBy: userId,
         accountSequence,
         templateSequence,
@@ -190,6 +192,9 @@ export async function postMultiTransaction(
           balance = account_balances.balance + ${delta},
           updated_at = NOW()
       `);
+
+      // تحديث الدفتر الفرعي (subledger) للكيان المرتبط بالحساب
+      await updateSubledgerBalance(tx, line.accountId, data.currencyId, delta);
     }
 
     // --- 5. تحديث أرصدة الصناديق إن وجدت ---
