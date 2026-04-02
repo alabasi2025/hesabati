@@ -40,3 +40,32 @@
 }
 .emp-name-cell { font-weight: 700; }
 .salary-cell { font-weight: 800; color: var(--accent-green); direction: ltr; text-align: right; }
+
+/* ============ Currency Chips ============ */
+.currency-chips {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;
+}
+.currency-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 14px; border-radius: 10px; border: 1.5px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-secondary);
+  font-size: 13px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+  &:hover { border-color: var(--accent-blue); background: rgba(59,130,246,0.04); }
+  &.selected { background: rgba(59,130,246,0.1); border-color: var(--accent-blue); color: var(--accent-blue); }
+  &.is-default { background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); border-color: var(--accent-blue); color: white; }
+  .chip-symbol { font-size: 15px; font-weight: 800; }
+  .chip-code { font-size: 11px; opacity: 0.8; }
+}
+.default-currency-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+  label { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+}
+.default-chip {
+  padding: 4px 10px; border-radius: 8px; border: 1.5px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-secondary);
+  font-size: 12px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+  &:hover { border-color: var(--accent-amber); }
+  &.active { background: linear-gradient(135deg, var(--accent-amber), #d97706); border-color: var(--accent-amber); color: white; }
+}

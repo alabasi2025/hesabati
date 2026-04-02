@@ -138,3 +138,21 @@
   .summary-row { flex-direction: column; }
   .header-actions { flex-direction: column; }
 }
+
+/* ============ Currency Chips ============ */
+.currency-chips {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;
+}
+.currency-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 14px; border-radius: 10px; border: 1.5px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-secondary);
+  font-size: 13px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+  &:hover { border-color: var(--accent-blue); background: rgba(59,130,246,0.04); }
+  &.selected { background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)); border-color: var(--accent-blue); color: white; }
+  &.default { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #f59e0b; color: white; }
+  .chip-symbol { font-size: 15px; font-weight: 800; }
+  .chip-code { font-size: 11px; opacity: 0.8; }
+  .chip-badge { font-size: 9px; background: rgba(255,255,255,0.25); padding: 1px 6px; border-radius: 6px; }
+}

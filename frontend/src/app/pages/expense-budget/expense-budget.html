@@ -94,6 +94,28 @@
             <div class="form-group"><label>الشهر</label><select [(ngModel)]="form.month"><option [ngValue]="null">--</option><option [ngValue]="m" *ngFor="let m of months">{{ m }}</option></select></div>
             <div class="form-group"><label>السنة</label><select [(ngModel)]="form.year"><option [ngValue]="null">--</option><option [ngValue]="y" *ngFor="let y of years">{{ y }}</option></select></div>
           </div>
+          <div class="form-group">
+            <label>الحساب المرتبط</label>
+            <select [(ngModel)]="form.accountId" (ngModelChange)="onAccountChange($event)">
+              <option [ngValue]="null">-- اختر حساب الميزانية --</option>
+              @for (acc of budgetAccounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+              }
+            </select>
+          </div>
+          @if (accountCurrencies().length > 0) {
+            <div class="form-group">
+              <label>العملة <span class="required">*</span></label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyId() === curr.currencyId" (click)="selectCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
           <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
         </div>
         <div class="modal-footer">

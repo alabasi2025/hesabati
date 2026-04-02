@@ -24,6 +24,7 @@ export const suppliers = pgTable('suppliers', {
   address: varchar('address', { length: 300 }),
   contactPerson: varchar('contact_person', { length: 200 }),
   notes: text('notes'),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -37,7 +38,9 @@ export const supplierBalances = pgTable('supplier_balances', {
   currencyId: integer('currency_id').notNull().references(() => currencies.id),
   balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  supplierCurrencyUnique: uniqueIndex('supplier_balances_supplier_currency_unique').on(table.supplierId, table.currencyId),
+}));
 
 // ===================== VOUCHERS (السندات) =====================
 
@@ -116,6 +119,7 @@ export const attachments = pgTable('attachments', {
 export const expenseBudget = pgTable('expense_budget', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
+  accountId: integer('account_id').references(() => accounts.id),
   name: varchar('name', { length: 200 }).notNull(),
   stationId: integer('station_id').references(() => stations.id),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
@@ -164,6 +168,7 @@ export const warehouses = pgTable('warehouses', {
   stationId: integer('station_id').references(() => stations.id),
   responsiblePerson: varchar('responsible_person', { length: 200 }),
   location: varchar('location', { length: 300 }),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   isActive: boolean('is_active').notNull().default(true),
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -171,6 +176,18 @@ export const warehouses = pgTable('warehouses', {
 }, (table) => ({
   codeUnique: unique('warehouses_biz_code_unique').on(table.businessId, table.code),
   seqUnique: unique('warehouses_biz_seq_unique').on(table.businessId, table.sequenceNumber),
+}));
+
+// ===================== WAREHOUSE BALANCES =====================
+
+export const warehouseBalances = pgTable('warehouse_balances', {
+  id: serial('id').primaryKey(),
+  warehouseId: integer('warehouse_id').notNull().references(() => warehouses.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  warehouseCurrencyUnique: uniqueIndex('warehouse_balances_warehouse_currency_unique').on(table.warehouseId, table.currencyId),
 }));
 
 // ===================== INVENTORY ITEMS =====================

@@ -26,10 +26,12 @@ export class PendingAccountsComponent extends BasePageComponent {
   editingId = signal<number | null>(null);
   filterStatus = signal<string>('all');
 
-  form: any = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '' };
+  pendingFilteredAccounts = signal<any[]>([]);
+  form: any = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '', accountId: null as number | null };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
+    this.api.getAccounts(this.bizId).then(a => this.pendingFilteredAccounts.set((a || []).filter((acc: any) => acc.accountType === 'pending')));
   }
 
   async load() {
@@ -55,7 +57,7 @@ export class PendingAccountsComponent extends BasePageComponent {
   resolvedCount() { return this.items().filter(i => i.status === 'resolved').length; }
 
   openAdd() {
-    this.form = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '' };
+    this.form = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '', accountId: null };
     this.editingId.set(null);
     this.showForm.set(true);
   }

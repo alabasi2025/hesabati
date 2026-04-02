@@ -9,8 +9,8 @@ export class EmployeeApiService {
   // ===================== الموظفين =====================
   getEmployees(bizId: number)           { return this.api.request<any[]>(`/businesses/${bizId}/employees`); }
   createEmployee(bizId: number, d: any) { return this.api.request<any>(`/businesses/${bizId}/employees`, { method: 'POST', body: JSON.stringify(d) }); }
-  updateEmployee(id: number, d: any)    { return this.api.request<any>(`/employees/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
-  deleteEmployee(id: number)            { return this.api.request<any>(`/employees/${id}`, { method: 'DELETE' }); }
+  updateEmployee(bizId: number, id: number, d: any) { return this.api.request<any>(`/businesses/${bizId}/employees/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteEmployee(bizId: number, id: number)         { return this.api.request<any>(`/businesses/${bizId}/employees/${id}`, { method: 'DELETE' }); }
 
   // ===================== حسابات الموظفين في أنظمة الفوترة =====================
   getEmployeeBillingAccounts(bizId: number, stationId?: number) {

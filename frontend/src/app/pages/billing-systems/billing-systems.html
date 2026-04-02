@@ -161,7 +161,15 @@
                 </div>
                 <div class="sys-info">
                   <h2 class="sys-name">{{ group.system }}</h2>
-                  <span class="sys-count">{{ group.employees.length }} موظف · {{ group.employees.length }} حساب</span>
+                  <div class="sys-meta-row">
+                    <span class="sys-count">{{ group.employees.length }} موظف · {{ group.employees.length }} حساب</span>
+                    @if (group.info.accountCode) {
+                      <span class="acc-code-badge" [style.background]="group.info.color + '18'" [style.color]="group.info.color">
+                        <span class="material-icons-round" style="font-size:13px">account_tree</span>
+                        {{ group.info.accountCode }}
+                      </span>
+                    }
+                  </div>
                 </div>
               </div>
 
@@ -248,6 +256,12 @@
                   <span class="sys-card-count">
                     {{ getSysCount(sys.name) }} حساب
                   </span>
+                  @if (sys.accountCode) {
+                    <span class="acc-code-badge" [style.background]="sys.color + '18'" [style.color]="sys.color">
+                      <span class="material-icons-round" style="font-size:13px">account_tree</span>
+                      {{ sys.accountCode }}
+                    </span>
+                  }
                 </div>
                 <button class="icon-btn danger-btn" (click)="deleteSystem(sys)" title="حذف النظام">
                   <span class="material-icons-round">delete</span>

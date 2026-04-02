@@ -23,6 +23,10 @@ export class WarehouseComponent extends BasePageComponent {
   warehouses = signal<any[]>([]);
   stations = signal<any[]>([]);
   warehouseTypes = signal<any[]>([]);
+  warehouseAccounts = signal<any[]>([]);
+  accountCurrencies = signal<any[]>([]);
+  selectedCurrencyIds = signal<number[]>([]);
+  defaultCurrencyId = signal<number | null>(null);
   loading = signal(true);
   showForm = signal(false);
   editingId = signal<number | null>(null);
@@ -31,7 +35,7 @@ export class WarehouseComponent extends BasePageComponent {
 
   // نموذج إضافة/تعديل مخزن
   form: any = {
-    name: '', warehouseType: 'main', subType: '',
+    name: '', accountId: null, warehouseType: 'main', subType: '',
     stationId: null, responsiblePerson: '', location: '', notes: '',
   };
 
@@ -49,14 +53,17 @@ export class WarehouseComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [wh, sts, types] = await Promise.allSettled([
+      const [wh, sts, types, accs] = await Promise.allSettled([
         this.api.getWarehouses(this.bizId),
         this.api.getStations(this.bizId),
         this.api.getWarehouseTypes(this.bizId),
+        this.api.getAccounts(this.bizId),
       ]);
       this.warehouses.set(wh.status === 'fulfilled' ? wh.value : []);
       this.stations.set(sts.status === 'fulfilled' ? sts.value : []);
       this.warehouseTypes.set(types.status === 'fulfilled' ? types.value : []);
+      const allAccs = accs.status === 'fulfilled' ? (accs.value as any[]) : [];
+      this.warehouseAccounts.set(allAccs.filter((a: any) => a.accountType === 'warehouse'));
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }
@@ -106,20 +113,35 @@ export class WarehouseComponent extends BasePageComponent {
 
   // ===== إضافة/تعديل مخزن =====
   openAdd() {
+    const defaultAcc = this.warehouseAccounts()[0];
     this.form = {
-      name: '', warehouseType: 'main', subType: '',
+      name: '', accountId: defaultAcc?.id ?? null, warehouseType: 'main', subType: '',
       stationId: null, responsiblePerson: '', location: '', notes: '',
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
     this.editingId.set(null);
     this.showForm.set(true);
+    if (defaultAcc?.id) this.onAccountChange(defaultAcc.id);
   }
 
   openEdit(w: any) {
     this.form = {
-      name: w.name, warehouseType: w.warehouseType, subType: w.subType || '',
+      name: w.name, accountId: w.accountId ?? null, warehouseType: w.warehouseType, subType: w.subType || '',
       stationId: w.stationId, responsiblePerson: w.responsiblePerson || '',
       location: w.location || '', notes: w.notes || '',
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
+    if (w.accountId) {
+      this.onAccountChange(w.accountId).then(() => {
+        const allIds = this.accountCurrencies().map((c: any) => c.currencyId);
+        this.selectedCurrencyIds.set(allIds);
+        if (w.defaultCurrencyId) this.defaultCurrencyId.set(w.defaultCurrencyId);
+      });
+    }
     this.editingId.set(w.id);
     this.showForm.set(true);
   }
@@ -130,11 +152,16 @@ export class WarehouseComponent extends BasePageComponent {
       return;
     }
     try {
+      const payload = {
+        ...this.form,
+        currencyIds: this.selectedCurrencyIds(),
+        defaultCurrencyId: this.defaultCurrencyId(),
+      };
       if (this.editingId()) {
-        await this.api.updateWarehouse(this.editingId()!, this.form);
+        await this.api.updateWarehouse(this.editingId()!, payload);
         this.toast.success('تم تعديل المخزن بنجاح');
       } else {
-        await this.api.createWarehouse(this.bizId, this.form);
+        await this.api.createWarehouse(this.bizId, payload);
         this.toast.success('تم إضافة المخزن بنجاح');
       }
       this.showForm.set(false);
@@ -241,4 +268,42 @@ export class WarehouseComponent extends BasePageComponent {
     'storefront', 'factory', 'domain', 'business', 'apartment',
     'home_work', 'garage', 'archive', 'inbox', 'shelves',
   ];
+
+  async onAccountChange(accountId: number) {
+    if (accountId) {
+      try {
+        const currencies = await this.api.getAccountCurrencies(accountId);
+        this.accountCurrencies.set(currencies || []);
+        const allIds = (currencies || []).map((c: any) => c.currencyId);
+        this.selectedCurrencyIds.set(allIds);
+        this.defaultCurrencyId.set(allIds[0] || null);
+      } catch (e) {
+        console.error(e);
+        this.accountCurrencies.set([]);
+      }
+    } else {
+      this.accountCurrencies.set([]);
+      this.selectedCurrencyIds.set([]);
+      this.defaultCurrencyId.set(null);
+    }
+  }
+
+  toggleCurrency(currencyId: number) {
+    const ids = [...this.selectedCurrencyIds()];
+    const idx = ids.indexOf(currencyId);
+    if (idx >= 0) {
+      ids.splice(idx, 1);
+      if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(ids[0] || null);
+    } else {
+      ids.push(currencyId);
+    }
+    this.selectedCurrencyIds.set(ids);
+  }
+
+  setDefaultCurrency(currencyId: number) {
+    this.defaultCurrencyId.set(currencyId);
+    if (!this.selectedCurrencyIds().includes(currencyId)) {
+      this.selectedCurrencyIds.update(ids => [...ids, currencyId]);
+    }
+  }
 }

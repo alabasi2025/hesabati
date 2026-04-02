@@ -1,8 +1,7 @@
 /**
- * warehouse.routes.ts — Phase 9 (thin re-export wrapper)
- * تم التقسيم في Phase 9 إلى:
- *  - warehouse-crud.routes.ts  (CRUD المخازن)
- *  - warehouse-ops.routes.ts   (عمليات + جرد + ملخصات)
+ * warehouse.routes.ts — barrel re-export
  */
 export { warehouseCrudRoutes } from './warehouse-crud.routes';
 export { warehouseOpsRoutes } from './warehouse-ops.routes';
+export { warehousesReadRoutes } from './warehouses-read.routes.ts';
+export { warehousesWriteRoutes } from './warehouses-write.routes.ts';

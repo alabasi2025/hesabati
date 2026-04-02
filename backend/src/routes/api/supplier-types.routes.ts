@@ -6,7 +6,7 @@
 import { Hono } from "hono";
 import { db } from "../../db/index.ts";
 import { eq, and, asc } from "drizzle-orm";
-import { supplierTypes } from "../../db/schema/index.ts";
+import { supplierTypes, accounts, accountSubNatures } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import {
@@ -16,7 +16,7 @@ import {
 } from "../../middleware/helpers.ts";
 import {
   getNextSequence,
-  generateItemCode,
+  generateLeafAccountCode,
 } from "../../middleware/sequencing.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import type { AppContext } from "./_shared/types.ts";
@@ -34,6 +34,7 @@ supplierTypesRoutes.get(
         id: supplierTypes.id,
         name: supplierTypes.name,
         subTypeKey: supplierTypes.subTypeKey,
+        accountId: supplierTypes.accountId,
         sequenceNumber: supplierTypes.sequenceNumber,
         description: supplierTypes.description,
         icon: supplierTypes.icon,
@@ -108,10 +109,36 @@ supplierTypesRoutes.post(
 
     const seqNum = await getNextSequence(bizId, "supplier_type", 0);
 
+    // إنشاء حساب تحكم تلقائياً لنوع المورد الجديد
+    let newAccountId: number | null = null;
+    try {
+      const { code: genCode, sequenceNumber: genSeq } = await generateLeafAccountCode(
+        bizId, "supplier", db as any
+      );
+      const [supNature] = await db
+        .select({ id: accountSubNatures.id })
+        .from(accountSubNatures)
+        .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, "supplier")))
+        .limit(1);
+      const [newAccount] = await db.insert(accounts).values({
+        businessId: bizId,
+        name: String(body.name),
+        accountType: "supplier" as any,
+        accountSubNatureId: supNature?.id ?? null,
+        isLeafAccount: true,
+        code: genCode,
+        sequenceNumber: genSeq,
+      }).returning();
+      newAccountId = newAccount.id;
+    } catch (_) {
+      // إذا لم يكن النوع الفرعي موجوداً، يُنشأ نوع المورد بدون حساب
+    }
+
     const [created] = await db
       .insert(supplierTypes)
       .values({
         businessId: bizId,
+        accountId: newAccountId,
         name: String(body.name),
         subTypeKey: String(body.subTypeKey),
         sequenceNumber: seqNum,

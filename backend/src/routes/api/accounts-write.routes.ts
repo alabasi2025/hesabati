@@ -5,7 +5,7 @@
 import { Hono } from 'hono';
 import { PostgresError } from 'postgres';
 import { db } from '../../db/index.ts';
-import { eq, and, isNotNull, desc } from 'drizzle-orm';
+import { eq, and, isNotNull } from 'drizzle-orm';
 import {
   accounts,
   accountSubNatures,
@@ -23,13 +23,10 @@ import {
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, getBody, parseId } from '../../middleware/helpers.ts';
 import {
-  generateItemCode,
   generateTreeAccountCode,
   generateLeafAccountCode,
   getNextChildAccountSequence,
   getNextItemInCategorySequence,
-  getNextSupplierSequence,
-  TYPE_PREFIXES,
 } from '../../middleware/sequencing.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getBizId } from './_shared/context-helpers.ts';
@@ -45,7 +42,7 @@ const NATURE_TO_ACCOUNT_TYPE: Record<string, string> = {
 };
 
 function toAccountTypeFromNature(natureKey: string): string {
-  return NATURE_TO_ACCOUNT_TYPE[natureKey] || 'accounting';
+  return NATURE_TO_ACCOUNT_TYPE[natureKey] || null;
 }
 
 // ===================== Endpoints مخصصة للأداء =====================
@@ -74,7 +71,7 @@ accountsWriteRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), che
     : [null];
   if (accountSubNatureId && !subNature) return c.json({ error: 'نوع الحساب الفرعي غير موجود' }, 400);
 
-  const accountType = subNature ? toAccountTypeFromNature(String(subNature.natureKey)) : (typeof body.accountType === 'string' ? body.accountType : 'accounting');
+  const accountType = subNature ? toAccountTypeFromNature(String(subNature.natureKey)) : (typeof body.accountType === 'string' ? body.accountType : null);
   const hasManualCode = typeof body.code === 'string' && body.code.trim().length > 0;
 
   let sequenceNumber: number;
@@ -140,49 +137,7 @@ accountsWriteRoutes.post('/businesses/:bizId/accounts', bizAuthMiddleware(), che
   }
   if (!created) return c.json({ error: 'تعذر إنشاء الحساب' }, 500);
 
-  // الصناديق تُنشأ من صفحة الصناديق فقط وتُربط بحساب موجود
-  const hasLinkedEntityPayload = body.linkedEntityId != null && body.linkedEntityType != null;
-  if (created && subNature?.natureKey === 'supplier' && !hasLinkedEntityPayload) {
-    const [lastSupplier] = await db
-      .select({ seq: suppliers.sequenceNumber })
-      .from(suppliers)
-      .where(eq(suppliers.businessId, bizId))
-      .orderBy(desc(suppliers.sequenceNumber), desc(suppliers.id))
-      .limit(1);
-    const nextSeq = (Number(lastSupplier?.seq) || 0) + 1;
-
-    await db.insert(suppliers).values({
-      businessId: bizId,
-      name: created.name,
-      sequenceNumber: nextSeq,
-      code: generateItemCode(TYPE_PREFIXES.supplier || 'SUP', nextSeq),
-      accountId: created.id,
-      notes: created.notes,
-      isActive: created.isActive,
-    });
-  }
-  if (created && subNature?.natureKey === 'warehouse' && !hasLinkedEntityPayload) {
-    const [lastWarehouse] = await db
-      .select({ seq: warehouses.sequenceNumber })
-      .from(warehouses)
-      .where(eq(warehouses.businessId, bizId))
-      .orderBy(desc(warehouses.sequenceNumber), desc(warehouses.id))
-      .limit(1);
-    const nextSeq = (Number(lastWarehouse?.seq) || 0) + 1;
-
-    await db.insert(warehouses).values({
-      businessId: bizId,
-      name: created.name,
-      accountId: created.id,
-      warehouseType: 'sub',
-      sequenceNumber: nextSeq,
-      code: generateItemCode(TYPE_PREFIXES.warehouse || 'WHS', nextSeq),
-      responsiblePerson: created.responsiblePerson,
-      notes: created.notes,
-      isActive: created.isActive,
-    });
-  }
-
+  // الموردون والمخازن تُنشأ من صفحاتهم المخصصة وتُربط بحساب موجود (Phase 12)
   if (created && body.linkedEntityId && body.linkedEntityType) {
     const linkedEntityId = Number(body.linkedEntityId);
     const linkedEntityType = typeof body.linkedEntityType === 'string' ? body.linkedEntityType : '';

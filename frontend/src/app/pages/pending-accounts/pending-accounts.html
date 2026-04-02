@@ -74,6 +74,15 @@
               </select>
             </div>
           </div>
+          <div class="form-group">
+            <label>الحساب المرتبط</label>
+            <select [(ngModel)]="form.accountId">
+              <option [ngValue]="null">-- اختر حساب معلق --</option>
+              @for (acc of pendingFilteredAccounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+              }
+            </select>
+          </div>
           <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
         </div>
         <div class="modal-footer">

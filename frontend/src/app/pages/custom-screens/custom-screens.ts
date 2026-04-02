@@ -293,9 +293,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     void this.loadScreens();
     this.loadCurrencies();
     try {
-      const token = this.auth.getToken();
-      if (token && this.bizId) {
-        this.wsService.connect(token, this.bizId);
+      if (this.auth.isLoggedIn() && this.bizId) {
+        this.wsService.connect('cookie', this.bizId);
       }
     } catch (e) { /* WebSocket optional */ }
   }

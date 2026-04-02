@@ -64,7 +64,7 @@ export class BusinessSelectComponent implements OnInit {
 
   async loadBusinesses() {
     this.loadError.set('');
-    if (!this.auth.getToken()) {
+    if (!this.auth.isLoggedIn()) {
       this.loading.set(false);
       this.loadError.set('لم يتم تسجيل الدخول. جاري التوجيه...');
       setTimeout(() => this.auth.logout(), 800);

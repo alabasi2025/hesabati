@@ -227,6 +227,28 @@
             </div>
           </div>
           <div class="form-group">
+            <label>الحساب المرتبط <span class="required">*</span></label>
+            <select [(ngModel)]="form.accountId" required (ngModelChange)="onAccountChange($event)">
+              <option [ngValue]="null" disabled>-- اختر حساب العهدة --</option>
+              @for (acc of filteredAccounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+              }
+            </select>
+          </div>
+          @if (accountCurrencies().length > 0) {
+            <div class="form-group">
+              <label>العملة <span class="required">*</span></label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyId() === curr.currencyId" (click)="selectCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+          <div class="form-group">
             <label>المبلغ</label>
             <input type="number" [(ngModel)]="form.amount" placeholder="0" />
           </div>

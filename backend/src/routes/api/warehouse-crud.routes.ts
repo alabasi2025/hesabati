@@ -35,14 +35,35 @@ const warehouseRoutes = new Hono();
 warehouseRoutes.get('/businesses/:bizId/warehouses', bizAuthMiddleware(), safeHandler('جلب المخازن', async (c) => {
   const bizId = getBizId(c);
   const includeCustody = c.req.query('includeCustody') === 'true';
-  // نستخدم مقارنة نصية لتفادي خطأ قواعد بيانات قديمة لا تحتوي قيمة enum (custody) بعد.
   const whereCondition = includeCustody
     ? eq(warehouses.businessId, bizId)
     : and(
       eq(warehouses.businessId, bizId),
       sql`${warehouses.warehouseType}::text <> 'custody'`,
     );
-  const rows = await db.select().from(warehouses).where(whereCondition).orderBy(warehouses.id);
+  const rows = await db
+    .select({
+      id: warehouses.id,
+      businessId: warehouses.businessId,
+      name: warehouses.name,
+      accountId: warehouses.accountId,
+      warehouseType: warehouses.warehouseType,
+      sequenceNumber: warehouses.sequenceNumber,
+      code: warehouses.code,
+      stationId: warehouses.stationId,
+      responsiblePerson: warehouses.responsiblePerson,
+      location: warehouses.location,
+      isActive: warehouses.isActive,
+      notes: warehouses.notes,
+      createdAt: warehouses.createdAt,
+      updatedAt: warehouses.updatedAt,
+      accountCode: accounts.code,
+      accountName: accounts.name,
+    })
+    .from(warehouses)
+    .leftJoin(accounts, eq(accounts.id, warehouses.accountId))
+    .where(whereCondition)
+    .orderBy(warehouses.id);
   return c.json(rows);
 }));
 
@@ -87,20 +108,6 @@ warehouseRoutes.put('/warehouses/:id', safeHandler('تعديل مخزن', async 
   const body = await getBody(c);
   const [updated] = await db.update(warehouses).set({ ...body, updatedAt: new Date() }).where(eq(warehouses.id, id)).returning();
   if (!updated) return c.json({ error: 'مخزن غير موجود' }, 404);
-
-  if (updated.accountId) {
-    await db.update(accounts).set({
-      name: updated.name,
-      subTypeId: updated.subTypeId,
-      subType: updated.subType,
-      code: updated.code,
-      sequenceNumber: updated.sequenceNumber,
-      responsiblePerson: updated.responsiblePerson,
-      notes: updated.notes,
-      isActive: updated.isActive,
-      updatedAt: new Date(),
-    }).where(eq(accounts.id, updated.accountId));
-  }
 
   return c.json(updated);
 }));

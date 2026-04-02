@@ -27,7 +27,10 @@ export class ExpenseBudgetComponent extends BasePageComponent {
   filterYear = signal<number | null>(null);
   months = [1,2,3,4,5,6,7,8,9,10,11,12];
   years: number[] = [];
-  form: any = { name: '', stationId: null as number | null, amount: 0, currencyId: 1, expenseType: 'variable', month: null as number | null, year: null as number | null, notes: '' };
+  budgetAccounts = signal<any[]>([]);
+  accountCurrencies = signal<any[]>([]);
+  selectedCurrencyId = signal<number | null>(null);
+  form: any = { name: '', stationId: null as number | null, amount: 0, currencyId: 1, expenseType: 'variable', month: null as number | null, year: null as number | null, notes: '', accountId: null as number | null };
 
   override ngOnInit(): void {
     super.ngOnInit();
@@ -39,6 +42,7 @@ export class ExpenseBudgetComponent extends BasePageComponent {
     this.load();
     this.api.getCurrencies().then(c => this.currencies.set(c || []));
     this.api.getStations(this.bizId).then(s => this.stations.set(s || []));
+    this.api.getAccounts(this.bizId).then(a => this.budgetAccounts.set((a || []).filter((acc: any) => acc.accountType === 'budget')));
   }
 
   async load() {
@@ -55,7 +59,9 @@ export class ExpenseBudgetComponent extends BasePageComponent {
   onFilterChange() { this.load(); }
 
   openAdd() {
-    this.form = { name: '', stationId: null, amount: 0, currencyId: 1, expenseType: 'variable', month: this.filterMonth() || null, year: this.filterYear() || new Date().getFullYear(), notes: '' };
+    this.form = { name: '', stationId: null, amount: 0, currencyId: 1, expenseType: 'variable', month: this.filterMonth() || null, year: this.filterYear() || new Date().getFullYear(), notes: '', accountId: null };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyId.set(null);
     this.editingId.set(null);
     this.showForm.set(true);
   }
@@ -64,7 +70,15 @@ export class ExpenseBudgetComponent extends BasePageComponent {
     this.form = {
       name: item.name, stationId: item.stationId || null, amount: Number(item.amount || 0), currencyId: item.currencyId || 1,
       expenseType: item.expenseType || 'variable', month: item.month ?? null, year: item.year ?? null, notes: item.notes || '',
+      accountId: item.accountId ?? null,
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyId.set(null);
+    if (item.accountId) {
+      this.onAccountChange(item.accountId).then(() => {
+        if (item.currencyId) this.selectedCurrencyId.set(item.currencyId);
+      });
+    }
     this.editingId.set(item.id);
     this.showForm.set(true);
   }
@@ -72,7 +86,8 @@ export class ExpenseBudgetComponent extends BasePageComponent {
   async save() {
     if (!this.form.name?.trim()) { this.toast.warning('يرجى إدخال اسم البند'); return; }
     try {
-      const payload = { ...this.form, amount: Number(this.form.amount) };
+      const currId = this.selectedCurrencyId() || this.form.currencyId;
+      const payload = { ...this.form, amount: Number(this.form.amount), currencyId: currId };
       const id = this.editingId();
       if (id === null) {
         await this.api.createExpenseBudget(this.bizId, payload);
@@ -109,4 +124,24 @@ export class ExpenseBudgetComponent extends BasePageComponent {
     return this.currencies().find(c => c.id === id)?.code || 'ر.ي';
   }
   totalAmount(): number { return this.items().reduce((s, i) => s + Number(i.amount || 0), 0); }
+
+  async onAccountChange(accountId: number) {
+    if (accountId) {
+      try {
+        const currencies = await this.api.getAccountCurrencies(accountId);
+        this.accountCurrencies.set(currencies || []);
+        this.selectedCurrencyId.set(null);
+      } catch (e) {
+        console.error(e);
+        this.accountCurrencies.set([]);
+      }
+    } else {
+      this.accountCurrencies.set([]);
+      this.selectedCurrencyId.set(null);
+    }
+  }
+
+  selectCurrency(currencyId: number) {
+    this.selectedCurrencyId.set(currencyId);
+  }
 }

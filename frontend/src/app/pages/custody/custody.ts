@@ -29,9 +29,13 @@ export class CustodyComponent extends BasePageComponent {
   settlements = signal<any[]>([]);
   showSettleForm = signal(false);
 
+  filteredAccounts = signal<any[]>([]);
+  accountCurrencies = signal<any[]>([]);
+  selectedCurrencyId = signal<number | null>(null);
+
   form: any = {
     custodyType: 'permanent', contentType: 'cash', partyName: '', partyType: 'employee',
-    employeeId: null, description: '', amount: 0,
+    employeeId: null, description: '', amount: 0, accountId: null as number | null, currencyId: null as number | null,
   };
 
   settleForm: any = { amount: 0, notes: '', settledAt: '' };
@@ -63,12 +67,14 @@ export class CustodyComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [custodyRecordsData, custodyAccountsData] = await Promise.all([
+      const [custodyRecordsData, custodyAccountsData, allAccounts] = await Promise.all([
         this.api.getCustodyRecords(this.bizId),
         this.api.getCustodyAccounts(this.bizId),
+        this.api.getAccounts(this.bizId),
       ]);
       this.records.set(custodyRecordsData || []);
       this.custodyAccounts.set(custodyAccountsData || []);
+      this.filteredAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'custody'));
     } catch (e) { 
       console.error(e); 
     }
@@ -78,8 +84,10 @@ export class CustodyComponent extends BasePageComponent {
   openAdd() {
     this.form = {
       custodyType: this.activeTab(), contentType: 'cash', partyName: '', partyType: 'employee',
-      employeeId: null, description: '', amount: 0,
+      employeeId: null, description: '', amount: 0, accountId: null, currencyId: null,
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyId.set(null);
     this.editingId.set(null);
     this.showForm.set(true);
   }
@@ -89,7 +97,15 @@ export class CustodyComponent extends BasePageComponent {
       custodyType: c.custodyType || 'permanent', contentType: c.contentType || 'cash',
       partyName: c.partyName || '', partyType: c.partyType || 'employee',
       employeeId: c.employeeId, description: c.description || '', amount: c.amount || 0,
+      accountId: c.accountId ?? null, currencyId: c.currencyId ?? null,
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyId.set(null);
+    if (c.accountId) {
+      this.onAccountChange(c.accountId).then(() => {
+        if (c.currencyId) this.selectedCurrencyId.set(c.currencyId);
+      });
+    }
     this.editingId.set(c.id);
     this.showForm.set(true);
   }
@@ -99,12 +115,13 @@ export class CustodyComponent extends BasePageComponent {
       this.toast.error('يرجى إدخال اسم الطرف');
       return;
     }
+    const data = { ...this.form, currencyId: this.selectedCurrencyId() };
     try {
       if (this.editingId()) {
-        await this.api.updateCustodyRecord(this.bizId, this.editingId()!, this.form);
+        await this.api.updateCustodyRecord(this.bizId, this.editingId()!, data);
         this.toast.success('تم تعديل سجل العهدة بنجاح');
       } else {
-        await this.api.createCustodyRecord(this.bizId, this.form);
+        await this.api.createCustodyRecord(this.bizId, data);
         this.toast.success('تم إنشاء سجل العهدة بنجاح');
       }
       this.showForm.set(false);
@@ -112,6 +129,26 @@ export class CustodyComponent extends BasePageComponent {
     } catch (e: unknown) {
       this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
     }
+  }
+
+  async onAccountChange(accountId: number) {
+    if (accountId) {
+      try {
+        const currencies = await this.api.getAccountCurrencies(accountId);
+        this.accountCurrencies.set(currencies || []);
+        this.selectedCurrencyId.set(null);
+      } catch (e) {
+        console.error(e);
+        this.accountCurrencies.set([]);
+      }
+    } else {
+      this.accountCurrencies.set([]);
+      this.selectedCurrencyId.set(null);
+    }
+  }
+
+  selectCurrency(currencyId: number) {
+    this.selectedCurrencyId.set(currencyId);
   }
 
   async remove(c: any) {

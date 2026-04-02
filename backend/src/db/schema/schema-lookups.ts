@@ -115,6 +115,7 @@ export const journalEntryCategories = pgTable('journal_entry_categories', {
 export const supplierTypes = pgTable('supplier_types', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
+  accountId: integer('account_id'),
   name: varchar('name', { length: 200 }).notNull(),
   subTypeKey: varchar('sub_type_key', { length: 100 }).notNull(),
   sequenceNumber: integer('sequence_number'),
@@ -205,6 +206,7 @@ export const reconciliationItems = pgTable('reconciliation_items', {
 export const custodyRecords = pgTable('custody_records', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
+  accountId: integer('account_id').references(() => accounts.id),
   custodyNumber: varchar('custody_number', { length: 50 }),
   custodyType: varchar('custody_type', { length: 20 }).notNull(),
   contentType: varchar('content_type', { length: 20 }).notNull(),
@@ -214,6 +216,8 @@ export const custodyRecords = pgTable('custody_records', {
   supplierId: integer('supplier_id').references(() => suppliers.id),
   fundId: integer('fund_id').references(() => funds.id),
   warehouseId: integer('warehouse_id').references(() => warehouses.id),
+  amount: decimal('amount', { precision: 20, scale: 2 }).default('0'),
+  currencyId: integer('currency_id').references(() => currencies.id),
   description: text('description'),
   status: varchar('status', { length: 30 }).notNull().default('active'),
   createdBy: integer('created_by').references(() => users.id),

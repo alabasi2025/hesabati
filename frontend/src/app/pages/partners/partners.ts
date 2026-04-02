@@ -21,13 +21,17 @@ export class PartnersComponent extends BasePageComponent {
 
   business = signal<any>(null);
   partners = signal<any[]>([]);
+  partnerAccounts = signal<any[]>([]);
   loading = signal(true);
   showForm = signal(false);
   editingId = signal<number | null>(null);
   showDeleteConfirm = signal(false);
   deleteTarget = signal<any>(null);
 
-  form: any = { fullName: '', sharePercentage: 0, phone: '', role: '', notes: '' };
+  accountCurrencies = signal<any[]>([]);
+  selectedCurrencyIds = signal<number[]>([]);
+  defaultCurrencyId = signal<number | null>(null);
+  form: any = { fullName: '', accountId: null, sharePercentage: 0, phone: '', role: '', notes: '' };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -36,12 +40,14 @@ export class PartnersComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [biz, partners] = await Promise.all([
+      const [biz, partners, accs] = await Promise.all([
         this.api.getBusiness(this.bizId),
         this.api.getPartners(this.bizId),
+        this.api.getAccounts(this.bizId).catch(() => []),
       ]);
       this.business.set(biz);
       this.partners.set(partners);
+      this.partnerAccounts.set((accs as any[]).filter((a: any) => a.accountType === 'partner'));
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }
@@ -51,23 +57,45 @@ export class PartnersComponent extends BasePageComponent {
   }
 
   openAdd() {
-    this.form = { fullName: '', sharePercentage: 0, phone: '', role: '', notes: '' };
+    const defaultAcc = this.partnerAccounts()[0];
+    this.form = { fullName: '', accountId: defaultAcc?.id ?? null, sharePercentage: 0, phone: '', role: '', notes: '' };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
     this.editingId.set(null);
     this.showForm.set(true);
+    if (defaultAcc?.id) this.onAccountChange(defaultAcc.id);
   }
 
   openEdit(p: any) {
     this.form = {
-      fullName: p.fullName, sharePercentage: Number(p.sharePercentage),
+      fullName: p.fullName, accountId: p.accountId ?? null,
+      sharePercentage: Number(p.sharePercentage),
       phone: p.phone || '', role: p.role || '', notes: p.notes || '',
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
+    if (p.accountId) {
+      this.onAccountChange(p.accountId).then(() => {
+        const allIds = this.accountCurrencies().map((c: any) => c.currencyId);
+        this.selectedCurrencyIds.set(allIds);
+        if (p.defaultCurrencyId) this.defaultCurrencyId.set(p.defaultCurrencyId);
+      });
+    }
     this.editingId.set(p.id);
     this.showForm.set(true);
   }
 
   async save() {
     try {
-      const data = { ...this.form, sharePercentage: String(this.form.sharePercentage), businessId: this.bizId };
+      const data = {
+        ...this.form,
+        sharePercentage: String(this.form.sharePercentage),
+        businessId: this.bizId,
+        currencyIds: this.selectedCurrencyIds(),
+        defaultCurrencyId: this.defaultCurrencyId(),
+      };
       if (this.editingId()) {
         await this.api.updatePartner(this.editingId()!, data);
       } else {
@@ -100,5 +128,43 @@ export class PartnersComponent extends BasePageComponent {
     if (pct >= 50) return '#f59e0b';
     if (pct >= 25) return '#3b82f6';
     return '#22c55e';
+  }
+
+  async onAccountChange(accountId: number) {
+    if (accountId) {
+      try {
+        const currencies = await this.api.getAccountCurrencies(accountId);
+        this.accountCurrencies.set(currencies || []);
+        const allIds = (currencies || []).map((c: any) => c.currencyId);
+        this.selectedCurrencyIds.set(allIds);
+        this.defaultCurrencyId.set(allIds[0] || null);
+      } catch (e) {
+        console.error(e);
+        this.accountCurrencies.set([]);
+      }
+    } else {
+      this.accountCurrencies.set([]);
+      this.selectedCurrencyIds.set([]);
+      this.defaultCurrencyId.set(null);
+    }
+  }
+
+  toggleCurrency(currencyId: number) {
+    const ids = [...this.selectedCurrencyIds()];
+    const idx = ids.indexOf(currencyId);
+    if (idx >= 0) {
+      ids.splice(idx, 1);
+      if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(ids[0] || null);
+    } else {
+      ids.push(currencyId);
+    }
+    this.selectedCurrencyIds.set(ids);
+  }
+
+  setDefaultCurrency(currencyId: number) {
+    this.defaultCurrencyId.set(currencyId);
+    if (!this.selectedCurrencyIds().includes(currencyId)) {
+      this.selectedCurrencyIds.update(ids => [...ids, currencyId]);
+    }
   }
 }

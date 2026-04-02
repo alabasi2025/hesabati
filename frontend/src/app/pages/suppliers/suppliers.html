@@ -71,12 +71,38 @@
             <div class="form-group"><label>اسم المورد</label><input [(ngModel)]="form.name" title="اسم المورد" placeholder="اسم المورد" /></div>
             <div class="form-group">
               <label>نوع المورد</label>
-              <select [(ngModel)]="form.supplierTypeId" title="نوع المورد">
+              <select [(ngModel)]="form.supplierTypeId" title="نوع المورد" (ngModelChange)="onTypeChange($event)">
                 <option [ngValue]="null">بدون نوع</option>
                 @for (t of supplierTypes(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
               </select>
             </div>
           </div>
+          @if (accountCurrencies().length > 0) {
+            <div class="form-group">
+              <label>العملات <span class="required">*</span></label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="form-group">
+              <label>العملة الافتراضية</label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  @if (selectedCurrencyIds().includes(curr.currencyId)) {
+                    <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                      <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                      @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          }
           <div class="form-row">
             <div class="form-group"><label>جهة الاتصال</label><input [(ngModel)]="form.contactPerson" title="جهة الاتصال" placeholder="اسم الشخص المسؤول" /></div>
             <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" title="الهاتف" placeholder="رقم الهاتف" /></div>

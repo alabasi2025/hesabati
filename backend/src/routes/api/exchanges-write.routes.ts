@@ -128,18 +128,6 @@ exchangesRoutes.put(
       .where(eq(exchanges.id, id))
       .returning();
 
-    if (updated.accountId) {
-      await db.update(accounts).set({
-        name: updated.name,
-        code: updated.code,
-        sequenceNumber: updated.sequenceNumber,
-        responsiblePerson: updated.responsiblePerson,
-        notes: updated.notes,
-        isActive: updated.isActive,
-        updatedAt: new Date(),
-      }).where(eq(accounts.id, updated.accountId));
-    }
-
     return c.json(updated);
   }),
 );

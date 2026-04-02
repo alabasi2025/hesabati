@@ -18,6 +18,9 @@ export class SuppliersComponent extends BasePageComponent {
 
   suppliers = signal<any[]>([]);
   supplierTypes = signal<any[]>([]);
+  accountCurrencies = signal<any[]>([]);
+  selectedCurrencyIds = signal<number[]>([]);
+  defaultCurrencyId = signal<number | null>(null);
   loading = signal(true);
   showForm = signal(false);
   editingId = signal<number | null>(null);
@@ -70,6 +73,9 @@ export class SuppliersComponent extends BasePageComponent {
 
   openAdd() {
     this.form = { name: '', supplierTypeId: null, category: '', phone: '', address: '', contactPerson: '', notes: '' };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
     this.editingId.set(null);
     this.showForm.set(true);
   }
@@ -79,6 +85,16 @@ export class SuppliersComponent extends BasePageComponent {
       name: s.name, supplierTypeId: s.supplierTypeId ?? null, category: s.category || '', phone: s.phone || '',
       address: s.address || '', contactPerson: s.contactPerson || '', notes: s.notes || '',
     };
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
+    if (s.supplierTypeId) {
+      this.onTypeChange(s.supplierTypeId).then(() => {
+        const allIds = this.accountCurrencies().map((c: any) => c.currencyId);
+        this.selectedCurrencyIds.set(allIds);
+        if (s.defaultCurrencyId) this.defaultCurrencyId.set(s.defaultCurrencyId);
+      });
+    }
     this.editingId.set(s.id);
     this.showForm.set(true);
   }
@@ -88,6 +104,8 @@ export class SuppliersComponent extends BasePageComponent {
       const payload = {
         ...this.form,
         category: this.getSupplierTypeName(this.form.supplierTypeId) || this.form.category || null,
+        currencyIds: this.selectedCurrencyIds(),
+        defaultCurrencyId: this.defaultCurrencyId(),
       };
       if (this.editingId()) {
         await this.api.updateSupplier(this.editingId()!, payload);
@@ -126,5 +144,43 @@ export class SuppliersComponent extends BasePageComponent {
     if (!typeId) return '';
     const t = this.supplierTypes().find((x: any) => x.id === typeId);
     return t?.name || '';
+  }
+
+  async onTypeChange(typeId: number) {
+    if (typeId) {
+      const st = this.supplierTypes().find((t: any) => t.id === typeId);
+      if (st?.accountId) {
+        try {
+          const currencies = await this.api.getAccountCurrencies(st.accountId);
+          this.accountCurrencies.set(currencies || []);
+          const allIds = (currencies || []).map((c: any) => c.currencyId);
+          this.selectedCurrencyIds.set(allIds);
+          this.defaultCurrencyId.set(allIds[0] || null);
+          return;
+        } catch (e) { console.error(e); }
+      }
+    }
+    this.accountCurrencies.set([]);
+    this.selectedCurrencyIds.set([]);
+    this.defaultCurrencyId.set(null);
+  }
+
+  toggleCurrency(currencyId: number) {
+    const ids = [...this.selectedCurrencyIds()];
+    const idx = ids.indexOf(currencyId);
+    if (idx >= 0) {
+      ids.splice(idx, 1);
+      if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(ids[0] || null);
+    } else {
+      ids.push(currencyId);
+    }
+    this.selectedCurrencyIds.set(ids);
+  }
+
+  setDefaultCurrency(currencyId: number) {
+    this.defaultCurrencyId.set(currencyId);
+    if (!this.selectedCurrencyIds().includes(currencyId)) {
+      this.selectedCurrencyIds.update(ids => [...ids, currencyId]);
+    }
   }
 }

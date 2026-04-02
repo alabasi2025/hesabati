@@ -115,11 +115,11 @@ export class ApiService {
   createEmployee(bizId: number, d: EmployeePayload) {
     return this.emp.createEmployee(bizId, d);
   }
-  updateEmployee(id: number, d: Partial<EmployeePayload>) {
-    return this.emp.updateEmployee(id, d);
+  updateEmployee(bizId: number, id: number, d: Partial<EmployeePayload>) {
+    return this.emp.updateEmployee(bizId, id, d);
   }
-  deleteEmployee(id: number) {
-    return this.emp.deleteEmployee(id);
+  deleteEmployee(bizId: number, id: number) {
+    return this.emp.deleteEmployee(bizId, id);
   }
   getEmployeeBillingAccounts(bizId: number, stationId?: number) {
     return this.emp.getEmployeeBillingAccounts(bizId, stationId);

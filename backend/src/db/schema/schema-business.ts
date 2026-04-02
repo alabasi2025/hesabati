@@ -37,9 +37,22 @@ export const businessPartners = pgTable('business_partners', {
   phone: varchar('phone', { length: 20 }),
   role: varchar('role', { length: 100 }),
   notes: text('notes'),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ===================== PARTNER BALANCES =====================
+
+export const partnerBalances = pgTable('partner_balances', {
+  id: serial('id').primaryKey(),
+  partnerId: integer('partner_id').notNull().references(() => businessPartners.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  partnerCurrencyUnique: uniqueIndex('partner_balances_partner_currency_unique').on(table.partnerId, table.currencyId),
+}));
 
 // ===================== STATIONS =====================
 
@@ -67,6 +80,7 @@ export const stations = pgTable('stations', {
 export const employees = pgTable('employees', {
   id: serial('id').primaryKey(),
   businessId: integer('business_id').notNull().references(() => businesses.id),
+  accountId: integer('account_id'),
   departmentId: integer('department_id'),
   jobTitleId: integer('job_title_id'),
   sequenceNumber: integer('sequence_number'),
@@ -77,6 +91,7 @@ export const employees = pgTable('employees', {
   department: varchar('department', { length: 100 }),
   salary: decimal('salary', { precision: 15, scale: 2 }).notNull().default('0'),
   salaryCurrency: varchar('salary_currency', { length: 10 }).default('YER'),
+  defaultCurrencyId: integer('default_currency_id').references(() => currencies.id),
   phone: varchar('phone', { length: 20 }),
   status: employeeStatusEnum('status').notNull().default('active'),
   hireDate: date('hire_date'),
@@ -86,6 +101,18 @@ export const employees = pgTable('employees', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
+
+// ===================== EMPLOYEE BALANCES =====================
+
+export const employeeBalances = pgTable('employee_balances', {
+  id: serial('id').primaryKey(),
+  employeeId: integer('employee_id').notNull().references(() => employees.id),
+  currencyId: integer('currency_id').notNull().references(() => currencies.id),
+  balance: decimal('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  employeeCurrencyUnique: uniqueIndex('employee_balances_employee_currency_unique').on(table.employeeId, table.currencyId),
+}));
 
 // ===================== ACCOUNTS (الحسابات) =====================
 
@@ -169,6 +196,7 @@ export const billingSystemsConfig = pgTable('billing_systems_config', {
   businessId: integer('business_id').notNull().references(() => businesses.id),
   name: varchar('name', { length: 200 }).notNull(),
   systemKey: varchar('system_key', { length: 100 }).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
   icon: varchar('icon', { length: 50 }).default('receipt'),
   color: varchar('color', { length: 20 }).default('#3b82f6'),
   stationMode: varchar('station_mode', { length: 20 }).notNull().default('per_station'),

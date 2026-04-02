@@ -136,6 +136,43 @@
           <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
         </div>
         <div class="modal-body">
+          @if (!editingId()) {
+            <div class="form-group">
+              <label>حساب التحكم <span class="required">*</span></label>
+              <select [(ngModel)]="form.accountId" title="حساب التحكم" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
+                <option [ngValue]="null">-- اختر حساب المخازن --</option>
+                @for (a of warehouseAccounts(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
+                }
+              </select>
+            </div>
+          }
+          @if (accountCurrencies().length > 0) {
+            <div class="form-group">
+              <label>العملات <span class="required">*</span></label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="form-group">
+              <label>العملة الافتراضية</label>
+              <div class="currency-chips">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  @if (selectedCurrencyIds().includes(curr.currencyId)) {
+                    <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                      <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                      @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          }
           <div class="form-row">
             <div class="form-group">
               <label>اسم المخزن <span class="required">*</span></label>
