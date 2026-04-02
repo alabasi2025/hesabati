@@ -43,6 +43,21 @@
       "options": { "cwd": "${workspaceFolder}/backend" },
       "problemMatcher": [],
       "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Frontend: ng serve",
+      "type": "shell",
+      "command": "pnpm start",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Start All (Backend + Frontend)",
+      "dependsOn": ["Backend: pnpm run dev", "Frontend: ng serve"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
     }
   ],
   "inputs": [

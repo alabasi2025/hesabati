@@ -1,8 +1,16 @@
 <aside class="sidebar" [class.collapsed]="isCollapsed()">
   <!-- Logo -->
   <div class="sidebar-header">
-    <div class="logo-wrapper" (click)="toggleCollapse()">
-      <div class="logo-box" [style.background]="biz.currentBusinessColor() + '20'" [style.color]="biz.currentBusinessColor()">
+    <div
+      class="logo-wrapper"
+      (click)="toggleCollapse()"
+      [title]="isCollapsed() ? 'توسيع القائمة' : 'طي القائمة'"
+    >
+      <div
+        class="logo-box"
+        [style.background]="biz.currentBusinessColor() + '20'"
+        [style.color]="biz.currentBusinessColor()"
+      >
         <span class="material-icons-round">{{ biz.currentBusinessIcon() || 'bolt' }}</span>
       </div>
       @if (!isCollapsed()) {
@@ -10,6 +18,7 @@
           <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
           <span>نظام الإدارة المالية</span>
         </div>
+        <span class="collapse-chevron material-icons-round">chevron_right</span>
       }
     </div>
   </div>
@@ -31,108 +40,190 @@
             (keydown)="onSidebarSearchKeydown($event)"
           />
           @if (sidebarSearchQuery().trim()) {
-            <button class="search-clear-btn" type="button" title="مسح البحث" (click)="clearSidebarSearch()">
+            <button
+              class="search-clear-btn"
+              type="button"
+              title="مسح البحث"
+              (click)="clearSidebarSearch()"
+            >
               <span class="material-icons-round">close</span>
             </button>
           }
         </div>
+        <button
+          class="toggle-all-btn"
+          type="button"
+          [title]="areAllSectionsCollapsed() ? 'فتح جميع الأقسام' : 'طي جميع الأقسام'"
+          (click)="toggleAllSections()"
+        >
+          <span class="material-icons-round">{{
+            areAllSectionsCollapsed() ? 'unfold_more' : 'unfold_less'
+          }}</span>
+          <span class="toggle-all-label">{{
+            areAllSectionsCollapsed() ? 'فتح الكل' : 'طي الكل'
+          }}</span>
+        </button>
       </div>
     }
 
     @for (section of filteredMenuSections(); track section.sectionId ?? section.title) {
-      <div class="nav-section">
+      <div
+        class="nav-section"
+        [class.section-collapsed]="
+          isSectionCollapsed(section.sectionId?.toString() ?? section.title)
+        "
+        [style.--section-color]="section.color || '#6366f1'"
+      >
         @if (!isCollapsed()) {
-          <div class="section-title">
-            @let parts = getSidebarHighlightParts(section.title);
-            {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
-          </div>
+          <button
+            class="section-title"
+            type="button"
+            (click)="toggleSection(section.sectionId?.toString() ?? section.title)"
+            [title]="
+              isSectionCollapsed(section.sectionId?.toString() ?? section.title)
+                ? 'فتح القسم'
+                : 'طي القسم'
+            "
+            [style.--section-color]="section.color || ''"
+          >
+            @if (section.icon) {
+              <span class="material-icons-round section-icon" [style.color]="section.color">{{
+                section.icon
+              }}</span>
+            }
+            <span class="section-title-text" [style.color]="section.color">
+              @let parts = getSidebarHighlightParts(section.title);
+              {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
+              >{{ parts.after }}
+            </span>
+            <span class="material-icons-round section-toggle-icon">
+              {{
+                isSectionCollapsed(section.sectionId?.toString() ?? section.title)
+                  ? 'expand_more'
+                  : 'expand_less'
+              }}
+            </span>
+          </button>
         }
-        @for (item of section.items; track item.label) {
-          @if (item.children) {
-            <div class="nav-item-group" [class.expanded]="isExpanded(item.label)">
-              <button class="nav-item has-children" (click)="toggleItem(item.label)" [title]="item.label"
-                [attr.data-icon]="item.icon">
-                <div class="nav-icon" [style.--icon-color]="getIconColor(item.icon)" [style.--icon-glow]="getIconGlow(item.icon)">
-                  <span class="material-icons-round">{{ item.icon }}</span>
-                </div>
-                @if (!isCollapsed()) {
-                  <span class="nav-label">
-                    @let parts = getSidebarHighlightParts(item.label);
-                    {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
-                  </span>
-                  <span class="material-icons-round expand-arrow">{{ isExpanded(item.label) ? 'expand_less' : 'expand_more' }}</span>
-                }
-              </button>
-              @if (isExpanded(item.label) && !isCollapsed()) {
-                <div class="nav-children">
-                  @for (child of item.children; track child.label) {
-                    <a class="nav-child-item" [routerLink]="child.route" routerLinkActive="active"
-                      [attr.data-icon]="child.icon">
-                      <span class="material-icons-round child-icon" [style.color]="getIconColor(child.icon)">{{ child.icon }}</span>
-                      <span class="child-label">
-                        @let parts = getSidebarHighlightParts(child.label);
-                        {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
-                      </span>
-                    </a>
-                  }
-                </div>
-              }
-            </div>
-          } @else {
-            @if (hasQueryParams(item.route)) {
-              <a
-                class="nav-item"
-                [class.active]="isItemActive(item.route)"
-                [routerLink]="getRoutePath(item.route)"
-                [queryParams]="getQueryParams(item.route)"
-                [title]="item.label"
-                [attr.hint]="item.label"
-                [attr.data-icon]="item.icon"
-              >
-                <div class="nav-icon" [style.--icon-color]="getIconColor(item.icon)" [style.--icon-glow]="getIconGlow(item.icon)">
-                  @if (item.icon && item.icon.startsWith('pi ')) {
-                    <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
-                  } @else {
+        @if (!isSectionCollapsed(section.sectionId?.toString() ?? section.title) || isCollapsed()) {
+          @for (item of section.items; track item.label) {
+            @if (item.children) {
+              <div class="nav-item-group" [class.expanded]="isExpanded(item.label)">
+                <button class="nav-item has-children" (click)="toggleItem(item.label)">
+                  <div
+                    class="nav-icon"
+                    [style.--icon-color]="getIconColor(item.icon)"
+                    [style.--icon-glow]="getIconGlow(item.icon)"
+                  >
                     <span class="material-icons-round">{{ item.icon }}</span>
+                  </div>
+                  @if (!isCollapsed()) {
+                    <span class="nav-label">
+                      @let parts = getSidebarHighlightParts(item.label);
+                      {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
+                      >{{ parts.after }}
+                    </span>
+                    <span class="material-icons-round expand-arrow">{{
+                      isExpanded(item.label) ? 'expand_less' : 'expand_more'
+                    }}</span>
                   }
-                </div>
-                @if (!isCollapsed()) {
-                  <span class="nav-label">
-                    @let parts = getSidebarHighlightParts(item.label);
-                    {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
-                  </span>
-                  @if (item.badge) {
-                    <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{ item.badge }}</span>
-                  }
+                </button>
+                @if (isExpanded(item.label) && !isCollapsed()) {
+                  <div class="nav-children">
+                    @for (child of item.children; track child.label) {
+                      <a
+                        class="nav-child-item"
+                        [routerLink]="child.route"
+                        routerLinkActive="active"
+                        [attr.data-icon]="child.icon"
+                      >
+                        <span
+                          class="material-icons-round child-icon"
+                          [style.color]="getIconColor(child.icon)"
+                          >{{ child.icon }}</span
+                        >
+                        <span class="child-label">
+                          @let parts = getSidebarHighlightParts(child.label);
+                          {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
+                          >{{ parts.after }}
+                        </span>
+                      </a>
+                    }
+                  </div>
                 }
-              </a>
+              </div>
             } @else {
-              <a
-                class="nav-item"
-                [routerLink]="item.route || '/'"
-                routerLinkActive="active"
-                [routerLinkActiveOptions]="{exact: (item.route || '') === ('/biz/' + biz.currentBusinessId())}"
-                [title]="item.label"
-                [attr.hint]="item.label"
-                [attr.data-icon]="item.icon"
-              >
-                <div class="nav-icon" [style.--icon-color]="getIconColor(item.icon)" [style.--icon-glow]="getIconGlow(item.icon)">
-                  @if (item.icon && item.icon.startsWith('pi ')) {
-                    <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
-                  } @else {
-                    <span class="material-icons-round">{{ item.icon }}</span>
+              @if (hasQueryParams(item.route)) {
+                <a
+                  class="nav-item"
+                  [class.active]="isItemActive(item.route)"
+                  [routerLink]="getRoutePath(item.route)"
+                  [queryParams]="getQueryParams(item.route)"
+                  [title]="item.label"
+                  [attr.hint]="item.label"
+                  [attr.data-icon]="item.icon"
+                >
+                  <div
+                    class="nav-icon"
+                    [style.--icon-color]="getIconColor(item.icon)"
+                    [style.--icon-glow]="getIconGlow(item.icon)"
+                  >
+                    @if (item.icon && item.icon.startsWith('pi ')) {
+                      <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
+                    } @else {
+                      <span class="material-icons-round">{{ item.icon }}</span>
+                    }
+                  </div>
+                  @if (!isCollapsed()) {
+                    <span class="nav-label">
+                      @let parts = getSidebarHighlightParts(item.label);
+                      {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
+                      >{{ parts.after }}
+                    </span>
+                    @if (item.badge) {
+                      <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{
+                        item.badge
+                      }}</span>
+                    }
                   }
-                </div>
-                @if (!isCollapsed()) {
-                  <span class="nav-label">
-                    @let parts = getSidebarHighlightParts(item.label);
-                    {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark>{{ parts.after }}
-                  </span>
-                  @if (item.badge) {
-                    <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{ item.badge }}</span>
+                </a>
+              } @else {
+                <a
+                  class="nav-item"
+                  [routerLink]="item.route || '/'"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{
+                    exact: (item.route || '') === '/biz/' + biz.currentBusinessId(),
+                  }"
+                  [title]="item.label"
+                  [attr.hint]="item.label"
+                  [attr.data-icon]="item.icon"
+                >
+                  <div
+                    class="nav-icon"
+                    [style.--icon-color]="getIconColor(item.icon)"
+                    [style.--icon-glow]="getIconGlow(item.icon)"
+                  >
+                    @if (item.icon && item.icon.startsWith('pi ')) {
+                      <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
+                    } @else {
+                      <span class="material-icons-round">{{ item.icon }}</span>
+                    }
+                  </div>
+                  @if (!isCollapsed()) {
+                    <span class="nav-label">
+                      @let parts = getSidebarHighlightParts(item.label);
+                      {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
+                      >{{ parts.after }}
+                    </span>
+                    @if (item.badge) {
+                      <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{
+                        item.badge
+                      }}</span>
+                    }
                   }
-                }
-              </a>
+                </a>
+              }
             }
           }
         }

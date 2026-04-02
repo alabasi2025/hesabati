@@ -14,5 +14,24 @@ npm-shrinkwrap.json
 yarn.lock
 
 
+# Build output
+backend/public/
+frontend/dist/
+
+# Temp files
+ng-serve-log.txt
+ng-log.txt
+ng-err.txt
+ng-version.txt
+ng-serve.txt
+reset-log.txt
+build-frontend.js
+frontend/serve.js
+start-frontend.bat
+setup-db.bat
+install_extensions.bat
+install_missing.ps1
+run-cursor-*.bat
+
 #Ignore cursor AI rules
 .cursor\rules\codacy.mdc

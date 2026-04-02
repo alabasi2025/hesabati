@@ -17,6 +17,7 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:fresh": "npm run db:reset && npm run db:push && npm run db:seed",
     "db:check": "tsx src/db/check-schema-match.ts",
+    "db:reset-sidebar": "tsx src/db/reset-sidebar.ts",
     "check:tdad": "node ../.tdad/scripts/validate-workflows.mjs"
   },
   "dependencies": {
