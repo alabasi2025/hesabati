@@ -33,5 +33,9 @@ install_extensions.bat
 install_missing.ps1
 run-cursor-*.bat
 
+# IDE caches
+.angularjs-lsp/
+temp_path.txt
+
 #Ignore cursor AI rules
 .cursor\rules\codacy.mdc

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/components/three-network/three-network.ts", "three-network.ts"],
-  "sourcesContent": ["\n    :host { display: block; width: 100%; height: 100%; min-height: 300px; }\n    .three-network-canvas { width: 100%; height: 100%; border-radius: 12px; overflow: hidden; }\n  ", ":host {\n  display: block;\n  width: 100%;\n  height: 100%;\n  min-height: 300px;\n}\n\n.three-network-canvas {\n  width: 100%;\n  height: 100%;\n  border-radius: 12px;\n  overflow: hidden;\n}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyJmaWxlOi8vL0Y6L0hoaGhoL2hlc2FiYXRpL2Zyb250ZW5kL3NyYy9hcHAvY29tcG9uZW50cy90aHJlZS1uZXR3b3JrL3RocmVlLW5ldHdvcmsudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQ0k7RUFBUTtFQUFnQjtFQUFhO0VBQWM7OztBQUNuRDtFQUF3QjtFQUFhO0VBQWM7RUFBcUIiLCJzb3VyY2VzQ29udGVudCI6WyJcbiAgICA6aG9zdCB7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogMTAwJTsgaGVpZ2h0OiAxMDAlOyBtaW4taGVpZ2h0OiAzMDBweDsgfVxuICAgIC50aHJlZS1uZXR3b3JrLWNhbnZhcyB7IHdpZHRoOiAxMDAlOyBoZWlnaHQ6IDEwMCU7IGJvcmRlci1yYWRpdXM6IDEycHg7IG92ZXJmbG93OiBoaWRkZW47IH1cbiAgIl19 */"],
-  "mappings": ";AACI;AAAQ,WAAA;AAAgB,SAAA;AAAa,UAAA;AAAc,cAAA;ACIvD;ADHI,CAAA;AAAwB,SAAA;AAAa,UAAA;AAAc,iBAAA;AAAqB,YAAA;ACU5E;",
-  "names": []
-}

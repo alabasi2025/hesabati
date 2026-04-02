@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/components/three-background/three-background.ts", "three-background.ts"],
-  "sourcesContent": ["\n    :host { display: block; position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }\n    .three-bg-canvas { width: 100%; height: 100%; }\n  ", ":host {\n  display: block;\n  position: absolute;\n  inset: 0;\n  z-index: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n\n.three-bg-canvas {\n  width: 100%;\n  height: 100%;\n}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyJmaWxlOi8vL0Y6L0hoaGhoL2hlc2FiYXRpL2Zyb250ZW5kL3NyYy9hcHAvY29tcG9uZW50cy90aHJlZS1iYWNrZ3JvdW5kL3RocmVlLWJhY2tncm91bmQudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQ0k7RUFBUTtFQUFnQjtFQUFvQjtFQUFVO0VBQVk7RUFBc0I7OztBQUN4RjtFQUFtQjtFQUFhIiwic291cmNlc0NvbnRlbnQiOlsiXG4gICAgOmhvc3QgeyBkaXNwbGF5OiBibG9jazsgcG9zaXRpb246IGFic29sdXRlOyBpbnNldDogMDsgei1pbmRleDogMDsgcG9pbnRlci1ldmVudHM6IG5vbmU7IG92ZXJmbG93OiBoaWRkZW47IH1cbiAgICAudGhyZWUtYmctY2FudmFzIHsgd2lkdGg6IDEwMCU7IGhlaWdodDogMTAwJTsgfVxuICAiXX0= */"],
-  "mappings": ";AACI;AAAQ,WAAA;AAAgB,YAAA;AAAoB,SAAA;AAAU,WAAA;AAAY,kBAAA;AAAsB,YAAA;ACM5F;ADLI,CAAA;AAAmB,SAAA;AAAa,UAAA;ACUpC;",
-  "names": []
-}
