@@ -1,4 +1,5 @@
 {
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
   "simpleBrowser.useIntegratedBrowser": true,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -17,7 +18,14 @@
     { "text": "FIXME:", "color": "#fff", "backgroundColor": "#f44336" }
   ],
   "cSpell.enabled": true,
-  "cSpell.enableFiletypes": ["html", "scss", "typescript", "javascript", "json", "markdown"],
+  "cSpell.enableFiletypes": [
+    "html",
+    "scss",
+    "typescript",
+    "javascript",
+    "json",
+    "markdown"
+  ],
   "cSpell.language": "en,ar",
   "cSpell.diagnosticLevel": "Hint",
   "cSpell.maxNumberOfProblems": 50,

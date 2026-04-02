@@ -14,23 +14,41 @@
 
   <!-- Toast Message -->
   @if (message()) {
-    <div class="toast" [class.success]="messageType() === 'success'" [class.error]="messageType() === 'error'">
-      <span class="material-icons-round">{{ messageType() === 'success' ? 'check_circle' : 'error' }}</span>
+    <div
+      class="toast"
+      [class.success]="messageType() === 'success'"
+      [class.error]="messageType() === 'error'"
+    >
+      <span class="material-icons-round">{{
+        messageType() === 'success' ? 'check_circle' : 'error'
+      }}</span>
       {{ message() }}
     </div>
   }
 
   <!-- Tabs -->
   <div class="tabs-bar">
-    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'users'"
+      (click)="activeTab.set('users')"
+    >
       <span class="material-icons-round">people</span>
       صلاحيات المستخدمين
     </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'sections'" (click)="activeTab.set('sections')">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'sections'"
+      (click)="activeTab.set('sections')"
+    >
       <span class="material-icons-round">folder</span>
       الأقسام
     </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'items'" (click)="activeTab.set('items')">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'items'"
+      (click)="activeTab.set('items')"
+    >
       <span class="material-icons-round">list</span>
       الشاشات
     </button>
@@ -42,7 +60,6 @@
       <p>جاري التحميل...</p>
     </div>
   } @else {
-
     <!-- ==================== Users Tab ==================== -->
     @if (activeTab() === 'users') {
       <div class="users-layout">
@@ -53,7 +70,11 @@
             <span class="count-badge">{{ users().length }}</span>
           </div>
           @for (user of users(); track user.id) {
-            <div class="user-card" [class.selected]="selectedUser()?.id === user.id" (click)="selectUser(user)">
+            <div
+              class="user-card"
+              [class.selected]="selectedUser()?.id === user.id"
+              (click)="selectUser(user)"
+            >
               <div class="user-card-icon" [class]="'role-' + user.role">
                 <span class="material-icons-round">{{ getRoleIcon(user.role) }}</span>
               </div>
@@ -98,12 +119,20 @@
                   <h4>{{ sectionName }}</h4>
                   <div class="section-actions">
                     @if (!isSectionAllVisible(sectionName)) {
-                      <button class="mini-btn" (click)="toggleAllInSection(getSectionId(sectionName), true)" title="تفعيل الكل">
+                      <button
+                        class="mini-btn"
+                        (click)="toggleAllInSection(getSectionId(sectionName), true)"
+                        title="تفعيل الكل"
+                      >
                         <span class="material-icons-round">visibility</span>
                       </button>
                     }
                     @if (!isSectionNoneVisible(sectionName)) {
-                      <button class="mini-btn" (click)="toggleAllInSection(getSectionId(sectionName), false)" title="تعطيل الكل">
+                      <button
+                        class="mini-btn"
+                        (click)="toggleAllInSection(getSectionId(sectionName), false)"
+                        title="تعطيل الكل"
+                      >
                         <span class="material-icons-round">visibility_off</span>
                       </button>
                     }
@@ -111,7 +140,11 @@
                 </div>
 
                 <div class="config-items-list">
-                  @for (item of getItemsForSection(sectionName); track item.itemId; let i = $index) {
+                  @for (
+                    item of getItemsForSection(sectionName);
+                    track item.itemId;
+                    let i = $index
+                  ) {
                     <div
                       class="config-item"
                       [class.visible]="item.isVisible"
@@ -135,7 +168,9 @@
                         (click)="toggleItemVisibility(item.itemId)"
                         [title]="item.isVisible ? 'إخفاء' : 'إظهار'"
                       >
-                        <span class="material-icons-round">{{ item.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                        <span class="material-icons-round">{{
+                          item.isVisible ? 'visibility' : 'visibility_off'
+                        }}</span>
                       </button>
                     </div>
                   }
@@ -161,12 +196,18 @@
         <div class="items-grid">
           @for (section of sections(); track section.id) {
             <div class="management-card">
-              <div class="card-icon">
-                <span class="material-icons-round">{{ section.icon }}</span>
+              <div class="card-color-bar" [style.background]="section.color || '#6366f1'"></div>
+              <div class="card-icon" [style.background]="(section.color || '#6366f1') + '18'">
+                <span class="material-icons-round" [style.color]="section.color || '#6366f1'">{{
+                  section.icon
+                }}</span>
               </div>
               <div class="card-info">
                 <h4>{{ section.name }}</h4>
-                <span class="card-meta">ترتيب: {{ section.sortOrder }} | {{ getItemsBySection(section.id).length }} عنصر</span>
+                <span class="card-meta"
+                  >ترتيب: {{ section.sortOrder }} |
+                  {{ getItemsBySection(section.id).length }} عنصر</span
+                >
               </div>
               <div class="card-actions">
                 <button class="icon-btn" (click)="openSectionForm(section)" title="تعديل">
@@ -194,7 +235,12 @@
             <div class="modal-body">
               <div class="form-group">
                 <label>اسم القسم</label>
-                <input type="text" [value]="sectionForm().name" (input)="sectionForm.set({...sectionForm(), name: $any($event.target).value})" placeholder="مثال: العمليات المالية" />
+                <input
+                  type="text"
+                  [value]="sectionForm().name"
+                  (input)="sectionForm.set({ ...sectionForm(), name: $any($event.target).value })"
+                  placeholder="مثال: العمليات المالية"
+                />
               </div>
               <div class="form-group">
                 <label>الأيقونة</label>
@@ -203,7 +249,7 @@
                     <button
                       class="icon-option"
                       [class.selected]="sectionForm().icon === icon"
-                      (click)="sectionForm.set({...sectionForm(), icon: icon})"
+                      (click)="sectionForm.set({ ...sectionForm(), icon: icon })"
                     >
                       <span class="material-icons-round">{{ icon }}</span>
                     </button>
@@ -211,8 +257,37 @@
                 </div>
               </div>
               <div class="form-group">
+                <label>اللون</label>
+                <div class="color-picker">
+                  @for (c of commonColors; track c.value) {
+                    <button
+                      class="color-option"
+                      [class.selected]="sectionForm().color === c.value"
+                      [style.background]="c.value"
+                      [title]="c.label"
+                      (click)="sectionForm.set({ ...sectionForm(), color: c.value })"
+                    ></button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
                 <label>الترتيب</label>
-                <input type="number" [value]="sectionForm().sortOrder" (input)="sectionForm.set({...sectionForm(), sortOrder: +$any($event.target).value})" />
+                <input
+                  type="number"
+                  [value]="sectionForm().sortOrder"
+                  (input)="
+                    sectionForm.set({ ...sectionForm(), sortOrder: +$any($event.target).value })
+                  "
+                />
+              </div>
+              <div class="form-preview">
+                <label>معاينة</label>
+                <div class="preview-section-title" [style.color]="sectionForm().color">
+                  <span class="material-icons-round" [style.color]="sectionForm().color">{{
+                    sectionForm().icon
+                  }}</span>
+                  {{ sectionForm().name || 'اسم القسم' }}
+                </div>
               </div>
             </div>
             <div class="modal-footer">
@@ -247,12 +322,19 @@
             <div class="items-grid">
               @for (item of getItemsBySection(section.id); track item.id) {
                 <div class="management-card">
-                  <div class="card-icon">
-                    <span class="material-icons-round">{{ item.icon }}</span>
+                  @if (item.color) {
+                    <div class="card-color-bar" [style.background]="item.color"></div>
+                  }
+                  <div class="card-icon" [style.background]="(item.color || '#a78bfa') + '18'">
+                    <span class="material-icons-round" [style.color]="item.color || '#a78bfa'">{{
+                      item.icon
+                    }}</span>
                   </div>
                   <div class="card-info">
                     <h4>{{ item.label }}</h4>
-                    <span class="card-meta">{{ item.screenKey }} | ترتيب: {{ item.sortOrder }}</span>
+                    <span class="card-meta"
+                      >{{ item.screenKey }} | ترتيب: {{ item.sortOrder }}</span
+                    >
                   </div>
                   <div class="card-actions">
                     <button class="icon-btn" (click)="openItemForm(item)" title="تعديل">
@@ -282,7 +364,10 @@
             <div class="modal-body">
               <div class="form-group">
                 <label>القسم</label>
-                <select [value]="itemForm().sectionId" (change)="itemForm.set({...itemForm(), sectionId: +$any($event.target).value})">
+                <select
+                  [value]="itemForm().sectionId"
+                  (change)="itemForm.set({ ...itemForm(), sectionId: +$any($event.target).value })"
+                >
                   @for (sec of sections(); track sec.id) {
                     <option [value]="sec.id">{{ sec.name }}</option>
                   }
@@ -290,15 +375,31 @@
               </div>
               <div class="form-group">
                 <label>معرّف الشاشة (screen key)</label>
-                <input type="text" [value]="itemForm().screenKey" (input)="itemForm.set({...itemForm(), screenKey: $any($event.target).value})" placeholder="مثال: accounts" />
+                <input
+                  type="text"
+                  [value]="itemForm().screenKey"
+                  (input)="itemForm.set({ ...itemForm(), screenKey: $any($event.target).value })"
+                  placeholder="مثال: accounts"
+                />
               </div>
               <div class="form-group">
                 <label>اسم الشاشة</label>
-                <input type="text" [value]="itemForm().label" (input)="itemForm.set({...itemForm(), label: $any($event.target).value})" placeholder="مثال: الحسابات" />
+                <input
+                  type="text"
+                  [value]="itemForm().label"
+                  (input)="itemForm.set({ ...itemForm(), label: $any($event.target).value })"
+                  placeholder="مثال: الحسابات"
+                />
               </div>
               <div class="form-group">
                 <label>المسار (route)</label>
-                <input type="text" [value]="itemForm().route" (input)="itemForm.set({...itemForm(), route: $any($event.target).value})" placeholder="مثال: /biz/{bizId}/accounts" dir="ltr" />
+                <input
+                  type="text"
+                  [value]="itemForm().route"
+                  (input)="itemForm.set({ ...itemForm(), route: $any($event.target).value })"
+                  placeholder="مثال: /biz/{bizId}/accounts"
+                  dir="ltr"
+                />
               </div>
               <div class="form-group">
                 <label>الأيقونة</label>
@@ -307,7 +408,7 @@
                     <button
                       class="icon-option"
                       [class.selected]="itemForm().icon === icon"
-                      (click)="itemForm.set({...itemForm(), icon: icon})"
+                      (click)="itemForm.set({ ...itemForm(), icon: icon })"
                     >
                       <span class="material-icons-round">{{ icon }}</span>
                     </button>
@@ -315,8 +416,34 @@
                 </div>
               </div>
               <div class="form-group">
+                <label>اللون (اختياري)</label>
+                <div class="color-picker">
+                  <button
+                    class="color-option color-option-none"
+                    [class.selected]="!itemForm().color"
+                    title="بدون لون"
+                    (click)="itemForm.set({ ...itemForm(), color: '' })"
+                  >
+                    <span class="material-icons-round">block</span>
+                  </button>
+                  @for (c of commonColors; track c.value) {
+                    <button
+                      class="color-option"
+                      [class.selected]="itemForm().color === c.value"
+                      [style.background]="c.value"
+                      [title]="c.label"
+                      (click)="itemForm.set({ ...itemForm(), color: c.value })"
+                    ></button>
+                  }
+                </div>
+              </div>
+              <div class="form-group">
                 <label>الترتيب</label>
-                <input type="number" [value]="itemForm().sortOrder" (input)="itemForm.set({...itemForm(), sortOrder: +$any($event.target).value})" />
+                <input
+                  type="number"
+                  [value]="itemForm().sortOrder"
+                  (input)="itemForm.set({ ...itemForm(), sortOrder: +$any($event.target).value })"
+                />
               </div>
             </div>
             <div class="modal-footer">

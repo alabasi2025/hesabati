@@ -43,39 +43,45 @@ export class BaseApiService {
   private readonly auth = inject(AuthService);
 
   protected getHeaders(): HeadersInit {
-    const token = this.auth.getToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    };
+    return { 'Content-Type': 'application/json' };
   }
 
+  private isRefreshing = false;
+
   async request<T>(path: string, options?: RequestInit): Promise<T> {
-    const res = await fetch(`${this.API_URL}${path}`, {
+    const fetchOpts: RequestInit = {
       ...options,
+      credentials: 'include',
       headers: { ...this.getHeaders(), ...options?.headers },
-    });
+    };
+
+    const res = await fetch(`${this.API_URL}${path}`, fetchOpts);
+
+    if (res.status === 401 && !this.isRefreshing) {
+      return this.retryAfterRefresh<T>(path, fetchOpts);
+    }
+
+    return this.handleResponse<T>(res);
+  }
+
+  private async retryAfterRefresh<T>(path: string, fetchOpts: RequestInit): Promise<T> {
+    this.isRefreshing = true;
+    try {
+      await this.auth.refreshSession();
+      this.isRefreshing = false;
+      const retryRes = await fetch(`${this.API_URL}${path}`, fetchOpts);
+      return this.handleResponse<T>(retryRes);
+    } catch {
+      this.isRefreshing = false;
+      this.auth.logout();
+      throw new Error('الجلسة منتهية - يرجى تسجيل الدخول مجدداً');
+    }
+  }
+
+  private async handleResponse<T>(res: Response): Promise<T> {
     const text = await res.text();
     if (!res.ok) {
-      let err: { error?: string; details?: string; location?: string } = {};
-      try {
-        if (text?.trim()) err = JSON.parse(text);
-      } catch {
-        err = { error: this.getArabicHttpError(res.status) };
-      }
-      if (res.status === 401) {
-        this.auth.logout();
-        throw new Error('الجلسة منتهية - يرجى تسجيل الدخول مجدداً');
-      }
-      let errorMsg = err.error || this.getArabicHttpError(res.status);
-      if (err.details) errorMsg += ` (التفاصيل: ${err.details})`;
-      if (err.location) errorMsg += ` [الموقع: ${err.location}]`;
-      const error: any = new Error(errorMsg);
-      error.status = res.status;
-      error.details = err.details;
-      error.location = err.location;
-      error.originalError = err;
-      throw error;
+      this.throwApiError(res.status, text);
     }
     if (!text?.trim()) return undefined as T;
     try {
@@ -83,6 +89,28 @@ export class BaseApiService {
     } catch {
       return undefined as T;
     }
+  }
+
+  private throwApiError(status: number, text: string): never {
+    let err: { error?: string; details?: string; location?: string } = {};
+    try {
+      if (text?.trim()) err = JSON.parse(text);
+    } catch {
+      err = { error: this.getArabicHttpError(status) };
+    }
+    if (status === 401) {
+      this.auth.logout();
+      throw new Error('الجلسة منتهية - يرجى تسجيل الدخول مجدداً');
+    }
+    let errorMsg = err.error || this.getArabicHttpError(status);
+    if (err.details) errorMsg += ` (التفاصيل: ${err.details})`;
+    if (err.location) errorMsg += ` [الموقع: ${err.location}]`;
+    const error: any = new Error(errorMsg);
+    error.status = status;
+    error.details = err.details;
+    error.location = err.location;
+    error.originalError = err;
+    throw error;
   }
 
   private getArabicHttpError(status: number): string {

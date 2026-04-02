@@ -11,6 +11,7 @@ interface SidebarSection {
   id: number;
   name: string;
   icon: string;
+  color: string;
   sortOrder: number;
   isActive: boolean;
 }
@@ -21,6 +22,7 @@ interface SidebarItem {
   screenKey: string;
   label: string;
   icon: string;
+  color: string | null;
   route: string;
   sortOrder: number;
   sectionName: string;
@@ -70,13 +72,21 @@ export class SidebarSettingsComponent extends BasePageComponent {
   sections = signal<SidebarSection[]>([]);
   showSectionForm = signal(false);
   editingSection = signal<SidebarSection | null>(null);
-  sectionForm = signal({ name: '', icon: 'folder', sortOrder: 0 });
+  sectionForm = signal({ name: '', icon: 'folder', color: '#6366f1', sortOrder: 0 });
 
   // Items tab
   allItems = signal<SidebarItem[]>([]);
   showItemForm = signal(false);
   editingItem = signal<SidebarItem | null>(null);
-  itemForm = signal({ sectionId: 0, screenKey: '', label: '', icon: 'circle', route: '', sortOrder: 0 });
+  itemForm = signal({
+    sectionId: 0,
+    screenKey: '',
+    label: '',
+    icon: 'circle',
+    color: '',
+    route: '',
+    sortOrder: 0,
+  });
 
   // Drag state
   draggedIndex = signal<number | null>(null);
@@ -145,7 +155,7 @@ export class SidebarSettingsComponent extends BasePageComponent {
 
       // لكل قسم حقيقي → لكل عنصر حقيقي يتبعه
       for (const section of realSections) {
-        const sectionItems = realItems.filter(item => item.sectionId === section.id);
+        const sectionItems = realItems.filter((item) => item.sectionId === section.id);
         for (const item of sectionItems) {
           // البحث عن config موجود لهذا العنصر
           const existing = configByItemId.get(item.id) || configByScreenKey.get(item.screenKey);
@@ -206,15 +216,15 @@ export class SidebarSettingsComponent extends BasePageComponent {
   }
 
   toggleItemVisibility(itemId: number) {
-    const configs = this.userConfigs().map(c =>
-      c.itemId === itemId ? { ...c, isVisible: !c.isVisible } : c
+    const configs = this.userConfigs().map((c) =>
+      c.itemId === itemId ? { ...c, isVisible: !c.isVisible } : c,
     );
     this.userConfigs.set(configs);
   }
 
   toggleAllInSection(sectionId: number, visible: boolean) {
-    const configs = this.userConfigs().map(c =>
-      c.sectionId === sectionId ? { ...c, isVisible: visible } : c
+    const configs = this.userConfigs().map((c) =>
+      c.sectionId === sectionId ? { ...c, isVisible: visible } : c,
     );
     this.userConfigs.set(configs);
   }
@@ -229,21 +239,21 @@ export class SidebarSettingsComponent extends BasePageComponent {
 
   getItemsForSection(sectionName: string): UserConfig[] {
     return this.userConfigs()
-      .filter(c => c.sectionName === sectionName)
+      .filter((c) => c.sectionName === sectionName)
       .sort((a, b) => a.customSortOrder - b.customSortOrder);
   }
 
   getSectionId(sectionName: string): number {
-    const item = this.userConfigs().find(c => c.sectionName === sectionName);
+    const item = this.userConfigs().find((c) => c.sectionName === sectionName);
     return item?.sectionId || 0;
   }
 
   isSectionAllVisible(sectionName: string): boolean {
-    return this.getItemsForSection(sectionName).every(c => c.isVisible);
+    return this.getItemsForSection(sectionName).every((c) => c.isVisible);
   }
 
   isSectionNoneVisible(sectionName: string): boolean {
-    return this.getItemsForSection(sectionName).every(c => !c.isVisible);
+    return this.getItemsForSection(sectionName).every((c) => !c.isVisible);
   }
 
   // Drag & Drop for reordering items within a section
@@ -283,9 +293,9 @@ export class SidebarSettingsComponent extends BasePageComponent {
     newItems.splice(dropIndex, 0, item);
 
     // Update sort orders
-    const updatedConfigs = this.userConfigs().map(c => {
+    const updatedConfigs = this.userConfigs().map((c) => {
       if (c.sectionName === sectionName) {
-        const newIdx = newItems.findIndex(ni => ni.itemId === c.itemId);
+        const newIdx = newItems.findIndex((ni) => ni.itemId === c.itemId);
         return { ...c, customSortOrder: newIdx };
       }
       return c;
@@ -310,8 +320,8 @@ export class SidebarSettingsComponent extends BasePageComponent {
       // إرسال فقط العناصر التي لها configId > 0 (موجودة في الخادم)
       // العناصر ذات configId === 0 تبقى للعرض فقط حتى يُنشأ لها سجل
       const items = this.userConfigs()
-        .filter(c => c.configId > 0)
-        .map(c => ({
+        .filter((c) => c.configId > 0)
+        .map((c) => ({
           id: c.configId,
           sidebarItemId: c.itemId,
           isVisible: c.isVisible,
@@ -330,11 +340,16 @@ export class SidebarSettingsComponent extends BasePageComponent {
   openSectionForm(section?: SidebarSection) {
     if (section) {
       this.editingSection.set(section);
-      this.sectionForm.set({ name: section.name, icon: section.icon, sortOrder: section.sortOrder });
+      this.sectionForm.set({
+        name: section.name,
+        icon: section.icon,
+        color: section.color || '#6366f1',
+        sortOrder: section.sortOrder,
+      });
     } else {
       this.editingSection.set(null);
-      const maxOrder = Math.max(0, ...this.sections().map(s => s.sortOrder));
-      this.sectionForm.set({ name: '', icon: 'folder', sortOrder: maxOrder + 1 });
+      const maxOrder = Math.max(0, ...this.sections().map((s) => s.sortOrder));
+      this.sectionForm.set({ name: '', icon: 'folder', color: '#6366f1', sortOrder: maxOrder + 1 });
     }
     this.showSectionForm.set(true);
   }
@@ -365,7 +380,11 @@ export class SidebarSettingsComponent extends BasePageComponent {
   }
 
   async deleteSection(section: SidebarSection) {
-    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف القسم "${section.name}"؟ سيتم حذف جميع العناصر بداخله.`, type: 'danger' });
+    const confirmed = await this.toast.confirm({
+      title: 'تأكيد الحذف',
+      message: `هل تريد حذف القسم "${section.name}"؟ سيتم حذف جميع العناصر بداخله.`,
+      type: 'danger',
+    });
     if (!confirmed) return;
     try {
       await this.api.deleteSidebarSection(section.id);
@@ -385,6 +404,7 @@ export class SidebarSettingsComponent extends BasePageComponent {
         screenKey: item.screenKey,
         label: item.label,
         icon: item.icon,
+        color: item.color || '',
         route: item.route,
         sortOrder: item.sortOrder,
       });
@@ -392,7 +412,12 @@ export class SidebarSettingsComponent extends BasePageComponent {
       this.editingItem.set(null);
       this.itemForm.set({
         sectionId: this.sections().length > 0 ? this.sections()[0].id : 0,
-        screenKey: '', label: '', icon: 'circle', route: '', sortOrder: 0,
+        screenKey: '',
+        label: '',
+        icon: 'circle',
+        color: '',
+        route: '',
+        sortOrder: 0,
       });
     }
     this.showItemForm.set(true);
@@ -424,7 +449,11 @@ export class SidebarSettingsComponent extends BasePageComponent {
   }
 
   async deleteItem(item: SidebarItem) {
-    const confirmed = await this.toast.confirm({ title: 'تأكيد الحذف', message: `هل تريد حذف العنصر "${item.label}"؟`, type: 'danger' });
+    const confirmed = await this.toast.confirm({
+      title: 'تأكيد الحذف',
+      message: `هل تريد حذف العنصر "${item.label}"؟`,
+      type: 'danger',
+    });
     if (!confirmed) return;
     try {
       await this.api.deleteSidebarItem(item.id);
@@ -436,40 +465,98 @@ export class SidebarSettingsComponent extends BasePageComponent {
   }
 
   getItemsBySection(sectionId: number): SidebarItem[] {
-    return this.allItems().filter(i => i.sectionId === sectionId);
+    return this.allItems().filter((i) => i.sectionId === sectionId);
   }
 
   getSectionNameById(id: number): string {
-    return this.sections().find(s => s.id === id)?.name || '';
+    return this.sections().find((s) => s.id === id)?.name || '';
   }
 
   getRoleLabel(role: string): string {
     switch (role) {
-      case 'admin': return 'مدير النظام';
-      case 'accountant': return 'محاسب';
-      case 'manager': return 'مدير محطة';
-      case 'viewer': return 'مشاهد';
-      default: return 'مستخدم';
+      case 'admin':
+        return 'مدير النظام';
+      case 'accountant':
+        return 'محاسب';
+      case 'manager':
+        return 'مدير محطة';
+      case 'viewer':
+        return 'مشاهد';
+      default:
+        return 'مستخدم';
     }
   }
 
   getRoleIcon(role: string): string {
     switch (role) {
-      case 'admin': return 'admin_panel_settings';
-      case 'accountant': return 'calculate';
-      case 'manager': return 'manage_accounts';
-      case 'viewer': return 'visibility';
-      default: return 'person';
+      case 'admin':
+        return 'admin_panel_settings';
+      case 'accountant':
+        return 'calculate';
+      case 'manager':
+        return 'manage_accounts';
+      case 'viewer':
+        return 'visibility';
+      default:
+        return 'person';
     }
   }
 
   // Common icons list for selection
   commonIcons = [
-    'dashboard', 'bolt', 'receipt_long', 'receipt', 'account_balance_wallet',
-    'category', 'savings', 'menu_book', 'currency_exchange', 'groups',
-    'handshake', 'warehouse', 'local_shipping', 'balance', 'assessment',
-    'warning', 'tune', 'settings', 'home', 'folder', 'circle',
-    'payments', 'people', 'summarize', 'arrow_forward',
+    'dashboard',
+    'bolt',
+    'receipt_long',
+    'receipt',
+    'account_balance_wallet',
+    'category',
+    'savings',
+    'menu_book',
+    'currency_exchange',
+    'groups',
+    'handshake',
+    'warehouse',
+    'local_shipping',
+    'balance',
+    'assessment',
+    'warning',
+    'tune',
+    'settings',
+    'home',
+    'folder',
+    'circle',
+    'payments',
+    'people',
+    'summarize',
+    'arrow_forward',
+    'inventory_2',
+    'analytics',
+    'space_dashboard',
+    'dashboard_customize',
+    'admin_panel_settings',
+    'account_balance',
+    'wallet',
+    'folder_open',
+    'label',
+  ];
+
+  commonColors = [
+    { value: '#6366f1', label: 'بنفسجي' },
+    { value: '#3b82f6', label: 'أزرق' },
+    { value: '#06b6d4', label: 'سماوي' },
+    { value: '#10b981', label: 'أخضر' },
+    { value: '#22c55e', label: 'أخضر فاتح' },
+    { value: '#f59e0b', label: 'ذهبي' },
+    { value: '#f97316', label: 'برتقالي' },
+    { value: '#ef4444', label: 'أحمر' },
+    { value: '#ec4899', label: 'وردي' },
+    { value: '#8b5cf6', label: 'بنفسجي فاتح' },
+    { value: '#a855f7', label: 'أرجواني' },
+    { value: '#14b8a6', label: 'فيروزي' },
+    { value: '#64748b', label: 'رمادي' },
+    { value: '#0ea5e9', label: 'أزرق فاتح' },
+    { value: '#d946ef', label: 'فوشيا' },
+    { value: '#84cc16', label: 'ليموني' },
   ];
 
   // ==================== Copy Config ====================
@@ -483,12 +570,15 @@ export class SidebarSettingsComponent extends BasePageComponent {
     const from = this.copyFromUserId();
     const to = this.copyToUserId();
     if (!from || !to) return;
-    if (from === to) { this.showMessage('لا يمكن النسخ لنفس المستخدم', 'error'); return; }
+    if (from === to) {
+      this.showMessage('لا يمكن النسخ لنفس المستخدم', 'error');
+      return;
+    }
 
     const confirmed = await this.toast.confirm({
       title: 'تأكيد النسخ',
       message: 'سيتم استبدال إعدادات المستخدم المستهدف بالكامل. هل تريد المتابعة؟',
-      type: 'warning'
+      type: 'warning',
     });
     if (!confirmed) return;
 
@@ -509,11 +599,11 @@ export class SidebarSettingsComponent extends BasePageComponent {
 
   // ==================== Reset Config ====================
   async resetConfig(userId: number) {
-    const user = this.users().find(u => u.id === userId);
+    const user = this.users().find((u) => u.id === userId);
     const confirmed = await this.toast.confirm({
       title: 'إعادة تعيين',
       message: `هل تريد إعادة تعيين إعدادات التبويب لـ "${user?.fullName || user?.username}"؟ سيتم إظهار جميع العناصر بالترتيب الافتراضي.`,
-      type: 'warning'
+      type: 'warning',
     });
     if (!confirmed) return;
 
@@ -535,7 +625,9 @@ export class SidebarSettingsComponent extends BasePageComponent {
     let items = this.getItemsForSection(sectionName);
     const q = this.searchQuery().toLowerCase().trim();
     if (q) {
-      items = items.filter(c => c.label.toLowerCase().includes(q) || c.screenKey.toLowerCase().includes(q));
+      items = items.filter(
+        (c) => c.label.toLowerCase().includes(q) || c.screenKey.toLowerCase().includes(q),
+      );
     }
     return items;
   }
@@ -544,22 +636,22 @@ export class SidebarSettingsComponent extends BasePageComponent {
     const filter = this.filterSection();
     let names = this.getSectionNames();
     if (filter !== 'all') {
-      names = names.filter(n => n === filter);
+      names = names.filter((n) => n === filter);
     }
     // إذا كان هناك بحث، أظهر فقط الأقسام التي فيها نتائج
     const q = this.searchQuery().toLowerCase().trim();
     if (q) {
-      names = names.filter(n => this.getFilteredItemsForSection(n).length > 0);
+      names = names.filter((n) => this.getFilteredItemsForSection(n).length > 0);
     }
     return names;
   }
 
   getVisibleCount(): number {
-    return this.userConfigs().filter(c => c.isVisible).length;
+    return this.userConfigs().filter((c) => c.isVisible).length;
   }
 
   getHiddenCount(): number {
-    return this.userConfigs().filter(c => !c.isVisible).length;
+    return this.userConfigs().filter((c) => !c.isVisible).length;
   }
 
   private showMessage(text: string, type: 'success' | 'error') {
