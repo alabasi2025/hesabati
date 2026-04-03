@@ -137,10 +137,10 @@ export class CollectionsComponent extends BasePageComponent {
     if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
 
     const total = entries.reduce((s, e) => s + Number.parseFloat(e.amount), 0);
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('en')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد التحصيل - ${this.selectedCollectionOT()?.name || ''}`,
-      message: `سيتم إنشاء سند قبض واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      message: `سيتم إنشاء سند قبض واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('en')}:\n${summaryLines}`,
       type: 'info',
     });
     if (!confirmed) return;
@@ -160,7 +160,7 @@ export class CollectionsComponent extends BasePageComponent {
           notes: e.notes || null,
         })),
       });
-      this.success.set(`تم إنشاء سند قبض متعدد بنجاح - إجمالي: ${total.toLocaleString('ar-SA')} (رقم: ${result.voucherNumber || '—'})`);
+      this.success.set(`تم إنشاء سند قبض متعدد بنجاح - إجمالي: ${total.toLocaleString('en')} (رقم: ${result.voucherNumber || '—'})`);
       setTimeout(() => this.success.set(''), 5000);
       this.selectedCollectionOT.set(null);
       this.collectionEntries.set([]);
@@ -200,10 +200,10 @@ export class CollectionsComponent extends BasePageComponent {
     if (!entries.length) { this.showError('أدخل مبلغاً واحداً على الأقل'); return; }
 
     const total = entries.reduce((s, e) => s + Number.parseFloat(e.amount), 0);
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('en')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد التوريد - ${this.selectedDeliveryOT()?.name || ''}`,
-      message: `سيتم إنشاء سند صرف واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+      message: `سيتم إنشاء سند صرف واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('en')}:\n${summaryLines}`,
       type: 'danger',
     });
     if (!confirmed) return;
@@ -224,7 +224,7 @@ export class CollectionsComponent extends BasePageComponent {
           notes: e.notes || null,
         })),
       });
-      this.success.set(`تم إنشاء سند صرف متعدد بنجاح - إجمالي: ${total.toLocaleString('ar-SA')} (رقم: ${result.voucherNumber || '—'})`);
+      this.success.set(`تم إنشاء سند صرف متعدد بنجاح - إجمالي: ${total.toLocaleString('en')} (رقم: ${result.voucherNumber || '—'})`);
       setTimeout(() => this.success.set(''), 5000);
       this.selectedDeliveryOT.set(null);
       this.deliveryEntries.set([]);

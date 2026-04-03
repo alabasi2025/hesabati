@@ -10,48 +10,48 @@
 // § 1. Number & Amount Formatting
 // ═══════════════════════════════════════════════════════════════
 
-/** Format amount with Arabic-Yemen locale (default) */
-export function formatAmount(amount: unknown, locale: string = 'ar-YE'): string {
+/** Format amount with Latin numerals */
+export function formatAmount(amount: unknown, locale: string = 'en-US'): string {
   if (amount === null || amount === undefined) return '—';
   const n = typeof amount === 'string' ? Number.parseFloat(amount) : Number(amount);
   if (Number.isNaN(n)) return '—';
-  return n.toLocaleString(locale);
+  return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 /** Format amount with fraction control */
-export function formatAmountPrecise(amount: string | number, minFractions = 0, maxFractions = 2, locale = 'ar-SA'): string {
+export function formatAmountPrecise(amount: string | number, minFractions = 0, maxFractions = 2, locale = 'en-US'): string {
   const n = typeof amount === 'string' ? Number.parseFloat(amount) : amount;
   if (Number.isNaN(n)) return '0';
-  return n.toLocaleString(locale, { minimumFractionDigits: minFractions, maximumFractionDigits: maxFractions });
+  return n.toLocaleString('en-US', { minimumFractionDigits: minFractions, maximumFractionDigits: maxFractions });
 }
 
 /** Format number with compact notation for large numbers */
 export function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-  return n.toLocaleString('ar-SA');
+  return n.toLocaleString('en-US');
 }
 
 // ═══════════════════════════════════════════════════════════════
 // § 2. Date Formatting
 // ═══════════════════════════════════════════════════════════════
 
-/** Format date with full options (year, month short, day) */
-export function formatDate(d: string, locale: string = 'ar-YE'): string {
+/** Format date — Arabic month names, Latin digits, Gregorian calendar */
+export function formatDate(d: string, locale: string = 'ar-u-nu-latn-ca-gregory'): string {
   if (!d) return '';
-  return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('ar-u-nu-latn-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-/** Format date simple (no options) */
-export function formatDateSimple(d: string, locale: string = 'ar-YE'): string {
+/** Format date simple */
+export function formatDateSimple(d: string, locale: string = 'ar-u-nu-latn-ca-gregory'): string {
   if (!d) return '';
-  return new Date(d).toLocaleDateString(locale);
+  return new Date(d).toLocaleDateString('ar-u-nu-latn-ca-gregory');
 }
 
 /** Format date with time */
-export function formatDateTime(d: string, locale: string = 'ar-YE'): string {
+export function formatDateTime(d: string, locale: string = 'ar-u-nu-latn-ca-gregory'): string {
   if (!d) return '';
-  return new Date(d).toLocaleString(locale, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(d).toLocaleString('ar-u-nu-latn-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Get today's date as ISO string (YYYY-MM-DD) */

@@ -335,11 +335,19 @@ async function resetSidebar() {
       },
       {
         sectionId: sec4.id,
+        screenKey: "register_operation",
+        label: "تسجيل عملية",
+        icon: "add_circle",
+        route: "/biz/{bizId}/register-operation",
+        sortOrder: 2,
+      },
+      {
+        sectionId: sec4.id,
         screenKey: "journal",
         label: "القيود المحاسبية",
         icon: "menu_book",
         route: "/biz/{bizId}/journal",
-        sortOrder: 2,
+        sortOrder: 3,
       },
       {
         sectionId: sec4.id,
@@ -347,7 +355,15 @@ async function resetSidebar() {
         label: "تصنيفات القيود",
         icon: "label",
         route: "/biz/{bizId}/journal-categories",
-        sortOrder: 3,
+        sortOrder: 4,
+      },
+      {
+        sectionId: sec4.id,
+        screenKey: "attachments_archive",
+        label: "الأرشفة الإلكترونية",
+        icon: "folder_open",
+        route: "/biz/{bizId}/attachments-archive",
+        sortOrder: 5,
       },
     ]);
 
@@ -372,7 +388,7 @@ async function resetSidebar() {
       {
         sectionId: sec5.id,
         screenKey: "inventory_item_types",
-        label: "أنواع الأصناف",
+        label: "الأصناف المخزنية",
         icon: "inventory_2",
         route: "/biz/{bizId}/inventory-item-types",
         sortOrder: 3,
@@ -423,19 +439,33 @@ async function resetSidebar() {
       },
     ]);
 
-    // --- الوحدة 7: الموردين ---
-    await db
-      .insert(schema.sidebarItems)
-      .values([
-        {
-          sectionId: sec7.id,
-          screenKey: "suppliers",
-          label: "الموردين",
-          icon: "local_shipping",
-          route: "/biz/{bizId}/suppliers",
-          sortOrder: 1,
-        },
-      ]);
+    // --- الوحدة 7: الموردين والمشتريات ---
+    await db.insert(schema.sidebarItems).values([
+      {
+        sectionId: sec7.id,
+        screenKey: "suppliers",
+        label: "الموردين",
+        icon: "local_shipping",
+        route: "/biz/{bizId}/suppliers",
+        sortOrder: 1,
+      },
+      {
+        sectionId: sec7.id,
+        screenKey: "supplier_types",
+        label: "تصنيفات الموردين",
+        icon: "label",
+        route: "/biz/{bizId}/supplier-types",
+        sortOrder: 2,
+      },
+      {
+        sectionId: sec7.id,
+        screenKey: "purchase_invoices",
+        label: "فواتير المشتريات",
+        icon: "receipt",
+        route: "/biz/{bizId}/purchase-invoices",
+        sortOrder: 3,
+      },
+    ]);
 
     // --- الوحدة 8: المطابقات والعهد ---
     const reconciliationAndCustodyItems: any[] = [
@@ -478,6 +508,14 @@ async function resetSidebar() {
         route: "/biz/{bizId}/reports-advanced",
         sortOrder: 2,
       },
+      {
+        sectionId: sec9.id,
+        screenKey: "fiscal_periods",
+        label: "الفترات المالية",
+        icon: "date_range",
+        route: "/biz/{bizId}/fiscal-periods",
+        sortOrder: 3,
+      },
     ]);
 
     // --- الوحدة 10: بناء الواجهات ---
@@ -518,24 +556,50 @@ async function resetSidebar() {
     const pendingItems: any[] = [
       {
         sectionId: sec12.id,
+        screenKey: "reconciliations",
+        label: "المطابقات",
+        icon: "fact_check",
+        route: "/biz/{bizId}/reconciliations",
+        sortOrder: 1,
+      },
+      {
+        sectionId: sec12.id,
+        screenKey: "intermediary_accounts",
+        label: "الحسابات الوسيطة",
+        icon: "sync_alt",
+        route: "/biz/{bizId}/intermediary-accounts",
+        sortOrder: 2,
+      },
+      {
+        sectionId: sec12.id,
         screenKey: "settlements",
         label: "التصفيات",
         icon: "balance",
         route: "/biz/{bizId}/settlements",
-        sortOrder: 1,
+        sortOrder: 3,
       },
     ];
     if (bizType === "stations") {
-      pendingItems.push({
-        sectionId: sec12.id,
-        screenKey: "pending_accounts",
-        label: "حسابات معلقة",
-        icon: "warning",
-        route: "/biz/{bizId}/pending",
-        badge: 3,
-        badgeColor: "red",
-        sortOrder: 2,
-      });
+      pendingItems.push(
+        {
+          sectionId: sec12.id,
+          screenKey: "custody",
+          label: "العهد",
+          icon: "lock",
+          route: "/biz/{bizId}/custody",
+          sortOrder: 4,
+        },
+        {
+          sectionId: sec12.id,
+          screenKey: "pending_accounts",
+          label: "حسابات معلقة",
+          icon: "warning",
+          route: "/biz/{bizId}/pending",
+          badge: 3,
+          badgeColor: "red",
+          sortOrder: 5,
+        },
+      );
     }
     await db.insert(schema.sidebarItems).values(pendingItems);
 

@@ -10,6 +10,9 @@
       </div>
     </div>
     <div class="jrn-header-actions">
+      <button class="jrn-btn ghost" (click)="openTypesPanel()">
+        <span class="material-icons-round">label</span> أنواع القيود
+      </button>
       <button class="jrn-btn primary" (click)="openNew()">
         <span class="material-icons-round">add</span> قيد جديد
       </button>
@@ -32,18 +35,141 @@
     </div>
   </div>
 
+  <!-- ===== لوحة أنواع القيود ===== -->
+  @if (showTypesPanel()) {
+    <div class="types-overlay" (click)="closeTypesPanel()"></div>
+    <div class="types-panel">
+      <div class="types-panel-head">
+        <div class="tp-title"><span class="material-icons-round">label</span> أنواع القيود</div>
+        <div style="display:flex;gap:8px">
+          <button class="jrn-btn secondary" (click)="openAddCat()">
+            <span class="material-icons-round">add</span> إضافة
+          </button>
+          <button class="jrn-btn ghost" (click)="closeTypesPanel()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- نموذج الإضافة/التعديل -->
+      @if (showCatForm()) {
+        <div class="cat-form">
+          <div class="cat-form-row">
+            <div class="cat-field flex2">
+              <label>اسم النوع <span class="req">*</span></label>
+              <input type="text" placeholder="مثال: قيد يومية" [ngModel]="catForm().name"
+                     (ngModelChange)="catForm.update(f => ({...f, name: $event}))" />
+            </div>
+            <div class="cat-field">
+              <label>المفتاح <span class="req">*</span></label>
+              <input type="text" placeholder="daily_journal" [ngModel]="catForm().categoryKey"
+                     (ngModelChange)="catForm.update(f => ({...f, categoryKey: $event}))" />
+            </div>
+          </div>
+          <div class="cat-form-row">
+            <div class="cat-field flex2">
+              <label>الوصف</label>
+              <input type="text" placeholder="وصف اختياري" [ngModel]="catForm().description"
+                     (ngModelChange)="catForm.update(f => ({...f, description: $event}))" />
+            </div>
+            <div class="cat-field">
+              <label>اللون</label>
+              <input type="color" [ngModel]="catForm().color"
+                     (ngModelChange)="catForm.update(f => ({...f, color: $event}))" />
+            </div>
+          </div>
+          <div class="cat-icons-row">
+            <label>الأيقونة</label>
+            <div class="cat-icons">
+              @for (ic of catIcons; track ic) {
+                <button class="cat-icon-btn" [class.selected]="catForm().icon === ic"
+                        (click)="catForm.update(f => ({...f, icon: ic}))" [title]="ic">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="cat-form-actions">
+            <button class="jrn-btn ghost" (click)="showCatForm.set(false)">إلغاء</button>
+            <button class="jrn-btn primary" [disabled]="savingCat()" (click)="saveCat()">
+              <span class="material-icons-round">save</span>
+              {{ editingCatId() ? 'تعديل' : 'إضافة' }}
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- قائمة الأنواع -->
+      <div class="cat-list">
+        @if (categories().length === 0) {
+          <div class="cat-empty">
+            <span class="material-icons-round">label_off</span>
+            <p>لا توجد أنواع بعد — اضغط إضافة</p>
+          </div>
+        }
+        @for (c of categories(); track c.id) {
+          <div class="cat-item">
+            <div class="cat-icon" [style.background]="c.color || '#6366f1'">
+              <span class="material-icons-round">{{ c.icon || 'menu_book' }}</span>
+            </div>
+            <div class="cat-info">
+              <div class="cat-name">{{ c.name }}</div>
+              <div class="cat-key">{{ c.categoryKey }}</div>
+              @if (c.description) { <div class="cat-desc">{{ c.description }}</div> }
+            </div>
+            <div class="cat-actions">
+              <button class="icon-btn" (click)="openEditCat(c)" title="تعديل">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="icon-btn danger" (click)="removeCat(c)" title="حذف">
+                <span class="material-icons-round">delete</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
   @if (loading()) { <app-loading-state message="جاري التحميل..." /> }
   @if (!loading() && error() && !showForm()) {
     <div class="jrn-error"><span class="material-icons-round">error</span> {{ error() }}</div>
   }
 
+  <!-- ===== Tabs ===== -->
+  @if (!loading() && !showForm()) {
+    <div class="jrn-tabs">
+      <button class="jrn-tab" [class.active]="activeTab() === 'all'" (click)="activeTab.set('all')">
+        <span class="material-icons-round">menu_book</span>
+        الكل
+        <span class="tab-count">{{ entries().length }}</span>
+      </button>
+      @for (c of categories(); track c.id) {
+        <button class="jrn-tab" [class.active]="activeTab() === c.categoryKey"
+                (click)="activeTab.set(c.categoryKey)"
+                [style.--tab-color]="c.color || '#8b5cf6'">
+          <span class="material-icons-round">{{ c.icon || 'label' }}</span>
+          {{ c.name }}
+          <span class="tab-count">{{ entries().filter(e => e.category === c.categoryKey).length }}</span>
+        </button>
+      }
+      @if (entries().filter(e => !e.category).length > 0) {
+        <button class="jrn-tab" [class.active]="activeTab() === 'other'" (click)="activeTab.set('other')">
+          <span class="material-icons-round">help_outline</span>
+          غير مصنف
+          <span class="tab-count">{{ entries().filter(e => !e.category).length }}</span>
+        </button>
+      }
+    </div>
+  }
+
   <!-- ===== Entries List ===== -->
   @if (!loading() && !showForm()) {
-    @if (entries().length === 0) {
-      <app-empty-state icon="menu_book" message="لا توجد قيود محاسبية" sub="اضغط قيد جديد لإنشاء أول قيد" />
+    @if (filteredEntries().length === 0) {
+      <app-empty-state icon="menu_book" message="لا توجد قيود في هذا التصنيف" sub="اختر تبويباً آخر أو أضف قيداً جديداً" />
     } @else {
       <div class="jrn-list">
-        @for (e of entries(); track e.id) {
+        @for (e of filteredEntries(); track e.id) {
           <div class="jrn-card" [class.expanded]="expandedId() === e.id">
             <div class="jrn-card-head" (click)="toggleExpand(e.id)">
               <div class="jrn-card-num">
@@ -73,8 +199,11 @@
                 }
               </div>
               <div class="jrn-card-actions" (click)="$event.stopPropagation()">
-                <button class="icon-btn danger" (click)="deleteEntry(e.id)" title="حذف">
-                  <span class="material-icons-round">delete</span>
+                <button class="icon-btn print-btn" (click)="printEntry(e)" title="طباعة">
+                  <span class="material-icons-round">print</span>
+                </button>
+                <button class="icon-btn edit-btn" (click)="openEdit(e)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
                 </button>
                 <span class="material-icons-round expand-icon">{{ expandedId() === e.id ? 'expand_less' : 'expand_more' }}</span>
               </div>
@@ -136,7 +265,7 @@
       <div class="jrn-form-meta">
         <div class="jfm-group">
           <label>التاريخ <span class="req">*</span></label>
-          <input type="date" [ngModel]="formHeader().date" (ngModelChange)="formHeader.update(h => ({...h, date: $event}))" />
+          <input type="date" [ngModel]="formHeader().date" (ngModelChange)="onDateChange($event)" />
         </div>
         <div class="jfm-group flex2">
           <label>البيان العام <span class="req">*</span></label>
@@ -147,12 +276,38 @@
           <input type="text" placeholder="اختياري" [ngModel]="formHeader().reference" (ngModelChange)="formHeader.update(h => ({...h, reference: $event}))" />
         </div>
         <div class="jfm-group flex2">
-          <label>القالب / نوع العملية <span class="req">*</span></label>
-          <select [ngModel]="formHeader().operationTypeId" (ngModelChange)="formHeader.update(h => ({...h, operationTypeId: +$event || null}))">
-            <option [ngValue]="null">— اختر —</option>
+          <label>القالب / نوع العملية</label>
+          <select [ngModel]="formHeader().operationTypeId" (ngModelChange)="onOperationTypeChange(+$event || null)">
+            <option [ngValue]="null">— اختياري —</option>
             @for (ot of journalOpTypes(); track ot.id) { <option [ngValue]="ot.id">{{ ot.name }}</option> }
           </select>
         </div>
+
+        <!-- نوع القيد + الرقم التسلسلي -->
+        <div class="jfm-group flex2">
+          <label>نوع القيد</label>
+          <select [ngModel]="formHeader().categoryKey" (ngModelChange)="onCategoryChange($event)">
+            <option value="">— بدون تصنيف —</option>
+            @for (c of categories(); track c.id) {
+              <option [ngValue]="c.categoryKey">
+                {{ c.name }}
+              </option>
+            }
+          </select>
+        </div>
+        @if (formHeader().categoryKey) {
+          <div class="jfm-group seq-preview">
+            <label>الرقم التسلسلي المتوقع</label>
+            <div class="seq-badge">
+              @if (loadingPreview()) {
+                <span class="material-icons-round rotating" style="font-size:16px;color:#8b5cf6">sync</span>
+              } @else {
+                <span class="material-icons-round" style="font-size:15px;color:#8b5cf6">tag</span>
+                <span class="seq-num">{{ previewNumber() || '—' }}</span>
+              }
+            </div>
+          </div>
+        }
       </div>
 
       <!-- جدول السطور -->
@@ -163,8 +318,8 @@
               <tr>
                 <th class="th-idx">#</th>
                 <th class="th-type">النوع</th>
-                <th class="th-account">الحساب الفرعي <span class="req">*</span></th>
                 <th class="th-etype">نوع الكيان</th>
+                <th class="th-account">الحساب الفرعي <span class="req">*</span></th>
                 <th class="th-entity">الحساب التحليلي</th>
                 <th class="th-desc">البيان</th>
                 <th class="th-cur">العملة</th>
@@ -187,24 +342,30 @@
                       <button [class.active-credit]="line.lineType === 'credit'" (click)="updateLine(i,'lineType','credit')" title="دائن">د</button>
                     </div>
                   </td>
-                  <td class="td-account">
-                    <select [ngModel]="line.accountId" (ngModelChange)="updateLine(i,'accountId',+$event||null)">
-                      <option [ngValue]="null">— اختر الحساب —</option>
-                      @for (a of accounts(); track a.id) {
-                        <option [ngValue]="a.id">{{ a.code ? a.code + ' - ' : '' }}{{ a.name }}</option>
-                      }
-                    </select>
-                  </td>
+
+                  <!-- 1: نوع الكيان أولاً -->
                   <td class="td-etype">
                     <select [ngModel]="line.entityType" (ngModelChange)="updateLine(i,'entityType',$event)">
                       @for (et of entityTypes; track et.key) { <option [ngValue]="et.key">{{ et.label }}</option> }
                     </select>
                   </td>
+
+                  <!-- 2: الحساب الفرعي مفلتر حسب نوع الكيان -->
+                  <td class="td-account">
+                    <select [ngModel]="line.accountId" (ngModelChange)="updateLine(i,'accountId',+$event||null)">
+                      <option [ngValue]="null">— اختر الحساب —</option>
+                      @for (a of getAccountsForEntityType(line.entityType); track a.id) {
+                        <option [ngValue]="a.id">{{ a.code ? a.code + ' - ' : '' }}{{ a.name }}</option>
+                      }
+                    </select>
+                  </td>
+
+                  <!-- 3: الحساب التحليلي مفلتر حسب الحساب الفرعي -->
                   <td class="td-entity">
                     @if (line.entityType) {
                       <select [ngModel]="line.entityId" (ngModelChange)="updateLine(i,'entityId',+$event||null)">
                         <option [ngValue]="null">— اختر —</option>
-                        @for (en of getEntityList(line.entityType); track en.id) {
+                        @for (en of getEntityList(line.entityType, line.accountId); track en.id) {
                           <option [ngValue]="en.id">{{ en.name || en.fullName || en.fundName }}</option>
                         }
                       </select>

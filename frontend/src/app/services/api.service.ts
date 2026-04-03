@@ -465,6 +465,9 @@ export class ApiService {
   getJournalEntries(bizId: number) {
     return this.vou.getJournalEntries(bizId);
   }
+  getJournalEntryPreviewNumber(bizId: number, categoryKey: string, operationTypeId?: number, year?: number) {
+    return this.vou.getJournalEntryPreviewNumber(bizId, categoryKey, operationTypeId, year);
+  }
   createJournalEntry(bizId: number, d: any) {
     return this.vou.createJournalEntry(bizId, d);
   }
@@ -586,6 +589,15 @@ export class ApiService {
   }
   getInventoryItems(bizId: number) {
     return this.inv.getInventoryItems(bizId);
+  }
+  createInventoryItem(bizId: number, d: any) {
+    return this.inv.createInventoryItem(bizId, d);
+  }
+  updateInventoryItem(id: number, d: any) {
+    return this.inv.updateInventoryItem(id, d);
+  }
+  deleteInventoryItem(id: number) {
+    return this.inv.deleteInventoryItem(id);
   }
   getInventoryItemTypes(bizId: number) {
     return this.inv.getInventoryItemTypes(bizId);

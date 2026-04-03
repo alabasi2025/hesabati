@@ -37,6 +37,6 @@ export class IntermediaryAccountsComponent extends BasePageComponent {
 
   getBalanceDisplay(acc: any): string {
     if (!acc.balances || acc.balances.length === 0) return '0';
-    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString('en')} ${b.currencySymbol || ''}`).join(' | ');
   }
 }

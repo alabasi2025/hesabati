@@ -2,7 +2,8 @@
  * مسارات محرك المخزون (قراءة أرصدة، تنبيهات، تقييم، حركات) — فصل عن api.rest
  */
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { getNextSequence } from '../../middleware/sequencing.ts';
 import { db } from '../../db/index.ts';
 import { inventoryItems } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
@@ -73,6 +74,65 @@ inventoryRoutes.post('/businesses/:bizId/stock-movements', bizAuthMiddleware(), 
     createdBy: userId,
   });
   return c.json(result, 201);
+}));
+
+// ===================== CRUD الأصناف =====================
+
+inventoryRoutes.post('/businesses/:bizId/inventory-items', bizAuthMiddleware(), safeHandler('إضافة صنف', async (c) => {
+  const bizId = getBizId(c);
+  const body = await getBody(c) as { name?: string; itemNumber?: string; category?: string; itemTypeId?: number; unit?: string; minQuantity?: number; notes?: string; isActive?: boolean };
+
+  if (!body.name?.trim()) return c.json({ error: 'اسم الصنف مطلوب' }, 400);
+  const itemNum = (body.itemNumber || body.category || '').toString().trim();
+  if (!itemNum) return c.json({ error: 'رقم الصنف مطلوب' }, 400);
+
+  // توليد رقم الكود تلقائياً
+  const seq = await getNextSequence(bizId, 'inventory_item', 0, 0);
+  const autoCode = `ITM-${String(seq).padStart(4, '0')}`;
+
+  const [created] = await db.insert(inventoryItems).values({
+    businessId: bizId,
+    name: body.name.trim(),
+    code: autoCode,
+    category: itemNum,           // رقم الصنف اليدوي
+    itemTypeId: body.itemTypeId || null,
+    unit: body.unit || null,
+    minQuantity: body.minQuantity ? String(body.minQuantity) : null,
+    notes: body.notes || null,
+    isActive: body.isActive !== false,
+    sequenceNumber: seq,
+  }).returning();
+  return c.json(created, 201);
+}));
+
+inventoryRoutes.put('/inventory-items/:id', bizAuthMiddleware(), safeHandler('تعديل صنف', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف الصنف غير صالح' }, 400);
+
+  const body = await getBody(c) as { name?: string; itemNumber?: string; category?: string; itemTypeId?: number; unit?: string; minQuantity?: number; notes?: string; isActive?: boolean };
+  if (!body.name?.trim()) return c.json({ error: 'اسم الصنف مطلوب' }, 400);
+  const itemNum = (body.itemNumber || body.category || '').toString().trim();
+  if (!itemNum) return c.json({ error: 'رقم الصنف مطلوب' }, 400);
+
+  const [updated] = await db.update(inventoryItems).set({
+    name: body.name.trim(),
+    category: itemNum,           // رقم الصنف اليدوي — الكود لا يتغير
+    itemTypeId: body.itemTypeId ?? null,
+    unit: body.unit ?? null,
+    minQuantity: body.minQuantity != null ? String(body.minQuantity) : null,
+    notes: body.notes ?? null,
+    isActive: body.isActive !== false,
+  }).where(eq(inventoryItems.id, id)).returning();
+
+  if (!updated) return c.json({ error: 'الصنف غير موجود' }, 404);
+  return c.json(updated);
+}));
+
+inventoryRoutes.delete('/inventory-items/:id', bizAuthMiddleware(), safeHandler('حذف صنف', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف الصنف غير صالح' }, 400);
+  await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+  return c.json({ success: true });
 }));
 
 export default inventoryRoutes;

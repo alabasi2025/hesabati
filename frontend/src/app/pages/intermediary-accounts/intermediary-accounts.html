@@ -21,9 +21,9 @@
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
   } @else if (!accounts().length) {
     <div class="empty-state">
-      <span class="material-icons-round">task_alt</span>
-      <p>لا توجد عمليات قيد الانتظار</p>
-      <small>جميع العمليات تم استكمالها</small>
+      <span class="material-icons-round">account_balance</span>
+      <p>لا توجد حسابات وسيطة</p>
+      <small>لم يتم إنشاء حسابات وسيطة بعد</small>
     </div>
   } @else {
     <div class="accounts-grid">
@@ -40,10 +40,10 @@
           </div>
 
           <div class="card-body">
-            @if (acc.balances?.length > 1) {
+            @if (acc.balances && acc.balances.length > 1) {
               <div class="card-currencies">
                 @for (b of acc.balances; track b.currencyId) {
-                  <span class="currency-mini-badge">{{ b.currencySymbol || b.currencyCode }} {{ b.balance | number:'1.0-2' }}</span>
+                  <span class="currency-mini-badge">{{ b.currencySymbol || b.currencyCode }} {{ getBalanceDisplay({balances: [b]}) }}</span>
                 }
               </div>
             } @else {
@@ -56,10 +56,10 @@
               </div>
             }
 
-            @if (acc.notes) {
+            @if (acc.description) {
               <div class="notes">
                 <span class="material-icons-round">notes</span>
-                <span>{{ acc.notes }}</span>
+                <span>{{ acc.description }}</span>
               </div>
             }
           </div>

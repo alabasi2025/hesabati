@@ -1,305 +1,353 @@
-<div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">receipt_long</span> فواتير المشتريات</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> فاتورة جديدة</button>
-  </div>
+<div class="pi-page" dir="rtl">
 
-  <div class="summary-row">
-    <div class="summary-card gray" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">
-      <span class="material-icons-round">receipt</span>
-      <div><span class="num">{{ statusCount('all') }}</span><span class="lbl">الكل</span></div>
-    </div>
-    <div class="summary-card blue" [class.active]="filterStatus() === 'confirmed'" (click)="filterStatus.set('confirmed')">
-      <span class="material-icons-round">verified</span>
-      <div><span class="num">{{ statusCount('confirmed') }}</span><span class="lbl">مؤكدة</span></div>
-    </div>
-    <div class="summary-card amber" [class.active]="filterStatus() === 'draft'" (click)="filterStatus.set('draft')">
-      <span class="material-icons-round">edit_note</span>
-      <div><span class="num">{{ statusCount('draft') }}</span><span class="lbl">مسودة</span></div>
-    </div>
-    <div class="summary-card green" [class.active]="filterStatus() === 'completed'" (click)="filterStatus.set('completed')">
-      <span class="material-icons-round">check_circle</span>
-      <div><span class="num">{{ statusCount('completed') }}</span><span class="lbl">مكتملة</span></div>
-    </div>
-  </div>
-
-  <div class="toolbar">
-    <div class="search-box">
-      <span class="material-icons-round">search</span>
-      <input type="text" placeholder="بحث برقم الفاتورة أو المورد..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
-    </div>
-  </div>
-
-  @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!filteredInvoices().length) {
-    <div class="empty-state"><span class="material-icons-round">receipt_long</span><p>لا توجد فواتير</p></div>
-  } @else {
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>رقم الفاتورة</th>
-          <th>المورد</th>
-          <th>التاريخ</th>
-          <th>الإجمالي</th>
-          <th>المدفوع</th>
-          <th>المتبقي</th>
-          <th>الحالة</th>
-          <th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (inv of filteredInvoices(); track inv.id; let i = $index) {
-          <tr>
-            <td>{{ i + 1 }}</td>
-            <td>
-              <div class="invoice-num" (click)="viewDetails(inv)">
-                <span class="material-icons-round">receipt</span>
-                {{ inv.fullSequenceNumber || inv.invoiceNumber }}
-              </div>
-            </td>
-            <td>{{ inv.supplierName || '-' }}</td>
-            <td>{{ inv.invoiceDate | date:'yyyy-MM-dd' }}</td>
-            <td class="amount">{{ formatNumber(inv.totalAmount) }}</td>
-            <td class="amount paid">{{ formatNumber(inv.paidAmount) }}</td>
-            <td class="amount remaining">{{ formatNumber(inv.remainingAmount) }}</td>
-            <td><span class="status-badge {{ getStatusClass(inv.status) }}">{{ getStatusLabel(inv.status) }}</span></td>
-            <td>
-              <div class="action-btns">
-                @if (inv.status === 'draft') {
-                  <button class="action-btn confirm" title="تأكيد" (click)="confirm(inv)"><span class="material-icons-round">check</span></button>
-                  <button class="action-btn edit" title="تعديل" (click)="openEdit(inv)"><span class="material-icons-round">edit</span></button>
-                }
-                <button class="action-btn view" title="عرض" (click)="viewDetails(inv)"><span class="material-icons-round">visibility</span></button>
-                @if (inv.status !== 'completed') {
-                  <button class="action-btn delete" title="حذف" (click)="remove(inv)"><span class="material-icons-round">delete</span></button>
-                }
-              </div>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  }
-
-  <!-- نموذج الفاتورة -->
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card large" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon blue"><span class="material-icons-round">receipt_long</span></div>
-            <div><h2>{{ editingId() ? 'تعديل فاتورة' : 'فاتورة مشتريات جديدة' }}</h2><p>أدخل بيانات الفاتورة والأصناف</p></div>
-          </div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-section">
-            <h3>بيانات الفاتورة</h3>
-            <div class="form-row">
-              <div class="form-group">
-                <label>المورد *</label>
-                <select [(ngModel)]="form.supplierId">
-                  <option [ngValue]="null">اختر المورد</option>
-                  @for (s of suppliers(); track s.id) {
-                    <option [ngValue]="s.id">{{ s.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group">
-                <label>المستودع</label>
-                <select [(ngModel)]="form.warehouseId">
-                  <option [ngValue]="null">اختر المستودع</option>
-                  @for (w of warehouses(); track w.id) {
-                    <option [ngValue]="w.id">{{ w.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group">
-                <label>العملة</label>
-                <select [(ngModel)]="form.currencyId">
-                  @for (c of currencies(); track c.id) {
-                    <option [ngValue]="c.id">{{ c.name }} ({{ c.symbol }})</option>
-                  }
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>طريقة الدفع</label>
-                <select [(ngModel)]="form.paymentMethod">
-                  <option value="cash">نقداً</option>
-                  <option value="credit">آجل</option>
-                  <option value="partial">جزئي</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>تاريخ الفاتورة</label>
-                <input type="date" [(ngModel)]="form.invoiceDate" />
-              </div>
-              <div class="form-group">
-                <label>تاريخ الاستحقاق</label>
-                <input type="date" [(ngModel)]="form.dueDate" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>المرجع الخارجي</label>
-                <input type="text" [(ngModel)]="form.externalReference" placeholder="رقم فاتورة المورد" />
-              </div>
-              <div class="form-group">
-                <label>ملاحظات</label>
-                <input type="text" [(ngModel)]="form.notes" placeholder="ملاحظات إضافية" />
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3>أصناف الفاتورة</h3>
-            <div class="item-form">
-              <div class="form-row">
-                <div class="form-group flex-2">
-                  <label>الصنف</label>
-                  <select [(ngModel)]="newItem.inventoryItemId">
-                    <option [ngValue]="0">اختر الصنف</option>
-                    @for (item of inventoryItems(); track item.id) {
-                      <option [ngValue]="item.id">{{ item.name }} ({{ item.code }})</option>
-                    }
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>الكمية</label>
-                  <input type="number" [(ngModel)]="newItem.quantity" min="0.01" step="0.01" />
-                </div>
-                <div class="form-group">
-                  <label>سعر الوحدة</label>
-                  <input type="number" [(ngModel)]="newItem.unitCost" min="0" step="0.01" />
-                </div>
-                <div class="form-group">
-                  <label>الضريبة</label>
-                  <input type="number" [(ngModel)]="newItem.tax" min="0" step="0.01" />
-                </div>
-                <div class="form-group">
-                  <label>الخصم</label>
-                  <input type="number" [(ngModel)]="newItem.discount" min="0" step="0.01" />
-                </div>
-                <div class="form-group btn-group">
-                  <button class="btn-add-item" (click)="addItem()"><span class="material-icons-round">add</span></button>
-                </div>
-              </div>
-            </div>
-
-            @if (form.items.length) {
-              <table class="items-table">
-                <thead>
-                  <tr>
-                    <th>الصنف</th>
-                    <th>الكمية</th>
-                    <th>سعر الوحدة</th>
-                    <th>الإجمالي</th>
-                    <th>الضريبة</th>
-                    <th>الخصم</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of form.items; track $index; let idx = $index) {
-                    <tr>
-                      <td>{{ item.itemName }}</td>
-                      <td>{{ item.quantity }}</td>
-                      <td>{{ formatNumber(item.unitCost) }}</td>
-                      <td>{{ formatNumber(item.quantity * item.unitCost) }}</td>
-                      <td>{{ formatNumber(item.tax) }}</td>
-                      <td>{{ formatNumber(item.discount) }}</td>
-                      <td><button class="btn-remove-item" (click)="removeItem(idx)"><span class="material-icons-round">close</span></button></td>
-                    </tr>
-                  }
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="3" class="label">المجموع الفرعي</td>
-                    <td colspan="4">{{ formatNumber(formSubtotal()) }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3" class="label">إجمالي الضريبة</td>
-                    <td colspan="4">{{ formatNumber(formTax()) }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3" class="label">إجمالي الخصم</td>
-                    <td colspan="4">{{ formatNumber(formDiscount()) }}</td>
-                  </tr>
-                  <tr class="total-row">
-                    <td colspan="3" class="label">الإجمالي النهائي</td>
-                    <td colspan="4" class="total-value">{{ formatNumber(formTotal()) }}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            } @else {
-              <div class="empty-items"><span class="material-icons-round">inventory_2</span><p>لم تتم إضافة أصناف بعد</p></div>
-            }
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء الفاتورة' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        </div>
+  <!-- ===== Page Header ===== -->
+  <div class="pi-header">
+    <div class="pi-header-left">
+      <div class="pi-icon"><span class="material-icons-round">receipt_long</span></div>
+      <div>
+        <div class="pi-title">فواتير المشتريات</div>
+        <div class="pi-subtitle">إدارة فواتير الموردين · أصناف · خصم</div>
       </div>
     </div>
+    <div class="pi-header-actions">
+      <button class="pi-btn primary" (click)="openNew()">
+        <span class="material-icons-round">add</span> فاتورة جديدة
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Stats ===== -->
+  <div class="pi-stats">
+    @for (key of statusKeys; track key) {
+      <div class="pi-stat" [style.border-right-color]="statusMeta[key].color">
+        <span class="material-icons-round" [style.color]="statusMeta[key].color">{{ statusMeta[key].icon }}</span>
+        <div>
+          <div class="pi-stat-num">{{ statusCount(key) }}</div>
+          <div class="pi-stat-lbl">{{ statusMeta[key].label }}</div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (loading()) { <app-loading-state message="جاري التحميل..." /> }
+  @if (!loading() && error() && !showForm()) {
+    <div class="pi-error"><span class="material-icons-round">error</span> {{ error() }}</div>
   }
 
-  <!-- عرض التفاصيل -->
-  @if (showDetails() && selectedInvoice()) {
-    <div class="modal-overlay" (click)="showDetails.set(false)">
-      <div class="modal-card large" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green"><span class="material-icons-round">receipt_long</span></div>
-            <div>
-              <h2>فاتورة رقم {{ selectedInvoice()!.fullSequenceNumber || selectedInvoice()!.invoiceNumber }}</h2>
-              <p>تفاصيل الفاتورة</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="showDetails.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="details-grid">
-            <div class="detail-item"><span class="label">الرقم العام</span><span class="value seq-num">{{ selectedInvoice()!.fullSequenceNumber || selectedInvoice()!.invoiceNumber }}</span></div>
-            @if (selectedInvoice()!.supplierSequenceNumber) {
-              <div class="detail-item"><span class="label">رقم المورد</span><span class="value seq-num supplier">{{ selectedInvoice()!.supplierSequenceNumber }}</span></div>
-            }
-            <div class="detail-item"><span class="label">المورد</span><span class="value">{{ selectedInvoice()!.supplierName }}</span></div>
-            <div class="detail-item"><span class="label">الحالة</span><span class="value"><span class="status-badge {{ getStatusClass(selectedInvoice()!.status) }}">{{ getStatusLabel(selectedInvoice()!.status) }}</span></span></div>
-            <div class="detail-item"><span class="label">طريقة الدفع</span><span class="value">{{ getPaymentLabel(selectedInvoice()!.paymentMethod) }}</span></div>
-            <div class="detail-item"><span class="label">تاريخ الفاتورة</span><span class="value">{{ selectedInvoice()!.invoiceDate | date:'yyyy-MM-dd' }}</span></div>
-            <div class="detail-item"><span class="label">الإجمالي</span><span class="value amount">{{ formatNumber(selectedInvoice()!.totalAmount) }}</span></div>
-            <div class="detail-item"><span class="label">المدفوع</span><span class="value amount paid">{{ formatNumber(selectedInvoice()!.paidAmount) }}</span></div>
-            <div class="detail-item"><span class="label">المتبقي</span><span class="value amount remaining">{{ formatNumber(selectedInvoice()!.remainingAmount) }}</span></div>
-          </div>
+  <!-- ===== Tabs ===== -->
+  @if (!loading() && !showForm()) {
+    <div class="pi-tabs">
+      @for (key of statusKeys; track key) {
+        <button class="pi-tab" [class.active]="activeTab() === key"
+                (click)="activeTab.set(key)"
+                [style.--tab-color]="statusMeta[key].color">
+          <span class="material-icons-round">{{ statusMeta[key].icon }}</span>
+          {{ statusMeta[key].label }}
+          <span class="tab-count">{{ statusCount(key) }}</span>
+        </button>
+      }
+    </div>
+  }
 
-          @if (selectedInvoice()!.items?.length) {
-            <h3 class="section-title">الأصناف</h3>
-            <table class="items-table">
-              <thead>
-                <tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>
-              </thead>
-              <tbody>
-                @for (item of selectedInvoice()!.items; track $index) {
-                  <tr>
-                    <td>{{ item.itemName }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ formatNumber(item.unitCost) }}</td>
-                    <td>{{ formatNumber(item.totalCost || (item.quantity * item.unitCost)) }}</td>
-                  </tr>
+  <!-- ===== Invoices List ===== -->
+  @if (!loading() && !showForm()) {
+    @if (filteredInvoices().length === 0) {
+      <app-empty-state icon="receipt_long" message="لا توجد فواتير في هذا التصنيف" sub="اختر تبويباً آخر أو أنشئ فاتورة جديدة" />
+    } @else {
+      <div class="pi-list">
+        @for (inv of filteredInvoices(); track inv.id) {
+          <div class="pi-card" [class.expanded]="expandedId() === inv.id">
+            <div class="pi-card-head" (click)="toggleExpand(inv.id)">
+              <div class="pi-card-num">
+                <span class="material-icons-round">receipt</span>
+                <span class="pi-inv-no">{{ inv.fullSequenceNumber || inv.invoiceNumber }}</span>
+              </div>
+              <div class="pi-card-meta">
+                <span class="pi-date">{{ formatDate(inv.invoiceDate) }}</span>
+                <span class="pi-supplier">{{ inv.supplierName || '—' }}</span>
+              </div>
+              <div class="pi-card-amounts">
+                <span class="amt-total">{{ fmt(inv.totalAmount) }}</span>
+                <span class="amt-remaining">المتبقي: {{ fmt(inv.remainingAmount) }}</span>
+              </div>
+              <div class="pi-card-badges">
+                <span class="badge" [style.background]="getStatusInfo(inv.status).color + '1a'"
+                      [style.color]="getStatusInfo(inv.status).color">
+                  <span class="material-icons-round">{{ getStatusInfo(inv.status).icon }}</span>
+                  {{ getStatusInfo(inv.status).label }}
+                </span>
+                <span class="badge payment">
+                  <span class="material-icons-round">payments</span>
+                  {{ getPaymentLabel(inv.paymentMethod) }}
+                </span>
+              </div>
+              <div class="pi-card-actions" (click)="$event.stopPropagation()">
+                @if (inv.status === 'draft') {
+                  <button class="icon-btn confirm-btn" (click)="confirm(inv)" title="تأكيد">
+                    <span class="material-icons-round">check_circle</span>
+                  </button>
+                  <button class="icon-btn edit-btn" (click)="openEdit(inv)" title="تعديل">
+                    <span class="material-icons-round">edit</span>
+                  </button>
                 }
-              </tbody>
-            </table>
+                @if (inv.status !== 'completed') {
+                  <button class="icon-btn danger" (click)="remove(inv)" title="حذف">
+                    <span class="material-icons-round">delete</span>
+                  </button>
+                }
+                <span class="material-icons-round expand-icon">{{ expandedId() === inv.id ? 'expand_less' : 'expand_more' }}</span>
+              </div>
+            </div>
+            @if (expandedId() === inv.id) {
+              <div class="pi-detail-panel">
+                <div class="pi-detail-grid">
+                  <div class="pi-detail-item">
+                    <span class="dl">الرقم العام</span>
+                    <span class="dv seq">{{ inv.fullSequenceNumber || inv.invoiceNumber }}</span>
+                  </div>
+                  @if (inv.supplierSequenceNumber) {
+                    <div class="pi-detail-item">
+                      <span class="dl">رقم المورد</span>
+                      <span class="dv seq supplier">{{ inv.supplierSequenceNumber }}</span>
+                    </div>
+                  }
+                  <div class="pi-detail-item">
+                    <span class="dl">المورد</span>
+                    <span class="dv">{{ inv.supplierName }}</span>
+                  </div>
+                  <div class="pi-detail-item">
+                    <span class="dl">طريقة الدفع</span>
+                    <span class="dv">{{ getPaymentLabel(inv.paymentMethod) }}</span>
+                  </div>
+                  <div class="pi-detail-item">
+                    <span class="dl">الإجمالي</span>
+                    <span class="dv amount">{{ fmt(inv.totalAmount) }}</span>
+                  </div>
+                  <div class="pi-detail-item">
+                    <span class="dl">المدفوع</span>
+                    <span class="dv amount paid">{{ fmt(inv.paidAmount) }}</span>
+                  </div>
+                  <div class="pi-detail-item">
+                    <span class="dl">المتبقي</span>
+                    <span class="dv amount remaining">{{ fmt(inv.remainingAmount) }}</span>
+                  </div>
+                  @if (inv.externalReference) {
+                    <div class="pi-detail-item">
+                      <span class="dl">المرجع الخارجي</span>
+                      <span class="dv">{{ inv.externalReference }}</span>
+                    </div>
+                  }
+                </div>
+                @if (inv.items?.length) {
+                  <div class="pi-items-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>#</th><th>الصنف</th><th>الكمية</th>
+                          <th class="amt-col">سعر الوحدة</th><th class="amt-col">الإجمالي</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (item of inv.items; track $index) {
+                          <tr>
+                            <td class="ln-idx">{{ $index + 1 }}</td>
+                            <td>{{ item.itemName }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td class="ln-amt">{{ fmt(item.unitCost) }}</td>
+                            <td class="ln-amt">{{ fmt(item.totalCost || (item.quantity * item.unitCost)) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                      <tfoot>
+                        <tr class="totals-row">
+                          <td colspan="4" class="totals-label">الإجمالي</td>
+                          <td class="ln-amt total">{{ fmt(inv.totalAmount) }}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ===== نموذج الفاتورة المدمج ===== -->
+  @if (showForm()) {
+    <div class="pi-form-container">
+      <div class="pi-form-header">
+        <div class="pfh-title">
+          <span class="material-icons-round">edit_note</span>
+          {{ editingId() ? 'تعديل فاتورة' : 'فاتورة مشتريات جديدة' }}
+        </div>
+        <div class="pfh-payment">
+          @for (p of paymentOptions; track p.key) {
+            <button class="payment-chip" [class.active]="formHeader().paymentMethod === p.key"
+                    (click)="formHeader.update(h => ({...h, paymentMethod: p.key}))">
+              <span class="material-icons-round" [style.color]="p.color">{{ p.icon }}</span> {{ p.label }}
+            </button>
           }
         </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" (click)="showDetails.set(false)">إغلاق</button>
+        <button class="pi-btn ghost" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <div class="pi-form-meta">
+        <div class="pfm-group flex2">
+          <label>المورد <span class="req">*</span></label>
+          <select [ngModel]="formHeader().supplierId"
+                  (ngModelChange)="formHeader.update(h => ({...h, supplierId: $event}))">
+            <option [ngValue]="null">— اختر المورد —</option>
+            @for (s of suppliers(); track s.id) {
+              <option [ngValue]="s.id">{{ s.name }}</option>
+            }
+          </select>
         </div>
+        <div class="pfm-group">
+          <label>المستودع</label>
+          <select [ngModel]="formHeader().warehouseId"
+                  (ngModelChange)="formHeader.update(h => ({...h, warehouseId: $event}))">
+            <option [ngValue]="null">— اختياري —</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="pfm-group">
+          <label>العملة</label>
+          <select [ngModel]="formHeader().currencyId"
+                  (ngModelChange)="formHeader.update(h => ({...h, currencyId: +$event}))">
+            @for (c of currencies(); track c.id) {
+              <option [ngValue]="c.id">{{ c.name }} ({{ c.symbol }})</option>
+            }
+          </select>
+        </div>
+        <div class="pfm-group">
+          <label>تاريخ الفاتورة <span class="req">*</span></label>
+          <input type="date" [ngModel]="formHeader().invoiceDate"
+                 (ngModelChange)="formHeader.update(h => ({...h, invoiceDate: $event}))" />
+        </div>
+        <div class="pfm-group">
+          <label>تاريخ الاستحقاق</label>
+          <input type="date" [ngModel]="formHeader().dueDate"
+                 (ngModelChange)="formHeader.update(h => ({...h, dueDate: $event}))" />
+        </div>
+        <div class="pfm-group">
+          <label>المرجع الخارجي</label>
+          <input type="text" placeholder="رقم فاتورة المورد" [ngModel]="formHeader().externalReference"
+                 (ngModelChange)="formHeader.update(h => ({...h, externalReference: $event}))" />
+        </div>
+        <div class="pfm-group flex2">
+          <label>ملاحظات</label>
+          <input type="text" placeholder="ملاحظات إضافية" [ngModel]="formHeader().notes"
+                 (ngModelChange)="formHeader.update(h => ({...h, notes: $event}))" />
+        </div>
+      </div>
+
+      <!-- جدول أصناف الفاتورة -->
+      <div class="pi-lines-wrapper">
+        <div class="pi-table-scroll">
+          <table class="pi-edit-table">
+            <thead>
+              <tr>
+                <th class="th-idx">#</th>
+                <th class="th-item">الصنف <span class="req">*</span></th>
+                <th class="th-qty">الكمية</th>
+                <th class="th-cost">سعر الوحدة</th>
+                <th class="th-total">الإجمالي</th>
+                <th class="th-disc">الخصم</th>
+                <th class="th-act"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of formItems(); track $index; let i = $index) {
+                <tr>
+                  <td class="td-idx">{{ i + 1 }}</td>
+                  <td class="td-item">{{ item.itemName }}</td>
+                  <td class="td-qty">{{ item.quantity }}</td>
+                  <td class="td-cost">{{ fmt(item.unitCost) }}</td>
+                  <td class="td-total">{{ fmt(item.quantity * item.unitCost) }}</td>
+                  <td class="td-disc">{{ fmt(item.discount) }}</td>
+                  <td class="td-act">
+                    <button class="line-btn del" (click)="removeItem(i)" title="حذف">
+                      <span class="material-icons-round">close</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+              <!-- صف الإضافة -->
+              <tr class="add-row">
+                <td class="td-idx"><span class="material-icons-round" style="font-size:16px;color:var(--text-muted)">add</span></td>
+                <td class="td-item">
+                  <select [(ngModel)]="newItem.inventoryItemId">
+                    <option [ngValue]="0">اختر الصنف...</option>
+                    @for (item of inventoryItems(); track item.id) {
+                      <option [ngValue]="item.id">{{ item.name }} {{ item.code ? '(' + item.code + ')' : '' }}</option>
+                    }
+                  </select>
+                </td>
+                <td class="td-qty">
+                  <input type="number" [(ngModel)]="newItem.quantity" min="0.01" step="0.01" placeholder="1" />
+                </td>
+                <td class="td-cost">
+                  <input type="number" [(ngModel)]="newItem.unitCost" min="0" step="0.01" placeholder="0.00" />
+                </td>
+                <td class="td-total">
+                  <span class="computed-val">{{ fmt(newItem.quantity * newItem.unitCost) }}</span>
+                </td>
+                <td class="td-disc">
+                  <input type="number" [(ngModel)]="newItem.discount" min="0" step="0.01" placeholder="0" />
+                </td>
+                <td class="td-act">
+                  <button class="line-btn add" (click)="addItem()" title="إضافة">
+                    <span class="material-icons-round">check</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- شريط الإجماليات -->
+      <div class="totals-bar">
+        <div class="tot-col">
+          <div class="tot-label">المجموع الفرعي</div>
+          <div class="tot-val">{{ fmt(formSubtotal()) }}</div>
+        </div>
+        <div class="tot-col">
+          <div class="tot-label">الخصم</div>
+          <div class="tot-val disc">-{{ fmt(formDiscount()) }}</div>
+        </div>
+        <div class="tot-sep"></div>
+        <div class="tot-col grand">
+          <div class="tot-label">الإجمالي النهائي</div>
+          <div class="tot-val final">{{ fmt(formTotal()) }}</div>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="pi-error"><span class="material-icons-round">error</span> {{ error() }}</div>
+      }
+
+      <div class="pi-form-footer">
+        <button class="pi-btn ghost" (click)="showForm.set(false)">إلغاء</button>
+        <button class="pi-btn secondary" [disabled]="saving()"
+                (click)="save()">
+          <span class="material-icons-round">save</span> حفظ كمسودة
+        </button>
+        <button class="pi-btn primary" [disabled]="saving() || !formItems().length"
+                (click)="save()">
+          @if (saving()) { <span class="material-icons-round rotating">sync</span> }
+          @else { <span class="material-icons-round">done_all</span> }
+          {{ editingId() ? 'حفظ التعديلات' : 'إنشاء الفاتورة' }}
+        </button>
       </div>
     </div>
   }
+
 </div>

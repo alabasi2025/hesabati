@@ -10,6 +10,8 @@ import { eq, and } from 'drizzle-orm';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { safeHandler, parseId, getBody } from '../../middleware/helpers.ts';
+import { requireResourceOwnership } from './_shared/ownership.ts';
+import { getNextSequence } from '../../middleware/sequencing.ts';
 
 export const miscCategoriesRoutes = new Hono();
 const api = miscCategoriesRoutes;
@@ -23,13 +25,21 @@ api.get('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safe
   return c.json(rows);
 }));
 
-api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('ط¥ط¶ط§ظپط© طھطµظ†ظٹظپ ظ‚ظٹط¯ ظٹظˆظ…ظٹط©', async (c) => {
+api.post('/businesses/:bizId/journal-entry-categories', bizAuthMiddleware(), safeHandler('إضافة نوع قيد', async (c) => {
   const bizId = getBizId(c);
-  const body = await getBody(c);
-  const validation = validateBody(journalCategorySchema, body);
-  if (!validation.success) return c.json({ error: validation.error }, 400);
-  const seqNum = await getNextCategorySequence(bizId, 'journal');
-  const [created] = await db.insert(journalEntryCategories).values({ ...validation.data, businessId: bizId, sequenceNumber: seqNum }).returning();
+  const body = await getBody(c) as { name?: string; categoryKey?: string; description?: string; icon?: string; color?: string };
+  if (!body.name?.trim()) return c.json({ error: 'اسم النوع مطلوب' }, 400);
+  if (!body.categoryKey?.trim()) return c.json({ error: 'مفتاح النوع مطلوب' }, 400);
+  const seqNum = await getNextSequence(bizId, 'journal_category', 0, new Date().getFullYear());
+  const [created] = await db.insert(journalEntryCategories).values({
+    name: body.name.trim(),
+    categoryKey: body.categoryKey.trim(),
+    description: body.description || null,
+    icon: body.icon || 'menu_book',
+    color: body.color || '#6366f1',
+    businessId: bizId,
+    sequenceNumber: seqNum,
+  }).returning();
   return c.json(created, 201);
 }));
 

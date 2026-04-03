@@ -175,7 +175,7 @@ export class ReportPrintService {
       doc.setTextColor(148, 163, 184);
       const footerY = doc.internal.pageSize.getHeight() - 8;
       doc.text(
-        this.reverseArabic(`تم الإنشاء بواسطة نظام حساباتي | ${new Date().toLocaleDateString('ar-SA')} | صفحة ${i} من ${pageCount}`),
+        this.reverseArabic(`تم الإنشاء بواسطة نظام حساباتي | ${new Date().toLocaleDateString('en')} | صفحة ${i} من ${pageCount}`),
         pageWidth / 2,
         footerY,
         { align: 'center' }
@@ -251,7 +251,7 @@ export class ReportPrintService {
   </div>
   ${content}
   <div class="rpt-footer">
-    تم الإنشاء بواسطة نظام حساباتي | ${new Date().toLocaleDateString('ar-SA')} ${new Date().toLocaleTimeString('ar-SA')}
+    تم الإنشاء بواسطة نظام حساباتي | ${new Date().toLocaleDateString('en')} ${new Date().toLocaleTimeString('en')}
   </div>
 </body>
 </html>`;

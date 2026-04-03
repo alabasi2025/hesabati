@@ -49,6 +49,9 @@ export class InventoryApiService {
 
   // ===================== الأصناف والمخزون =====================
   getInventoryItems(bizId: number)               { return this.api.request<any[]>(`/businesses/${bizId}/inventory-items`); }
+  createInventoryItem(bizId: number, d: any)     { return this.api.request<any>(`/businesses/${bizId}/inventory-items`, { method: 'POST', body: JSON.stringify(d) }); }
+  updateInventoryItem(id: number, d: any)        { return this.api.request<any>(`/inventory-items/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
+  deleteInventoryItem(id: number)                { return this.api.request<any>(`/inventory-items/${id}`, { method: 'DELETE' }); }
   getInventoryItemTypes(bizId: number)           { return this.api.request<any[]>(`/businesses/${bizId}/inventory-item-types`); }
   createInventoryItemType(bizId: number, d: any) { return this.api.request<any>(`/businesses/${bizId}/inventory-item-types`, { method: 'POST', body: JSON.stringify(d) }); }
   updateInventoryItemType(id: number, d: any)    { return this.api.request<any>(`/inventory-item-types/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }

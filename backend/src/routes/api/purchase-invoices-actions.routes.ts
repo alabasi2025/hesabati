@@ -18,6 +18,8 @@ import { getNextSequence } from '../../middleware/sequencing.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
+import { processStockMovement } from '../../services/inventory.service.ts';
+import { updateSubledgerBalance } from '../../engines/subledger.engine.ts';
 
 const piActionsRoutes = new Hono();
 
@@ -180,21 +182,44 @@ piActionsRoutes.post(
       );
 
     if (!existing) {
-      return c.json({ error: "ط§ظ„ظپط§طھظˆط±ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©" }, 404);
+      return c.json({ error: "الفاتورة غير موجودة" }, 404);
     }
 
     if (existing.status !== "draft") {
-      return c.json({ error: "ظٹظ…ظƒظ† طھط£ظƒظٹط¯ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ط³ظˆط¯ط© ظپظ‚ط·" }, 400);
+      return c.json({ error: "يمكن تأكيد الفواتير المسودة فقط" }, 400);
     }
 
-    // ط¬ظ„ط¨ ط¨ظ†ظˆط¯ ط§ظ„ظپط§طھظˆط±ط© ظ„طھط­ط¯ظٹط« ط§ظ„ظ…ط®ط²ظˆظ†
+    // جلب بيانات المورد (حساب المورد)
+    const [supplier] = await db
+      .select({ id: suppliers.id, accountId: suppliers.accountId })
+      .from(suppliers)
+      .where(eq(suppliers.id, existing.supplierId))
+      .limit(1);
+
+    const supplierAccountId = existing.supplierAccountId || supplier?.accountId || null;
+
+    // جلب حساب المستودع (للطرف المدين)
+    let warehouseAccountId: number | null = null;
+    if (existing.warehouseId) {
+      const [wh] = await db
+        .select({ accountId: warehouses.accountId })
+        .from(warehouses)
+        .where(eq(warehouses.id, existing.warehouseId))
+        .limit(1);
+      warehouseAccountId = wh?.accountId || null;
+    }
+
+    // جلب بنود الفاتورة لتحديث المخزون
     const invoiceItems = await db
       .select()
       .from(purchaseInvoiceItems)
       .where(eq(purchaseInvoiceItems.invoiceId, id));
 
+    const totalAmount = parseFloat(String(existing.totalAmount));
+    const currencyId = existing.currencyId || 1;
+
     const result = await db.transaction(async (tx) => {
-      // طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ظپط§طھظˆط±ط©
+      // 1. تحديث حالة الفاتورة
       const [updated] = await tx
         .update(purchaseInvoices)
         .set({
@@ -204,24 +229,93 @@ piActionsRoutes.post(
         .where(eq(purchaseInvoices.id, id))
         .returning();
 
-      // طھط­ط¯ظٹط« ط§ظ„ظ…ط®ط²ظˆظ† ظ„ظƒظ„ ط¨ظ†ط¯ ط¥ظ† ظˆظڈط¬ط¯ ظ…ط³طھظˆط¯ط¹
+      // 2. إنشاء قيد محاسبي (مدين: حساب المستودع/المشتريات، دائن: حساب المورد)
+      if (supplierAccountId && warehouseAccountId) {
+        const year = new Date().getFullYear();
+        const seqNum = await getNextSequence(bizId, 'journal_entry', 0, year);
+        const entryNumber = `JE-PI-${year}-${String(seqNum).padStart(4, '0')}`;
+        const entryDate = existing.invoiceDate
+          ? new Date(existing.invoiceDate).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0];
+
+        const [entry] = await tx.insert(journalEntries).values({
+          businessId: bizId,
+          entryNumber,
+          entryDate,
+          description: `فاتورة مشتريات #${existing.invoiceNumber}`,
+          reference: existing.invoiceNumber,
+          totalDebit: String(totalAmount),
+          totalCredit: String(totalAmount),
+          isBalanced: true,
+          createdBy: userId,
+        }).returning();
+
+        // سطر مدين — حساب المستودع (المخزون يزيد)
+        await tx.insert(journalEntryLines).values({
+          journalEntryId: entry.id,
+          accountId: warehouseAccountId,
+          lineType: 'debit',
+          amount: String(totalAmount),
+          description: `فاتورة مشتريات #${existing.invoiceNumber}`,
+          sortOrder: 0,
+        });
+
+        // سطر دائن — حساب المورد (الالتزام يزيد)
+        await tx.insert(journalEntryLines).values({
+          journalEntryId: entry.id,
+          accountId: supplierAccountId,
+          lineType: 'credit',
+          amount: String(totalAmount),
+          description: `فاتورة مشتريات #${existing.invoiceNumber}`,
+          sortOrder: 1,
+        });
+
+        // تحديث أرصدة الحسابات
+        await tx.execute(sql`
+          INSERT INTO account_balances (account_id, currency_id, balance)
+          VALUES (${warehouseAccountId}, ${currencyId}, ${totalAmount})
+          ON CONFLICT (account_id, currency_id) DO UPDATE SET
+            balance = account_balances.balance + ${totalAmount}, updated_at = NOW()
+        `);
+        await updateSubledgerBalance(tx, warehouseAccountId, currencyId, totalAmount);
+
+        await tx.execute(sql`
+          INSERT INTO account_balances (account_id, currency_id, balance)
+          VALUES (${supplierAccountId}, ${currencyId}, ${-totalAmount})
+          ON CONFLICT (account_id, currency_id) DO UPDATE SET
+            balance = account_balances.balance - ${totalAmount}, updated_at = NOW()
+        `);
+        await updateSubledgerBalance(tx, supplierAccountId, currencyId, -totalAmount);
+      }
+
+      // 3. تحديث المخزون لكل بند إن وُجد مستودع
       if (existing.warehouseId && invoiceItems.length > 0) {
         for (const item of invoiceItems) {
           if (item.inventoryItemId) {
             await processStockMovement(bizId, {
               warehouseId: existing.warehouseId,
-              inventoryItemId: item.inventoryItemId,
+              itemId: item.inventoryItemId,
               movementType: "in",
               quantity: parseFloat(String(item.quantity)),
               unitCost: parseFloat(String(item.unitCost)),
-              referenceType: "purchase_invoice",
-              referenceId: id,
-              notes: `طھط£ظƒظٹط¯ ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ #${existing.invoiceNumber}`,
+              reference: `purchase_invoice_${id}`,
+              description: `confirm purchase invoice #${existing.invoiceNumber}`,
               createdBy: userId,
-            }, tx as any);
+            });
           }
         }
       }
+
+      // 4. سجل التدقيق
+      await tx.insert(auditLog).values({
+        userId,
+        businessId: bizId,
+        action: 'confirm_purchase_invoice',
+        tableName: 'purchase_invoices',
+        recordId: id,
+        oldData: { status: 'draft' },
+        newData: { status: 'confirmed', totalAmount: String(totalAmount) },
+      });
 
       return updated;
     });
@@ -301,15 +395,13 @@ piActionsRoutes.post(
             if (existing.warehouseId && invoiceItem.inventoryItemId) {
               await processStockMovement(bizId, {
                 warehouseId: existing.warehouseId,
-                inventoryItemId: invoiceItem.inventoryItemId,
+                itemId: invoiceItem.inventoryItemId,
                 movementType: "in",
                 quantity: receivedQty,
                 unitCost: parseFloat(String(invoiceItem.unitCost)),
-                referenceType: "purchase_invoice_receive",
-                referenceId: id,
-                notes: `ط§ط³طھظ„ط§ظ… ظپط§طھظˆط±ط© ظ…ط´طھط±ظٹط§طھ #${existing.invoiceNumber}`,
-                createdBy: undefined,
-              }, tx as any);
+                reference: `purchase_invoice_receive_${id}`,
+                description: `receive purchase invoice #${existing.invoiceNumber}`,
+              });
             }
           }
         }

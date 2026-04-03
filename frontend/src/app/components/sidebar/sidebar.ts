@@ -161,12 +161,6 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
         path: 'journal',
         showFor: ['stations', 'single_station', 'personal'],
       },
-      {
-        icon: 'label',
-        label: 'تصنيفات القيود',
-        path: 'journal-categories',
-        showFor: ['stations', 'single_station', 'personal'],
-      },
     ],
   },
   {
@@ -186,7 +180,7 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
       },
       {
         icon: 'inventory_2',
-        label: 'أنواع الأصناف',
+        label: 'الأصناف المخزنية',
         path: 'inventory-item-types',
         showFor: ['stations', 'single_station'],
       },
@@ -631,7 +625,6 @@ export class SidebarComponent {
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
           { icon: 'folder_open', label: 'الأرشفة الإلكترونية', route: `${b}/attachments-archive` },
           { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-          { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
         ],
       },
       {
@@ -642,7 +635,7 @@ export class SidebarComponent {
         title: '6. المخزون والمخازن',
         items: [
           { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
-          { icon: 'inventory_2', label: 'العمليات المخزنية', route: `${b}/warehouse-operations` },
+          { icon: 'inventory_2', label: 'الأصناف المخزنية', route: `${b}/inventory-item-types` },
         ],
       },
       {
@@ -738,7 +731,6 @@ export class SidebarComponent {
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
           { icon: 'folder_open', label: 'الأرشفة الإلكترونية', route: `${b}/attachments-archive` },
           { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-          { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
         ],
       },
       {
@@ -749,7 +741,7 @@ export class SidebarComponent {
         title: '6. المخزون والمخازن',
         items: [
           { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
-          { icon: 'inventory_2', label: 'العمليات المخزنية', route: `${b}/warehouse-operations` },
+          { icon: 'inventory_2', label: 'الأصناف المخزنية', route: `${b}/inventory-item-types` },
         ],
       },
       {
@@ -825,12 +817,21 @@ export class SidebarComponent {
           { icon: 'receipt_long', label: 'سندات الصرف والقبض', route: `${b}/vouchers` },
           { icon: 'folder_open', label: 'الأرشفة الإلكترونية', route: `${b}/attachments-archive` },
           { icon: 'menu_book', label: 'القيود المحاسبية', route: `${b}/journal` },
-          { icon: 'label', label: 'تصنيفات القيود', route: `${b}/journal-categories` },
         ],
       },
       {
         title: '5. القوالب والترقيم',
         items: [{ icon: 'category', label: 'أنواع العمليات', route: `${b}/operation-types` }],
+      },
+      {
+        title: '6. المخزون والمشتريات',
+        items: [
+          { icon: 'warehouse', label: 'المخزن', route: `${b}/warehouse` },
+          { icon: 'inventory_2', label: 'الأصناف المخزنية', route: `${b}/inventory-item-types` },
+          { icon: 'swap_horiz', label: 'العمليات المخزنية', route: `${b}/warehouse-operations` },
+          { icon: 'local_shipping', label: 'الموردين', route: `${b}/suppliers` },
+          { icon: 'receipt_long', label: 'فواتير المشتريات', route: `${b}/purchase-invoices` },
+        ],
       },
       {
         title: '9. التقارير',

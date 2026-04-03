@@ -92,6 +92,7 @@ export class VoucherApiService {
 
   // ===================== القيود المحاسبية =====================
   getJournalEntries(bizId: number)           { return this.api.request<any[]>(`/businesses/${bizId}/journal-entries`); }
+  getJournalEntryPreviewNumber(bizId: number, categoryKey: string, operationTypeId?: number, year?: number) { return this.api.request<any>(`/businesses/${bizId}/journal-entries/preview-number?categoryKey=${encodeURIComponent(categoryKey)}${operationTypeId ? '&operationTypeId=' + operationTypeId : ''}${year ? '&year=' + year : ''}`); }
   createJournalEntry(bizId: number, d: any)  { return this.api.request<any>(`/businesses/${bizId}/journal-entries`, { method: 'POST', body: JSON.stringify(d) }); }
   updateJournalEntry(bizId: number, id: number, d: any) { return this.api.request<any>(`/businesses/${bizId}/journal-entries/${id}`, { method: 'PUT', body: JSON.stringify(d) }); }
   deleteJournalEntry(id: number)             { return this.api.request<any>(`/journal-entries/${id}`, { method: 'DELETE' }); }

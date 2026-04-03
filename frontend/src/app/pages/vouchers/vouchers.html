@@ -1,1072 +1,378 @@
-<div class="page-container">
+<div class="vou-page">
 
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d green">
-        <span class="material-icons-round">receipt_long</span>
-      </div>
+  <!-- Header -->
+  <div class="vou-header">
+    <div class="vou-header-left">
+      <div class="vou-icon"><span class="material-icons-round">receipt_long</span></div>
       <div>
-        <h1 class="page-title">سندات الصرف والقبض</h1>
-        <p class="page-subtitle">إدارة الحركات المالية من خزينة واحدة إلى عدة أطراف</p>
+        <div class="vou-title">سندات الصرف والقبض</div>
+        <div class="vou-subtitle">إدارة الحركات المالية · متعدد الأطراف · متعدد العملات</div>
       </div>
     </div>
-    <div class="header-right">
-      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
-        <span class="material-icons-round">help_outline</span>
+    <div class="vou-header-actions">
+      <button class="vou-btn receipt-btn" (click)="openNew('receipt')">
+        <span class="material-icons-round">call_received</span> سند قبض
       </button>
-      <button class="btn-3d btn-receipt" (click)="openCreate('receipt')" title="إنشاء سند قبض">
-        <span class="material-icons-round">call_received</span>
-        سند قبض
-      </button>
-      <button class="btn-3d btn-payment" (click)="openCreate('payment')" title="إنشاء سند صرف">
-        <span class="material-icons-round">call_made</span>
-        سند صرف
-      </button>
-      <button class="btn-3d btn-primary" [routerLink]="['/biz', bizId, 'register-operation']">
-        <span class="material-icons-round">play_circle</span>
-        تسجيل عملية
+      <button class="vou-btn payment-btn" (click)="openNew('payment')">
+        <span class="material-icons-round">call_made</span> سند صرف
       </button>
     </div>
   </div>
 
-  <!-- ===== Error ===== -->
-  @if (error()) {
-    <div class="alert-error" (click)="error.set('')">
-      <span class="material-icons-round">error_outline</span>
-      {{ error() }}
-      <span class="close-x">✕</span>
+  <!-- Stats -->
+  <div class="vou-stats">
+    <div class="vou-stat total"><span class="material-icons-round">receipt_long</span>
+      <div><div class="vou-stat-num">{{ stats().total }}</div><div class="vou-stat-lbl">إجمالي السندات</div></div>
     </div>
-  }
-
-  <!-- ===== Stats Cards ===== -->
-  @if (!loading()) {
-    <div class="stats-row">
-      <div class="stat-card-3d total">
-        <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ stats().total }}</div>
-          <div class="sc-label">إجمالي السندات</div>
-        </div>
-      </div>
-      <div class="stat-card-3d receipt">
-        <div class="sc-icon"><span class="material-icons-round">call_received</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ stats().receipts }}</div>
-          <div class="sc-label">سندات قبض</div>
-          <div class="sc-amount">{{ formatAmount(stats().totalReceipt) }}</div>
-        </div>
-      </div>
-      <div class="stat-card-3d payment">
-        <div class="sc-icon"><span class="material-icons-round">call_made</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ stats().payments }}</div>
-          <div class="sc-label">سندات صرف</div>
-          <div class="sc-amount">{{ formatAmount(stats().totalPayment) }}</div>
-        </div>
-      </div>
+    <div class="vou-stat green"><span class="material-icons-round">call_received</span>
+      <div><div class="vou-stat-num">{{ stats().receipts }}</div><div class="vou-stat-lbl">سندات قبض</div>
+        <div class="vou-stat-amt">{{ fmt(stats().totalReceipt) }}</div></div>
     </div>
-  }
-
-  <!-- ===== Tabs ===== -->
-  <div class="tabs-bar">
-    @for (tab of tabs; track tab.value) {
-      <button class="tab-btn" [class.active]="activeTab() === tab.value"
-              [style.--tab-color]="tab.color"
-              (click)="switchTab(tab.value)">
-        <span class="material-icons-round">{{ tab.icon }}</span>
-        {{ tab.label }}
-      </button>
-    }
+    <div class="vou-stat red"><span class="material-icons-round">call_made</span>
+      <div><div class="vou-stat-num">{{ stats().payments }}</div><div class="vou-stat-lbl">سندات صرف</div>
+        <div class="vou-stat-amt">{{ fmt(stats().totalPayment) }}</div></div>
+    </div>
   </div>
 
-  <div class="filters-card">
-    <div class="filters-row">
-      <app-smart-filter-input
-        inputId="voucher-filter-number"
-        label="رقم السند"
-        title="فلترة حسب رقم السند"
-        placeholder="اكتب رقم السند..."
-        [value]="filterVoucherNumberQuery()"
-        [suggestions]="filterVoucherNumberSuggestions()"
-        (valueChange)="setFilterVoucherNumberQuery($event)"
-        (committed)="onFilterVoucherNumberCommitted($event)"
-      />
-      <app-smart-filter-input
-        inputId="voucher-filter-treasury-type"
-        label="نوع الخزينة"
-        title="فلترة حسب نوع الخزينة"
-        placeholder="الكل / صندوق / بنك / صراف / محفظة"
-        [value]="filterTreasuryTypeQuery()"
-        [suggestions]="filterTreasuryTypeSuggestionLabels()"
-        (valueChange)="setFilterTreasuryTypeQuery($event)"
-        (committed)="onFilterTreasuryTypeCommitted($event)"
-      />
-      <app-smart-filter-input
-        inputId="voucher-filter-treasury"
-        label="الخزينة"
-        title="فلترة حسب الخزينة"
-        placeholder="اكتب اسم الخزينة..."
-        [value]="filterTreasuryQuery()"
-        [suggestions]="filterTreasurySuggestionLabels()"
-        (valueChange)="setFilterTreasuryQuery($event)"
-        (committed)="onFilterTreasuryCommitted($event)"
-      />
-      <app-smart-filter-input
-        inputId="voucher-filter-status-main"
-        label="حالة السند"
-        title="فلترة حسب حالة السند"
-        placeholder="الكل / مسودة / معتمد / ملغي"
-        [value]="filterStatusQuery()"
-        [suggestions]="filterStatusSuggestionLabels()"
-        (valueChange)="setFilterStatusQuery($event)"
-        (committed)="onFilterStatusCommitted($event)"
-      />
-      <div class="filters-actions">
-        <button class="btn-3d btn-primary" (click)="applyFilters()">
-          <span class="material-icons-round">filter_alt</span>
-          تطبيق
-        </button>
-        <button class="btn-3d btn-ghost" (click)="clearFilters()">
-          <span class="material-icons-round">restart_alt</span>
-          مسح
-        </button>
-        <button class="btn-3d btn-ghost" (click)="showAdvancedFilters.set(!showAdvancedFilters())">
-          <span class="material-icons-round">{{ showAdvancedFilters() ? 'expand_less' : 'expand_more' }}</span>
-          متقدم
-        </button>
-      </div>
+  <!-- Tabs -->
+  @if (!loading() && !showForm()) {
+    <div class="vou-tabs">
+      <button class="vou-tab" [class.active]="activeTab()==='all'" (click)="activeTab.set('all')" style="--tab-color:#8b5cf6">
+        <span class="material-icons-round">menu_book</span> الكل
+        <span class="tab-count">{{ vouchers().length }}</span>
+      </button>
+      <button class="vou-tab" [class.active]="activeTab()==='receipt'" (click)="activeTab.set('receipt')" style="--tab-color:#16a34a">
+        <span class="material-icons-round">call_received</span> قبض
+        <span class="tab-count">{{ stats().receipts }}</span>
+      </button>
+      <button class="vou-tab" [class.active]="activeTab()==='payment'" (click)="activeTab.set('payment')" style="--tab-color:#dc2626">
+        <span class="material-icons-round">call_made</span> صرف
+        <span class="tab-count">{{ stats().payments }}</span>
+      </button>
     </div>
-    @if (showAdvancedFilters()) {
-      <div class="filters-row advanced">
-        <div class="form-group">
-          <label class="form-label" for="voucher-filter-date-from">من تاريخ</label>
-          <input id="voucher-filter-date-from" class="form-input" type="date" title="من تاريخ" [value]="filterDateFrom()"
-                 (change)="onAdvancedDateFromChange($any($event.target).value)">
+  }
+
+  @if (loading()) { <app-loading-state message="جاري التحميل..." /> }
+
+  @if (!loading() && error() && !showForm()) {
+    <div class="vou-error"><span class="material-icons-round">error</span> {{ error() }}</div>
+  }
+
+  <!-- Form -->
+  @if (showForm()) {
+    <div class="vou-form-container">
+
+      <div class="vou-form-header">
+        <div class="vfh-title">
+          <span class="material-icons-round" [style.color]="formHeader().voucherType==='receipt'?'#22c55e':'#ef4444'">
+            {{ formHeader().voucherType === 'receipt' ? 'call_received' : 'call_made' }}
+          </span>
+          {{ formHeader().voucherType === 'receipt' ? 'سند قبض' : 'سند صرف' }}
+          @if (editingId()) { <span class="edit-badge">تعديل</span> }
         </div>
-        <div class="form-group">
-          <label class="form-label" for="voucher-filter-date-to">إلى تاريخ</label>
-          <input id="voucher-filter-date-to" class="form-input" type="date" title="إلى تاريخ" [value]="filterDateTo()"
-                 (change)="onAdvancedDateToChange($any($event.target).value)">
+        <div class="vfh-type-toggle">
+          <button [class.active-receipt]="formHeader().voucherType==='receipt'"
+                  (click)="formHeader.update(h=>({...h,voucherType:'receipt'}))">
+            <span class="material-icons-round">call_received</span> قبض
+          </button>
+          <button [class.active-payment]="formHeader().voucherType==='payment'"
+                  (click)="formHeader.update(h=>({...h,voucherType:'payment'}))">
+            <span class="material-icons-round">call_made</span> صرف
+          </button>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="voucher-filter-status">الحالة</label>
-          <select id="voucher-filter-status" class="form-select" title="الحالة" [value]="filterStatus()"
-                  (change)="onAdvancedStatusChange($any($event.target).value)">
-            <option value="">الكل</option>
-            @for (status of statusOptions; track status.value) {
-              <option [value]="status.value">{{ status.label }}</option>
-            }
+        <div class="vfh-status">
+          @for (s of statusOptions; track s.key) {
+            <button class="status-chip" [class.active]="formHeader().status===s.key"
+                    (click)="formHeader.update(h=>({...h,status:s.key}))">
+              <span class="material-icons-round" [style.color]="s.color">{{ s.icon }}</span> {{ s.label }}
+            </button>
+          }
+        </div>
+        <button class="vou-btn ghost" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+
+      <div class="vou-form-meta">
+        <div class="vfm-group">
+          <label>التاريخ <span class="req">*</span></label>
+          <input type="date" [ngModel]="formHeader().date" (ngModelChange)="onDateChange($event)" />
+        </div>
+        <div class="vfm-group flex2">
+          <label>البيان <span class="req">*</span></label>
+          <input type="text" placeholder="بيان السند..." [ngModel]="formHeader().description"
+                 (ngModelChange)="formHeader.update(h=>({...h,description:$event}))" />
+        </div>
+        <div class="vfm-group">
+          <label>المرجع</label>
+          <input type="text" placeholder="اختياري" [ngModel]="formHeader().reference"
+                 (ngModelChange)="formHeader.update(h=>({...h,reference:$event}))" />
+        </div>
+        <div class="vfm-group flex2">
+          <label>نوع العملية</label>
+          <select [ngModel]="formHeader().operationTypeId" (ngModelChange)="onOperationTypeChange(+$event||null)">
+            <option [ngValue]="null">— اختياري —</option>
+            @for (ot of operationTypes(); track ot.id) { <option [ngValue]="ot.id">{{ ot.name }}</option> }
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">أقل مبلغ</label>
-          <input class="form-input" type="number" placeholder="0"
-                 [value]="filterMinAmount()"
-                 (change)="onAdvancedMinAmountChange($any($event.target).value)">
-        </div>
-        <div class="form-group">
-          <label class="form-label">أعلى مبلغ</label>
-          <input class="form-input" type="number" placeholder="0"
-                 [value]="filterMaxAmount()"
-                 (change)="onAdvancedMaxAmountChange($any($event.target).value)">
+        <div class="vfm-group seq-preview">
+          <label>رقم السند</label>
+          <div class="seq-badge">
+            @if (loadingPreview()) {
+              <span class="material-icons-round rotating" style="font-size:16px;color:#22c55e">sync</span>
+            } @else if (previewNumber()) {
+              <span class="material-icons-round" style="font-size:15px;color:#22c55e">tag</span>
+              <span class="seq-num">{{ previewNumber() }}</span>
+            } @else {
+              <span style="font-size:12px;color:var(--text-muted)">يظهر بعد اختيار الخزينة</span>
+            }
+          </div>
         </div>
       </div>
-    }
-  </div>
 
-  <!-- ===== Loading ===== -->
-  @if (loading()) {
-    <div class="loading-grid">
-      @for (i of [1,2,3,4]; track i) {
-        <div class="skeleton-row"></div>
-      }
-    </div>
-  }
-
-  <!-- ===== Vouchers List ===== -->
-  @if (!loading()) {
-    @if (filteredVouchers().length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d">
-          <span class="material-icons-round">receipt_long</span>
+      <!-- Treasury -->
+      <div class="vou-treasury-row">
+        <div class="treasury-label">
+          <span class="material-icons-round">
+            {{ formHeader().voucherType === 'receipt' ? 'south_east' : 'north_west' }}
+          </span>
+          {{ formHeader().voucherType === 'receipt' ? 'الوارد إلى (الخزينة)' : 'المصروف من (الخزينة)' }}
         </div>
-        <h3>لا توجد سندات</h3>
-        <p>أنشئ أول سند قبض أو صرف من هذه الشاشة</p>
+        <div class="treasury-types">
+          @for (tt of treasuryTypes; track tt.key) {
+            <button class="treasury-type-btn" [class.active]="treasuryType()===tt.key"
+                    (click)="treasuryType.set(tt.key); treasuryId.set(null)">
+              <span class="material-icons-round">{{ tt.icon }}</span> {{ tt.label }}
+            </button>
+          }
+        </div>
+        @if (treasuryType()) {
+          <div class="treasury-select">
+            <select [ngModel]="treasuryId()" (ngModelChange)="treasuryId.set(+$event||null); fetchPreview()">
+              <option [ngValue]="null">— اختر {{ treasuryType() === 'fund' ? 'الصندوق' : treasuryType() === 'bank' ? 'البنك' : 'الحساب' }} —</option>
+              @for (t of treasuryOptions(); track t.id) {
+                <option [ngValue]="t.id">{{ t.name || t.fundName }}</option>
+              }
+            </select>
+          </div>
+        }
+        @if (treasuryId()) {
+          <div class="treasury-selected">
+            <span class="material-icons-round">check_circle</span>
+            {{ getTreasuryName() }}
+          </div>
+        }
       </div>
-    } @else {
-      <div class="vouchers-list">
-        @for (v of filteredVouchers(); track v.id) {
-          <div
-            class="voucher-row-3d"
-            [style.--v-color]="getTypeColor(v.voucherType)"
-            role="button"
-            tabindex="0"
-            (click)="openDetails(v)"
-            (keydown)="onVoucherRowKeydown($event, v)">
-            <div class="vr-type-indicator"></div>
-            <div class="vr-icon">
-              <span class="material-icons-round">{{ getTypeIcon(v.voucherType) }}</span>
-            </div>
-            <div class="vr-main">
-              <div class="vr-desc">
-                @if (v.fullSequenceNumber) {
-                  <span class="vr-seq-badge" [style.color]="getTypeColor(v.voucherType)">
-                    <span class="material-icons-round" style="font-size:14px">tag</span>
-                    {{ v.fullSequenceNumber }}
-                  </span>
+
+      <!-- Lines -->
+      <div class="vou-lines-wrapper">
+        <div class="vou-table-scroll">
+          <table class="vou-edit-table">
+            <thead>
+              <tr>
+                <th class="th-idx">#</th>
+                <th class="th-etype">نوع الكيان</th>
+                <th class="th-account">الحساب الفرعي</th>
+                <th class="th-entity">الحساب التحليلي</th>
+                <th class="th-desc">البيان</th>
+                <th class="th-cur">العملة</th>
+                <th class="th-amt">المبلغ <span class="req">*</span></th>
+                @if (hasForeignCurrency()) {
+                  <th class="th-foreign">م. أجنبي</th>
+                  <th class="th-rate">سعر الصرف</th>
                 }
-                {{ v.description || 'بدون بيان' }}
-              </div>
-              <div class="vr-meta">
-                <span class="vr-date">
-                  <span class="material-icons-round">calendar_today</span>
-                  {{ formatDate(v.voucherDate || v.createdAt) }}
-                </span>
-                <span class="vr-number">
-                  <span class="material-icons-round">tag</span>
-                  {{ v.voucherNumber || '-' }}
-                </span>
-                <span class="vr-account">
-                  <span class="material-icons-round">account_balance_wallet</span>
-                  {{ getVoucherTreasuryLabel(v) }}
-                </span>
-                <span class="vr-account">
-                  <span class="material-icons-round">compare_arrows</span>
-                  {{ getVoucherCounterpartySummary(v) }}
-                </span>
-              </div>
-            </div>
-            <div class="vr-right">
-              <div class="vr-amount" [style.color]="getTypeColor(v.voucherType)">
-                {{ formatAmount(v.amount) }}
-              </div>
-              <span class="vr-type-badge" [style.background]="getTypeColor(v.voucherType) + '18'"
-                    [style.color]="getTypeColor(v.voucherType)">
-                {{ getTypeLabel(v.voucherType) }}
-              </span>
-            </div>
-          </div>
-        }
-      </div>
-    }
-  }
-
-  <!-- ===== How It Works Modal ===== -->
-  @if (showHowItWorks()) {
-    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
-      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon amber">
-            <span class="material-icons-round">help_outline</span>
-          </div>
-          <h2>مبدأ العمل - السندات</h2>
-          <button class="modal-close" (click)="showHowItWorks.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">call_received</span> سند القبض</h3>
-            <p>
-              يُستخدم عند <strong>استلام</strong> مبلغ إلى خزينة واحدة ثابتة من عدة أطراف عبر سطور السند.
-              <br />
-              <small>كل سطر يمثل طرفاً مالياً مقابلاً يدخل ضمن نفس السند.</small>
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">call_made</span> سند الصرف</h3>
-            <p>
-              يُستخدم عند <strong>صرف</strong> مبلغ من خزينة واحدة ثابتة إلى عدة أطراف عبر سطور السند.
-              <br />
-              <small>مجموع مبالغ السطور يجب أن يساوي مبلغ السند.</small>
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">list_alt</span> بنود السند</h3>
-            <p>
-              كل بند يحتوي على نوع حساب فرعي، حساب فرعي، مبلغ، وبيان مستقل داخل نفس السند.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">tag</span> ترقيم السند</h3>
-            <p>
-              رقم السند يُولّد حسب <strong>نوع السند + كود الخزينة + السنة + التسلسل</strong>.
-            </p>
-            <p dir="ltr" style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
-              FND-01-2025-صرف-0001 &nbsp;|
-              BNK-02-2025-قبض-0003
-            </p>
-            <p>
-              <small>PREFIX = نوع الخزينة — XX = رقمها التسلسلي — YYYY = السنة — التسلسل يبدأ من <strong>1</strong> لكل خزينة ولكل سنة.</small>
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">inventory_2</span> المخازن</h3>
-            <p>
-              عمليات المخازن لها شاشة مستقلة ورقم عملية مستقل (ليست سندات قبض/صرف)، مثل: توريد، صرف، تحويل، استلام تحويل.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ===== Create Voucher Modal ===== -->
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header" [class.receipt-header]="voucherType() === 'receipt'"
-             [class.payment-header]="voucherType() === 'payment'">
-          <div class="modal-icon" [class.receipt-icon]="voucherType() === 'receipt'"
-               [class.payment-icon]="voucherType() === 'payment'">
-            <span class="material-icons-round">{{ voucherType() === 'receipt' ? 'call_received' : 'call_made' }}</span>
-          </div>
-          <div>
-            <h2>{{ isEditing() ? (voucherType() === 'receipt' ? 'تعديل سند قبض' : 'تعديل سند صرف') : (voucherType() === 'receipt' ? 'سند قبض جديد' : 'سند صرف جديد') }}</h2>
-            <p class="modal-subtitle">{{ isEditing() ? 'تعديل بيانات السند الأساسية' : (voucherType() === 'receipt' ? 'استلام مبلغ من حساب' : 'دفع مبلغ لحساب') }}</p>
-          </div>
-          <button class="modal-close" (click)="showForm.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <!-- Step 1: Treasury -->
-          <div class="form-step">
-            <div class="step-header">
-              <div class="step-num">١</div>
-              <span>الخزينة</span>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">نوع الخزينة <span class="required">*</span></label>
-                <select class="form-select" title="نوع الخزينة" [value]="treasuryType() || ''"
-                        (change)="setTreasuryType($any($event.target).value)">
-                  <option value="">اختر النوع...</option>
-                  <option value="fund">صندوق</option>
-                  <option value="bank">بنك</option>
-                  <option value="exchange">صراف</option>
-                  <option value="e_wallet">محفظة</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">
-                  {{ getTreasuryFieldLabel() }}
-                  <span class="required">*</span>
-                </label>
-                <div class="treasury-picker">
-                  <div class="treasury-autocomplete">
-                    <input
-                      class="form-input"
-                      type="text"
-                      [placeholder]="getTreasuryFieldPlaceholder()"
-                      title="الخزينة"
-                      autocomplete="off"
-                      [value]="treasurySearchQuery()"
-                      (input)="onTreasuryTyping($any($event.target).value)"
-                      (change)="onTreasuryInputCommit($any($event.target).value)"
-                      (focus)="onTreasuryInputFocus()"
-                      (blur)="onTreasuryInputBlur()"
-                      (keydown)="onTreasuryInputKeydown($event)"
-                    />
-                    @if (showTreasurySuggestions() && filteredTreasuryOptions().length > 0) {
-                      <div class="treasury-suggestions">
-                        @for (item of filteredTreasuryOptions(); track item.id; let i = $index) {
-                          <button
-                            type="button"
-                            class="treasury-suggestion-item"
-                            [class.active]="i === activeTreasurySuggestionIndex()"
-                            (mousedown)="$event.preventDefault()"
-                            (click)="selectTreasurySuggestion(item)"
-                          >
-                            <span class="name">
-                              @let nameParts = getTreasurySuggestionNameParts(item);
-                              {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
-                            </span>
-                            @if (item.code) {
-                              <span class="code">
-                                @let codeParts = getTreasurySuggestionCodeParts(item);
-                                ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
-                              </span>
-                            }
-                          </button>
+                <th class="th-act"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of formLines(); track $index; let i = $index) {
+                <tr class="edit-row">
+                  <td class="td-idx">{{ i+1 }}</td>
+                  <td class="td-etype">
+                    <select [ngModel]="line.entityType" (ngModelChange)="updateLine(i,'entityType',$event)">
+                      @for (et of entityTypes; track et.key) { <option [ngValue]="et.key">{{ et.label }}</option> }
+                    </select>
+                  </td>
+                  <td class="td-account">
+                    <select [ngModel]="line.accountId" (ngModelChange)="updateLine(i,'accountId',+$event||null)">
+                      <option [ngValue]="null">— اختر —</option>
+                      @for (a of getAccountsForEntityType(line.entityType); track a.id) {
+                        <option [ngValue]="a.id">{{ a.code ? a.code + ' - ' : '' }}{{ a.name }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td class="td-entity">
+                    @if (line.entityType) {
+                      <select [ngModel]="line.entityId" (ngModelChange)="updateLine(i,'entityId',+$event||null)">
+                        <option [ngValue]="null">— اختر —</option>
+                        @for (en of getEntityList(line.entityType, line.accountId); track en.id) {
+                          <option [ngValue]="en.id">{{ en.name || en.fullName || en.fundName }}</option>
                         }
-                      </div>
-                    }
-                    @if (shouldShowTreasurySearchSummary()) {
-                      <small class="treasury-search-summary">{{ getTreasurySearchSummary() }}</small>
-                    }
-                  </div>
-
-                </div>
-              </div>
-            </div>
-            <div class="form-row single-col">
-              <div class="form-group">
-                <label class="form-label">رقم السند</label>
-                <input class="form-input" type="text" title="رقم السند"
-                       [value]="previewLoading() ? 'جاري توليد الرقم...' : (voucherNumberPreview() || 'سيظهر بعد اختيار الخزينة')"
-                       readonly>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 2: Voucher Data -->
-          <div class="form-step">
-            <div class="step-header">
-              <div class="step-num">٢</div>
-              <span>بيانات السند</span>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">التاريخ</label>
-                <input class="form-input" type="date" title="تاريخ السند" [value]="form().voucherDate"
-                       (change)="setFormField('voucherDate', $any($event.target).value)">
-              </div>
-              <div class="form-group">
-                <label class="form-label">العملة</label>
-                <select class="form-select" title="العملة" [value]="form().currencyId"
-                        (change)="setFormField('currencyId', +$any($event.target).value || 1)">
-                  @for (currency of currencies(); track currency.id) {
-                    <option [value]="currency.id">{{ currency.nameAr }} ({{ currency.code }})</option>
+                      </select>
+                    } @else { <span class="td-dash">—</span> }
+                  </td>
+                  <td class="td-desc">
+                    <input type="text" placeholder="بيان..." [ngModel]="line.description"
+                           (ngModelChange)="updateLine(i,'description',$event)" />
+                  </td>
+                  <td class="td-currency">
+                    <select [ngModel]="line.currencyId" (ngModelChange)="updateLine(i,'currencyId',+$event||1)">
+                      <option [ngValue]="1">ر.ي</option>
+                      @for (c of currencies(); track c.id) {
+                        @if (c.id !== 1) { <option [ngValue]="c.id">{{ c.code || c.name }}</option> }
+                      }
+                    </select>
+                  </td>
+                  <td class="td-amt">
+                    <input type="number" placeholder="0" class="amt-input"
+                           [ngModel]="line.amount" (ngModelChange)="updateLine(i,'amount',+$event||0)" />
+                  </td>
+                  @if (hasForeignCurrency()) {
+                    <td class="td-foreign">
+                      @if (line.currencyId !== 1) {
+                        <input type="number" placeholder="0" class="amt-input small"
+                               [ngModel]="line.foreignAmount" (ngModelChange)="updateLine(i,'foreignAmount',+$event||null)" />
+                      } @else { <span class="td-dash">—</span> }
+                    </td>
+                    <td class="td-rate">
+                      @if (line.currencyId !== 1) {
+                        <input type="number" placeholder="0" class="amt-input small"
+                               [ngModel]="line.exchangeRate" (ngModelChange)="updateLine(i,'exchangeRate',+$event||null)" />
+                      } @else { <span class="td-dash">—</span> }
+                    </td>
                   }
-                </select>
-              </div>
-              @if (form().currencyId && form().currencyId !== 1) {
-                <div class="form-group">
-                  <label class="form-label">سعر الصرف</label>
-                  <input class="form-input" type="number" step="0.0001" min="0" placeholder="سعر الصرف مقابل الريال"
-                         [value]="form().exchangeRate"
-                         (input)="setFormField('exchangeRate', +$any($event.target).value || null)">
-                </div>
+                  <td class="td-act">
+                    <button class="line-btn dup" (click)="duplicateLine(i)"><span class="material-icons-round">content_copy</span></button>
+                    <button class="line-btn del" (click)="removeLine(i)" [disabled]="formLines().length<=1"><span class="material-icons-round">delete</span></button>
+                  </td>
+                </tr>
               }
-            </div>
-            @if (!isEditing()) {
-              <!-- السند الجديد يُنشأ دائماً بحالة "غير مراجع" تلقائياً -->
-            }
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">مبلغ السند <span class="required">*</span></label>
-                <div class="amount-input-wrap">
-                  <input class="form-input amount-input" type="number" placeholder="0"
-                         [value]="form().amount"
-                         (input)="setFormField('amount', $any($event.target).value)">
-                  <span class="currency-label">{{ getCurrencyLabel(form().currencyId) }}</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">المرجع</label>
-                <input class="form-input" type="text" placeholder="رقم المرجع أو الإشعار"
-                       [value]="form().reference"
-                       (input)="setFormField('reference', $any($event.target).value)">
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">بيان السند <span class="required">*</span></label>
-              <input class="form-input" type="text" placeholder="بيان الصندوق أو وصف الحركة المالية..."
-                     [value]="form().description"
-                     (input)="setFormField('description', $any($event.target).value)">
-            </div>
-
-          </div>
-
-          <!-- Step 3: Voucher Lines -->
-          <div class="form-step">
-            <div class="step-header">
-              <div class="step-num">٣</div>
-              <span>سطور السند</span>
-            </div>
-            <div class="voucher-lines-list">
-              @for (line of voucherLines(); track $index; let lineIndex = $index) {
-                <div class="voucher-line-row">
-                  <div class="line-index-badge" title="رقم السطر">
-                    {{ lineIndex + 1 }}
-                  </div>
-                  <div class="form-group line-sub-type-group">
-                    <label class="form-label">نوع الحساب الفرعي</label>
-                    <div class="line-autocomplete">
-                      <input
-                        class="form-input"
-                        type="text"
-                        placeholder="النوع..."
-                        title="نوع الحساب الفرعي"
-                        autocomplete="off"
-                        [value]="line.subNatureQuery || ''"
-                        (input)="onLineSubNatureTyping(lineIndex, $any($event.target).value)"
-                        (focus)="onLineSubNatureFocus(lineIndex)"
-                        (blur)="onLineSubNatureBlur(lineIndex)"
-                        (keydown)="onLineSubNatureKeydown(lineIndex, $event)"
-                      />
-                      @if (line.showSubNatureSuggestions && getLineSubNatureOptions(line).length > 0) {
-                        <div class="line-suggestions">
-                          @for (nature of getLineSubNatureOptions(line); track nature.id; let i = $index) {
-                            <button
-                              type="button"
-                              class="line-suggestion-item"
-                              [class.active]="i === (line.activeSubNatureSuggestionIndex || -1)"
-                              (mousedown)="$event.preventDefault()"
-                              (click)="selectLineSubNatureSuggestion(lineIndex, nature)"
-                            >
-                              <span class="name">
-                                @let nameParts = getLineSubNatureNameParts(line, nature);
-                                {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
-                              </span>
-                            </button>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="form-group line-sub-account-group">
-                    <label class="form-label">الحساب الفرعي</label>
-                    <div class="line-autocomplete">
-                      <input
-                        class="form-input"
-                        type="text"
-                        placeholder="اكتب اسم الحساب..."
-                        title="الحساب الفرعي"
-                        autocomplete="off"
-                        [value]="line.accountQuery || ''"
-                        (input)="onLineAccountTyping(lineIndex, $any($event.target).value)"
-                        (focus)="onLineAccountFocus(lineIndex)"
-                        (blur)="onLineAccountBlur(lineIndex)"
-                        (keydown)="onLineAccountKeydown(lineIndex, $event)"
-                      />
-                      @if (line.showAccountSuggestions && getLineAccountOptions(line).length > 0) {
-                        <div class="line-suggestions">
-                          @for (account of getLineAccountOptions(line); track account.id; let i = $index) {
-                            <button
-                              type="button"
-                              class="line-suggestion-item"
-                              [class.active]="i === (line.activeAccountSuggestionIndex || -1)"
-                              (mousedown)="$event.preventDefault()"
-                              (click)="selectLineAccountSuggestion(lineIndex, account)"
-                            >
-                              <span class="name">
-                                @let nameParts = getLineAccountNameParts(line, account);
-                                {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
-                              </span>
-                              @if (account.code) {
-                                <span class="code">
-                                  @let codeParts = getLineAccountCodeParts(line, account);
-                                  ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
-                                </span>
-                              }
-                            </button>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                  <div class="form-group line-analytical-group">
-                    <label class="form-label">الحساب التحليلي</label>
-                    @if (hasSubledgerEntities(line)) {
-                      <div class="line-autocomplete">
-                        <input
-                          class="form-input"
-                          type="text"
-                          [placeholder]="'اختر ' + getEntityTypeLabel(line.entityType) + '...'"
-                          [title]="'الحساب التحليلي — ' + getEntityTypeLabel(line.entityType)"
-                          autocomplete="off"
-                          [value]="line.entityQuery || ''"
-                          (input)="onLineEntityTyping(lineIndex, $any($event.target).value)"
-                          (focus)="onLineEntityFocus(lineIndex)"
-                          (blur)="onLineEntityBlur(lineIndex)"
-                          (keydown)="onLineEntityKeydown(lineIndex, $event)"
-                        />
-                        @if (line.showEntitySuggestions && getLineEntityOptions(line).length > 0) {
-                          <div class="line-suggestions">
-                            @for (entity of getLineEntityOptions(line); track entity.id; let i = $index) {
-                              <button
-                                type="button"
-                                class="line-suggestion-item"
-                                [class.active]="i === (line.activeEntitySuggestionIndex || -1)"
-                                (mousedown)="$event.preventDefault()"
-                                (click)="selectLineEntitySuggestion(lineIndex, entity)"
-                              >
-                                <span class="name">
-                                  @let nameParts = getLineEntityNameParts(line, entity);
-                                  {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
-                                </span>
-                                @if (entity.code) {
-                                  <span class="code">
-                                    @let codeParts = getLineEntityCodeParts(line, entity);
-                                    ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
-                                  </span>
-                                }
-                              </button>
-                            }
-                          </div>
-                        }
-                      </div>
-                    } @else {
-                      <input class="form-input" type="text" disabled placeholder="—" title="لا يوجد حساب تحليلي" />
-                    }
-                  </div>
-                  <div class="form-group line-currency-group">
-                    <label class="form-label">العملة</label>
-                    <span class="line-currency-badge">{{ getLineCurrencyLabel(line) }}</span>
-                  </div>
-                  <div class="form-group line-amount-group">
-                    <label class="form-label">المبلغ</label>
-                    <input class="form-input" type="number" placeholder="0"
-                           [value]="line.amount"
-                           (input)="updateVoucherLine(lineIndex, 'amount', $any($event.target).value)"
-                           (keydown)="onVoucherLineFieldKeydown(lineIndex, 'amount', $event)">
-                  </div>
-                  <div class="form-group line-notes-group">
-                    <label class="form-label">البيان</label>
-                    <input class="form-input" type="text" placeholder="بيان السطر"
-                           [value]="line.notes"
-                           (input)="updateVoucherLine(lineIndex, 'notes', $any($event.target).value)"
-                           (keydown)="onVoucherLineFieldKeydown(lineIndex, 'notes', $event)">
-                  </div>
-                  <div class="line-actions">
-                    <button class="icon-btn delete-btn" type="button" title="حذف السطر" (click)="removeVoucherLine(lineIndex)">
-                      <span class="material-icons-round">delete</span>
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-            <div class="voucher-lines-summary">
-              <button class="btn-3d btn-ghost" type="button" (click)="addVoucherLine()">
-                <span class="material-icons-round">add</span>
-                إضافة سطر
-              </button>
-              <div class="summary-values">
-                <span>إجمالي السطور: {{ formatAmount(getVoucherLinesTotal()) }}</span>
-                <span>الفرق: {{ formatAmount(getVoucherAmountDifference()) }}</span>
-              </div>
-            </div>
-          </div>
-
+            </tbody>
+          </table>
         </div>
-        @if (formError()) {
-          <div class="modal-form-error">
-            <span class="material-icons-round">warning</span>
-            <span>{{ formError() }}</span>
-            <button type="button" class="modal-error-close" (click)="formError.set('')">✕</button>
-          </div>
-        }
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
-          <button class="btn-3d" [class.btn-receipt]="voucherType() === 'receipt'"
-                  [class.btn-payment]="voucherType() === 'payment'"
-                  [disabled]="saving()" (click)="saveVoucher()">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-            {{ saving() ? (isEditing() ? 'جاري التحديث...' : 'جاري الحفظ...') : (isEditing() ? 'تحديث السند' : 'حفظ السند') }}
-          </button>
+        <button class="add-line-btn" (click)="addLine()">
+          <span class="material-icons-round">add</span> إضافة سطر
+        </button>
+      </div>
+
+      <!-- Total -->
+      <div class="vou-total-bar">
+        <div class="total-label">إجمالي السند</div>
+        <div class="total-amount" [class.receipt-total]="formHeader().voucherType==='receipt'"
+             [class.payment-total]="formHeader().voucherType==='payment'">
+          {{ fmt(totalAmount()) }}
         </div>
       </div>
+
+      @if (error()) {
+        <div class="vou-error form-error"><span class="material-icons-round">error</span> {{ error() }}</div>
+      }
+
+      <div class="vou-form-footer">
+        <button class="vou-btn ghost" (click)="showForm.set(false)">إلغاء</button>
+        <button class="vou-btn secondary" [disabled]="saving()"
+                (click)="formHeader.update(h=>({...h,status:'draft'}));save()">
+          <span class="material-icons-round">save</span> حفظ كمسودة
+        </button>
+        <button class="vou-btn" [class]="formHeader().voucherType==='receipt'?'receipt-btn':'payment-btn'"
+                [disabled]="saving()" (click)="formHeader.update(h=>({...h,status:'unreviewed'}));save()">
+          @if (saving()) { <span class="material-icons-round rotating">sync</span> }
+          @else { <span class="material-icons-round">{{ formHeader().voucherType==='receipt'?'call_received':'call_made' }}</span> }
+          {{ editingId() ? 'تعديل السند' : (formHeader().voucherType==='receipt' ? 'ترحيل القبض' : 'ترحيل الصرف') }}
+        </button>
+      </div>
+
     </div>
   }
 
-  <!-- ===== Voucher Details Modal ===== -->
-  @if (showDetailsModal()) {
-    <div class="modal-overlay" (click)="closeDetails()">
-      <div class="modal-3d details-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
-          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
-            <span class="material-icons-round">receipt_long</span>
-          </div>
-          <h2 style="color:white">تفاصيل السند</h2>
-          <button class="modal-close" (click)="closeDetails()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          @if (detailsLoading()) {
-            <div style="text-align:center;padding:40px"><span class="material-icons-round spin" style="font-size:32px;color:#6366f1">sync</span></div>
-          } @else if (detailsVoucher()) {
-            <div class="details-grid">
-              @if (detailsVoucher().fullSequenceNumber) {
-                <div class="detail-row" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:8px;padding:12px">
-                  <span class="detail-label" style="font-weight:600;color:#0369a1">الرقم التسلسلي</span>
-                  <span class="detail-value" style="font-family:monospace;font-size:16px;font-weight:700;color:#0c4a6e;letter-spacing:1px">{{ detailsVoucher().fullSequenceNumber }}</span>
-                </div>
-              }
-              <div class="detail-row">
-                <span class="detail-label">رقم السند</span>
-                <span class="detail-value">{{ detailsVoucher().voucherNumber || '-' }}</span>
+  <!-- List -->
+  @if (!loading() && !showForm()) {
+    @if (filteredVouchers().length === 0) {
+      <app-empty-state icon="receipt_long" message="لا توجد سندات" sub="اضغط سند قبض أو سند صرف لإنشاء أول سند" />
+    } @else {
+      <div class="vou-list">
+        @for (v of filteredVouchers(); track v.id) {
+          <div class="vou-card" [class.expanded]="expandedId()===v.id"
+               [class.card-receipt]="v.voucherType==='receipt'"
+               [class.card-payment]="v.voucherType==='payment'">
+            <div class="vou-card-head" (click)="toggleExpand(v.id)">
+              <div class="vou-type-badge" [class.receipt-badge]="v.voucherType==='receipt'"
+                                           [class.payment-badge]="v.voucherType==='payment'">
+                <span class="material-icons-round">{{ v.voucherType==='receipt'?'call_received':'call_made' }}</span>
+                {{ v.voucherType==='receipt'?'قبض':'صرف' }}
               </div>
-              @if (detailsVoucherNumberParts()) {
-                <div class="detail-row" style="background:linear-gradient(135deg,#fefce8,#fef9c3);border-radius:8px;padding:12px">
-                  <span class="detail-label" style="font-weight:600;color:#713f12">الخزينة</span>
-                  <span class="detail-value" style="font-weight:700;color:#854d0e">
-                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">account_balance_wallet</span>
-                    {{ getDetailsTreasuryName(detailsVoucher()) }}
-                    <span style="font-size:12px;color:#92400e;font-weight:400;margin-right:6px" dir="ltr">({{ detailsVoucherNumberParts()?.treasuryCode }})</span>
-                  </span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">السنة / التسلسل</span>
-                  <span class="detail-value">{{ detailsVoucherNumberParts()?.year }} / {{ detailsVoucherNumberParts()?.serial }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">الصيغة المختصرة</span>
-                  <span class="detail-value" dir="ltr">
-                    {{ detailsVoucherNumberParts()?.treasuryCode }}-{{ detailsVoucherNumberParts()?.year }}-{{ detailsVoucherNumberParts()?.serial }}
-                  </span>
-                </div>
-              }
-              @if (!detailsVoucherNumberParts()) {
-                <div class="detail-row" style="background:linear-gradient(135deg,#fefce8,#fef9c3);border-radius:8px;padding:12px">
-                  <span class="detail-label" style="font-weight:600;color:#713f12">الخزينة</span>
-                  <span class="detail-value" style="font-weight:700;color:#854d0e">
-                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">account_balance_wallet</span>
-                    {{ getDetailsTreasuryName(detailsVoucher()) }}
-                  </span>
-                </div>
-              }
-              @if (detailsVoucher().accountSequence) {
-                <div class="detail-row">
-                  <span class="detail-label">تسلسل الحساب</span>
-                  <span class="detail-value">{{ detailsVoucher().accountSequence }}</span>
-                </div>
-              }
-              @if (detailsVoucher().templateSequence) {
-                <div class="detail-row">
-                  <span class="detail-label">تسلسل القالب</span>
-                  <span class="detail-value">{{ detailsVoucher().templateSequence }}</span>
-                </div>
-              }
-              <div class="detail-row">
-                <span class="detail-label">النوع</span>
-                <span class="detail-value">
-                  <span class="vr-type-badge" [style.background]="getTypeColor(detailsVoucher().voucherType) + '18'" [style.color]="getTypeColor(detailsVoucher().voucherType)">
-                    {{ getTypeLabel(detailsVoucher().voucherType) }}
-                  </span>
-                </span>
+              <div class="vou-card-num">
+                <span class="vou-voucher-no">{{ v.voucherNumber || ('#' + v.id) }}</span>
               </div>
-              <div class="detail-row">
-                <span class="detail-label">المبلغ</span>
-                <span class="detail-value amount-big" [style.color]="getTypeColor(detailsVoucher().voucherType)">{{ formatAmount(detailsVoucher().amount) }} ر.ي</span>
+              <div class="vou-card-meta">
+                <span class="vou-date">{{ formatDate(v.voucherDate) }}</span>
+                <span class="vou-desc">{{ v.description }}</span>
               </div>
-              <div class="detail-row">
-                <span class="detail-label">البيان</span>
-                <span class="detail-value">{{ detailsVoucher().description || '-' }}</span>
+              <div class="vou-card-amount" [class.receipt-amt]="v.voucherType==='receipt'"
+                                            [class.payment-amt]="v.voucherType==='payment'">
+                {{ fmt(v.amount) }}
               </div>
-              <div class="detail-row">
-                <span class="detail-label">التاريخ</span>
-                <span class="detail-value">{{ formatDateTime(detailsVoucher().voucherDate || detailsVoucher().createdAt) }}</span>
+              <div class="vou-card-badges">
+                @if (v.status === 'reviewed') {
+                  <span class="badge status-reviewed"><span class="material-icons-round">verified</span> مراجع</span>
+                } @else if (v.status === 'unreviewed') {
+                  <span class="badge status-unreviewed"><span class="material-icons-round">pending</span> غير مراجع</span>
+                } @else {
+                  <span class="badge status-draft"><span class="material-icons-round">edit_note</span> مسودة</span>
+                }
               </div>
-              <div class="detail-row">
-                <span class="detail-label">الحالة</span>
-                <span class="detail-value">
-                  <span class="status-pill" [style.background]="getStatusColor(detailsVoucher().status) + '18'" [style.color]="getStatusColor(detailsVoucher().status)">
-                    <span class="material-icons-round" style="font-size:14px">{{ getStatusIcon(detailsVoucher().status) }}</span>
-                    {{ getStatusLabel(detailsVoucher().status) }}
-                  </span>
-                </span>
+              <div class="vou-card-actions" (click)="$event.stopPropagation()">
+                <button class="icon-btn print-btn" (click)="printVoucher(v)" title="طباعة">
+                  <span class="material-icons-round">print</span>
+                </button>
+                <button class="icon-btn edit-btn" (click)="openEdit(v)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="icon-btn danger" (click)="deleteVoucher(v.id)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+                <span class="material-icons-round expand-icon">{{ expandedId()===v.id?'expand_less':'expand_more' }}</span>
               </div>
-              @if (detailsVoucher().fromAccountId
-                && !isSystemCashAccount(detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId))
-                && !isDetailsTreasuryAccount(detailsVoucher().fromAccountId)) {
-                <div class="detail-row">
-                  <span class="detail-label">من حساب</span>
-                  <span class="detail-value">{{ detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId) }}</span>
-                </div>
-              }
-              @if (detailsVoucher().toAccountId
-                && !isSystemCashAccount(detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId))
-                && !isDetailsTreasuryAccount(detailsVoucher().toAccountId)) {
-                <div class="detail-row">
-                  <span class="detail-label">إلى حساب</span>
-                  <span class="detail-value">{{ detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId) }}</span>
-                </div>
-              }
-              <div class="detail-row">
-                <span class="detail-label">الأطراف المقابلة</span>
-                <span class="detail-value">{{ getVoucherCounterpartySummary(detailsVoucher()) }}</span>
-              </div>
-              @if (detailsVoucher().reference) {
-                <div class="detail-row">
-                  <span class="detail-label">المرجع</span>
-                  <span class="detail-value">{{ detailsVoucher().reference }}</span>
-                </div>
-              }
-              @if (detailsVoucher().operationTypeId) {
-                <div class="detail-row">
-                  <span class="detail-label">نوع العملية</span>
-                  <span class="detail-value">{{ getOpTypeName(detailsVoucher().operationTypeId) }}</span>
-                </div>
-              }
+            </div>
 
-              <!-- بنود السند (voucherLineDetails) - المصدر الأساسي مع الحساب التحليلي -->
-              @if (detailsVoucher().voucherLineDetails?.length > 0) {
-                <div class="journal-lines-block">
-                  <div class="journal-lines-title">
-                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">list_alt</span>
-                    بنود السند
-                  </div>
-                  <div class="journal-lines-table" style="grid-template-columns:1fr 1fr auto auto">
-                    <div class="jl-head">الحساب</div>
-                    <div class="jl-head">الحساب التحليلي</div>
-                    <div class="jl-head">المبلغ</div>
-                    <div class="jl-head">ملاحظات</div>
-                    @for (vl of detailsVoucher().voucherLineDetails; track $index) {
-                      <div class="jl-cell">{{ vl.accountName || '-' }}</div>
-                      <div class="jl-cell">
-                        @if (vl.entityName) {
-                          <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600">
-                            <span class="material-icons-round" style="font-size:13px">person</span>
-                            {{ vl.entityName }}
-                          </span>
-                        } @else {
-                          <span style="color:#94a3b8">—</span>
-                        }
-                      </div>
-                      <div class="jl-cell amount">{{ formatAmount(vl.amount) }}</div>
-                      <div class="jl-cell" style="color:#64748b;font-size:12px">{{ vl.description || '—' }}</div>
-                    }
-                  </div>
-                </div>
-              }
-
-              <!-- سطور القيد المحاسبي -->
-              @if (getVoucherJournalLines(detailsVoucher()).length > 0) {
-                <div class="journal-lines-block" style="margin-top:8px">
-                  <div class="journal-lines-title">
-                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">account_balance</span>
-                    القيد المحاسبي
-                  </div>
-                  <div class="journal-lines-table" style="grid-template-columns:1fr auto 1fr auto">
-                    <div class="jl-head">الحساب</div>
-                    <div class="jl-head">الطرف</div>
-                    <div class="jl-head">الحساب التحليلي</div>
-                    <div class="jl-head">المبلغ</div>
-                    @for (line of getVoucherJournalLines(detailsVoucher()); track $index) {
-                      <div class="jl-cell">{{ line.accountName || '-' }}</div>
-                      <div class="jl-cell">
-                        <span [style.color]="line.lineType === 'debit' ? '#dc2626' : '#16a34a'" style="font-weight:600;font-size:12px">
-                          {{ line.lineType === 'debit' ? 'مدين' : (line.lineType === 'credit' ? 'دائن' : (line.lineType || '-')) }}
-                        </span>
-                      </div>
-                      <div class="jl-cell">
-                        @if (line.entityName) {
-                          <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600">
-                            <span class="material-icons-round" style="font-size:13px">person</span>
-                            {{ line.entityName }}
-                          </span>
-                        } @else {
-                          <span style="color:#94a3b8">—</span>
-                        }
-                      </div>
-                      <div class="jl-cell amount">{{ formatAmount(line.amount) }}</div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-        <div class="modal-footer details-footer">
-          @if (detailsVoucher()) {
-            <div class="details-status-switch">
-              <span class="details-status-label">حالة السند</span>
-              <select
-                class="details-status-select"
-                title="تغيير حالة السند"
-                [value]="detailsVoucher().status || 'unreviewed'"
-                [disabled]="saving()"
-                (change)="onDetailsStatusSelection($any($event.target).value)"
-              >
-                <option value="unreviewed">غير مراجع</option>
-                <option value="reviewed">مراجع</option>
-              </select>
-            </div>
-            <button class="btn-3d" style="background:#6366f1;color:white" (click)="openEditFromDetails()">
-              <span class="material-icons-round">edit</span>
-              تعديل
-            </button>
-            <button class="btn-3d" style="background:#3b82f6;color:white" (click)="openAttachmentsFromDetails()">
-              <span class="material-icons-round">attach_file</span>
-              المرفقات
-            </button>
-            <button class="btn-3d" style="background:#06b6d4;color:white" (click)="printVoucher(detailsVoucher())">
-              <span class="material-icons-round">print</span>
-              طباعة
-            </button>
-            <button class="btn-3d" style="background:#ef4444;color:white" (click)="deleteDetailsVoucher()">
-              <span class="material-icons-round">delete</span>
-              حذف
-            </button>
-          }
-          <button class="btn-3d btn-ghost" (click)="closeDetails()">إغلاق</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ===== Print Report Preview (No Popups) ===== -->
-  @if (showPrintReport() && printingVoucher()) {
-    <div class="modal-overlay print-preview-overlay" (click)="closePrintReport()">
-      <div class="modal-3d print-preview-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header" style="background:linear-gradient(135deg,#0f172a,#1e293b)">
-          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
-            <span class="material-icons-round">description</span>
-          </div>
-          <h2 style="color:white">تقرير {{ getVoucherDocumentTitle(printingVoucher()) }}</h2>
-          <button class="modal-close" (click)="closePrintReport()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div id="voucher-print-area" class="print-report-card">
-            <div class="print-header gradient">
-              <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
-              <h3 class="document-title">{{ getVoucherDocumentTitle(printingVoucher()) }}</h3>
-              @if (printingVoucher().fullSequenceNumber) {
-                <p style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:1px">الرقم التسلسلي: {{ printingVoucher().fullSequenceNumber }}</p>
-              }
-              <p>رقم السند: {{ printingVoucher().voucherNumber || '-' }}</p>
-            </div>
-            <div class="print-badges">
-              <span class="print-badge document">{{ getVoucherDirectionLabel(printingVoucher()) }}</span>
-              <span class="print-badge treasury">الخزينة: {{ getVoucherTreasuryLabel(printingVoucher()) }}</span>
-              <span class="print-badge counterpart">الأطراف: {{ getVoucherCounterpartySummary(printingVoucher()) }}</span>
-              <span class="print-badge status">{{ getStatusLabel(printingVoucher().status) }}</span>
-            </div>
-            <div class="print-row">
-              <span class="print-label">نوع المستند:</span>
-              <span>{{ getVoucherDocumentTitle(printingVoucher()) }}</span>
-            </div>
-            <div class="print-row">
-              <span class="print-label">التاريخ:</span>
-              <span>{{ formatDate(printingVoucher().voucherDate || printingVoucher().createdAt) }}</span>
-            </div>
-            <div class="print-row">
-              <span class="print-label">الحالة:</span>
-              <span>{{ getStatusLabel(printingVoucher().status) }}</span>
-            </div>
-            <div class="print-row">
-              <span class="print-label">الخزينة:</span>
-              <span>{{ getVoucherTreasuryLabel(printingVoucher()) }}</span>
-            </div>
-            @if (printingVoucher().fromAccountId && !isSystemCashAccount(printingVoucher().fromAccountName || getAccountName(printingVoucher().fromAccountId))) {
-              <div class="print-row">
-                <span class="print-label">من حساب:</span>
-                <span>{{ printingVoucher().fromAccountName || getAccountName(printingVoucher().fromAccountId) }}</span>
-              </div>
-            }
-            @if (printingVoucher().toAccountId && !isSystemCashAccount(printingVoucher().toAccountName || getAccountName(printingVoucher().toAccountId))) {
-              <div class="print-row">
-                <span class="print-label">إلى حساب:</span>
-                <span>{{ printingVoucher().toAccountName || getAccountName(printingVoucher().toAccountId) }}</span>
-              </div>
-            }
-            <div class="print-amount">
-              {{ formatAmount(printingVoucher().amount) }} ر.ي
-            </div>
-            <div class="print-row">
-              <span class="print-label">البيان:</span>
-              <span>{{ printingVoucher().description || '-' }}</span>
-            </div>
-            @if (printingVoucher().reference) {
-              <div class="print-row">
-                <span class="print-label">المرجع:</span>
-                <span>{{ printingVoucher().reference }}</span>
-              </div>
-            }
-            @if (getVoucherJournalLines(printingVoucher()).length > 0) {
-              <div class="print-lines-block">
-                <div class="print-lines-title">سطور الحركة</div>
-                <table class="print-lines-table">
+            @if (expandedId() === v.id) {
+              <div class="vou-lines-table">
+                <table>
                   <thead>
                     <tr>
-                      <th>الحساب</th>
-                      <th>الطرف</th>
-                      <th>المبلغ</th>
+                      <th>#</th><th>الحساب</th><th>الجهة</th><th>البيان</th><th class="amt-col">المبلغ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (line of getVoucherJournalLines(printingVoucher()); track $index) {
+                    @for (l of (v.lines||[]); track $index) {
                       <tr>
-                        <td>{{ line.accountName || '-' }}</td>
-                        <td>{{ line.lineType === 'debit' ? 'مدين' : (line.lineType === 'credit' ? 'دائن' : line.lineType) }}</td>
-                        <td>{{ formatAmount(line.amount) }}</td>
+                        <td class="ln-idx">{{ $index+1 }}</td>
+                        <td>{{ l.accountName || getAccountName(l.accountId) }}</td>
+                        <td>
+                          @if (l.entityType && l.entityId) {
+                            <span class="entity-pill">{{ getEntityLabel(l.entityType, l.entityId) }}</span>
+                          } @else { <span class="text-muted">—</span> }
+                        </td>
+                        <td>{{ l.description||'—' }}</td>
+                        <td class="amt-col" [class.receipt-val]="v.voucherType==='receipt'" [class.payment-val]="v.voucherType==='payment'">
+                          {{ fmt(l.amount) }}
+                        </td>
                       </tr>
                     }
                   </tbody>
+                  <tfoot>
+                    <tr class="totals-row">
+                      <td colspan="4" class="totals-label">الإجمالي</td>
+                      <td class="amt-col" [class.receipt-val]="v.voucherType==='receipt'" [class.payment-val]="v.voucherType==='payment'">
+                        {{ fmt(v.amount) }}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             }
-            <div class="print-footer">
-              <div class="print-sig">المحاسب</div>
-              <div class="print-sig">المدير</div>
-              <div class="print-sig">المستلم</div>
-            </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="closePrintReport()">إغلاق</button>
-          <button class="btn-3d" style="background:#06b6d4;color:white" (click)="printCurrentReport()">
-            <span class="material-icons-round">print</span>
-            طباعة
-          </button>
-        </div>
+        }
       </div>
-    </div>
-  }
-
-  <!-- ===== Attachments Dialog ===== -->
-  @if (showAttachments()) {
-    <div class="modal-overlay" (click)="showAttachments.set(false)">
-      <div class="modal-3d" style="max-width:560px" (click)="$event.stopPropagation()">
-        <div class="modal-header" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">
-          <div class="modal-icon" style="background:rgba(255,255,255,0.2)">
-            <span class="material-icons-round">attach_file</span>
-          </div>
-          <h2 style="color:white">المرفقات</h2>
-          <button class="modal-close" (click)="showAttachments.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          @if (attachments().length > 0) {
-            <div style="margin-bottom:16px">
-              @for (att of attachments(); track att.id) {
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px">
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <span class="material-icons-round" style="color:#3b82f6">description</span>
-                    <div>
-                      <div style="font-size:14px;font-weight:500">{{att.fileName}}</div>
-                      <div style="font-size:11px;color:#94a3b8">{{att.description || att.fileType}}</div>
-                    </div>
-                  </div>
-                  <button class="icon-btn delete-btn" (click)="removeAttachment(att.id)">
-                    <span class="material-icons-round">close</span>
-                  </button>
-                </div>
-              }
-            </div>
-          } @else {
-            <p style="text-align:center;color:#94a3b8;padding:16px">لا توجد مرفقات</p>
-          }
-          <div style="border-top:1px solid #e2e8f0;padding-top:16px">
-            <h4 style="font-size:14px;margin-bottom:8px">إضافة مرفق</h4>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <input class="form-input" type="text" placeholder="اسم الملف" [value]="attachmentForm().fileName" (input)="attachmentForm.update(f => ({...f, fileName: $any($event.target).value}))">
-              <input class="form-input" type="text" placeholder="مسار الملف (اختياري - يولد تلقائياً)" [value]="attachmentForm().filePath" (input)="attachmentForm.update(f => ({...f, filePath: $any($event.target).value}))">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-              <select class="form-select" [value]="attachmentForm().importance || 'عادي'" title="درجة الأهمية" (change)="attachmentForm.update(f => ({...f, importance: $any($event.target).value}))">
-                <option value="عاجل">عاجل</option>
-                <option value="مهم">مهم</option>
-                <option value="عادي">عادي</option>
-              </select>
-              <div></div>
-            </div>
-            <input class="form-input" style="margin-top:8px" type="text" placeholder="وصف (اختياري)" [value]="attachmentForm().description" (input)="attachmentForm.update(f => ({...f, description: $any($event.target).value}))">
-            <button class="btn-3d" style="margin-top:8px;background:#3b82f6;color:white;width:100%" (click)="addAttachment()">
-              <span class="material-icons-round">upload</span>
-              إضافة
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    }
   }
 
 </div>

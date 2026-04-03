@@ -9,6 +9,8 @@ import { eq, and, isNotNull, desc, sql, count } from "drizzle-orm";
 import {
   accounts,
   accountSubNatures,
+  accountBalances,
+  currencies,
   funds,
   suppliers,
   warehouses,
@@ -110,7 +112,36 @@ accountsReadRoutes.get(
         ),
       )
       .orderBy(accounts.code);
-    return c.json(rows.map((r) => r.accounts));
+
+    const accountIds = rows.map(r => r.accounts.id);
+    let balancesMap: Record<number, { currencyId: number; balance: string; currencySymbol: string; currencyCode: string }[]> = {};
+    if (accountIds.length > 0) {
+      const balRows = await db
+        .select({
+          accountId: accountBalances.accountId,
+          currencyId: accountBalances.currencyId,
+          balance: accountBalances.balance,
+          currencySymbol: currencies.symbol,
+          currencyCode: currencies.code,
+        })
+        .from(accountBalances)
+        .innerJoin(currencies, eq(accountBalances.currencyId, currencies.id))
+        .where(sql`${accountBalances.accountId} IN ${accountIds}`);
+      for (const b of balRows) {
+        if (!balancesMap[b.accountId]) balancesMap[b.accountId] = [];
+        balancesMap[b.accountId].push({
+          currencyId: b.currencyId,
+          balance: b.balance,
+          currencySymbol: b.currencySymbol || '',
+          currencyCode: b.currencyCode || '',
+        });
+      }
+    }
+
+    return c.json(rows.map((r) => ({
+      ...r.accounts,
+      balances: balancesMap[r.accounts.id] || [],
+    })));
   }),
 );
 

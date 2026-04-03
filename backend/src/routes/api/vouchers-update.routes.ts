@@ -396,6 +396,34 @@ vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddl
 // 4. ط¬ظ„ط¨ ط±طµظٹط¯ ط­ط³ط§ط¨ (ظ„ط¹ط±ط¶ظ‡ ط£ط«ظ†ط§ط، ط¥ظ†ط´ط§ط، ط§ظ„ط¹ظ…ظ„ظٹط©)
 
 
+// 5. حذف السند (مع تجاهل القيد المرتبط إن كان محذوفاً)
+vouchersUpdateRouter.delete('/vouchers/:id', safeHandler('حذف سند', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
+
+  const [voucher] = await db.select().from(vouchers).where(eq(vouchers.id, id));
+  if (!voucher) return c.json({ error: 'السند غير موجود' }, 404);
+
+  // احذف سطور السند
+  await db.delete(voucherLines).where(eq(voucherLines.voucherId, id));
+
+  // احذف القيد المحاسبي المرتبط إن وُجد (تجاهل الخطأ إن كان محذوفاً)
+  try {
+    const [linked] = await db.select({ id: journalEntries.id })
+      .from(journalEntries)
+      .where(eq(journalEntries.reference, voucher.voucherNumber ?? ''))
+      .limit(1);
+    if (linked?.id) {
+      await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, linked.id));
+      await db.delete(journalEntries).where(eq(journalEntries.id, linked.id));
+    }
+  } catch { /* القيد محذوف مسبقاً — تجاهل */ }
+
+  // احذف السند
+  await db.delete(vouchers).where(eq(vouchers.id, id));
+  return c.json({ success: true });
+}));
+
 export { vouchersUpdateRouter };
 
 

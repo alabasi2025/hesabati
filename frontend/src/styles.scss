@@ -10,6 +10,7 @@
 /* ===================== Dark Mode Variables (Default) ===================== */
 :root,
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-base:        #{t.$dark-bg-base};
   --bg-surface:     #{t.$dark-bg-depth-2};
   --bg-card:        #{t.$dark-bg-depth-3};
@@ -87,6 +88,7 @@
 
 /* ===================== Light Mode Variables ===================== */
 [data-theme="light"] {
+  color-scheme: light;
   --bg-base:        #{t.$light-bg-base};
   --bg-surface:     #{t.$light-bg-depth-1};
   --bg-card:        #{t.$light-bg-depth-2};
@@ -162,6 +164,17 @@ html {
   direction: rtl;
   font-family: t.$font-family-primary;
   scroll-behavior: smooth;
+}
+
+/* ===== Force Latin/Western Numerals Everywhere ===== */
+:root { font-variant-numeric: normal; }
+* {
+  -webkit-font-feature-settings: "lnum" 1, "tnum" 1;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}
+input[type=number], input[type=text], input[type=date],
+.monospace, [class*="amt"], [class*="num"], [class*="seq"] {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 body {

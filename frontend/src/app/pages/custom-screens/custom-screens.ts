@@ -685,7 +685,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       const toAcc = this.allAccounts().find(a => a.id === toId);
       const confirmed = await this.toast.confirm({
         title: `تأكيد تحويل - ${opType.name}`,
-        message: `تحويل ${amount.toLocaleString('ar-SA')} من "${fromAcc?.name || fromId}" إلى "${toAcc?.name || toId}"`,
+        message: `تحويل ${amount.toLocaleString('en')} من "${fromAcc?.name || fromId}" إلى "${toAcc?.name || toId}"`,
         type: 'info',
       });
       if (!confirmed) return;
@@ -699,7 +699,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
           description: this.csFormDescription() || `${opType.name} - تحويل`,
           voucherDate: this.csFormDate(),
         });
-        this.toast.success(`تم التحويل بنجاح - ${amount.toLocaleString('ar-SA')}`);
+        this.toast.success(`تم التحويل بنجاح - ${amount.toLocaleString('en')}`);
         this.csSelectedOpType.set(null); this.csTransferFromAccountId.set(null); this.csTransferToAccountId.set(null); this.csTransferAmount.set('');
         const screen = this.activeScreen();
         if (screen) await this.openScreen(screen);
@@ -724,12 +724,12 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     } else {
       if (!opType.sourceAccountId) { this.toast.warning('حدد الخزينة (حساب بنك/صراف/محفظة) في القالب قبل التنفيذ'); return; }
     }
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('ar-SA')}`).join('\n');
+    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('en')}`).join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد ${vTypeLabel} - ${opType.name}`,
       message: useMulti
-        ? `سيتم إنشاء سند ${vTypeLabel} واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`
-        : `سيتم تنفيذ ${entries.length} سند بإجمالي ${total.toLocaleString('ar-SA')}:\n${summaryLines}`,
+        ? `سيتم إنشاء سند ${vTypeLabel} واحد (متعدد) يحتوي على ${entries.length} سطور بإجمالي ${total.toLocaleString('en')}:\n${summaryLines}`
+        : `سيتم تنفيذ ${entries.length} سند بإجمالي ${total.toLocaleString('en')}:\n${summaryLines}`,
       type: opType.voucherType === 'payment' ? 'danger' : 'info',
     });
     if (!confirmed) return;
@@ -787,7 +787,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       if (results.length > 0 && errors.length === 0) {
         const countLabel = useMulti ? 'سند واحد' : `${results.length} سند`;
         const vNo = (results[0] as any)?.voucherNumber ? ` (رقم: ${(results[0] as any).voucherNumber})` : '';
-        this.toast.success(`تم تنفيذ ${countLabel} بنجاح - إجمالي: ${total.toLocaleString('ar-SA')}${vNo}`);
+        this.toast.success(`تم تنفيذ ${countLabel} بنجاح - إجمالي: ${total.toLocaleString('en')}${vNo}`);
       } else if (results.length > 0) {
         this.toast.warning(`تم ${results.length} عملية بنجاح، فشلت ${errors.length}`);
       } else {
@@ -1292,16 +1292,16 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
   // ===================== Helpers =====================
   formatDate(dateStr: string): string {
-    return formatDateShared(dateStr || '', 'ar-SA');
+    return formatDateShared(dateStr || '', 'en');
   }
 
   formatNumber(num: number): string {
     if (!num && num !== 0) return '0';
-    return num.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return num.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
   formatAmount(amount: string | number): string {
-    return formatAmountPrecise(amount, 0, 2, 'ar-SA');
+    return formatAmountPrecise(amount, 0, 2, 'en');
   }
 
   getVoucherTypeLabel(type: string): string {

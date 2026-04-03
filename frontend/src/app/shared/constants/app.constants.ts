@@ -3,8 +3,8 @@
  */
 export const APP_CONSTANTS = {
   LOCALE: {
-    DEFAULT: 'ar-YE',
-    AMOUNT: 'ar-SA',
+    DEFAULT: 'ar-u-nu-latn-ca-gregory',
+    AMOUNT:  'en-US',
   },
   CURRENCY: {
     SYMBOL: 'ر.ي',

@@ -4,273 +4,255 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { formatDate as formatDateShared } from '../../shared/helpers';
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
-interface OperationItem {
-  itemName: string;
-  itemCode: string;
-  itemTypeId: number | null;
-  quantity: number;
-  unitCost: number;
-  unit: string;
-  notes: string;
+interface WopItem {
+  itemId:    number | null;
+  itemName:  string;
+  itemCode:  string;
+  quantity:  number;
+  unitCost:  number;
+  unit:      string;
+  notes:     string;
 }
 
-const OPERATION_TYPE_META: Record<string, { label: string; icon: string; color: string; description: string }> = {
-  supply_invoice:   { label: 'توريد فاتورة',   icon: 'receipt_long',    color: '#22c55e', description: 'إدخال بضاعة بفاتورة مشتريات من مورد' },
-  supply_order:     { label: 'توريد أمر',       icon: 'assignment',      color: '#3b82f6', description: 'إدخال بضاعة بأمر توريد داخلي' },
-  dispatch:         { label: 'صرف مخزني',       icon: 'outbox',          color: '#ef4444', description: 'صرف بضاعة من المخزن' },
-  transfer_out:     { label: 'تحويل مخزني',     icon: 'swap_horiz',      color: '#8b5cf6', description: 'تحويل بضاعة من مخزن إلى آخر' },
-  receive_transfer: { label: 'استلام تحويل',    icon: 'move_to_inbox',   color: '#f59e0b', description: 'استلام بضاعة محولة من مخزن آخر' },
+const OP_META: Record<string, { label: string; icon: string; color: string }> = {
+  supply_invoice:   { label: 'توريد فاتورة',  icon: 'receipt_long',  color: '#22c55e' },
+  supply_order:     { label: 'توريد أمر',      icon: 'assignment',    color: '#3b82f6' },
+  dispatch:         { label: 'صرف مخزني',      icon: 'outbox',        color: '#ef4444' },
+  transfer_out:     { label: 'تحويل مخزني',    icon: 'swap_horiz',    color: '#8b5cf6' },
+  receive_transfer: { label: 'استلام تحويل',   icon: 'move_to_inbox', color: '#f59e0b' },
 };
 
 @Component({
   selector: 'app-warehouse-operations',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
   templateUrl: './warehouse-operations.html',
-  styleUrl: './warehouse-operations.scss',
+  styleUrl:    './warehouse-operations.scss',
 })
 export class WarehouseOperationsComponent extends BasePageComponent {
-  private readonly api = inject(ApiService);
+  private readonly api   = inject(ApiService);
   private readonly toast = inject(ToastService);
 
-  operations = signal<any[]>([]);
-  warehouses = signal<any[]>([]);
-  suppliers = signal<any[]>([]);
-  itemTypes = signal<any[]>([]);
+  // ===== Data =====
+  operations  = signal<any[]>([]);
+  warehouses  = signal<any[]>([]);
+  suppliers   = signal<any[]>([]);
+  inventoryItems = signal<any[]>([]);
   operationTypes = signal<any[]>([]);
-  loading = signal(true);
-  saving = signal(false);
-  showHowItWorks = signal(false);
-
-  // فلاتر
-  filterType = signal<string>('all');
-  filterWarehouse = signal<number | null>(null);
-
-  // نموذج العملية
+  loading  = signal(true);
+  saving   = signal(false);
+  error    = signal('');
   showForm = signal(false);
-  showDetail = signal(false);
-  selectedOperation = signal<any>(null);
+  expandedId = signal<number | null>(null);
 
-  form = {
-    operationType: 'supply_invoice' as string,
-    sourceWarehouseId: null as number | null,
-    destinationWarehouseId: null as number | null,
-    operationTypeId: null as number | null,
-    supplierId: null as number | null,
-    relatedOperationId: null as number | null,
-    operationDate: new Date().toISOString().split('T')[0],
-    description: '',
-    reference: '',
-    items: [this.newItem()] as OperationItem[],
-  };
+  // ===== Tabs =====
+  activeTab = signal<string>('all');
+  filteredOps = computed(() => {
+    const tab = this.activeTab();
+    const all = this.operations();
+    if (tab === 'all') return all;
+    return all.filter((o: any) => o.operationType === tab);
+  });
 
-  protected override onBizIdChange(_bizId: number): void {
-    this.load();
-  }
+  // ===== Stats =====
+  stats = computed(() => {
+    const all = this.operations();
+    const result: Record<string, number> = { all: all.length };
+    for (const key of Object.keys(OP_META)) result[key] = all.filter((o: any) => o.operationType === key).length;
+    return result;
+  });
+
+  // ===== Form =====
+  formHeader = signal({
+    operationType:         'supply_invoice' as string,
+    sourceWarehouseId:     null as number | null,
+    destinationWarehouseId:null as number | null,
+    operationTypeId:       null as number | null,
+    supplierId:            null as number | null,
+    relatedOperationId:    null as number | null,
+    operationDate:         new Date().toISOString().split('T')[0],
+    description:           '',
+    reference:             '',
+    status:                'draft' as string,
+  });
+
+  formItems = signal<WopItem[]>([]);
+
+  readonly allTypes = Object.entries(OP_META).map(([key, m]) => ({ key, ...m }));
+
+  readonly statusOptions = [
+    { key: 'draft',     label: 'مسودة',  icon: 'edit_note',    color: '#64748b' },
+    { key: 'confirmed', label: 'مؤكد',   icon: 'check_circle', color: '#22c55e' },
+    { key: 'cancelled', label: 'ملغي',   icon: 'cancel',       color: '#ef4444' },
+  ];
+
+  meta(type: string) { return OP_META[type] || { label: type, icon: 'inventory_2', color: '#64748b' }; }
+
+  needsSource()      { return ['dispatch','transfer_out'].includes(this.formHeader().operationType); }
+  needsDestination() { return ['supply_invoice','supply_order','transfer_out','receive_transfer'].includes(this.formHeader().operationType); }
+  needsSupplier()    { return this.formHeader().operationType === 'supply_invoice'; }
+  needsRelated()     { return this.formHeader().operationType === 'receive_transfer'; }
+
+  pendingTransfers = computed(() => this.operations().filter((o: any) => o.operationType === 'transfer_out' && o.status === 'confirmed'));
+
+  grandTotal = computed(() => this.formItems().reduce((s, i) => s + (i.quantity || 0) * (i.unitCost || 0), 0));
+  totalQty   = computed(() => this.formItems().reduce((s, i) => s + (i.quantity || 0), 0));
+
+  protected override onBizIdChange(_bizId: number): void { this.load(); }
 
   async load() {
     this.loading.set(true);
     try {
-      const [ops, whs, supps, itemTypesRes, ots] = await Promise.allSettled([
+      const [ops, whs, supps, invItems, ots] = await Promise.allSettled([
         this.api.getWarehouseOperations(this.bizId),
         this.api.getWarehouses(this.bizId),
         this.api.getSuppliers(this.bizId),
-        this.api.getInventoryItemTypes(this.bizId).catch(() => []),
+        this.api.getInventoryItems(this.bizId),
         this.api.getOperationTypes(this.bizId),
       ]);
-      this.operations.set(ops.status === 'fulfilled' ? ops.value : []);
-      this.warehouses.set(whs.status === 'fulfilled' ? whs.value : []);
-      this.suppliers.set(supps.status === 'fulfilled' ? supps.value : []);
-      this.itemTypes.set(itemTypesRes.status === 'fulfilled' ? itemTypesRes.value : []);
-      this.operationTypes.set(ots.status === 'fulfilled' ? ots.value : []);
+      this.operations.set(ops.status    === 'fulfilled' ? ops.value    || [] : []);
+      this.warehouses.set(whs.status    === 'fulfilled' ? whs.value    || [] : []);
+      this.suppliers.set(supps.status   === 'fulfilled' ? supps.value  || [] : []);
+      this.inventoryItems.set(invItems.status === 'fulfilled' ? invItems.value || [] : []);
+      this.operationTypes.set(ots.status === 'fulfilled' ? ots.value   || [] : []);
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }
 
-  // ===== الفلترة =====
-  filteredOperations() {
-    const ft = this.filterType();
-    const fw = this.filterWarehouse();
-    let list = this.operations();
-    if (ft !== 'all') list = list.filter(o => o.operationType === ft);
-    if (fw) list = list.filter(o => o.sourceWarehouseId === fw || o.destinationWarehouseId === fw);
-    return list;
+  newItem(): WopItem {
+    return { itemId: null, itemName: '', itemCode: '', quantity: 1, unitCost: 0, unit: 'قطعة', notes: '' };
   }
 
-  // إحصائيات حسب النوع
-  countByType(type: string): number {
-    return this.operations().filter(o => o.operationType === type).length;
-  }
-
-  // ===== نموذج العملية =====
-  newItem(): OperationItem {
-    return { itemName: '', itemCode: '', itemTypeId: null, quantity: 1, unitCost: 0, unit: '', notes: '' };
-  }
-
-  openAdd(type?: string) {
-    this.form = {
-      operationType: type || 'supply_invoice',
-      sourceWarehouseId: null,
-      destinationWarehouseId: null,
-      operationTypeId: null,
-      supplierId: null,
-      relatedOperationId: null,
+  openNew(type = 'supply_invoice') {
+    this.formHeader.set({
+      operationType: type, sourceWarehouseId: null, destinationWarehouseId: null,
+      operationTypeId: null, supplierId: null, relatedOperationId: null,
       operationDate: new Date().toISOString().split('T')[0],
-      description: '',
-      reference: '',
-      items: [this.newItem()],
-    };
+      description: '', reference: '', status: 'draft',
+    });
+    this.formItems.set([this.newItem()]);
+    this.error.set('');
     this.showForm.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  addItem() {
-    this.form.items.push(this.newItem());
+  addItem()    { this.formItems.update(ls => [...ls, this.newItem()]); }
+  removeItem(i: number) { if (this.formItems().length > 1) this.formItems.update(ls => ls.filter((_, idx) => idx !== i)); }
+
+  updateItem(i: number, field: keyof WopItem, value: any) {
+    this.formItems.update(ls => { const c = [...ls]; c[i] = { ...c[i], [field]: value }; return c; });
   }
 
-  removeItem(index: number) {
-    if (this.form.items.length > 1) {
-      this.form.items.splice(index, 1);
+  onItemSelect(i: number, itemId: number | null) {
+    if (!itemId) { this.updateItem(i, 'itemId', null); return; }
+    const inv = this.inventoryItems().find((x: any) => x.id === itemId);
+    if (inv) {
+      this.formItems.update(ls => {
+        const c = [...ls];
+        c[i] = { ...c[i], itemId, itemName: inv.name, itemCode: inv.code || inv.category || '', unit: inv.unit || 'قطعة' };
+        return c;
+      });
     }
   }
-
-  getItemTotal(item: OperationItem): number {
-    return (item.quantity || 0) * (item.unitCost || 0);
-  }
-
-  getGrandTotal(): number {
-    return this.form.items.reduce((sum, item) => sum + this.getItemTotal(item), 0);
-  }
-
-  getTotalQuantity(): number {
-    return this.form.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  }
-
-  // هل النوع يحتاج مخزن مصدر
-  needsSource(): boolean {
-    return ['dispatch', 'transfer_out'].includes(this.form.operationType);
-  }
-
-  // هل النوع يحتاج مخزن وجهة
-  needsDestination(): boolean {
-    return ['supply_invoice', 'supply_order', 'transfer_out', 'receive_transfer'].includes(this.form.operationType);
-  }
-
-  // هل النوع يحتاج مورد
-  needsSupplier(): boolean {
-    return this.form.operationType === 'supply_invoice';
-  }
-
-  // هل النوع يحتاج عملية مرتبطة
-  needsRelated(): boolean {
-    return this.form.operationType === 'receive_transfer';
-  }
-
-  // القوالب المخزنية فقط
-  warehouseTemplates = computed(() => {
-    return this.operationTypes().filter((ot: any) =>
-      ot.voucherType && ['supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer'].includes(ot.voucherType)
-    );
-  });
-
-  // عمليات التحويل المتاحة للاستلام
-  pendingTransfers = computed(() => {
-    return this.operations().filter(o =>
-      o.operationType === 'transfer_out' && o.status === 'confirmed'
-    );
-  });
 
   async save() {
-    // التحقق
-    if (this.needsDestination() && !this.form.destinationWarehouseId) {
-      this.toast.error('يرجى تحديد المخزن الوجهة');
-      return;
-    }
-    if (this.needsSource() && !this.form.sourceWarehouseId) {
-      this.toast.error('يرجى تحديد المخزن المصدر');
-      return;
-    }
-    if (this.needsSupplier() && !this.form.supplierId) {
-      this.toast.error('يرجى تحديد المورد');
-      return;
-    }
-    if (this.needsRelated() && !this.form.relatedOperationId) {
-      this.toast.error('يرجى تحديد عملية التحويل المرتبطة');
-      return;
-    }
-
-    const validItems = this.form.items.filter(i => i.itemName?.trim());
-    if (validItems.length === 0) {
-      this.toast.error('يجب إضافة صنف واحد على الأقل');
-      return;
-    }
+    const h = this.formHeader();
+    if (!h.description?.trim()) { this.error.set('البيان مطلوب'); return; }
+    if (this.needsDestination() && !h.destinationWarehouseId) { this.error.set('يرجى تحديد المخزن الوجهة'); return; }
+    if (this.needsSource()      && !h.sourceWarehouseId)      { this.error.set('يرجى تحديد المخزن المصدر'); return; }
+    if (this.needsSupplier()    && !h.supplierId)             { this.error.set('يرجى تحديد المورد'); return; }
+    if (this.needsRelated()     && !h.relatedOperationId)     { this.error.set('يرجى تحديد عملية التحويل المرتبطة'); return; }
+    const validItems = this.formItems().filter(i => i.itemName?.trim() || i.itemId);
+    if (!validItems.length) { this.error.set('يجب إضافة صنف واحد على الأقل'); return; }
 
     this.saving.set(true);
+    this.error.set('');
     try {
-      await this.api.createWarehouseOperation(this.bizId, {
-        ...this.form,
-        items: validItems,
-      });
+      await this.api.createWarehouseOperation(this.bizId, { ...h, items: validItems });
       this.toast.success('تم إنشاء العملية المخزنية بنجاح');
       this.showForm.set(false);
       await this.load();
-    } catch (e: unknown) {
-      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء إنشاء العملية');
-    }
+    } catch (e: unknown) { this.error.set(e instanceof Error ? e.message : 'حدث خطأ'); }
     this.saving.set(false);
   }
 
-  async viewDetail(op: any) {
-    try {
-      const detail = await this.api.getWarehouseOperation(op.id);
-      this.selectedOperation.set(detail);
-      this.showDetail.set(true);
-    } catch (e: unknown) {
-      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
-    }
+  toggleExpand(id: number) { this.expandedId.set(this.expandedId() === id ? null : id); }
+
+  fmt(v: any) { return Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+
+  formatDate(d: any) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('ar-u-nu-latn-ca-gregory', { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch { return String(d); }
   }
 
-  // ===== مساعدات =====
-  getTypeMeta(type: string) {
-    return OPERATION_TYPE_META[type] || { label: type, icon: 'inventory_2', color: '#64748b', description: '' };
-  }
+  getWarehouseName(id: number | null) { return id ? (this.warehouses().find((w: any) => w.id === id)?.name || '—') : '—'; }
+  getSupplierName(id: number | null)  { return id ? (this.suppliers().find((s: any) => s.id === id)?.name || '—') : '—'; }
+  getItemName(id: number | null)      { return id ? (this.inventoryItems().find((i: any) => i.id === id)?.name || '—') : '—'; }
 
-  getWarehouseName(id: number | null): string {
-    if (!id) return '-';
-    const w = this.warehouses().find(w => w.id === id);
-    return w ? w.name : '-';
+  printOperation(op: any) {
+    const meta = this.meta(op.operationType);
+    const lines = (op.items || []).map((it: any, i: number) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${it.itemName || this.getItemName(it.itemId)}</td>
+        <td>${it.itemCode || '—'}</td>
+        <td style="text-align:center">${this.fmt(it.quantity)} ${it.unit || ''}</td>
+        <td style="text-align:left">${this.fmt(it.unitCost)}</td>
+        <td style="text-align:left;font-weight:900">${this.fmt((it.quantity || 0) * (it.unitCost || 0))}</td>
+      </tr>`).join('');
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar">
+<head><meta charset="UTF-8"><title>${meta.label}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13px; direction: rtl; padding: 24px; }
+  .header { display: flex; justify-content: space-between; border-bottom: 3px solid ${meta.color}; padding-bottom: 12px; margin-bottom: 16px; }
+  .title { font-size: 18px; font-weight: 900; color: ${meta.color}; }
+  .meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; padding: 10px 14px; background: #f8fafc; border-radius: 8px; }
+  .meta-item { display: flex; flex-direction: column; gap: 2px; }
+  .meta-label { font-size: 10px; color: #64748b; font-weight: 700; }
+  .meta-value { font-size: 13px; font-weight: 800; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { padding: 8px 10px; background: ${meta.color}; color: #fff; font-size: 12px; text-align: right; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+  .total-row { background: #f1f5f9; font-weight: 900; border-top: 2px solid ${meta.color}; }
+  .footer { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 24px; }
+  .sig-row { display: flex; justify-content: space-between; margin-top: 40px; }
+  .sig-box { text-align: center; width: 160px; border-top: 1px solid #1e293b; padding-top: 4px; font-size: 11px; color: #64748b; }
+  @media print { body { padding: 12px; } }
+</style></head>
+<body>
+  <div class="header">
+    <div><div class="title">${meta.label}</div><div style="font-size:11px;color:#64748b;margin-top:4px">${this.formatDate(op.operationDate)}</div></div>
+    <div style="text-align:left;font-size:18px;font-weight:900;font-family:monospace;color:${meta.color}">${op.operationNumber || '#' + op.id}</div>
+  </div>
+  <div class="meta">
+    <div class="meta-item"><div class="meta-label">البيان</div><div class="meta-value">${op.description || ''}</div></div>
+    ${op.sourceWarehouseId      ? `<div class="meta-item"><div class="meta-label">المخزن المصدر</div><div class="meta-value">${this.getWarehouseName(op.sourceWarehouseId)}</div></div>` : ''}
+    ${op.destinationWarehouseId ? `<div class="meta-item"><div class="meta-label">المخزن الوجهة</div><div class="meta-value">${this.getWarehouseName(op.destinationWarehouseId)}</div></div>` : ''}
+    ${op.supplierId             ? `<div class="meta-item"><div class="meta-label">المورد</div><div class="meta-value">${this.getSupplierName(op.supplierId)}</div></div>` : ''}
+    ${op.reference              ? `<div class="meta-item"><div class="meta-label">المرجع</div><div class="meta-value">${op.reference}</div></div>` : ''}
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>الصنف</th><th>الكود</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+    <tbody>${lines}</tbody>
+    <tfoot><tr class="total-row"><td colspan="5" style="text-align:right">الإجمالي الكلي</td><td style="text-align:left;font-size:15px">${this.fmt(op.totalCost || 0)}</td></tr></tfoot>
+  </table>
+  <div class="sig-row">
+    <div class="sig-box">أمين المخزن</div>
+    <div class="sig-box">المحاسب</div>
+    <div class="sig-box">المدير</div>
+  </div>
+  <div class="footer">
+    <span>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-u-nu-latn-ca-gregory')}</span>
+    <span>الحالة: ${op.status === 'confirmed' ? 'مؤكد' : op.status === 'cancelled' ? 'ملغي' : 'مسودة'}</span>
+  </div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body></html>`;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (w) { w.document.write(html); w.document.close(); }
   }
-
-  getSupplierName(id: number | null): string {
-    if (!id) return '-';
-    const s = this.suppliers().find(s => s.id === id);
-    return s ? s.name : '-';
-  }
-
-  formatNumber(n: number): string {
-    return new Intl.NumberFormat('ar-YE').format(n);
-  }
-
-  formatDate(d: string): string {
-    if (!d) return '-';
-    try {
-      return formatDateShared(d);
-    } catch { return d; }
-  }
-
-  getStatusLabel(s: string): string {
-    const map: Record<string, string> = { draft: 'مسودة', confirmed: 'مؤكد', cancelled: 'ملغي' };
-    return map[s] || s;
-  }
-
-  getStatusClass(s: string): string {
-    const map: Record<string, string> = { draft: 'draft', confirmed: 'confirmed', cancelled: 'cancelled' };
-    return map[s] || 'default';
-  }
-
-  allTypes = Object.entries(OPERATION_TYPE_META).map(([key, meta]) => ({ key, ...meta }));
 }

@@ -25,6 +25,37 @@ import { isForeignCurrency, requireExchangeDiffAccount } from '../../engines/cur
 
 const journalEntriesRoutes = new Hono();
 
+journalEntriesRoutes.get('/businesses/:bizId/journal-entries/preview-number', bizAuthMiddleware(), safeHandler('معاينة الرقم التسلسلي للقيد', async (c) => {
+  const bizId = getBizId(c);
+  const categoryKey = c.req.query('categoryKey') || '';
+  const year = Number(c.req.query('year') || new Date().getFullYear());
+
+  if (!categoryKey) return c.json({ previewNumber: `JE-${year}-????` });
+
+  const [jeCat] = await db.select().from(journalEntryCategories)
+    .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, categoryKey)));
+
+  if (!jeCat) return c.json({ previewNumber: `JE-${year}-????` });
+
+  const catSeq = jeCat.sequenceNumber || 1;
+  const operationTypeId = Number(c.req.query('operationTypeId') || 0);
+
+  // peek at the next sequence without consuming it (read last_number + 1)
+  const result = await db.execute(sql`
+    SELECT COALESCE(
+      (SELECT last_number FROM sequence_counters
+       WHERE business_id = ${bizId}
+         AND counter_type = 'journal_entry'
+         AND entity_id = ${operationTypeId}
+         AND year = ${year}
+      ), 0) + 1 AS next_val
+  `);
+  const rows = Array.isArray(result) ? result : (result as any).rows || [];
+  const nextVal = Number(rows[0]?.next_val || 1);
+  const previewNumber = `${catSeq}-${year}-${String(nextVal).padStart(4, '0')}`;
+  return c.json({ previewNumber, categoryName: jeCat.name, categorySeq: catSeq });
+}));
+
 journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware(), safeHandler('جلب القيود المحاسبية', async (c) => {
   const bizId = getBizId(c);
   const entries = await db.select().from(journalEntries).where(eq(journalEntries.businessId, bizId)).orderBy(desc(journalEntries.entryDate));
@@ -68,10 +99,9 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
   if (!lines || !Array.isArray(lines) || lines.length < 2) {
     return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل (مدين ودائن)' }, 400);
   }
-  if (!entryData.operationTypeId) {
-    return c.json({ error: 'معرّف نوع العملية (القالب) مطلوب - operationTypeId' }, 400);
+  if (!entryData.categoryKey?.trim()) {
+    return c.json({ error: 'نوع القيد مطلوب' }, 400);
   }
-
   const currencyId = entryData.currencyId || 1;
 
   // ⛔ حماية حرجة: منع العمليات بعملة أجنبية بدون حساب فروقات عملة
@@ -129,6 +159,18 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
       entryNumber = entryNumber || journalFullSeqNum;
       journalCategorySeq = String(catSeqNum);
       journalTemplateSeq = String(jeSeqResult.sequentialNumber);
+    }
+  } else if (entryData.categoryKey) {
+    // توليد التسلسل من نوع القيد مباشرةً بدون operationTypeId
+    const [jeCat] = await db.select().from(journalEntryCategories)
+      .where(and(eq(journalEntryCategories.businessId, bizId), eq(journalEntryCategories.categoryKey, entryData.categoryKey)));
+    if (jeCat) {
+      const catSeqNum = jeCat.sequenceNumber || 1;
+      const seqNum = await getNextSequence(bizId, 'journal_entry', jeCat.id, year);
+      journalFullSeqNum = `${catSeqNum}-${year}-${String(seqNum).padStart(4, '0')}`;
+      entryNumber = entryNumber || journalFullSeqNum;
+      journalCategorySeq = String(catSeqNum);
+      journalTemplateSeq = String(seqNum);
     }
   }
 
@@ -251,14 +293,7 @@ journalEntriesRoutes.put('/businesses/:bizId/journal-entries/:id', bizAuthMiddle
 }));
 
 journalEntriesRoutes.delete('/journal-entries/:id', safeHandler('حذف قيد محاسبي', async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (!id) return c.json({ error: 'معرّف القيد غير صالح' }, 400);
-  const [entry] = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
-  const err = await requireResourceOwnership(c, entry ?? null);
-  if (err) return err;
-  await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
-  await db.delete(journalEntries).where(eq(journalEntries.id, id));
-  return c.json({ success: true });
+  return c.json({ error: 'لا يمكن حذف القيود المحاسبية — القيود محمية من الحذف' }, 403);
 }));
 
 export default journalEntriesRoutes;
