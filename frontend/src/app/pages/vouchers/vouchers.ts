@@ -1277,8 +1277,15 @@ export class VouchersComponent extends BasePageComponent {
         voucherDate: this.form().voucherDate || null,
       };
       if (treasuryType === 'fund') {
-        if (this.voucherType() === 'payment') params.fromFundId = treasuryId;
-        else params.toFundId = treasuryId;
+        // الصناديق: نرسل fundId + accountId المرتبط
+        const selectedFund = this.treasuryOptions().find((option) => option.id === treasuryId);
+        if (this.voucherType() === 'payment') {
+          params.fromFundId = treasuryId;
+          if (selectedFund?.accountId) params.fromAccountId = selectedFund.accountId;
+        } else {
+          params.toFundId = treasuryId;
+          if (selectedFund?.accountId) params.toAccountId = selectedFund.accountId;
+        }
       } else {
         // للبنوك/الصرافين/المحافظ: نحتاج accountId وليس id الكيان
         const selectedItem = this.treasuryOptions().find((option) => option.id === treasuryId);
@@ -1385,8 +1392,15 @@ export class VouchersComponent extends BasePageComponent {
       };
 
       if (treasuryType === 'fund') {
-        if (this.voucherType() === 'payment') payload.fromFundId = treasuryId;
-        else payload.toFundId = treasuryId;
+        // الصناديق: نرسل fundId + accountId المرتبط من جدول الصناديق
+        const selectedFund = this.treasuryOptions().find((option) => option.id === treasuryId);
+        if (this.voucherType() === 'payment') {
+          payload.fromFundId = treasuryId;
+          if (selectedFund?.accountId) payload.fromAccountId = selectedFund.accountId;
+        } else {
+          payload.toFundId = treasuryId;
+          if (selectedFund?.accountId) payload.toAccountId = selectedFund.accountId;
+        }
       } else {
         // للبنوك/الصرافين/المحافظ: نحتاج accountId (من جدول الحسابات) وليس id الكيان
         const selectedItem = this.treasuryOptions().find((option) => option.id === treasuryId);

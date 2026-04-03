@@ -4,9 +4,9 @@
  */
 import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
-  operationTypes, accounts,
+  operationTypes, funds,
 } from '../../db/schema/index.ts';
 import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
 import { safeHandler, getBody, toErrorMessage } from '../../middleware/helpers.ts';
@@ -15,7 +15,6 @@ import { checkPermission } from '../../middleware/permissions.ts';
 import { postMultiTransaction } from '../../engines/transaction.engine.ts';
 import { isForeignCurrency, requireExchangeDiffAccount } from '../../engines/currency.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
-import { getFirstRow } from '../../utils/db-result.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { validateEntityAccountLinks } from './_shared/account-guards.ts';
 
@@ -65,32 +64,21 @@ vouchersCreateRouter.post(
       ? (data.toAccountId ?? opType?.sourceAccountId ?? null)
       : (data.fromAccountId ?? opType?.sourceAccountId ?? null);
 
-    // ط¹ظ†ط¯ ط§ط®طھظٹط§ط± طµظ†ط¯ظˆظ‚ ظƒط®ط²ظٹظ†ط©طŒ ظ†ط³طھط®ط¯ظ… ط­ط³ط§ط¨ ط®ط²ظٹظ†ط© ط¯ط§ط®ظ„ظٹ ظ…ظˆط­ظ‘ط¯ ظ„ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ط£ط«ط± ط§ظ„ط¯ط§ط®ظ„ظٹ
+    // عند اختيار صندوق كخزينة، نجلب الحساب المحاسبي المرتبط به مباشرة
     if (!treasuryAccountId && treasuryFundId) {
-      const accRows = await db.execute(sql`
-        SELECT id FROM accounts
-        WHERE business_id = ${bizId}
-          AND account_type = 'fund'
-          AND notes = 'system_cash_treasury'
-        LIMIT 1
-      `);
-      const existing = getFirstRow<{ id: number }>(accRows);
-      if (existing?.id) {
-        treasuryAccountId = existing.id;
+      const [fundRow] = await db
+        .select({ accountId: funds.accountId })
+        .from(funds)
+        .where(and(eq(funds.id, treasuryFundId), eq(funds.businessId, bizId)))
+        .limit(1);
+      if (fundRow?.accountId) {
+        treasuryAccountId = fundRow.accountId;
       } else {
-        const [created] = await db.insert(accounts).values({
-          businessId: bizId,
-          name: 'ط­ط³ط§ط¨ ط§ظ„طµظ†ط§ط¯ظٹظ‚ (ط¢ظ„ظٹ)',
-          accountType: 'fund',
-          canCreateVoucher: false,
-          canApproveVoucher: false,
-          notes: 'system_cash_treasury',
-        }).returning({ id: accounts.id });
-        treasuryAccountId = created?.id ?? null;
+        return c.json({ error: 'الصندوق المحدد غير مرتبط بحساب محاسبي. يرجى ربطه بحساب من شاشة الصناديق أولاً' }, 400);
       }
     }
     if (!treasuryAccountId) {
-      return c.json({ error: 'ط§ظ„ط®ط²ظٹظ†ط© ظ…ط·ظ„ظˆط¨ط©. ط§ط®طھط± طµظ†ط¯ظˆظ‚ط§ظ‹ ط£ظˆ ط­ط³ط§ط¨ ط®ط²ظٹظ†ط© طµط§ظ„ط­ط§ظ‹ ظ‚ط¨ظ„ ط§ظ„ط­ظپط¸' }, 400);
+      return c.json({ error: 'الخزينة مطلوبة. اختر صندوقاً أو حساب خزينة صالحاً قبل الحفظ' }, 400);
     }
 
     const voucherDate = data.voucherDate ? new Date(data.voucherDate) : null;

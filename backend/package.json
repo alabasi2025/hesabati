@@ -49,6 +49,9 @@
       "@orpc/client": ">=1.13.6",
       "path-to-regexp": ">=8.0.0",
       "micromatch": ">=4.0.8"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

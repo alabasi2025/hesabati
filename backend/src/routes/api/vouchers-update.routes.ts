@@ -113,30 +113,21 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
     ? parseOptionalId(body.fromAccountId) ?? (existing.fromAccountId ?? null)
     : parseOptionalId(body.toAccountId) ?? (existing.toAccountId ?? null);
 
-  const [systemFundAccount] = fundTreasuryId && !accountTreasuryId
-    ? await db.select({ id: accounts.id })
-      .from(accounts)
-      .where(and(eq(accounts.businessId, bizId), eq(accounts.accountType, 'fund'), eq(accounts.notes, 'system_cash_treasury')))
-      .limit(1)
-    : [null];
+  // عند اختيار صندوق كخزينة، نجلب الحساب المحاسبي المرتبط به مباشرة
   if (fundTreasuryId && !accountTreasuryId) {
-    if (systemFundAccount?.id) {
-      accountTreasuryId = systemFundAccount.id;
+    const [fundRow] = await db
+      .select({ accountId: funds.accountId })
+      .from(funds)
+      .where(and(eq(funds.id, fundTreasuryId), eq(funds.businessId, bizId)))
+      .limit(1);
+    if (fundRow?.accountId) {
+      accountTreasuryId = fundRow.accountId;
     } else {
-      const [createdSystemAccount] = await db.insert(accounts).values({
-        businessId: bizId,
-        name: 'ط­ط³ط§ط¨ ط§ظ„طµظ†ط§ط¯ظٹظ‚ (ط¢ظ„ظٹ)',
-        accountType: 'fund',
-        canCreateVoucher: false,
-        canApproveVoucher: false,
-        isLeafAccount: true,
-        notes: 'system_cash_treasury',
-      }).returning({ id: accounts.id });
-      accountTreasuryId = createdSystemAccount?.id ?? null;
+      return c.json({ error: 'الصندوق المحدد غير مرتبط بحساب محاسبي. يرجى ربطه بحساب من شاشة الصناديق أولاً' }, 400);
     }
   }
   if (!accountTreasuryId) {
-    return c.json({ error: 'ط§ظ„ط®ط²ظٹظ†ط© ظ…ط·ظ„ظˆط¨ط© ظ„ظ„طھط¹ط¯ظٹظ„' }, 400);
+    return c.json({ error: 'الخزينة مطلوبة للتعديل' }, 400);
   }
 
   const accountIdsToValidate = Array.from(new Set<number>([
