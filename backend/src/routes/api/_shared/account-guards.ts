@@ -1,7 +1,10 @@
 /**
  * account-guards.ts
- * حماية: منع تنفيذ عمليات على حسابات فرعية (صندوق/بنك/محفظة/صراف)
- * إذا لم يكن هناك كيان فعلي مرتبط بالحساب
+ * حماية: منع تنفيذ عمليات على حسابات فرعية (صندوق/بنك/محفظة/صراف/مورد/موظف/شريك)
+ * إذا لم يكن هناك كيان تحليلي مرتبط بالحساب
+ *
+ * القاعدة الصارمة: كل حساب فرعي له حسابات تحليلية (كيانات) يجب أن تنفَّذ
+ * العملية على الحساب التحليلي وليس مباشرة على الحساب الفرعي.
  */
 import { db } from '../../../db/index.ts';
 import { eq, inArray } from 'drizzle-orm';
@@ -63,6 +66,51 @@ export async function validateEntityAccountLinks(accountIds: number[]): Promise<
         exchange: 'صراف',
       };
       return `لا يمكن تنفيذ عملية على الحساب "${acc.name}" لأنه من نوع ${typeLabels[type]} ولا يوجد ${typeLabels[type]} مرتبط به. أنشئ ${typeLabels[type]} مرتبطاً بهذا الحساب أولاً`;
+    }
+  }
+
+  return null;
+}
+
+/** أنواع الحسابات التي تتطلب كياناً تحليلياً (مورد/موظف/شريك/مخزن/عهدة) */
+const SUBLEDGER_ACCOUNT_TYPES = ['supplier', 'employee', 'partner', 'warehouse', 'custody'] as const;
+
+const SUBLEDGER_LABELS: Record<string, string> = {
+  supplier: 'مورد',
+  employee: 'موظف',
+  partner: 'شريك',
+  warehouse: 'مخزن',
+  custody: 'عهدة',
+};
+
+/**
+ * تتحقق من أن كل إدخال على حساب من نوع subledger (مورد/موظف/شريك/مخزن/عهدة)
+ * يحتوي على entityId صالح.
+ * entriesWithAccounts: مصفوفة من { accountId, entityId? }
+ */
+export async function validateSubledgerAccountEntries(
+  entriesWithAccounts: Array<{ accountId: number; entityId?: number | null }>
+): Promise<string | null> {
+  if (!entriesWithAccounts.length) return null;
+
+  const accountIds = [...new Set(entriesWithAccounts.map(e => e.accountId).filter(Boolean))];
+  if (!accountIds.length) return null;
+
+  const rows = await db
+    .select({ id: accounts.id, name: accounts.name, accountType: accounts.accountType })
+    .from(accounts)
+    .where(inArray(accounts.id, accountIds));
+
+  const subledgerAccounts = rows.filter(
+    r => r.accountType && (SUBLEDGER_ACCOUNT_TYPES as readonly string[]).includes(r.accountType)
+  );
+
+  for (const acc of subledgerAccounts) {
+    const entry = entriesWithAccounts.find(e => e.accountId === acc.id);
+    const entityId = entry?.entityId ? Number(entry.entityId) : null;
+    if (!entityId || !Number.isInteger(entityId) || entityId <= 0) {
+      const label = SUBLEDGER_LABELS[acc.accountType as string] || acc.accountType || 'كيان';
+      return `لا يمكن الترحيل مباشرة على الحساب "${acc.name}" — يجب اختيار ${label} محدد (الحساب التحليلي) لكل عملية`;
     }
   }
 

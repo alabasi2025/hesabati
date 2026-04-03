@@ -21,7 +21,7 @@ import { db } from '../db/index.ts';
 import { eq, and, sql } from 'drizzle-orm';
 import {
   accounts, accountBalances, funds, fundBalances, currencies,
-  businesses, analyticsSnapshots,
+  businesses, analyticsSnapshots, vouchers,
 } from '../db/schema/index.ts';
 
 import type { ReportFilters, ProfitLossResult, TrialBalanceResult, AccountStatementResult } from './reporting.types';
@@ -214,14 +214,20 @@ export async function getAccountStatement(bizId: number, accountId: number, filt
   }
 
   // جلب الحركات
+  // تصنيف نوع الحركة: نستخدم JOIN مع vouchers للحصول على نوع السند الفعلي
   const sourceTypeCondition = sourceType === 'all'
     ? sql`TRUE`
     : sql`
       (
         CASE
-          WHEN je.reference LIKE 'PAY-%' THEN 'payment_voucher'
-          WHEN je.reference LIKE 'REC-%' THEN 'receipt_voucher'
+          WHEN v.voucher_type = 'payment' THEN 'payment_voucher'
+          WHEN v.voucher_type = 'receipt' THEN 'receipt_voucher'
           WHEN je.reference LIKE 'INV-%' OR je.reference LIKE 'STK-%' THEN 'inventory_txn'
+          WHEN v.id IS NULL AND (je.reference LIKE 'INV-%' OR je.reference LIKE 'STK-%') THEN 'inventory_txn'
+          WHEN v.id IS NOT NULL THEN
+            CASE WHEN v.voucher_type = 'payment' THEN 'payment_voucher'
+                 WHEN v.voucher_type = 'receipt' THEN 'receipt_voucher'
+                 ELSE 'journal_manual' END
           ELSE 'journal_manual'
         END
       ) = ${sourceType}
@@ -229,19 +235,30 @@ export async function getAccountStatement(bizId: number, accountId: number, filt
 
   const result = await db.execute(sql`
     SELECT
-      je.id as entry_id, je.entry_number, je.entry_date, je.description as entry_description,
+      je.id as entry_id,
+      COALESCE(v.voucher_number, je.entry_number, je.reference) as entry_number,
+      je.entry_date,
+      COALESCE(v.description, je.description) as entry_description,
       je.reference, jel.line_type, CAST(jel.amount AS NUMERIC) as amount,
       CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END as debit,
       CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END as credit,
       jel.description as line_description,
       CASE
-        WHEN je.reference LIKE 'PAY-%' THEN 'payment_voucher'
-        WHEN je.reference LIKE 'REC-%' THEN 'receipt_voucher'
+        WHEN v.voucher_type = 'payment' THEN 'payment_voucher'
+        WHEN v.voucher_type = 'receipt' THEN 'receipt_voucher'
         WHEN je.reference LIKE 'INV-%' OR je.reference LIKE 'STK-%' THEN 'inventory_txn'
+        WHEN v.id IS NOT NULL THEN
+          CASE WHEN v.voucher_type = 'payment' THEN 'payment_voucher'
+               WHEN v.voucher_type = 'receipt' THEN 'receipt_voucher'
+               ELSE 'journal_manual' END
         ELSE 'journal_manual'
-      END as source_type
+      END as source_type,
+      v.id as voucher_id,
+      v.voucher_number,
+      v.voucher_type
     FROM journal_entry_lines jel
     JOIN journal_entries je ON je.id = jel.journal_entry_id
+    LEFT JOIN vouchers v ON v.voucher_number = je.reference AND v.business_id = ${bizId}
     WHERE jel.account_id = ${accountId}
     AND je.business_id = ${bizId}
     AND je.entry_date >= ${dateFrom}

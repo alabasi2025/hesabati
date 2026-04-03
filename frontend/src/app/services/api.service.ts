@@ -1056,7 +1056,7 @@ export class ApiService {
       ...(sourceType ? { sourceType } : {}),
     }).toString();
     return this.request<any>(
-      `/businesses/${bizId}/accounts/${accountId}/statement${q ? `?${q}` : ''}`,
+      `/businesses/${bizId}/reports/account-statement/${accountId}${q ? `?${q}` : ''}`,
     );
   }
 

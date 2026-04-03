@@ -1,20 +1,26 @@
+<!-- ===== Reports Advanced — Professional ===== -->
 <div class="page-container">
 
   <!-- ===== Page Header ===== -->
   <div class="page-header">
     <div class="header-left">
-      <div class="page-icon-3d green">
+      <div class="page-icon-3d" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
         <span class="material-icons-round">analytics</span>
       </div>
       <div>
-        <h1 class="page-title">التقارير المتقدمة</h1>
-        <p class="page-subtitle">تحليل مالي شامل: أرباح وخسائر، كشف حساب، ملخص يومي، ميزان مراجعة</p>
+        <h1 class="page-title">التقارير المالية</h1>
+        <p class="page-subtitle">نظرة عامة — أرباح وخسائر — ميزان مراجعة — كشف حساب — ملخص يومي — مقارنة شهرية</p>
       </div>
     </div>
-    <div class="header-actions">
-      <button class="btn-3d btn-print" (click)="printReport()" [disabled]="loading()">
+    <div class="header-actions" style="gap:8px;display:flex">
+      <button class="btn-3d" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0"
+              (click)="exportExcel()" [disabled]="loading()" title="تصدير Excel">
+        <span class="material-icons-round" style="color:#16a34a">table_chart</span>
+        Excel
+      </button>
+      <button class="btn-3d btn-print" (click)="printCurrent()" [disabled]="loading()">
         <span class="material-icons-round">print</span>
-        طباعة التقرير
+        طباعة
       </button>
     </div>
   </div>
@@ -22,7 +28,7 @@
   <!-- ===== Tabs ===== -->
   <div class="tabs-3d">
     @for (t of tabs; track t.key) {
-      <button class="tab-btn" [class.active]="activeTab === t.key" (click)="activeTab = t.key; loadTab()">
+      <button class="tab-btn" [class.active]="activeTab() === t.key" (click)="setTab(t.key)">
         <span class="material-icons-round">{{ t.icon }}</span>
         {{ t.label }}
       </button>
@@ -30,7 +36,7 @@
   </div>
 
   <!-- ===== Filters ===== -->
-  @if (activeTab !== 'daily') {
+  @if (activeTab() !== 'daily' && activeTab() !== 'monthly') {
     <div class="filter-card-3d">
       <div class="filter-row">
         <div class="filter-field">
@@ -41,12 +47,12 @@
           <label class="form-label" for="adv-date-to">إلى تاريخ</label>
           <input id="adv-date-to" title="إلى تاريخ" type="date" class="form-input" [(ngModel)]="dateTo">
         </div>
-        @if (activeTab === 'statement') {
+        @if (activeTab() === 'statement') {
           <div class="filter-field wide">
             <label class="form-label" for="adv-statement-account">الحساب / الصندوق</label>
             <select id="adv-statement-account" title="الحساب أو الصندوق" class="form-select" [(ngModel)]="selectedAccountId">
-              @for (a of allAccountsAndFunds; track a.id) {
-                <option [value]="a.id">{{a.displayName || a.name}}</option>
+              @for (a of allAccounts; track a.id) {
+                <option [value]="a.id">{{a._label || a.name}}</option>
               }
             </select>
           </div>
@@ -69,12 +75,27 @@
         </div>
       </div>
     </div>
-  } @else {
+  } @else if (activeTab() === 'daily') {
     <div class="filter-card-3d">
       <div class="filter-row">
         <div class="filter-field">
           <label class="form-label" for="adv-daily-date">التاريخ</label>
           <input id="adv-daily-date" title="التاريخ" type="date" class="form-input" [(ngModel)]="dailyDate">
+        </div>
+        <div class="filter-action">
+          <button class="btn-3d btn-primary" (click)="loadTab()">
+            <span class="material-icons-round">search</span>
+            عرض
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else if (activeTab() === 'monthly') {
+    <div class="filter-card-3d">
+      <div class="filter-row">
+        <div class="filter-field">
+          <label class="form-label" for="adv-year">السنة</label>
+          <input id="adv-year" title="السنة" type="number" class="form-input" [(ngModel)]="monthlyYear" min="2000" max="2099">
         </div>
         <div class="filter-action">
           <button class="btn-3d btn-primary" (click)="loadTab()">
@@ -94,37 +115,90 @@
     </div>
   }
 
-  <!-- ===== Print Area ===== -->
+  <!-- ===== Content Area ===== -->
   <div class="print-area">
 
+  <!-- ===== نظرة عامة ===== -->
+  @if (activeTab() === 'overview' && !loading()) {
+    @if (profitLoss) {
+      <div class="stats-row">
+        <div class="stat-card-3d green">
+          <div class="sc-icon"><span class="material-icons-round">trending_up</span></div>
+          <div class="sc-body">
+            <div class="sc-num">{{ fmt(profitLoss.summary?.total_income) }}</div>
+            <div class="sc-label">الإيرادات</div>
+          </div>
+        </div>
+        <div class="stat-card-3d red">
+          <div class="sc-icon"><span class="material-icons-round">trending_down</span></div>
+          <div class="sc-body">
+            <div class="sc-num">{{ fmt(profitLoss.summary?.total_expenses) }}</div>
+            <div class="sc-label">المصروفات</div>
+          </div>
+        </div>
+        <div class="stat-card-3d" [class.blue]="(profitLoss.summary?.net_profit || 0) >= 0" [class.amber]="(profitLoss.summary?.net_profit || 0) < 0">
+          <div class="sc-icon"><span class="material-icons-round">account_balance</span></div>
+          <div class="sc-body">
+            <div class="sc-num">{{ fmt(profitLoss.summary?.net_profit) }}</div>
+            <div class="sc-label">صافي الربح</div>
+          </div>
+        </div>
+        @if (trialBalance?.totals) {
+          <div class="stat-card-3d" [class.blue]="trialBalance.totals.isBalanced" [class.amber]="!trialBalance.totals.isBalanced">
+            <div class="sc-icon"><span class="material-icons-round">balance</span></div>
+            <div class="sc-body">
+              <div class="sc-num">{{ trialBalance.totals.isBalanced ? 'متوازن' : 'غير متوازن' }}</div>
+              <div class="sc-label">ميزان المراجعة</div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+    @if (overviewDonut) {
+      <div class="chart-card-3d">
+        <apx-chart
+          [series]="overviewDonut.series"
+          [chart]="overviewDonut.chart"
+          [labels]="overviewDonut.labels"
+          [legend]="overviewDonut.legend"
+          [dataLabels]="overviewDonut.dataLabels"
+          [responsive]="overviewDonut.responsive"
+          [plotOptions]="overviewDonut.plotOptions"
+          [tooltip]="overviewDonut.tooltip"
+          [title]="overviewDonut.title">
+        </apx-chart>
+      </div>
+    }
+  }
+
   <!-- ===== تقرير الأرباح والخسائر ===== -->
-  @if (activeTab === 'profit-loss' && profitLoss && !loading()) {
+  @if (activeTab() === 'profit-loss' && profitLoss && !loading()) {
     <div class="stats-row">
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.totalIncome | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ fmt(profitLoss.summary?.total_income ?? profitLoss.summary?.totalIncome) }}</div>
           <div class="sc-label">الإيرادات</div>
         </div>
       </div>
       <div class="stat-card-3d red">
         <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.totalExpenses | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ fmt(profitLoss.summary?.total_expenses ?? profitLoss.summary?.totalExpenses) }}</div>
           <div class="sc-label">المصروفات</div>
         </div>
       </div>
-      <div class="stat-card-3d" [class]="profitLoss.summary.netProfit >= 0 ? 'blue' : 'amber'">
-        <div class="sc-icon"><span class="material-icons-round">{{ profitLoss.summary.netProfit >= 0 ? 'trending_up' : 'trending_down' }}</span></div>
+      <div class="stat-card-3d" [class.blue]="(profitLoss.summary?.net_profit ?? 0) >= 0" [class.amber]="(profitLoss.summary?.net_profit ?? 0) < 0">
+        <div class="sc-icon"><span class="material-icons-round">trending_up</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.netProfit | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ fmt(profitLoss.summary?.net_profit ?? profitLoss.summary?.netProfit) }}</div>
           <div class="sc-label">صافي الربح</div>
         </div>
       </div>
       <div class="stat-card-3d gray">
         <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary.totalOperations }}</div>
+          <div class="sc-num">{{ profitLoss.summary?.total_operations ?? profitLoss.summary?.totalOperations }}</div>
           <div class="sc-label">عدد العمليات</div>
         </div>
       </div>
@@ -151,7 +225,7 @@
                 <tr>
                   <td class="cell-name">{{ c.category }}</td>
                   <td><span class="type-badge" [class]="c.voucher_type === 'receipt' ? 'receipt' : 'payment'">{{ c.voucher_type === 'receipt' ? 'إيراد' : 'مصروف' }}</span></td>
-                  <td class="cell-amount">{{ c.total | number:'1.0-0' }}</td>
+                  <td class="cell-amount">{{ fmt(c.total) }}</td>
                   <td class="cell-count">{{ c.count }}</td>
                 </tr>
               }
@@ -163,18 +237,18 @@
   }
 
   <!-- ===== كشف حساب ===== -->
-  @if (activeTab === 'statement' && statement && !loading()) {
+  @if (activeTab() === 'statement' && statement && !loading()) {
     <div class="account-info-3d">
       <div class="ai-icon"><span class="material-icons-round">account_balance</span></div>
       <div class="ai-main">
-        <div class="ai-name">{{ statement.account?.name || getSelectedAccountName() }}</div>
+        <div class="ai-name">{{ statement.account?.name || getSelectedAccountLabel() }}</div>
         <div class="ai-entries">عدد الحركات: {{ statement.totalEntries }}</div>
       </div>
       <div class="ai-balances">
         @for (b of statement.balances; track $index) {
           <div class="ai-balance" [class]="b.balance >= 0 ? 'positive' : 'negative'">
             <span class="ai-currency">{{ b.currencyCode }}</span>
-            <span class="ai-amount">{{ b.balance | number:'1.0-2' }}</span>
+            <span class="ai-amount">{{ fmt(b.balance) }}</span>
           </div>
         }
       </div>
@@ -210,31 +284,48 @@
                 <td class="cell-ref">{{ e.entry_number }}</td>
                 <td>{{ getSourceTypeLabel(e.source_type || e.sourceType) }}</td>
                 <td class="cell-desc">{{ e.entry_description || e.line_description }}</td>
-                <td class="cell-debit">{{ e.line_type === 'debit' ? (e.amount | number:'1.0-2') : '-' }}</td>
-                <td class="cell-credit">{{ e.line_type === 'credit' ? (e.amount | number:'1.0-2') : '-' }}</td>
-                <td class="cell-balance" [class]="e.runningBalance >= 0 ? 'positive' : 'negative'">{{ e.runningBalance | number:'1.0-2' }}</td>
+                        <td class="cell-debit">{{ e.line_type === 'debit' ? fmt(e.amount) : '-' }}</td>
+                <td class="cell-credit">{{ e.line_type === 'credit' ? fmt(e.amount) : '-' }}</td>
+                <td class="cell-balance" [class]="(e.runningBalance || 0) >= 0 ? 'positive' : 'negative'">{{ fmt(e.runningBalance || 0) }}</td>
               </tr>
             }
           </tbody>
         </table>
       </div>
     </div>
+    <!-- Statement Totals Footer -->
+    <div class="table-card-3d" style="margin-top:0;border-top:2px solid #f0fdf4">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 16px">
+        <div style="text-align:center">
+          <div style="font-size:11px;color:#64748b;font-weight:700">إجمالي المدين</div>
+          <div style="font-size:18px;font-weight:900;color:#16a34a">{{ fmt(stmtTotalDebit()) }}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:#64748b;font-weight:700">إجمالي الدائن</div>
+          <div style="font-size:18px;font-weight:900;color:#dc2626">{{ fmt(stmtTotalCredit()) }}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:#64748b;font-weight:700">الرصيد النهائي</div>
+          <div style="font-size:18px;font-weight:900" [style.color]="stmtFinalBalance() >= 0 ? '#2563eb' : '#ea580c'">{{ fmt(stmtFinalBalance()) }}</div>
+        </div>
+      </div>
+    </div>
   }
 
   <!-- ===== ملخص يومي ===== -->
-  @if (activeTab === 'daily' && dailySummary && !loading()) {
+  @if (activeTab() === 'daily' && dailySummary && !loading()) {
     <div class="stats-row">
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ dailySummary.summary.receipts | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ fmt(dailySummary.summary.receipts) }}</div>
           <div class="sc-label">التحصيل</div>
         </div>
       </div>
       <div class="stat-card-3d red">
         <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ dailySummary.summary.payments | number:'1.0-0' }}</div>
+          <div class="sc-num">{{ fmt(dailySummary.summary.payments) }}</div>
           <div class="sc-label">الصرف</div>
         </div>
       </div>
@@ -273,7 +364,7 @@
                     {{ o.name }}
                   </td>
                   <td><span class="type-badge" [class]="o.voucher_type === 'receipt' ? 'receipt' : 'payment'">{{ o.voucher_type === 'receipt' ? 'تحصيل' : 'صرف' }}</span></td>
-                  <td class="cell-amount">{{ o.total | number:'1.0-0' }}</td>
+                  <td class="cell-amount">{{ fmt(o.total) }}</td>
                   <td class="cell-count">{{ o.count }}</td>
                 </tr>
               }
@@ -285,19 +376,19 @@
   }
 
   <!-- ===== ميزان المراجعة ===== -->
-  @if (activeTab === 'trial-balance' && trialBalance && !loading()) {
+  @if (activeTab() === 'trial-balance' && trialBalance && !loading()) {
     <div class="stats-row">
       <div class="stat-card-3d green">
         <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ trialBalance.totals.totalDebit | number:'1.0-2' }}</div>
+          <div class="sc-num">{{ fmt(trialBalance.totals.totalDebit) }}</div>
           <div class="sc-label">إجمالي المدين</div>
         </div>
       </div>
       <div class="stat-card-3d red">
         <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
         <div class="sc-body">
-          <div class="sc-num">{{ trialBalance.totals.totalCredit | number:'1.0-2' }}</div>
+          <div class="sc-num">{{ fmt(trialBalance.totals.totalCredit) }}</div>
           <div class="sc-label">إجمالي الدائن</div>
         </div>
       </div>
@@ -336,18 +427,18 @@
                 <td class="cell-index">{{ $index + 1 }}</td>
                 <td class="cell-name">{{ a.account_name }}</td>
                 <td class="cell-type">{{ getAccountTypeLabel(a.account_type) }}</td>
-                <td class="cell-debit">{{ a.total_debit | number:'1.0-2' }}</td>
-                <td class="cell-credit">{{ a.total_credit | number:'1.0-2' }}</td>
-                <td class="cell-balance" [class]="a.balance >= 0 ? 'positive' : 'negative'">{{ a.balance | number:'1.0-2' }}</td>
+                <td class="cell-debit">{{ fmt(a.total_debit) }}</td>
+                <td class="cell-credit">{{ fmt(a.total_credit) }}</td>
+                <td class="cell-balance" [class]="(a.balance || 0) >= 0 ? 'positive' : 'negative'">{{ fmt(a.balance) }}</td>
               </tr>
             }
           </tbody>
           <tfoot>
             <tr class="totals-row">
               <td colspan="3" style="font-weight:900;">الإجمالي</td>
-              <td class="cell-debit" style="font-weight:900;">{{ trialBalance.totals.totalDebit | number:'1.0-2' }}</td>
-              <td class="cell-credit" style="font-weight:900;">{{ trialBalance.totals.totalCredit | number:'1.0-2' }}</td>
-              <td class="cell-balance" style="font-weight:900;">{{ (trialBalance.totals.totalDebit - trialBalance.totals.totalCredit) | number:'1.0-2' }}</td>
+              <td class="cell-debit" style="font-weight:900;">{{ fmt(trialBalance.totals.totalDebit) }}</td>
+              <td class="cell-credit" style="font-weight:900;">{{ fmt(trialBalance.totals.totalCredit) }}</td>
+              <td class="cell-balance" style="font-weight:900;">{{ fmt((trialBalance.totals.totalDebit || 0) - (trialBalance.totals.totalCredit || 0)) }}</td>
             </tr>
           </tfoot>
         </table>
@@ -357,8 +448,33 @@
 
   </div><!-- end print-area -->
 
+  <!-- ===== مقارنة شهرية ===== -->
+  @if (activeTab() === 'monthly' && !loading()) {
+    @if (monthlyChart) {
+      <div class="chart-card-3d" style="padding:16px">
+        <apx-chart
+          [series]="monthlyChart.series"
+          [chart]="monthlyChart.chart"
+          [xaxis]="monthlyChart.xaxis"
+          [stroke]="monthlyChart.stroke"
+          [dataLabels]="monthlyChart.dataLabels"
+          [yaxis]="monthlyChart.yaxis"
+          [legend]="monthlyChart.legend"
+          [tooltip]="monthlyChart.tooltip"
+          [fill]="monthlyChart.fill"
+          [grid]="monthlyChart.grid">
+        </apx-chart>
+      </div>
+    } @else {
+      <div class="empty-state">
+        <span class="material-icons-round" style="font-size:48px;color:#cbd5e1">bar_chart</span>
+        <h3>اضغط عرض لتحميل المقارنة الشهرية</h3>
+      </div>
+    }
+  }
+
   <!-- ===== Empty State ===== -->
-  @if (!loading() && ((activeTab === 'profit-loss' && !profitLoss) || (activeTab === 'statement' && !statement) || (activeTab === 'daily' && !dailySummary) || (activeTab === 'trial-balance' && !trialBalance))) {
+  @if (!loading() && ((activeTab() === 'profit-loss' && !profitLoss) || (activeTab() === 'statement' && !statement) || (activeTab() === 'daily' && !dailySummary) || (activeTab() === 'trial-balance' && !trialBalance))) {
     <div class="empty-state">
       <div class="empty-icon-3d">
         <span class="material-icons-round">analytics</span>

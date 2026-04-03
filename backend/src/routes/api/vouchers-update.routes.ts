@@ -24,6 +24,7 @@ import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { logAction } from '../../engines/audit.engine.ts';
 import type { AppContext } from './_shared/types.ts';
 import { normalizeTreasuryCode, resolveVoucherTreasuryInfo } from './_vouchers-helpers.ts';
+import { validateEntityAccountLinks, validateSubledgerAccountEntries } from './_shared/account-guards.ts';
 
 const vouchersUpdateRouter = new Hono();
 
@@ -97,6 +98,12 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
   if (counterpartEntries.length === 0) {
     return c.json({ error: 'ط£ط¯ط®ظ„ ط³ط·ط±ط§ظ‹ ظˆط§ط­ط¯ط§ظ‹ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ ظپظٹ ط¨ظ†ظˆط¯ ط§ظ„ط³ظ†ط¯' }, 400);
   }
+
+  // ⛔ القاعدة الصارمة: حسابات subledger تتطلب entityId
+  const subledgerError = await validateSubledgerAccountEntries(
+    counterpartEntries.map((e: any) => ({ accountId: e.accountId, entityId: e.entityId }))
+  );
+  if (subledgerError) return c.json({ error: subledgerError }, 400);
   const totalAmount = counterpartEntries.reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
   if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
     return c.json({ error: 'ظ…ط¬ظ…ظˆط¹ ط§ظ„ط¨ظ†ظˆط¯ ط؛ظٹط± طµط§ظ„ط­' }, 400);

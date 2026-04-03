@@ -752,6 +752,35 @@ export class VouchersComponent extends BasePageComponent {
     this.editingVoucher.set(normalized);
     this.isEditing.set(true);
     this.showForm.set(true);
+
+    // جلب تفاصيل السند كاملة من API لضمان تحميل سطور السند حتى للسندات القديمة
+    const vId = Number(normalized?.id);
+    if (vId > 0) {
+      this.api.getVoucherDetails(this.bizId, vId).then((details: any) => {
+        if (!this.isEditing() || Number(this.editingVoucher()?.id) !== vId) return;
+        const fullVoucher = this.normalizeVoucher({
+          ...normalized,
+          voucherLineDetails: details?.voucherLineDetails || [],
+          journalEntries: this.normalizeDetailsJournalLines(details?.journalEntries || []),
+        });
+        const lines = this.buildEditableVoucherLines(fullVoucher);
+        if (lines.length > 0 && !(lines.length === 1 && !lines[0].accountId)) {
+          this.voucherLines.set(lines);
+        }
+      }).catch(() => {});
+    }
+  }
+
+  private normalizeDetailsJournalLines(lines: any[]): any[] {
+    return lines.map((line: any) => ({
+      ...line,
+      accountId: line.accountId ?? line.account_id ?? null,
+      accountName: line.accountName ?? line.account_name ?? null,
+      accountType: line.accountType ?? line.account_type ?? null,
+      lineType: line.lineType ?? line.line_type ?? null,
+      amount: line.amount ?? line.lineAmount ?? line.line_amount ?? 0,
+      description: line.description ?? line.lineDescription ?? line.line_description ?? null,
+    }));
   }
 
   addVoucherLine() {
@@ -1353,6 +1382,15 @@ export class VouchersComponent extends BasePageComponent {
 
     if (entries.length === 0) missing.push('أدخل سطراً واحداً على الأقل (حساب + مبلغ)');
 
+    // ⛔ القاعدة الصارمة: كل حساب له نوع تحليلي يجب اختيار الحساب التحليلي
+    for (const row of entries) {
+      if (row.entityType && !row.entityId) {
+        const label = this.getEntityTypeLabel(row.entityType);
+        const accountName = this.getAccountName(row.accountId as number);
+        missing.push(`حساب "${accountName}" يتطلب اختيار ${label} — لا يمكن الترحيل مباشرة للحساب الفرعي`);
+      }
+    }
+
     const linesTotal = entries.reduce((sum, row) => sum + row.amount, 0);
     if (entries.length > 0 && Number.isFinite(amount) && amount > 0 && Math.abs(linesTotal - amount) > 0.001) {
       missing.push(`مجموع السطور (${linesTotal.toFixed(2)}) لا يساوي مبلغ السند (${amount.toFixed(2)})`);
@@ -1487,19 +1525,124 @@ export class VouchersComponent extends BasePageComponent {
     this.showDetailsModal.set(true);
     try {
       const details = await this.api.getVoucherDetails(this.bizId, voucher.id);
-      // API may return either the voucher itself OR a wrapper { voucher, ... }
       const payload = details as any;
       const normalizedVoucher = this.normalizeVoucher(payload?.voucher ?? details);
-      const journalEntries = Array.isArray(payload?.journalEntries)
+
+      const rawJournalEntries = Array.isArray(payload?.journalEntries)
         ? payload.journalEntries
         : Array.isArray(payload?.journal_entries)
           ? payload.journal_entries
           : Array.isArray(normalizedVoucher?.journalEntries)
             ? normalizedVoucher.journalEntries
             : [];
+
+      // جلب voucherLineDetails من الـ API
+      const rawVoucherLineDetails: any[] = Array.isArray(payload?.voucherLineDetails)
+        ? payload.voucherLineDetails
+        : [];
+
+      // تحديد معرّف الحساب الخزينة من السند مباشرة (الأكثر دقة)
+      const voucherPayload = payload?.voucher ?? {};
+      const isPayment = String(voucherPayload.voucherType ?? voucherPayload.voucher_type ?? '').toLowerCase() === 'payment';
+      const treasuryFundId    = Number(isPayment ? (voucherPayload.fromFundId    ?? voucherPayload.from_fund_id)    : (voucherPayload.toFundId    ?? voucherPayload.to_fund_id))    || null;
+      const treasuryAccountId = Number(isPayment ? (voucherPayload.fromAccountId ?? voucherPayload.from_account_id) : (voucherPayload.toAccountId ?? voucherPayload.to_account_id)) || null;
+
+      // اسم الخزينة الحقيقي
+      const treasuryName: string | null = (() => {
+        if (treasuryFundId) {
+          const fund = this.funds().find((f: any) => f.id === treasuryFundId);
+          if (fund) return String(fund.name || '');
+        }
+        if (treasuryAccountId) {
+          const acc = this.accounts().find((a: any) => a.id === treasuryAccountId);
+          if (acc && this.isTreasuryType(this.getAccountType(acc))) return String(acc.name || '');
+        }
+        return null;
+      })();
+
+      // إثراء journal lines بأسماء الكيانات والصناديق
+      const enrichedJournalLines = rawJournalEntries.map((line: any) => {
+        const norm = this.normalizeJournalLine(line);
+        const matchId = Number(norm.accountId ?? norm.account_id) || null;
+
+        // 1. إذا كان هذا السطر هو سطر الخزينة — أظهر اسمها مباشرة
+        if (matchId && matchId === treasuryAccountId && treasuryName) {
+          norm.entityName = treasuryName;
+          norm.entityType = treasuryFundId ? 'fund' : 'treasury';
+          return norm;
+        }
+
+        // 2. ابحث في voucherLineDetails عن الكيان المقابل
+        if (!norm.entityName && matchId && rawVoucherLineDetails.length > 0) {
+          const match = rawVoucherLineDetails.find((vl: any) =>
+            Number(vl.accountId ?? vl.account_id) === matchId);
+          if (match) {
+            norm.entityType = match.entityType ?? match.entity_type ?? null;
+            norm.entityId   = match.entityId   ?? match.entity_id   ?? null;
+            if (!norm.entityName && norm.entityType && norm.entityId) {
+              const entities = this.getEntitiesForType(norm.entityType);
+              const found = entities.find((e: any) => e.id === norm.entityId);
+              norm.entityName = found ? String(found?.fullName || found?.name || '') : null;
+            }
+          }
+        }
+
+        // 3. fallback: بحث في قائمة الصناديق عبر accountId
+        if (!norm.entityName && matchId) {
+          const linkedFund = this.funds().find((f: any) => Number(f.accountId) === matchId);
+          if (linkedFund) {
+            norm.entityName = String(linkedFund.name || '');
+            norm.entityType = 'fund';
+          }
+        }
+
+        return norm;
+      });
+
+      // إثراء voucherLineDetails بأسماء الكيانات من البيانات المحمّلة
+      const enrichedVoucherLineDetails = rawVoucherLineDetails.map((vl: any) => {
+        const accountId   = Number(vl.accountId ?? vl.account_id ?? 0) || null;
+        const rawAccType  = vl.accountType ?? vl.account_type ?? null;
+        const account     = accountId ? this.accounts().find((a: any) => a.id === accountId) : null;
+        const accountName = vl.accountName ?? vl.account_name ?? (account?.name ?? null);
+        const accountType = rawAccType ?? (account ? this.getAccountType(account) : null);
+
+        // اشتقاق entityType من accountType إذا لم يكن محفوظاً صراحةً
+        let entityType = vl.entityType ?? vl.entity_type ?? null;
+        if (!entityType && accountType) {
+          entityType = this.getEntityTypeForAccountType(String(accountType));
+        }
+
+        const entityId = Number(vl.entityId ?? vl.entity_id ?? 0) || null;
+        let entityName: string | null = vl.entityName ?? null;
+
+        if (!entityName && entityType && entityId) {
+          const entities = this.getEntitiesForType(entityType);
+          const found = entities.find((e: any) => e.id === entityId);
+          entityName = found ? String(found?.fullName || found?.name || '') : null;
+        }
+
+        // إذا كان الحساب مرتبطاً بصندوق → أظهر اسم الصندوق
+        if (!entityName && accountId) {
+          const linkedFund = this.funds().find((f: any) => Number(f.accountId) === accountId);
+          if (linkedFund) {
+            entityName = String(linkedFund.name || '');
+            if (!entityType) entityType = 'fund';
+          }
+        }
+
+        return {
+          accountId, accountName, accountType,
+          entityType, entityId, entityName,
+          amount: vl.amount,
+          description: vl.description ?? null,
+        };
+      });
+
       this.detailsVoucher.set({
         ...normalizedVoucher,
-        journalEntries: journalEntries.map((line: any) => this.normalizeJournalLine(line)),
+        journalEntries: enrichedJournalLines,
+        voucherLineDetails: enrichedVoucherLineDetails,
       });
     } catch (e: unknown) {
       this.detailsVoucher.set(this.normalizeVoucher(voucher));
@@ -1864,6 +2007,41 @@ export class VouchersComponent extends BasePageComponent {
     return fund?.name || '-';
   }
 
+  /** اسم الخزينة الحقيقي (صندوق/بنك/صراف/محفظة) مع كودها */
+  getDetailsTreasuryName(voucher: any): string {
+    if (!voucher) return '-';
+    const isPayment = String(voucher.voucherType || '').toLowerCase() === 'payment';
+    const fundId  = Number(isPayment ? voucher.fromFundId  : voucher.toFundId)  || null;
+    const accId   = Number(isPayment ? voucher.fromAccountId : voucher.toAccountId) || null;
+    const accName = isPayment ? (voucher.fromAccountName || '') : (voucher.toAccountName || '');
+    const fundName = isPayment ? (voucher.fromFundName || '') : (voucher.toFundName || '');
+
+    if (fundId) {
+      const name = fundName || this.getFundName(fundId);
+      return name !== '-' ? name : String(fundId);
+    }
+    if (accId) {
+      const account = this.accounts().find((a: any) => a.id === accId);
+      const type = this.getAccountType(account);
+      if (this.isTreasuryType(type)) {
+        return accName || account?.name || this.getAccountName(accId);
+      }
+    }
+    return isPayment
+      ? (voucher.fromFundName || voucher.fromAccountName || this.getFundName(voucher.fromFundId) || '-')
+      : (voucher.toFundName   || voucher.toAccountName   || this.getFundName(voucher.toFundId)   || '-');
+  }
+
+  /** هل الحساب خزينة (صندوق/بنك/صراف/محفظة)؟ */
+  isDetailsTreasuryAccount(accountId: number | null | undefined): boolean {
+    if (!accountId) return false;
+    // إذا كان الحساب مرتبطاً بصندوق فهو خزينة
+    const linkedByFund = this.funds().some((f: any) => f.accountId === accountId);
+    if (linkedByFund) return true;
+    const account = this.accounts().find((a: any) => a.id === accountId);
+    return this.isTreasuryType(this.getAccountType(account));
+  }
+
   getOpTypeName(id: number): string {
     const ot = this.operationTypes().find(o => o.id === id);
     return ot?.name || '';
@@ -2044,14 +2222,34 @@ export class VouchersComponent extends BasePageComponent {
   }
 
   private buildEditableVoucherLines(voucher: any): VoucherLine[] {
-    const lines = this.getVoucherCounterpartyLines(voucher);
-    const mapped = lines
+    // Prefer voucherLineDetails (voucher_lines table) — these are the actual counterpart lines
+    // with entity info. Fall back to journalEntries filtered by lineType.
+    const vlDetails = Array.isArray(voucher?.voucherLineDetails) && voucher.voucherLineDetails.length > 0
+      ? voucher.voucherLineDetails
+      : null;
+
+    const rawLines: any[] = vlDetails ?? this.getVoucherCounterpartyLines(voucher);
+
+    const mapped = rawLines
       .map((line: any) => {
         const accountId = Number.parseInt(String(line?.accountId ?? ''), 10);
         if (!Number.isInteger(accountId) || accountId <= 0) return null;
         const account = this.accounts().find((item) => item.id === accountId);
         const subNature = this.accountSubNatures().find((nature) => nature.id === account?.accountSubNatureId);
         const amount = Number.parseFloat(String(line?.amount ?? 0));
+        const accountType = this.getAccountType(account);
+        // اشتقاق entityType من accountType إذا لم يكن محفوظاً صراحةً
+        const entityType: string | null =
+          line?.entityType ?? this.getEntityTypeForAccountType(accountType);
+        const entityId = line?.entityId ? Number(line.entityId) : null;
+        // جلب اسم الكيان من البيانات المحمّلة
+        const entityName: string = (() => {
+          if (line?.entityName) return String(line.entityName);
+          if (!entityType || !entityId) return '';
+          const entities = this.getEntitiesForType(entityType);
+          const found = entities.find((e: any) => e.id === entityId);
+          return found ? String(found?.fullName || found?.name || '') : '';
+        })();
         return {
           accountSubNatureId: account?.accountSubNatureId ?? null,
           accountId,
@@ -2060,10 +2258,15 @@ export class VouchersComponent extends BasePageComponent {
           subNatureQuery: String(subNature?.name || ''),
           accountQuery: String(account?.name || line?.accountName || ''),
           accountNumberFilter: '',
+          entityType,
+          entityId,
+          entityQuery: entityName,
           showSubNatureSuggestions: false,
           activeSubNatureSuggestionIndex: -1,
           showAccountSuggestions: false,
           activeAccountSuggestionIndex: -1,
+          showEntitySuggestions: false,
+          activeEntitySuggestionIndex: -1,
         } as VoucherLine;
       })
       .filter((line): line is VoucherLine => line !== null);
@@ -2097,6 +2300,7 @@ export class VouchersComponent extends BasePageComponent {
       operationTypeId: this.getVoucherField(voucher, 'operationTypeId', 'operation_type_id') || null,
       description: this.getVoucherField(voucher, 'description', 'description') || '',
       journalEntries: this.getVoucherField(voucher, 'journalEntries', 'journal_entries') || [],
+      voucherLineDetails: this.getVoucherField(voucher, 'voucherLineDetails', 'voucher_line_details') || [],
     };
     return normalized;
   }

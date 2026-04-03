@@ -691,11 +691,12 @@
                 <span class="detail-value">{{ detailsVoucher().voucherNumber || '-' }}</span>
               </div>
               @if (detailsVoucherNumberParts()) {
-                <div class="detail-row">
-                  <span class="detail-label">الخزينة</span>
-                  <span class="detail-value">
-                    {{ getTreasuryKindLabel(detailsVoucherNumberParts()?.treasuryKindCode || '') }}
-                    • الكود {{ detailsVoucherNumberParts()?.treasuryCode }}
+                <div class="detail-row" style="background:linear-gradient(135deg,#fefce8,#fef9c3);border-radius:8px;padding:12px">
+                  <span class="detail-label" style="font-weight:600;color:#713f12">الخزينة</span>
+                  <span class="detail-value" style="font-weight:700;color:#854d0e">
+                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">account_balance_wallet</span>
+                    {{ getDetailsTreasuryName(detailsVoucher()) }}
+                    <span style="font-size:12px;color:#92400e;font-weight:400;margin-right:6px" dir="ltr">({{ detailsVoucherNumberParts()?.treasuryCode }})</span>
                   </span>
                 </div>
                 <div class="detail-row">
@@ -710,10 +711,11 @@
                 </div>
               }
               @if (!detailsVoucherNumberParts()) {
-                <div class="detail-row">
-                  <span class="detail-label">الخزينة</span>
-                  <span class="detail-value">
-                    {{ getVoucherTreasuryLabel(detailsVoucher()) }}
+                <div class="detail-row" style="background:linear-gradient(135deg,#fefce8,#fef9c3);border-radius:8px;padding:12px">
+                  <span class="detail-label" style="font-weight:600;color:#713f12">الخزينة</span>
+                  <span class="detail-value" style="font-weight:700;color:#854d0e">
+                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">account_balance_wallet</span>
+                    {{ getDetailsTreasuryName(detailsVoucher()) }}
                   </span>
                 </div>
               }
@@ -758,13 +760,17 @@
                   </span>
                 </span>
               </div>
-              @if (detailsVoucher().fromAccountId && !isSystemCashAccount(detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId))) {
+              @if (detailsVoucher().fromAccountId
+                && !isSystemCashAccount(detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId))
+                && !isDetailsTreasuryAccount(detailsVoucher().fromAccountId)) {
                 <div class="detail-row">
                   <span class="detail-label">من حساب</span>
                   <span class="detail-value">{{ detailsVoucher().fromAccountName || getAccountName(detailsVoucher().fromAccountId) }}</span>
                 </div>
               }
-              @if (detailsVoucher().toAccountId && !isSystemCashAccount(detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId))) {
+              @if (detailsVoucher().toAccountId
+                && !isSystemCashAccount(detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId))
+                && !isDetailsTreasuryAccount(detailsVoucher().toAccountId)) {
                 <div class="detail-row">
                   <span class="detail-label">إلى حساب</span>
                   <span class="detail-value">{{ detailsVoucher().toAccountName || getAccountName(detailsVoucher().toAccountId) }}</span>
@@ -787,16 +793,66 @@
                 </div>
               }
 
-              @if (getVoucherJournalLines(detailsVoucher()).length > 0) {
+              <!-- بنود السند (voucherLineDetails) - المصدر الأساسي مع الحساب التحليلي -->
+              @if (detailsVoucher().voucherLineDetails?.length > 0) {
                 <div class="journal-lines-block">
-                  <div class="journal-lines-title">سطور القيد المرتبط</div>
-                  <div class="journal-lines-table">
+                  <div class="journal-lines-title">
+                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">list_alt</span>
+                    بنود السند
+                  </div>
+                  <div class="journal-lines-table" style="grid-template-columns:1fr 1fr auto auto">
+                    <div class="jl-head">الحساب</div>
+                    <div class="jl-head">الحساب التحليلي</div>
+                    <div class="jl-head">المبلغ</div>
+                    <div class="jl-head">ملاحظات</div>
+                    @for (vl of detailsVoucher().voucherLineDetails; track $index) {
+                      <div class="jl-cell">{{ vl.accountName || '-' }}</div>
+                      <div class="jl-cell">
+                        @if (vl.entityName) {
+                          <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600">
+                            <span class="material-icons-round" style="font-size:13px">person</span>
+                            {{ vl.entityName }}
+                          </span>
+                        } @else {
+                          <span style="color:#94a3b8">—</span>
+                        }
+                      </div>
+                      <div class="jl-cell amount">{{ formatAmount(vl.amount) }}</div>
+                      <div class="jl-cell" style="color:#64748b;font-size:12px">{{ vl.description || '—' }}</div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- سطور القيد المحاسبي -->
+              @if (getVoucherJournalLines(detailsVoucher()).length > 0) {
+                <div class="journal-lines-block" style="margin-top:8px">
+                  <div class="journal-lines-title">
+                    <span class="material-icons-round" style="font-size:16px;vertical-align:middle;margin-left:4px">account_balance</span>
+                    القيد المحاسبي
+                  </div>
+                  <div class="journal-lines-table" style="grid-template-columns:1fr auto 1fr auto">
                     <div class="jl-head">الحساب</div>
                     <div class="jl-head">الطرف</div>
+                    <div class="jl-head">الحساب التحليلي</div>
                     <div class="jl-head">المبلغ</div>
                     @for (line of getVoucherJournalLines(detailsVoucher()); track $index) {
                       <div class="jl-cell">{{ line.accountName || '-' }}</div>
-                      <div class="jl-cell">{{ line.lineType === 'debit' ? 'مدين' : (line.lineType === 'credit' ? 'دائن' : line.lineType) }}</div>
+                      <div class="jl-cell">
+                        <span [style.color]="line.lineType === 'debit' ? '#dc2626' : '#16a34a'" style="font-weight:600;font-size:12px">
+                          {{ line.lineType === 'debit' ? 'مدين' : (line.lineType === 'credit' ? 'دائن' : (line.lineType || '-')) }}
+                        </span>
+                      </div>
+                      <div class="jl-cell">
+                        @if (line.entityName) {
+                          <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600">
+                            <span class="material-icons-round" style="font-size:13px">person</span>
+                            {{ line.entityName }}
+                          </span>
+                        } @else {
+                          <span style="color:#94a3b8">—</span>
+                        }
+                      </div>
                       <div class="jl-cell amount">{{ formatAmount(line.amount) }}</div>
                     }
                   </div>

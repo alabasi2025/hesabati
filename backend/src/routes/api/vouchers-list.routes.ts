@@ -226,57 +226,53 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
   }
 
   // ط¬ظ„ط¨ ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ…ط¹ ط§ظ„ط­ط³ط§ط¨ط§طھ ظˆط£ظ†ظˆط§ط¹ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
-  const rows = await db.execute(sql`
-    SELECT v.*,
-      ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category_id as operation_category,
-      fa.name as from_account_name, fa.account_type as from_account_type,
-      ta.name as to_account_name, ta.account_type as to_account_type,
-      ff.name as from_fund_name, ff.code as from_fund_code,
-      tf.name as to_fund_name, tf.code as to_fund_code,
-      c.code as currency_code, c.symbol as currency_symbol,
-      u.full_name as created_by_name
-    FROM vouchers v
-    LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    LEFT JOIN accounts fa ON fa.id = v.from_account_id
-    LEFT JOIN accounts ta ON ta.id = v.to_account_id
-    LEFT JOIN funds ff ON ff.id = v.from_fund_id
-    LEFT JOIN funds tf ON tf.id = v.to_fund_id
-    LEFT JOIN currencies c ON c.id = v.currency_id
-    LEFT JOIN users u ON u.id = v.created_by
-    WHERE ${conditions}
-    ORDER BY ${orderBySql}
-    LIMIT ${limit} OFFSET ${offset}
-  `);
+  const [rows, countResult, statsResult] = await Promise.all([
+    db.execute(sql`
+      SELECT v.*,
+        ot.name as operation_type_name, ot.icon as operation_type_icon, ot.color as operation_type_color, ot.category_id as operation_category,
+        fa.name as from_account_name, fa.account_type as from_account_type,
+        ta.name as to_account_name, ta.account_type as to_account_type,
+        ff.name as from_fund_name, ff.code as from_fund_code,
+        tf.name as to_fund_name, tf.code as to_fund_code,
+        c.code as currency_code, c.symbol as currency_symbol,
+        u.full_name as created_by_name
+      FROM vouchers v
+      LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
+      LEFT JOIN accounts fa ON fa.id = v.from_account_id
+      LEFT JOIN accounts ta ON ta.id = v.to_account_id
+      LEFT JOIN funds ff ON ff.id = v.from_fund_id
+      LEFT JOIN funds tf ON tf.id = v.to_fund_id
+      LEFT JOIN currencies c ON c.id = v.currency_id
+      LEFT JOIN users u ON u.id = v.created_by
+      WHERE ${conditions}
+      ORDER BY ${orderBySql}
+      LIMIT ${limit} OFFSET ${offset}
+    `),
+    db.execute(sql`SELECT COUNT(*) as total FROM vouchers v WHERE ${conditions}`),
+    db.execute(sql`
+      SELECT
+        COUNT(*) as total_count,
+        COALESCE(SUM(CASE WHEN v.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_receipts,
+        COALESCE(SUM(CASE WHEN v.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_payments,
+        COUNT(CASE WHEN v.voucher_type = 'receipt' THEN 1 END) as receipt_count,
+        COUNT(CASE WHEN v.voucher_type = 'payment' THEN 1 END) as payment_count,
+        COUNT(CASE WHEN v.status = 'unreviewed' THEN 1 END) as unreviewed_count,
+        COUNT(CASE WHEN v.status = 'reviewed' THEN 1 END) as reviewed_count
+      FROM vouchers v WHERE ${conditions}
+    `),
+  ]);
 
-  // ط¹ط¯ط¯ ط§ظ„ظ†طھط§ط¦ط¬ ط§ظ„ظƒظ„ظٹ
-  const countResult = await db.execute(sql`
-    SELECT COUNT(*) as total FROM vouchers v WHERE ${conditions}
-  `);
-  const countRows = normalizeDbResult<{ total: string }>(countResult);
   const total = Number(getFirstRow<{ total: string }>(countResult)?.total ?? 0);
-
-  // ط¥ط­طµط§ط¦ظٹط§طھ
-  const statsResult = await db.execute(sql`
-    SELECT
-      COUNT(*) as total_count,
-      COALESCE(SUM(CASE WHEN v.voucher_type = 'receipt' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_receipts,
-      COALESCE(SUM(CASE WHEN v.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_payments,
-      COUNT(CASE WHEN v.voucher_type = 'receipt' THEN 1 END) as receipt_count,
-      COUNT(CASE WHEN v.voucher_type = 'payment' THEN 1 END) as payment_count,
-      COUNT(CASE WHEN v.status = 'unreviewed' THEN 1 END) as unreviewed_count,
-      COUNT(CASE WHEN v.status = 'reviewed' THEN 1 END) as reviewed_count
-    FROM vouchers v WHERE ${conditions}
-  `);
-  const statsRows = normalizeDbResult(statsResult);
-  const stats = statsRows[0] || {};
+  const stats = normalizeDbResult(statsResult)[0] || {};
 
   const resultRows = normalizeDbResult(rows);
-
-  // جلب سطور القيود المحاسبية (journal_entry_lines) مع أسماء الحسابات لعرض الحسابات المقابلة
   const voucherNumbers = resultRows.map((r: any) => r.voucher_number || r.voucherNumber).filter(Boolean);
   const voucherIds = resultRows.map((r: any) => r.id).filter(Boolean);
-  let linesMap: Record<string, any[]> = {};
-  if (voucherNumbers.length > 0) {
+
+  // تشغيل استعلامات السطور بالتوازي مع count/stats
+  const journalLinesPromise = (async (): Promise<Record<string, any[]>> => {
+    const map: Record<string, any[]> = {};
+    if (voucherNumbers.length === 0) return map;
     const placeholders = voucherNumbers.map((n: string) => `'${n.replace(/'/g, "''")}'`).join(',');
     const linesResult = await db.execute(sql`
       SELECT je.reference as voucher_ref, jel.*, a.name as account_name, a.account_type as account_type
@@ -286,24 +282,24 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
       WHERE je.reference IN ${sql.raw('(' + placeholders + ')')}
       ORDER BY jel.sort_order
     `);
-    const allLines = normalizeDbResult(linesResult);
-    for (const line of allLines) {
-      const ref = line.voucherRef || line.voucher_ref;
-      if (!linesMap[ref]) linesMap[ref] = [];
-      linesMap[ref].push({
-        id: line.id,
-        accountId: line.accountId || line.account_id,
-        accountName: line.accountName || line.account_name,
-        accountType: line.accountType || line.account_type,
-        lineType: line.lineType || line.line_type,
-        amount: line.amount,
+    for (const line of normalizeDbResult(linesResult)) {
+      const ref = (line as any).voucherRef || (line as any).voucher_ref;
+      if (!map[ref]) map[ref] = [];
+      map[ref].push({
+        id: (line as any).id,
+        accountId: (line as any).accountId || (line as any).account_id,
+        accountName: (line as any).accountName || (line as any).account_name,
+        accountType: (line as any).accountType || (line as any).account_type,
+        lineType: (line as any).lineType || (line as any).line_type,
+        amount: (line as any).amount,
       });
     }
-  }
+    return map;
+  })();
 
-  // جلب سطور السند (voucher_lines) مع entity_type و entity_id لعرض الحساب التحليلي
-  let voucherLinesMap: Record<number, any[]> = {};
-  if (voucherIds.length > 0) {
+  const voucherLinesPromise = (async (): Promise<Record<number, any[]>> => {
+    const map: Record<number, any[]> = {};
+    if (voucherIds.length === 0) return map;
     const vIdPlaceholders = voucherIds.join(',');
     const vlResult = await db.execute(sql`
       SELECT vl.voucher_id, vl.account_id, vl.entity_type, vl.entity_id, vl.amount, vl.description,
@@ -313,29 +309,29 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
       WHERE vl.voucher_id IN ${sql.raw('(' + vIdPlaceholders + ')')}
       ORDER BY vl.sort_order
     `);
-    const allVoucherLines = normalizeDbResult(vlResult);
-    for (const vl of allVoucherLines) {
-      const vid = vl.voucherId || vl.voucher_id;
-      if (!voucherLinesMap[vid]) voucherLinesMap[vid] = [];
-      voucherLinesMap[vid].push({
-        accountId: vl.accountId || vl.account_id,
-        accountName: vl.accountName || vl.account_name,
-        accountType: vl.accountType || vl.account_type,
-        entityType: vl.entityType || vl.entity_type || null,
-        entityId: vl.entityId || vl.entity_id || null,
-        amount: vl.amount,
-        description: vl.description,
+    for (const vl of normalizeDbResult(vlResult)) {
+      const vid = (vl as any).voucherId || (vl as any).voucher_id;
+      if (!map[vid]) map[vid] = [];
+      map[vid].push({
+        accountId: (vl as any).accountId || (vl as any).account_id,
+        accountName: (vl as any).accountName || (vl as any).account_name,
+        accountType: (vl as any).accountType || (vl as any).account_type,
+        entityType: (vl as any).entityType || (vl as any).entity_type || null,
+        entityId: (vl as any).entityId || (vl as any).entity_id || null,
+        amount: (vl as any).amount,
+        description: (vl as any).description,
       });
     }
-  }
+    return map;
+  })();
 
-  // جلب أسماء الكيانات التحليلية (شركاء، موظفين، موردين) من الجداول المناسبة
+  const [linesMap, voucherLinesMap] = await Promise.all([journalLinesPromise, voucherLinesPromise]);
+
+  // جلب أسماء الكيانات التحليلية بالتوازي
   const allEntityRefs: { type: string; id: number }[] = [];
   for (const lines of Object.values(voucherLinesMap)) {
     for (const vl of lines) {
-      if (vl.entityType && vl.entityId) {
-        allEntityRefs.push({ type: vl.entityType, id: vl.entityId });
-      }
+      if (vl.entityType && vl.entityId) allEntityRefs.push({ type: vl.entityType, id: vl.entityId });
     }
   }
   const entityNameCache: Record<string, string> = {};
@@ -343,24 +339,20 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
     const partnerIds = [...new Set(allEntityRefs.filter(e => e.type === 'partner').map(e => e.id))];
     const employeeIds = [...new Set(allEntityRefs.filter(e => e.type === 'employee').map(e => e.id))];
     const supplierIds = [...new Set(allEntityRefs.filter(e => e.type === 'supplier').map(e => e.id))];
-    if (partnerIds.length > 0) {
-      const pResult = await db.execute(sql`SELECT id, full_name FROM business_partners WHERE id IN ${sql.raw('(' + partnerIds.join(',') + ')')}`);
-      for (const p of normalizeDbResult(pResult)) {
-        entityNameCache[`partner_${p.id}`] = p.fullName || p.full_name || '';
-      }
-    }
-    if (employeeIds.length > 0) {
-      const eResult = await db.execute(sql`SELECT id, full_name FROM employees WHERE id IN ${sql.raw('(' + employeeIds.join(',') + ')')}`);
-      for (const e of normalizeDbResult(eResult)) {
-        entityNameCache[`employee_${e.id}`] = e.fullName || e.full_name || '';
-      }
-    }
-    if (supplierIds.length > 0) {
-      const sResult = await db.execute(sql`SELECT id, name FROM suppliers WHERE id IN ${sql.raw('(' + supplierIds.join(',') + ')')}`);
-      for (const s of normalizeDbResult(sResult)) {
-        entityNameCache[`supplier_${s.id}`] = s.name || '';
-      }
-    }
+    await Promise.all([
+      partnerIds.length > 0
+        ? db.execute(sql`SELECT id, full_name FROM business_partners WHERE id IN ${sql.raw('(' + partnerIds.join(',') + ')')}`)
+            .then(r => { for (const p of normalizeDbResult(r)) entityNameCache[`partner_${(p as any).id}`] = (p as any).fullName || (p as any).full_name || ''; })
+        : Promise.resolve(),
+      employeeIds.length > 0
+        ? db.execute(sql`SELECT id, full_name FROM employees WHERE id IN ${sql.raw('(' + employeeIds.join(',') + ')')}`)
+            .then(r => { for (const e of normalizeDbResult(r)) entityNameCache[`employee_${(e as any).id}`] = (e as any).fullName || (e as any).full_name || ''; })
+        : Promise.resolve(),
+      supplierIds.length > 0
+        ? db.execute(sql`SELECT id, name FROM suppliers WHERE id IN ${sql.raw('(' + supplierIds.join(',') + ')')}`)
+            .then(r => { for (const s of normalizeDbResult(r)) entityNameCache[`supplier_${(s as any).id}`] = (s as any).name || ''; })
+        : Promise.resolve(),
+    ]);
   }
 
   // دمج أسماء الكيانات التحليلية في سطور السند
@@ -494,6 +486,26 @@ vouchersRouter.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(
   `);
   const journalRows = normalizeDbResult(journalResult);
 
+  // ط¬ظ„ط¨ ط³ط·ظˆط± ط§ظ„ط³ظ†ط¯ (voucher_lines) ظ…ط¹ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظƒظٹط§ظ†
+  const voucherLinesResult = await db.execute(sql`
+    SELECT vl.*, a.name as account_name, a.account_type
+    FROM voucher_lines vl
+    LEFT JOIN accounts a ON a.id = vl.account_id
+    WHERE vl.voucher_id = ${id}
+    ORDER BY vl.sort_order
+  `);
+  const rawVoucherLines = normalizeDbResult(voucherLinesResult);
+  const voucherLineDetails = rawVoucherLines.map((vl: any) => ({
+    accountId: vl.accountId ?? vl.account_id,
+    accountName: vl.accountName ?? vl.account_name ?? null,
+    accountType: vl.accountType ?? vl.account_type ?? null,
+    entityType: vl.entityType ?? vl.entity_type ?? null,
+    entityId: vl.entityId ?? vl.entity_id ?? null,
+    amount: vl.amount,
+    description: vl.description ?? null,
+    sortOrder: vl.sortOrder ?? vl.sort_order ?? 0,
+  }));
+
   // ط¬ظ„ط¨ ظ†ظˆط¹ ط§ظ„ط¹ظ…ظ„ظٹط©
   let opType = null;
   if (voucher.operationTypeId) {
@@ -520,7 +532,7 @@ vouchersRouter.get('/businesses/:bizId/vouchers/:id/details', bizAuthMiddleware(
 
   return c.json({
     voucher, operationType: opType, fromAccount, toAccount,
-    journalEntries: journalRows, auditTrail: auditRows,
+    journalEntries: journalRows, voucherLineDetails, auditTrail: auditRows,
   });
 }));
 

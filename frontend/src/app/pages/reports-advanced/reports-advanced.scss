@@ -272,6 +272,17 @@
   .material-icons-round { font-size: 36px; color: white; }
 }
 
+/* ===================== Chart Card ===================== */
+.chart-card-3d {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+  overflow: hidden;
+  padding: 8px;
+}
+
 /* ===================== Responsive ===================== */
 @media (max-width: 768px) {
   .page-header { flex-direction: column; gap: 14px; align-items: flex-start; }

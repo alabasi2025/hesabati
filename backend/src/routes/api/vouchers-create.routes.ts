@@ -16,7 +16,7 @@ import { postMultiTransaction } from '../../engines/transaction.engine.ts';
 import { isForeignCurrency, requireExchangeDiffAccount } from '../../engines/currency.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
-import { validateEntityAccountLinks } from './_shared/account-guards.ts';
+import { validateEntityAccountLinks, validateSubledgerAccountEntries } from './_shared/account-guards.ts';
 
 const vouchersCreateRouter = new Hono();
 
@@ -102,6 +102,12 @@ vouchersCreateRouter.post(
     const allAccountIds = entries.map((e: any) => e.accountId).filter(Boolean);
     const guardError = await validateEntityAccountLinks(allAccountIds);
     if (guardError) return c.json({ error: guardError }, 400);
+
+    // ⛔ القاعدة الصارمة: حسابات subledger تتطلب entityId
+    const subledgerError = await validateSubledgerAccountEntries(
+      entries.map((e: any) => ({ accountId: e.accountId, entityId: e.entityId }))
+    );
+    if (subledgerError) return c.json({ error: subledgerError }, 400);
 
     const total = entries.reduce((s: number, e: any) => s + e.amount, 0);
     const entryLineType: 'debit' | 'credit' = vType === 'receipt' ? 'credit' : 'debit';
