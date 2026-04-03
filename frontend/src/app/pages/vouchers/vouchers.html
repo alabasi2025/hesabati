@@ -491,13 +491,13 @@
                   <div class="line-index-badge" title="رقم السطر">
                     {{ lineIndex + 1 }}
                   </div>
-                  <div class="form-group">
+                  <div class="form-group line-sub-type-group">
                     <label class="form-label">نوع الحساب الفرعي</label>
                     <div class="line-autocomplete">
                       <input
                         class="form-input"
                         type="text"
-                        placeholder="اكتب نوع الحساب..."
+                        placeholder="النوع..."
                         title="نوع الحساب الفرعي"
                         autocomplete="off"
                         [value]="line.subNatureQuery || ''"
@@ -526,39 +526,80 @@
                       }
                     </div>
                   </div>
-                  <div class="form-group">
+                  <div class="form-group line-sub-account-group">
                     <label class="form-label">الحساب الفرعي</label>
-                    <div class="line-account-picker">
+                    <div class="line-autocomplete">
+                      <input
+                        class="form-input"
+                        type="text"
+                        placeholder="اكتب اسم الحساب..."
+                        title="الحساب الفرعي"
+                        autocomplete="off"
+                        [value]="line.accountQuery || ''"
+                        (input)="onLineAccountTyping(lineIndex, $any($event.target).value)"
+                        (focus)="onLineAccountFocus(lineIndex)"
+                        (blur)="onLineAccountBlur(lineIndex)"
+                        (keydown)="onLineAccountKeydown(lineIndex, $event)"
+                      />
+                      @if (line.showAccountSuggestions && getLineAccountOptions(line).length > 0) {
+                        <div class="line-suggestions">
+                          @for (account of getLineAccountOptions(line); track account.id; let i = $index) {
+                            <button
+                              type="button"
+                              class="line-suggestion-item"
+                              [class.active]="i === (line.activeAccountSuggestionIndex || -1)"
+                              (mousedown)="$event.preventDefault()"
+                              (click)="selectLineAccountSuggestion(lineIndex, account)"
+                            >
+                              <span class="name">
+                                @let nameParts = getLineAccountNameParts(line, account);
+                                {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
+                              </span>
+                              @if (account.code) {
+                                <span class="code">
+                                  @let codeParts = getLineAccountCodeParts(line, account);
+                                  ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
+                                </span>
+                              }
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <div class="form-group line-analytical-group">
+                    <label class="form-label">الحساب التحليلي</label>
+                    @if (hasSubledgerEntities(line)) {
                       <div class="line-autocomplete">
                         <input
                           class="form-input"
                           type="text"
-                          placeholder="اكتب اسم الحساب..."
-                          title="الحساب الفرعي"
+                          [placeholder]="'اختر ' + getEntityTypeLabel(line.entityType) + '...'"
+                          [title]="'الحساب التحليلي — ' + getEntityTypeLabel(line.entityType)"
                           autocomplete="off"
-                          [value]="line.accountQuery || ''"
-                          (input)="onLineAccountTyping(lineIndex, $any($event.target).value)"
-                          (focus)="onLineAccountFocus(lineIndex)"
-                          (blur)="onLineAccountBlur(lineIndex)"
-                          (keydown)="onLineAccountKeydown(lineIndex, $event)"
+                          [value]="line.entityQuery || ''"
+                          (input)="onLineEntityTyping(lineIndex, $any($event.target).value)"
+                          (focus)="onLineEntityFocus(lineIndex)"
+                          (blur)="onLineEntityBlur(lineIndex)"
+                          (keydown)="onLineEntityKeydown(lineIndex, $event)"
                         />
-                        @if (line.showAccountSuggestions && getLineAccountOptions(line).length > 0) {
+                        @if (line.showEntitySuggestions && getLineEntityOptions(line).length > 0) {
                           <div class="line-suggestions">
-                            @for (account of getLineAccountOptions(line); track account.id; let i = $index) {
+                            @for (entity of getLineEntityOptions(line); track entity.id; let i = $index) {
                               <button
                                 type="button"
                                 class="line-suggestion-item"
-                                [class.active]="i === (line.activeAccountSuggestionIndex || -1)"
+                                [class.active]="i === (line.activeEntitySuggestionIndex || -1)"
                                 (mousedown)="$event.preventDefault()"
-                                (click)="selectLineAccountSuggestion(lineIndex, account)"
+                                (click)="selectLineEntitySuggestion(lineIndex, entity)"
                               >
                                 <span class="name">
-                                  @let nameParts = getLineAccountNameParts(line, account);
+                                  @let nameParts = getLineEntityNameParts(line, entity);
                                   {{ nameParts.before }}<mark class="match-mark">{{ nameParts.match }}</mark>{{ nameParts.after }}
                                 </span>
-                                @if (account.code) {
+                                @if (entity.code) {
                                   <span class="code">
-                                    @let codeParts = getLineAccountCodeParts(line, account);
+                                    @let codeParts = getLineEntityCodeParts(line, entity);
                                     ({{ codeParts.before }}<mark class="match-mark">{{ codeParts.match }}</mark>{{ codeParts.after }})
                                   </span>
                                 }
@@ -567,17 +608,13 @@
                           </div>
                         }
                       </div>
-                      <input
-                        class="form-input line-account-number-input"
-                        type="number"
-                        min="1"
-                        placeholder="رقم"
-                        title="رقم الحساب"
-                        [value]="line.accountNumberFilter || ''"
-                        (input)="setLineAccountNumberFilter(lineIndex, $any($event.target).value)"
-                        (keydown)="onVoucherLineFieldKeydown(lineIndex, 'accountNumber', $event)"
-                      />
-                    </div>
+                    } @else {
+                      <input class="form-input" type="text" disabled placeholder="—" title="لا يوجد حساب تحليلي" />
+                    }
+                  </div>
+                  <div class="form-group line-currency-group">
+                    <label class="form-label">العملة</label>
+                    <span class="line-currency-badge">{{ getLineCurrencyLabel(line) }}</span>
                   </div>
                   <div class="form-group line-amount-group">
                     <label class="form-label">المبلغ</label>
@@ -614,6 +651,13 @@
           </div>
 
         </div>
+        @if (formError()) {
+          <div class="modal-form-error">
+            <span class="material-icons-round">warning</span>
+            <span>{{ formError() }}</span>
+            <button type="button" class="modal-error-close" (click)="formError.set('')">✕</button>
+          </div>
+        }
         <div class="modal-footer">
           <button class="btn-3d btn-ghost" (click)="showForm.set(false)">إلغاء</button>
           <button class="btn-3d" [class.btn-receipt]="voucherType() === 'receipt'"

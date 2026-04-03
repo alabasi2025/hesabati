@@ -530,13 +530,80 @@
 
 .voucher-line-row {
   display: grid;
-  grid-template-columns: 56px 1.1fr 1.5fr 0.7fr 2fr auto;
-  gap: 10px;
+  grid-template-columns: 36px minmax(70px, 0.7fr) minmax(100px, 1.2fr) minmax(100px, 1.2fr) minmax(50px, auto) minmax(70px, 0.6fr) minmax(120px, 1.5fr) auto;
+  gap: 8px;
   align-items: end;
   padding: 12px;
   border-radius: 12px;
   background: var(--bg-card, white);
   border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.line-sub-type-group .form-input {
+  min-width: 60px;
+}
+
+.line-sub-account-group .form-input {
+  min-width: 80px;
+}
+
+.line-analytical-group .form-input {
+  min-width: 80px;
+}
+
+.line-currency-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.line-currency-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+  white-space: nowrap;
+}
+
+.modal-form-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 0 16px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+  direction: rtl;
+
+  .material-icons-round {
+    font-size: 20px;
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+
+  .modal-error-close {
+    margin-inline-start: auto;
+    background: none;
+    border: none;
+    color: #b91c1c;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 900;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
 }
 
 .line-index-badge {
@@ -614,11 +681,6 @@
   }
 }
 
-.line-account-picker {
-  display: grid;
-  grid-template-columns: 1fr 84px;
-  gap: 8px;
-}
 
 .line-account-number-input {
   text-align: center;
@@ -908,9 +970,8 @@
   .filters-row { grid-template-columns: 1fr; }
   .filters-row.advanced { grid-template-columns: 1fr; }
   .filters-actions { width: 100%; }
-  .voucher-line-row { grid-template-columns: 1fr; }
+  .voucher-line-row { grid-template-columns: 1fr 1fr; }
   .line-index-badge { margin-bottom: 6px; }
-  .line-account-picker { grid-template-columns: 1fr; }
   .voucher-lines-summary { flex-direction: column; align-items: stretch; }
   .summary-values { flex-direction: column; align-items: flex-start; gap: 6px; }
   .modal-3d { border-radius: 16px; }

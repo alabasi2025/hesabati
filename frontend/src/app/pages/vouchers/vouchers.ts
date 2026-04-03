@@ -34,15 +34,20 @@ type TreasuryType = 'fund' | 'bank' | 'exchange' | 'e_wallet';
 interface VoucherLine {
   accountSubNatureId: number | null;
   accountId: number | null;
+  entityType: string | null;
+  entityId: number | null;
   amount: string;
   notes: string;
   subNatureQuery?: string;
   accountQuery?: string;
   accountNumberFilter?: string;
+  entityQuery?: string;
   showSubNatureSuggestions?: boolean;
   activeSubNatureSuggestionIndex?: number;
   showAccountSuggestions?: boolean;
   activeAccountSuggestionIndex?: number;
+  showEntitySuggestions?: boolean;
+  activeEntitySuggestionIndex?: number;
 }
 
 @Component({
@@ -65,8 +70,17 @@ export class VouchersComponent extends BasePageComponent {
   accounts = signal<any[]>([]);
   accountSubNatures = signal<any[]>([]);
   funds = signal<any[]>([]);
+  banks = signal<any[]>([]);
+  exchanges = signal<any[]>([]);
+  wallets = signal<any[]>([]);
+  suppliers = signal<any[]>([]);
+  employees = signal<any[]>([]);
+  partners = signal<any[]>([]);
+  warehouses = signal<any[]>([]);
+  custodies = signal<any[]>([]);
   currencies = signal<any[]>([]);
   error = signal('');
+  formError = signal('');
 
   // UI State
   showHowItWorks = signal(false);
@@ -147,10 +161,22 @@ export class VouchersComponent extends BasePageComponent {
         .map((fund) => ({ ...fund, label: fund.name }))
         .sort((a, b) => this.compareTreasuryOptions(a, b));
     }
-    return this.accounts()
-      .filter((account) => this.getAccountType(account) === type && account.isLeafAccount !== false)
-      .map((account) => ({ ...account, label: account.name }))
-      .sort((a, b) => this.compareTreasuryOptions(a, b));
+    if (type === 'bank') {
+      return this.banks()
+        .map((bank) => ({ ...bank, label: bank.name }))
+        .sort((a, b) => this.compareTreasuryOptions(a, b));
+    }
+    if (type === 'exchange') {
+      return this.exchanges()
+        .map((exchange) => ({ ...exchange, label: exchange.name }))
+        .sort((a, b) => this.compareTreasuryOptions(a, b));
+    }
+    if (type === 'e_wallet') {
+      return this.wallets()
+        .map((wallet) => ({ ...wallet, label: wallet.name }))
+        .sort((a, b) => this.compareTreasuryOptions(a, b));
+    }
+    return [];
   });
 
   filteredTreasuryOptions = computed(() => {
@@ -308,6 +334,10 @@ export class VouchersComponent extends BasePageComponent {
       this.loadOperationTypes(),
       this.loadAccounts(),
       this.loadFunds(),
+      this.loadBanks(),
+      this.loadExchanges(),
+      this.loadWallets(),
+      this.loadSubledgerEntities(),
       this.loadAccountSubNatures(),
       this.loadCurrencies(),
     ]);
@@ -391,6 +421,37 @@ export class VouchersComponent extends BasePageComponent {
       const data = await this.api.getFunds(this.bizId);
       this.funds.set(data);
     } catch { /* non-critical: funds list unavailable */ }
+  }
+
+  async loadBanks() {
+    try {
+      const data = await this.api.getBanks(this.bizId);
+      this.banks.set(data);
+    } catch { /* non-critical: banks list unavailable */ }
+  }
+
+  async loadExchanges() {
+    try {
+      const data = await this.api.getExchanges(this.bizId);
+      this.exchanges.set(data);
+    } catch { /* non-critical: exchanges list unavailable */ }
+  }
+
+  async loadWallets() {
+    try {
+      const data = await this.api.getWallets(this.bizId);
+      this.wallets.set(data);
+    } catch { /* non-critical: wallets list unavailable */ }
+  }
+
+  async loadSubledgerEntities() {
+    await Promise.all([
+      this.api.getSuppliers(this.bizId).then(d => this.suppliers.set(d)).catch(() => {}),
+      this.api.getEmployees(this.bizId).then(d => this.employees.set(d)).catch(() => {}),
+      this.api.getPartners(this.bizId).then(d => this.partners.set(d)).catch(() => {}),
+      this.api.getWarehouses(this.bizId).then(d => this.warehouses.set(d)).catch(() => {}),
+      this.api.getCustodyRecords(this.bizId).then(d => this.custodies.set(d)).catch(() => {}),
+    ]);
   }
 
   async loadCurrencies() {
@@ -721,8 +782,13 @@ export class VouchersComponent extends BasePageComponent {
             accountId: null,
             accountQuery: '',
             accountNumberFilter: '',
+            entityType: null,
+            entityId: null,
+            entityQuery: '',
             showAccountSuggestions: false,
             activeAccountSuggestionIndex: -1,
+            showEntitySuggestions: false,
+            activeEntitySuggestionIndex: -1,
           };
         }
         return { ...row, [field]: value };
@@ -966,17 +1032,159 @@ export class VouchersComponent extends BasePageComponent {
     const resolvedSubNatureName = resolvedSubNatureId
       ? (this.accountSubNatures().find((nature) => nature.id === resolvedSubNatureId)?.name || '')
       : '';
+    const accountType = this.getAccountType(account);
+    const entityType = this.getEntityTypeForAccountType(accountType);
     this.patchVoucherLine(index, {
       accountSubNatureId: resolvedSubNatureId,
       subNatureQuery: resolvedSubNatureName,
       accountId: account?.id ?? null,
       accountQuery: this.getAccountOptionText(account),
       accountNumberFilter: accountNumber !== null ? String(accountNumber) : '',
+      entityType: entityType,
+      entityId: null,
+      entityQuery: '',
       showSubNatureSuggestions: false,
       activeSubNatureSuggestionIndex: -1,
       showAccountSuggestions: false,
       activeAccountSuggestionIndex: -1,
+      showEntitySuggestions: false,
+      activeEntitySuggestionIndex: -1,
     });
+  }
+
+  // ===================== Entity Selection (دفتر الأستاذ الفرعي) =====================
+
+  getEntityTypeForAccountType(accountType: string): string | null {
+    const map: Record<string, string> = {
+      supplier: 'supplier', employee: 'employee', partner: 'partner',
+      warehouse: 'warehouse', custody: 'custody',
+    };
+    return map[accountType] || null;
+  }
+
+  getEntitiesForType(entityType: string | null): any[] {
+    if (!entityType) return [];
+    const map: Record<string, () => any[]> = {
+      supplier: () => this.suppliers(),
+      employee: () => this.employees(),
+      partner: () => this.partners(),
+      warehouse: () => this.warehouses(),
+      custody: () => this.custodies(),
+    };
+    return (map[entityType] ?? (() => []))();
+  }
+
+  getLineEntityOptions(line: VoucherLine): any[] {
+    if (!line.entityType || !line.accountId) return [];
+    const allEntities = this.getEntitiesForType(line.entityType);
+    const accountId = line.accountId;
+    let entities = allEntities.filter((e) => e.accountId === accountId);
+    const query = this.normalizeTreasurySearchText(line?.entityQuery || '');
+    if (query) {
+      entities = entities.filter((e) => {
+        const name = this.normalizeTreasurySearchText(e?.name || e?.fullName || '');
+        const code = this.normalizeTreasurySearchText(e?.code || '');
+        return name.includes(query) || code.includes(query);
+      });
+    }
+    return entities;
+  }
+
+  hasSubledgerEntities(line: VoucherLine): boolean {
+    return !!line.entityType && !!line.accountId;
+  }
+
+  getEntityOptionText(entity: any): string {
+    if (!entity) return '';
+    const name = String(entity?.name || entity?.fullName || '').trim();
+    const code = String(entity?.code || '').trim();
+    return code ? `${name} (${code})` : name;
+  }
+
+  getEntityTypeLabel(entityType: string | null): string {
+    const m: Record<string, string> = {
+      supplier: 'المورد', employee: 'الموظف', partner: 'الشريك',
+      warehouse: 'المخزن', custody: 'العهدة',
+    };
+    return m[entityType || ''] || 'الكيان';
+  }
+
+  onLineEntityTyping(index: number, value: string) {
+    this.patchVoucherLine(index, {
+      entityQuery: String(value || ''),
+      showEntitySuggestions: true,
+      activeEntitySuggestionIndex: -1,
+      entityId: null,
+    });
+    const line = this.voucherLines()[index];
+    const options = this.getLineEntityOptions(line);
+    if (options.length === 1) {
+      this.selectLineEntitySuggestion(index, options[0]);
+    }
+  }
+
+  onLineEntityFocus(index: number) {
+    const line = this.voucherLines()[index];
+    this.patchVoucherLine(index, { showEntitySuggestions: this.getLineEntityOptions(line).length > 0 });
+  }
+
+  onLineEntityBlur(index: number) {
+    globalThis.setTimeout(() => {
+      this.patchVoucherLine(index, { showEntitySuggestions: false, activeEntitySuggestionIndex: -1 });
+    }, 120);
+  }
+
+  onLineEntityKeydown(index: number, event: KeyboardEvent) {
+    if (event.key === 'F3') {
+      event.preventDefault();
+      return;
+    }
+
+    const line = this.voucherLines()[index];
+    const options = this.getLineEntityOptions(line);
+    if (!options.length) return;
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const current = line.activeEntitySuggestionIndex ?? -1;
+      const dir = event.key === 'ArrowDown' ? 1 : -1;
+      const next = current < 0 ? (dir > 0 ? 0 : options.length - 1) : (current + dir + options.length) % options.length;
+      this.patchVoucherLine(index, { showEntitySuggestions: true, activeEntitySuggestionIndex: next });
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const activeIdx = line.activeEntitySuggestionIndex ?? -1;
+      if (activeIdx >= 0 && activeIdx < options.length) {
+        this.selectLineEntitySuggestion(index, options[activeIdx]);
+      } else if (options.length === 1) {
+        this.selectLineEntitySuggestion(index, options[0]);
+      }
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.patchVoucherLine(index, { showEntitySuggestions: false, activeEntitySuggestionIndex: -1 });
+    }
+  }
+
+  selectLineEntitySuggestion(index: number, entity: any) {
+    this.patchVoucherLine(index, {
+      entityId: entity?.id ?? null,
+      entityQuery: this.getEntityOptionText(entity),
+      showEntitySuggestions: false,
+      activeEntitySuggestionIndex: -1,
+    });
+  }
+
+  getLineEntityNameParts(line: VoucherLine, entity: any) {
+    return this.getHighlightParts(String(entity?.name || entity?.fullName || ''), line?.entityQuery || '');
+  }
+
+  getLineEntityCodeParts(line: VoucherLine, entity: any) {
+    return this.getHighlightParts(String(entity?.code || ''), line?.entityQuery || '');
   }
 
   onVoucherLineFieldKeydown(index: number, field: 'amount' | 'notes' | 'accountNumber', event: KeyboardEvent) {
@@ -1072,8 +1280,11 @@ export class VouchersComponent extends BasePageComponent {
         if (this.voucherType() === 'payment') params.fromFundId = treasuryId;
         else params.toFundId = treasuryId;
       } else {
-        if (this.voucherType() === 'payment') params.fromAccountId = treasuryId;
-        else params.toAccountId = treasuryId;
+        // للبنوك/الصرافين/المحافظ: نحتاج accountId وليس id الكيان
+        const selectedItem = this.treasuryOptions().find((option) => option.id === treasuryId);
+        const accountId = selectedItem?.accountId || treasuryId;
+        if (this.voucherType() === 'payment') params.fromAccountId = accountId;
+        else params.toAccountId = accountId;
       }
       const preview = await this.api.getVoucherNumberPreview(this.bizId, params);
       this.voucherNumberPreview.set(preview?.voucherNumber || '');
@@ -1108,66 +1319,85 @@ export class VouchersComponent extends BasePageComponent {
 
   // ===================== Save Voucher =====================
   async saveVoucher() {
+    this.formError.set('');
     const f = this.form();
     const treasuryType = this.treasuryType();
     const treasuryId = this.selectedTreasuryId();
     const amount = Number.parseFloat(String(f.amount || 0));
 
+    // ====== تجميع كل أخطاء التحقق ======
+    const missing: string[] = [];
+    if (!treasuryType || !treasuryId) missing.push('اختر نوع الخزينة والخزينة نفسها');
+    if (!f.description?.trim()) missing.push('أدخل بيان السند');
+    if (!Number.isFinite(amount) || amount <= 0) missing.push('أدخل مبلغ السند (أكبر من صفر)');
+    if (!String(f.voucherDate || '').trim()) missing.push('أدخل تاريخ السند');
+
     if (this.isEditing()) {
       const editing = this.editingVoucher();
       const editId = Number.parseInt(String(editing?.id ?? ''), 10);
       if (!Number.isInteger(editId) || editId <= 0) {
-        this.error.set('تعذر تحديد السند المراد تعديله');
-        return;
+        missing.push('تعذر تحديد السند المراد تعديله');
       }
-      if (!treasuryType || !treasuryId) { this.error.set('اختر نوع الخزينة ثم الخزينة نفسها'); return; }
-      if (!f.description?.trim()) { this.error.set('أدخل بيان السند'); return; }
-      if (!Number.isFinite(amount) || amount <= 0) { this.error.set('أدخل مبلغ السند'); return; }
-      if (!String(f.voucherDate || '').trim()) { this.error.set('أدخل تاريخ السند'); return; }
+    }
 
-      const entries = this.voucherLines()
-        .map((row) => ({
-          accountSubNatureId: row.accountSubNatureId ? Number(row.accountSubNatureId) : null,
-          accountId: row.accountId ? Number(row.accountId) : null,
-          amount: Number.parseFloat(String(row.amount || 0)),
-          notes: String(row.notes || '').trim() || null,
-        }))
-        .filter((row) => Number.isInteger(row.accountId) && (row.accountId as number) > 0 && Number.isFinite(row.amount) && row.amount > 0);
+    const entries = this.voucherLines()
+      .map((row) => ({
+        accountSubNatureId: row.accountSubNatureId ? Number(row.accountSubNatureId) : null,
+        accountId: row.accountId ? Number(row.accountId) : null,
+        entityType: row.entityType || null,
+        entityId: row.entityId ? Number(row.entityId) : null,
+        amount: Number.parseFloat(String(row.amount || 0)),
+        notes: String(row.notes || '').trim() || null,
+      }))
+      .filter((row) => Number.isInteger(row.accountId) && (row.accountId as number) > 0 && Number.isFinite(row.amount) && row.amount > 0);
 
-      if (entries.length === 0) {
-        this.error.set('أدخل سطراً واحداً على الأقل في بنود السند');
-        return;
+    if (entries.length === 0) missing.push('أدخل سطراً واحداً على الأقل (حساب + مبلغ)');
+
+    const linesTotal = entries.reduce((sum, row) => sum + row.amount, 0);
+    if (entries.length > 0 && Number.isFinite(amount) && amount > 0 && Math.abs(linesTotal - amount) > 0.001) {
+      missing.push(`مجموع السطور (${linesTotal.toFixed(2)}) لا يساوي مبلغ السند (${amount.toFixed(2)})`);
+    }
+
+    if (missing.length > 0) {
+      const msg = missing.join(' • ');
+      this.formError.set(msg);
+      this.toast.warning(msg);
+      return;
+    }
+
+    // ====== التحقق نجح — حفظ ======
+    this.saving.set(true);
+    try {
+      const payload: any = {
+        voucherType: this.voucherType(),
+        amount: String(amount),
+        description: String(f.description || '').trim(),
+        reference: String(f.reference || '').trim() || null,
+        voucherDate: String(f.voucherDate || ''),
+        currencyId: f.currencyId || 1,
+        entries: entries.map((row) => ({
+          accountId: row.accountId,
+          entityType: row.entityType,
+          entityId: row.entityId,
+          amount: row.amount,
+          notes: row.notes,
+        })),
+      };
+
+      if (treasuryType === 'fund') {
+        if (this.voucherType() === 'payment') payload.fromFundId = treasuryId;
+        else payload.toFundId = treasuryId;
+      } else {
+        // للبنوك/الصرافين/المحافظ: نحتاج accountId (من جدول الحسابات) وليس id الكيان
+        const selectedItem = this.treasuryOptions().find((option) => option.id === treasuryId);
+        const accountId = selectedItem?.accountId || treasuryId;
+        if (this.voucherType() === 'payment') payload.fromAccountId = accountId;
+        else payload.toAccountId = accountId;
       }
 
-      const linesTotal = entries.reduce((sum, row) => sum + row.amount, 0);
-      if (Math.abs(linesTotal - amount) > 0.001) {
-        this.error.set('مجموع السطور يجب أن يساوي مبلغ السند');
-        return;
-      }
-
-      this.saving.set(true);
-      this.error.set('');
-      try {
-        const payload: any = {
-          voucherType: this.voucherType(),
-          description: String(f.description || '').trim(),
-          reference: String(f.reference || '').trim() || null,
-          amount: String(amount),
-          voucherDate: String(f.voucherDate || ''),
-          currencyId: f.currencyId || 1,
-          entries: entries.map((row) => ({
-            accountId: row.accountId,
-            amount: row.amount,
-            notes: row.notes,
-          })),
-        };
-        if (treasuryType === 'fund') {
-          if (this.voucherType() === 'payment') payload.fromFundId = treasuryId;
-          else payload.toFundId = treasuryId;
-        } else {
-          if (this.voucherType() === 'payment') payload.fromAccountId = treasuryId;
-          else payload.toAccountId = treasuryId;
-        }
+      if (this.isEditing()) {
+        const editing = this.editingVoucher();
+        const editId = Number.parseInt(String(editing?.id ?? ''), 10);
         await this.api.updateVoucher(this.bizId, editId, payload);
         this.voucherNumberPreview.set(editing?.voucherNumber || '');
         this.treasurySearchQuery.set(this.getVoucherTreasuryLabel(editing));
@@ -1187,73 +1417,19 @@ export class VouchersComponent extends BasePageComponent {
         this.showForm.set(false);
         this.isEditing.set(false);
         this.editingVoucher.set(null);
-        await this.loadVouchers();
-      } catch (e: unknown) {
-        this.error.set(e instanceof Error ? e.message : String(e));
-      } finally {
-        this.saving.set(false);
-      }
-      return;
-    }
-
-    if (!treasuryType || !treasuryId) { this.error.set('اختر نوع الخزينة ثم الخزينة نفسها'); return; }
-    if (!f.description?.trim()) { this.error.set('أدخل بيان السند'); return; }
-    if (!Number.isFinite(amount) || amount <= 0) { this.error.set('أدخل مبلغ السند'); return; }
-
-    const entries = this.voucherLines()
-      .map((row) => ({
-        accountSubNatureId: row.accountSubNatureId ? Number(row.accountSubNatureId) : null,
-        accountId: row.accountId ? Number(row.accountId) : null,
-        amount: Number.parseFloat(String(row.amount || 0)),
-        notes: String(row.notes || '').trim() || null,
-      }))
-      .filter((row) => Number.isInteger(row.accountId) && (row.accountId as number) > 0 && Number.isFinite(row.amount) && row.amount > 0);
-
-    if (entries.length === 0) {
-      this.error.set('أدخل سطراً واحداً على الأقل في بنود السند');
-      return;
-    }
-
-    const linesTotal = entries.reduce((sum, row) => sum + row.amount, 0);
-    if (Math.abs(linesTotal - amount) > 0.001) {
-      this.error.set('مجموع السطور يجب أن يساوي مبلغ السند');
-      return;
-    }
-
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const requestedStatus = 'unreviewed';
-      const payload: any = {
-        voucherType: this.voucherType(),
-        amount: String(amount),
-        description: String(f.description || '').trim(),
-        reference: String(f.reference || '').trim() || null,
-        voucherDate: f.voucherDate,
-        currencyId: f.currencyId || 1,
-        exchangeRate: f.exchangeRate || null,
-        status: requestedStatus,
-        entries: entries.map((row) => ({
-          accountId: row.accountId,
-          amount: row.amount,
-          notes: row.notes,
-        })),
-      };
-
-      if (treasuryType === 'fund') {
-        if (this.voucherType() === 'payment') payload.fromFundId = treasuryId;
-        else payload.toFundId = treasuryId;
       } else {
-        if (this.voucherType() === 'payment') payload.fromAccountId = treasuryId;
-        else payload.toAccountId = treasuryId;
+        payload.exchangeRate = f.exchangeRate || null;
+        payload.status = 'unreviewed';
+        await this.api.createVoucherMulti(this.bizId, payload);
+        this.toast.success(`تم إنشاء ${this.getTypeLabel(this.voucherType())} بنجاح`);
+        this.showForm.set(false);
       }
-
-      await this.api.createVoucherMulti(this.bizId, payload);
-      this.toast.success(`تم إنشاء ${this.getTypeLabel(this.voucherType())} بنجاح`);
-      this.showForm.set(false);
+      this.formError.set('');
       await this.loadVouchers();
     } catch (e: unknown) {
-      this.error.set(e instanceof Error ? e.message : String(e));
+      const errMsg = e instanceof Error ? e.message : String(e);
+      this.formError.set('خطأ من الخادم: ' + errMsg);
+      this.toast.error('فشل الحفظ: ' + errMsg);
     } finally {
       this.saving.set(false);
     }
@@ -1663,6 +1839,18 @@ export class VouchersComponent extends BasePageComponent {
     return currency?.nameAr || currency?.code || 'العملة الافتراضية';
   }
 
+  getLineCurrencyLabel(line: VoucherLine): string {
+    if (!line.accountId) return '—';
+    const account = this.accounts().find((a) => a.id === line.accountId);
+    if (!account) return '—';
+    const currId = account?.currencyId || account?.currency_id || account?.defaultCurrencyId || account?.default_currency_id;
+    if (currId) {
+      const currency = this.currencies().find((c: any) => c.id === Number(currId));
+      if (currency) return currency.nameAr || currency.code || '—';
+    }
+    return this.getCurrencyLabel(this.form().currencyId);
+  }
+
   getVoucherAmountDifference(): number {
     const amount = Number.parseFloat(String(this.form().amount || 0));
     if (!Number.isFinite(amount)) return 0;
@@ -1775,8 +1963,12 @@ export class VouchersComponent extends BasePageComponent {
     if (!voucherNumber) return null;
     const parts = String(voucherNumber).split('-');
     if (parts.length !== 5) return null;
-    const [voucherPrefix, treasuryKindCode, treasurySequence, year, serial] = parts;
-    const vaultNo = Number.parseInt(treasurySequence, 10);
+    const [voucherPrefix, treasuryKindCode, treasuryCodePart, year, serial] = parts;
+
+    // دعم الأكواد المركبة (مثل: 01/1, 02/2) والبسيطة (مثل: 01, 02)
+    const firstNumberMatch = treasuryCodePart.match(/^(\d+)/);
+    const vaultNo = firstNumberMatch ? Number.parseInt(firstNumberMatch[1], 10) : 0;
+
     const y = Number.parseInt(year, 10);
     const s = Number.parseInt(serial, 10);
     if (!Number.isInteger(vaultNo) || !Number.isInteger(y) || !Number.isInteger(s)) return null;
@@ -1784,7 +1976,7 @@ export class VouchersComponent extends BasePageComponent {
     return {
       voucherPrefix,
       treasuryKindCode,
-      treasuryCode: `${treasuryKindCode}-${treasurySequence}`,
+      treasuryCode: `${treasuryKindCode}-${treasuryCodePart}`,
       treasurySequence: vaultNo,
       year: y,
       serial: s,
@@ -2009,15 +2201,20 @@ export class VouchersComponent extends BasePageComponent {
     return {
       accountSubNatureId: null,
       accountId: null,
+      entityType: null,
+      entityId: null,
       amount: '',
       notes: '',
       subNatureQuery: '',
       accountQuery: '',
       accountNumberFilter: '',
+      entityQuery: '',
       showSubNatureSuggestions: false,
       activeSubNatureSuggestionIndex: -1,
       showAccountSuggestions: false,
       activeAccountSuggestionIndex: -1,
+      showEntitySuggestions: false,
+      activeEntitySuggestionIndex: -1,
     };
   }
 

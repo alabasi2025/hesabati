@@ -89,8 +89,20 @@ export interface MultiTransactionData {
   voucherNumber?: string | null;
   /** سعر الصرف (للعملة الأجنبية مقابل العملة الأساسية) */
   exchangeRate?: number | null;
+  /** سطور السند مع بيانات الكيان من دفتر الأستاذ الفرعي */
+  voucherLineEntries?: VoucherLineEntry[];
   /** حقول عرضية داخل جدول vouchers (قد تكون متعددة في الواقع) */
   fromAccountId?: number | null;
   toAccountId?: number | null;
+}
+
+/** سطر سند مع بيانات الكيان */
+export interface VoucherLineEntry {
+  accountId: number;
+  entityType?: string | null;
+  entityId?: number | null;
+  amount: number;
+  description?: string | null;
+  sortOrder?: number;
 }
 

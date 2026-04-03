@@ -6,7 +6,7 @@ import { Hono } from 'hono';
 import { db } from '../../db/index.ts';
 import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
-  businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
+  businesses, vouchers, voucherLines, currencies, operationTypes, operationTypeAccounts,
   accounts, accountBalances, funds, fundBalances,
   operationCategories,
   journalEntries, journalEntryLines,
@@ -90,6 +90,8 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
       accountId: parseOptionalId(entry?.accountId ?? entry?.toAccountId),
       amount: parseOptionalAmount(entry?.amount),
       notes: String(entry?.notes || '').trim() || null,
+      entityType: entry?.entityType || null,
+      entityId: entry?.entityId ? Number(entry.entityId) : null,
     }))
     .filter((entry: any) => Number.isInteger(entry.accountId) && Number.isFinite(entry.amount) && entry.amount > 0);
   if (counterpartEntries.length === 0) {
@@ -289,6 +291,22 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
           sortOrder: line.sortOrder,
         });
       }
+    }
+
+    // --- تحديث سطور السند (voucher_lines) مع بيانات الكيان ---
+    await tx.delete(voucherLines).where(eq(voucherLines.voucherId, id));
+    for (let i = 0; i < counterpartEntries.length; i++) {
+      const ce = counterpartEntries[i];
+      await tx.insert(voucherLines).values({
+        voucherId: id,
+        accountId: ce.accountId,
+        entityType: ce.entityType || null,
+        entityId: ce.entityId || null,
+        amount: String(ce.amount),
+        description: ce.notes || null,
+        currencyId,
+        sortOrder: i,
+      });
     }
 
     await tx.insert(auditLog).values({

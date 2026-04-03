@@ -24,6 +24,7 @@ function normalizeTreasuryCode(
   code: unknown,
   fallbackKind: 'fund' | 'bank' | 'exchange' | 'e_wallet',
   sequenceNumber: unknown,
+  entityId?: number,
 ): { kindCode: string; treasuryCode: string } | null {
   const normalizedCode = String(code ?? '').trim().toUpperCase();
   const matched = normalizedCode.match(/^([A-Z]+)-(\d+)$/);
@@ -33,9 +34,15 @@ function normalizeTreasuryCode(
   const seq = typeof sequenceNumber === 'number'
     ? sequenceNumber
     : Number.parseInt(String(sequenceNumber ?? ''), 10);
-  if (!Number.isInteger(seq) || seq <= 0) return null;
   const kindCode = TYPE_PREFIXES[fallbackKind] || fallbackKind.toUpperCase().substring(0, 3);
-  return { kindCode, treasuryCode: `${kindCode}-${String(seq).padStart(2, '0')}` };
+  if (Number.isInteger(seq) && seq > 0) {
+    return { kindCode, treasuryCode: `${kindCode}-${String(seq).padStart(2, '0')}` };
+  }
+  // fallback: استخدام ID الكيان إذا لم يتوفر code ولا sequenceNumber
+  if (entityId && Number.isInteger(entityId) && entityId > 0) {
+    return { kindCode, treasuryCode: `${kindCode}-${String(entityId).padStart(2, '0')}` };
+  }
+  return null;
 }
 
 
@@ -52,7 +59,7 @@ async function resolveVoucherTreasuryInfo(
       const [fund] = await db.select({ id: funds.id, code: funds.code, sequenceNumber: funds.sequenceNumber })
         .from(funds).where(and(eq(funds.id, toFundId), eq(funds.businessId, bizId))).limit(1);
       if (!fund) return null;
-      const normalized = normalizeTreasuryCode(fund.code, 'fund', fund.sequenceNumber);
+      const normalized = normalizeTreasuryCode(fund.code, 'fund', fund.sequenceNumber, toFundId);
       if (!normalized) return null;
       return { kind: 'fund', treasuryId: toFundId, ...normalized };
     }
@@ -62,7 +69,7 @@ async function resolveVoucherTreasuryInfo(
       if (!account) return null;
       const accountType = String(account.accountType);
       if (!['bank', 'exchange', 'e_wallet'].includes(accountType)) return null;
-      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber);
+      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber, toAccountId);
       if (!normalized) return null;
       return { kind: accountType as 'bank' | 'exchange' | 'e_wallet', treasuryId: toAccountId, ...normalized };
     }
@@ -73,7 +80,7 @@ async function resolveVoucherTreasuryInfo(
       const [fund] = await db.select({ id: funds.id, code: funds.code, sequenceNumber: funds.sequenceNumber })
         .from(funds).where(and(eq(funds.id, fromFundId), eq(funds.businessId, bizId))).limit(1);
       if (!fund) return null;
-      const normalized = normalizeTreasuryCode(fund.code, 'fund', fund.sequenceNumber);
+      const normalized = normalizeTreasuryCode(fund.code, 'fund', fund.sequenceNumber, fromFundId);
       if (!normalized) return null;
       return { kind: 'fund', treasuryId: fromFundId, ...normalized };
     }
@@ -83,7 +90,7 @@ async function resolveVoucherTreasuryInfo(
       if (!account) return null;
       const accountType = String(account.accountType);
       if (!['bank', 'exchange', 'e_wallet'].includes(accountType)) return null;
-      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber);
+      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber, fromAccountId);
       if (!normalized) return null;
       return { kind: accountType as 'bank' | 'exchange' | 'e_wallet', treasuryId: fromAccountId, ...normalized };
     }

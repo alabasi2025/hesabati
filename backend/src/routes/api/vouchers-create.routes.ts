@@ -100,15 +100,18 @@ vouchersCreateRouter.post(
       .map((e: any) => {
         const accountId = e.accountId ?? e.toAccountId;
         const amount = typeof e.amount === 'string' ? Number.parseFloat(e.amount) : e.amount;
-        return { accountId, amount, notes: e.notes ?? null, reference: e.reference ?? null };
+        return {
+          accountId, amount, notes: e.notes ?? null, reference: e.reference ?? null,
+          entityType: e.entityType || null, entityId: e.entityId ? Number(e.entityId) : null,
+        };
       })
       .filter((e: any) => Number.isFinite(e.amount) && e.amount > 0);
 
     if (entries.length === 0) return c.json({ error: 'ط£ط¯ط®ظ„ ظ…ط¨ظ„ط؛ط§ظ‹ ظˆط§ط­ط¯ط§ظ‹ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„' }, 400);
 
     // حماية: منع تنفيذ عملية على حسابات فرعية بدون كيان مرتبط
+    // ملاحظة: لا نُضيف treasuryAccountId لأنه حساب نظامي (system_cash_treasury) تتم التحقق من صحته مسبقاً
     const allAccountIds = entries.map((e: any) => e.accountId).filter(Boolean);
-    if (treasuryAccountId) allAccountIds.push(treasuryAccountId);
     const guardError = await validateEntityAccountLinks(allAccountIds);
     if (guardError) return c.json({ error: guardError }, 400);
 
@@ -133,11 +136,21 @@ vouchersCreateRouter.post(
       description: baseDesc || null,
     });
 
+    const voucherLineEntries = entries.map((e: any, i: number) => ({
+      accountId: e.accountId as number,
+      entityType: e.entityType as string | null,
+      entityId: e.entityId as number | null,
+      amount: e.amount as number,
+      description: e.notes ? String(e.notes).trim() : null,
+      sortOrder: i,
+    }));
+
     try {
       const result = await postMultiTransaction(bizId, userId, {
           voucherType: vType,
           currencyId,
           lines,
+          voucherLineEntries,
           operationTypeId: data.operationTypeId,
           operationTypeName: opType?.name || null,
           description: baseDesc || opType?.name || '',

@@ -8,6 +8,7 @@ import { eq, desc, sql, and, inArray, asc, count } from 'drizzle-orm';
 import {
   businesses, vouchers, currencies, operationTypes, operationTypeAccounts,
   accounts, accountBalances, funds, fundBalances,
+  banks, exchanges, wallets,
   operationCategories,
   journalEntries, journalEntryLines,
   users, auditLog,
@@ -17,6 +18,7 @@ import { safeHandler, getBody, parseId, toErrorMessage } from '../../middleware/
 import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { getNextSequence, getCurrentSequence, TYPE_PREFIXES, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
+import { generateVoucherFullSequence, previewVoucherFullSequence } from '../../engines/sequencing-entity.engine.ts';
 import { postMultiTransaction, postTransaction, confirmDraftTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { normalizeDbResult, getFirstRow } from '../../utils/db-result.ts';
@@ -42,10 +44,11 @@ function normalizeTreasuryCode(
   fallbackKind: 'fund' | 'bank' | 'exchange' | 'e_wallet',
   sequenceNumber: unknown,
 ): { kindCode: string; treasuryCode: string } | null {
-  const normalizedCode = String(code ?? '').trim().toUpperCase();
-  const matched = normalizedCode.match(/^([A-Z]+)-(\d+)$/);
+  const normalizedCode = String(code ?? '').trim();
+  // دعم الأكواد المركبة (FND-01/1) والبسيطة (FND-01)
+  const matched = normalizedCode.match(/^([A-Z]+)-(.+)$/i);
   if (matched) {
-    return { kindCode: matched[1]!, treasuryCode: `${matched[1]}-${matched[2]}` };
+    return { kindCode: matched[1]!.toUpperCase(), treasuryCode: normalizedCode };
   }
   const seq = typeof sequenceNumber === 'number'
     ? sequenceNumber
@@ -74,12 +77,30 @@ async function resolveVoucherTreasuryInfo(
       return { kind: 'fund', treasuryId: toFundId, ...normalized };
     }
     if (toAccountId) {
-      const [account] = await db.select({ id: accounts.id, code: accounts.code, accountType: accounts.accountType, sequenceNumber: accounts.sequenceNumber })
+      const [account] = await db.select({ id: accounts.id, accountType: accounts.accountType })
         .from(accounts).where(and(eq(accounts.id, toAccountId), eq(accounts.businessId, bizId))).limit(1);
       if (!account) return null;
       const accountType = String(account.accountType);
       if (!['bank', 'exchange', 'e_wallet'].includes(accountType)) return null;
-      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber);
+
+      // جلب الكود من جدول البنك/الصراف/المحفظة المناسب
+      let entityCode = null;
+      let entitySeq = null;
+      if (accountType === 'bank') {
+        const [bank] = await db.select({ code: banks.code, sequenceNumber: banks.sequenceNumber })
+          .from(banks).where(and(eq(banks.accountId, toAccountId), eq(banks.businessId, bizId))).limit(1);
+        if (bank) { entityCode = bank.code; entitySeq = bank.sequenceNumber; }
+      } else if (accountType === 'exchange') {
+        const [exchange] = await db.select({ code: exchanges.code, sequenceNumber: exchanges.sequenceNumber })
+          .from(exchanges).where(and(eq(exchanges.accountId, toAccountId), eq(exchanges.businessId, bizId))).limit(1);
+        if (exchange) { entityCode = exchange.code; entitySeq = exchange.sequenceNumber; }
+      } else if (accountType === 'e_wallet') {
+        const [wallet] = await db.select({ code: wallets.code, sequenceNumber: wallets.sequenceNumber })
+          .from(wallets).where(and(eq(wallets.accountId, toAccountId), eq(wallets.businessId, bizId))).limit(1);
+        if (wallet) { entityCode = wallet.code; entitySeq = wallet.sequenceNumber; }
+      }
+
+      const normalized = normalizeTreasuryCode(entityCode, accountType as 'bank' | 'exchange' | 'e_wallet', entitySeq);
       if (!normalized) return null;
       return { kind: accountType as 'bank' | 'exchange' | 'e_wallet', treasuryId: toAccountId, ...normalized };
     }
@@ -95,12 +116,30 @@ async function resolveVoucherTreasuryInfo(
       return { kind: 'fund', treasuryId: fromFundId, ...normalized };
     }
     if (fromAccountId) {
-      const [account] = await db.select({ id: accounts.id, code: accounts.code, accountType: accounts.accountType, sequenceNumber: accounts.sequenceNumber })
+      const [account] = await db.select({ id: accounts.id, accountType: accounts.accountType })
         .from(accounts).where(and(eq(accounts.id, fromAccountId), eq(accounts.businessId, bizId))).limit(1);
       if (!account) return null;
       const accountType = String(account.accountType);
       if (!['bank', 'exchange', 'e_wallet'].includes(accountType)) return null;
-      const normalized = normalizeTreasuryCode(account.code, accountType as 'bank' | 'exchange' | 'e_wallet', account.sequenceNumber);
+
+      // جلب الكود من جدول البنك/الصراف/المحفظة المناسب
+      let entityCode = null;
+      let entitySeq = null;
+      if (accountType === 'bank') {
+        const [bank] = await db.select({ code: banks.code, sequenceNumber: banks.sequenceNumber })
+          .from(banks).where(and(eq(banks.accountId, fromAccountId), eq(banks.businessId, bizId))).limit(1);
+        if (bank) { entityCode = bank.code; entitySeq = bank.sequenceNumber; }
+      } else if (accountType === 'exchange') {
+        const [exchange] = await db.select({ code: exchanges.code, sequenceNumber: exchanges.sequenceNumber })
+          .from(exchanges).where(and(eq(exchanges.accountId, fromAccountId), eq(exchanges.businessId, bizId))).limit(1);
+        if (exchange) { entityCode = exchange.code; entitySeq = exchange.sequenceNumber; }
+      } else if (accountType === 'e_wallet') {
+        const [wallet] = await db.select({ code: wallets.code, sequenceNumber: wallets.sequenceNumber })
+          .from(wallets).where(and(eq(wallets.accountId, fromAccountId), eq(wallets.businessId, bizId))).limit(1);
+        if (wallet) { entityCode = wallet.code; entitySeq = wallet.sequenceNumber; }
+      }
+
+      const normalized = normalizeTreasuryCode(entityCode, accountType as 'bank' | 'exchange' | 'e_wallet', entitySeq);
       if (!normalized) return null;
       return { kind: accountType as 'bank' | 'exchange' | 'e_wallet', treasuryId: fromAccountId, ...normalized };
     }
@@ -256,24 +295,31 @@ vouchersRouter.get('/businesses/:bizId/voucher-number-preview', bizAuthMiddlewar
     toAccountId || null,
   );
 
+  console.log('[preview] treasury resolved:', JSON.stringify(treasury), { bizId, voucherType, fromFundId, toFundId, fromAccountId, toAccountId });
+
   if (!treasury) {
-    return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھظˆظ„ظٹط¯ ط±ظ‚ظ… ط§ظ„ط³ظ†ط¯ ظ‚ط¨ظ„ ط§ط®طھظٹط§ط± ط®ط²ظٹظ†ط© طµط­ظٹط­ط©' }, 400);
+    return c.json({ error: 'لا يمكن توليد رقم السند قبل اختيار خزينة صحيحة' }, 400);
   }
 
-  const counterType = `treasury_${treasury.kind}_${voucherType}`;
-  const current = await getCurrentSequence(bizId, counterType, treasury.treasuryId, year);
-  const nextSerial = current + 1;
-  const voucherPrefix = TYPE_PREFIXES[voucherType] || 'VCH';
-  const voucherNumber = `${voucherPrefix}-${treasury.treasuryCode}-${year}-${nextSerial}`;
+  // معاينة فقط: نستخدم preview لعدم زيادة العداد فعلياً
+  const { fullSequenceNumber, sequentialNumber } = await previewVoucherFullSequence(
+    bizId,
+    treasury.treasuryCode,
+    treasury.kind,
+    voucherType as 'receipt' | 'payment',
+    treasury.treasuryId,
+    year,
+  );
+  console.log('[preview] result:', { fullSequenceNumber, sequentialNumber });
 
   return c.json({
-    voucherNumber,
-    accountSequence: `${treasury.treasuryCode}-${year}-${nextSerial}`,
+    voucherNumber: fullSequenceNumber,
+    accountSequence: fullSequenceNumber,
     treasuryKind: treasury.kind,
     treasuryKindCode: treasury.kindCode,
     treasuryCode: treasury.treasuryCode,
     year,
-    serial: nextSerial,
+    serial: sequentialNumber,
   });
 }));
 

@@ -1,7 +1,7 @@
 /**
  * subledger.engine.ts — محرك الدفاتر الفرعية (Subledger Engine)
  * ================================================================
- * يتتبع أرصدة الكيانات (موردين، شركاء، موظفين، مخازن، بنوك، صرافين، محافظ)
+ * يتتبع أرصدة الكيانات (موردين، شركاء، موظفين، مخازن، بنوك، صرافين، محافظ، صناديق)
  * عند تنفيذ أي سند مالي يمس حساباً مرتبطاً بكيان.
  *
  * الآلية:
@@ -29,6 +29,8 @@ import {
   exchangeBalances,
   wallets,
   walletBalances,
+  funds,
+  fundBalances,
 } from '../db/schema/index.ts';
 
 /**
@@ -81,8 +83,11 @@ export async function updateSubledgerBalance(
     case 'e_wallet':
       await updateWalletBalance(tx, accountId, currencyId, delta);
       break;
+    case 'fund':
+      await updateFundBalance(tx, accountId, currencyId, delta);
+      break;
     default:
-      // أنواع أخرى (fund, accounting, custody, ...) — لا يوجد subledger لها
+      // أنواع أخرى (accounting, custody, ...) — لا يوجد subledger لها
       break;
   }
 }
@@ -209,6 +214,24 @@ async function updateWalletBalance(tx: any, accountId: number, currencyId: numbe
     VALUES (${wallet.id}, ${currencyId}, ${delta}, NOW())
     ON CONFLICT (wallet_id, currency_id) DO UPDATE SET
       balance = wallet_balances.balance + ${delta},
+      updated_at = NOW()
+  `);
+}
+
+// ─── Fund (الصناديق) ───────────────────────────────────────────────────────
+async function updateFundBalance(tx: any, accountId: number, currencyId: number, delta: number) {
+  const [fund] = await tx
+    .select({ id: funds.id })
+    .from(funds)
+    .where(eq(funds.accountId, accountId))
+    .limit(1);
+  if (!fund) return;
+
+  await tx.execute(sql`
+    INSERT INTO fund_balances (fund_id, currency_id, balance, updated_at)
+    VALUES (${fund.id}, ${currencyId}, ${delta}, NOW())
+    ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+      balance = fund_balances.balance + ${delta},
       updated_at = NOW()
   `);
 }

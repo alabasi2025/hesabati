@@ -87,6 +87,8 @@ export const voucherLines = pgTable('voucher_lines', {
   id: serial('id').primaryKey(),
   voucherId: integer('voucher_id').notNull().references(() => vouchers.id),
   accountId: integer('account_id').notNull().references(() => accounts.id),
+  entityType: varchar('entity_type', { length: 50 }),  // supplier | employee | partner | warehouse | custody | fund | bank | exchange | e_wallet
+  entityId: integer('entity_id'),                       // معرف الكيان في دفتر الأستاذ الفرعي
   amount: decimal('amount', { precision: 20, scale: 2 }).notNull(),
   description: text('description'),
   currencyId: integer('currency_id').references(() => currencies.id),

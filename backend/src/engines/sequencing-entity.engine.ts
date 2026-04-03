@@ -5,15 +5,18 @@
  */
 import { type DbOrTx, ARABIC_LABELS, TYPE_PREFIXES } from './sequencing.types.ts';
 import { getNextSequence, getCurrentSequence } from './sequencing-core.engine.ts';
+import { db } from '../db/index.ts';
+import { sql } from 'drizzle-orm';
+import { getFirstRow } from '../utils/db-result.ts';
 
 // ===================== ترقيم السندات (صرف/قبض) =====================
 
 /**
  * توليد الرقم المنسق الكامل لسند (صرف/قبض)
- * الشكل: PREFIX-XX-سنة-نوع-ZZZZ مثال: FND-01-2025-صرف-0001
+ * الشكل: PREFIX-CODE-سنة-نوع-ZZZZ مثال: FND-01/1-2025-صرف-0001
  *
  * @param businessId - معرّف العمل
- * @param treasurySeqNum - رقم الخزينة التسلسلي (sequenceNumber)
+ * @param treasuryCode - كود الخزينة الكامل (مثل: FND-01 أو FND-01/1)
  * @param treasuryType - نوع الخزينة (fund/bank/exchange/e_wallet)
  * @param voucherType - نوع السند (receipt/payment)
  * @param treasuryId - معرّف الخزينة
@@ -22,7 +25,7 @@ import { getNextSequence, getCurrentSequence } from './sequencing-core.engine.ts
  */
 export async function generateVoucherFullSequence(
   businessId: number,
-  treasurySeqNum: number,
+  treasuryCode: string,
   treasuryType: string,
   voucherType: "receipt" | "payment",
   treasuryId: number,
@@ -31,10 +34,97 @@ export async function generateVoucherFullSequence(
 ): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
   const currentYear = year || new Date().getFullYear();
   const counterType = `voucher_${voucherType}` as const;
-  const sequentialNumber = await getNextSequence(businessId, counterType, treasuryId, currentYear, tx);
+  const executor = tx || db;
+
+  // --- 1. عدّ السندات المحفوظة فعلياً لهذه الخزينة + النوع + السنة ---
+  const yearStart = `${currentYear}-01-01`;
+  const yearEnd   = `${currentYear + 1}-01-01`;
+
+  let treasuryCol: string;
+  if (treasuryType === 'fund') {
+    treasuryCol = voucherType === 'receipt' ? 'to_fund_id' : 'from_fund_id';
+  } else {
+    treasuryCol = voucherType === 'receipt' ? 'to_account_id' : 'from_account_id';
+  }
+
+  const countResult = await executor.execute(sql`
+    SELECT COUNT(*)::int AS cnt FROM vouchers
+    WHERE business_id = ${businessId}
+      AND voucher_type = ${voucherType}
+      AND ${sql.raw(treasuryCol)} = ${treasuryId}
+      AND voucher_date >= ${yearStart}
+      AND voucher_date < ${yearEnd}
+  `);
+  const actualCount = getFirstRow<{ cnt: number }>(countResult)?.cnt ?? 0;
+
+  // --- 2. زيادة ذرّية للعداد مع ضمان أنه >= عدد السندات المحفوظة + 1 ---
+  //     GREATEST يحمي من أي انحراف سابق في العداد
+  const seqResult = await executor.execute(sql`
+    INSERT INTO sequence_counters (business_id, counter_type, entity_id, year, last_number)
+    VALUES (${businessId}, ${counterType}, ${treasuryId}, ${currentYear}, ${actualCount + 1})
+    ON CONFLICT (business_id, counter_type, entity_id, year)
+    DO UPDATE SET
+      last_number = GREATEST(sequence_counters.last_number + 1, ${actualCount + 1}),
+      updated_at = NOW()
+    RETURNING last_number
+  `);
+  const sequentialNumber = getFirstRow<{ last_number: number }>(seqResult)?.last_number ?? (actualCount + 1);
+
+  // --- 3. تنسيق الرقم ---
   const prefix = TYPE_PREFIXES[treasuryType] || treasuryType.toUpperCase().substring(0, 3);
   const voucherLabel = ARABIC_LABELS[voucherType] || voucherType;
-  const fullSequenceNumber = `${prefix}-${String(treasurySeqNum).padStart(2, "0")}-${currentYear}-${voucherLabel}-${String(sequentialNumber).padStart(4, "0")}`;
+  const codeWithoutPrefix = treasuryCode.replace(new RegExp(`^${prefix}-?`, 'i'), '');
+  const treasuryCodePart = codeWithoutPrefix || '00';
+
+  const fullSequenceNumber = `${prefix}-${treasuryCodePart}-${currentYear}-${voucherLabel}-${String(sequentialNumber).padStart(4, "0")}`;
+  return { fullSequenceNumber, sequentialNumber };
+}
+
+/**
+ * معاينة الرقم التالي لسند بناءً على السندات المحفوظة فعلياً في جدول vouchers
+ * لا تزيد أي عداد — تقرأ فقط عدد السندات الموجودة فعلياً وتضيف 1
+ *
+ * المنطق: عدّ السندات المحفوظة لنفس (العمل + نوع السند + الخزينة + السنة)
+ */
+export async function previewVoucherFullSequence(
+  businessId: number,
+  treasuryCode: string,
+  treasuryType: string,
+  voucherType: "receipt" | "payment",
+  treasuryId: number,
+  year?: number,
+): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
+  const currentYear = year || new Date().getFullYear();
+  const yearStart = `${currentYear}-01-01`;
+  const yearEnd   = `${currentYear + 1}-01-01`;
+
+  // بناء شرط الخزينة حسب نوعها ونوع السند
+  let treasuryCol: string;
+  if (treasuryType === 'fund') {
+    treasuryCol = voucherType === 'receipt' ? 'to_fund_id' : 'from_fund_id';
+  } else {
+    treasuryCol = voucherType === 'receipt' ? 'to_account_id' : 'from_account_id';
+  }
+
+  // عدّ السندات المحفوظة فعلياً لهذه الخزينة + النوع + السنة
+  const result = await db.execute(sql`
+    SELECT COUNT(*)::int AS cnt FROM vouchers
+    WHERE business_id = ${businessId}
+      AND voucher_type = ${voucherType}
+      AND ${sql.raw(treasuryCol)} = ${treasuryId}
+      AND voucher_date >= ${yearStart}
+      AND voucher_date < ${yearEnd}
+  `);
+
+  const savedCount = getFirstRow<{ cnt: number }>(result)?.cnt ?? 0;
+  const sequentialNumber = savedCount + 1;
+
+  const prefix = TYPE_PREFIXES[treasuryType] || treasuryType.toUpperCase().substring(0, 3);
+  const voucherLabel = ARABIC_LABELS[voucherType] || voucherType;
+  const codeWithoutPrefix = treasuryCode.replace(new RegExp(`^${prefix}-?`, 'i'), '');
+  const treasuryCodePart = codeWithoutPrefix || '00';
+
+  const fullSequenceNumber = `${prefix}-${treasuryCodePart}-${currentYear}-${voucherLabel}-${String(sequentialNumber).padStart(4, "0")}`;
   return { fullSequenceNumber, sequentialNumber };
 }
 

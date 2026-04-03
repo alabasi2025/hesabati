@@ -269,9 +269,7 @@ export async function generateVoucherNumberByTreasury(
   const year = getSequenceYear(data.voucherDate);
   const treasury = await resolveTreasuryForVoucher(tx, bizId, data);
   const vType = data.voucherType as "receipt" | "payment";
-  const seqMatch = /-(\d+)$/.exec(treasury.treasuryCode);
-  const treasurySeqNum = seqMatch ? Number.parseInt(seqMatch[1], 10) : 0;
-  const { fullSequenceNumber } = await generateVoucherFullSequence(bizId, treasurySeqNum, treasury.kind, vType, treasury.treasuryId, year, tx);
+  const { fullSequenceNumber } = await generateVoucherFullSequence(bizId, treasury.treasuryCode, treasury.kind, vType, treasury.treasuryId, year, tx);
   return { voucherNumber: fullSequenceNumber, accountSequence: fullSequenceNumber };
 }
 
@@ -283,7 +281,7 @@ export async function generateVoucherNumberByTreasuryMulti(
   const year = getSequenceYear(data.voucherDate);
   const treasury = await resolveTreasuryForMulti(tx, bizId, data);
   const vType = data.voucherType as "receipt" | "payment";
-  const { fullSequenceNumber } = await generateVoucherFullSequence(bizId, treasury.treasuryId, treasury.kind, vType, treasury.treasuryId, year, tx);
+  const { fullSequenceNumber } = await generateVoucherFullSequence(bizId, treasury.treasuryCode, treasury.kind, vType, treasury.treasuryId, year, tx);
   return {
     voucherNumber: fullSequenceNumber,
     accountSequence: fullSequenceNumber,

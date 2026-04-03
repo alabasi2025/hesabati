@@ -33,6 +33,7 @@ import {
   funds,
   operationTypes,
   vouchers,
+  voucherLines,
   journalEntries,
   journalEntryLines,
   auditLog,
@@ -195,6 +196,22 @@ export async function postMultiTransaction(
 
       // تحديث الدفتر الفرعي (subledger) للكيان المرتبط بالحساب
       await updateSubledgerBalance(tx, line.accountId, data.currencyId, delta);
+    }
+
+    // --- 4b. إدخال سطور السند (voucher_lines) مع بيانات الكيان ---
+    if (data.voucherLineEntries && data.voucherLineEntries.length > 0) {
+      for (const vle of data.voucherLineEntries) {
+        await tx.insert(voucherLines).values({
+          voucherId: created.id,
+          accountId: vle.accountId,
+          entityType: vle.entityType || null,
+          entityId: vle.entityId || null,
+          amount: String(vle.amount),
+          description: vle.description || null,
+          currencyId: data.currencyId,
+          sortOrder: vle.sortOrder ?? 0,
+        });
+      }
     }
 
     // --- 5. تحديث أرصدة الصناديق إن وجدت ---
