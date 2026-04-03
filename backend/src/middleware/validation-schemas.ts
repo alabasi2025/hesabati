@@ -89,6 +89,8 @@ export const voucherMultiSchema = z.object({
           }, "المبلغ يجب أن يكون رقماً موجباً"),
           notes: z.string().optional().nullable(),
           reference: z.string().max(200).optional().nullable(),
+          entityType: z.string().max(50).optional().nullable(),
+          entityId: z.union([z.number().int().positive(), z.string()]).optional().nullable(),
         })
         .refine((v) => (v.accountId ?? v.toAccountId) != null, {
           message: "معرّف الحساب (accountId) مطلوب",

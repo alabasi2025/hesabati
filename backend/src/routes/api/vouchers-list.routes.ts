@@ -271,7 +271,133 @@ vouchersRouter.get('/businesses/:bizId/vouchers-enhanced', bizAuthMiddleware(), 
   const stats = statsRows[0] || {};
 
   const resultRows = normalizeDbResult(rows);
-  return c.json({ vouchers: resultRows, total, stats, limit, offset });
+
+  // جلب سطور القيود المحاسبية (journal_entry_lines) مع أسماء الحسابات لعرض الحسابات المقابلة
+  const voucherNumbers = resultRows.map((r: any) => r.voucher_number || r.voucherNumber).filter(Boolean);
+  const voucherIds = resultRows.map((r: any) => r.id).filter(Boolean);
+  let linesMap: Record<string, any[]> = {};
+  if (voucherNumbers.length > 0) {
+    const placeholders = voucherNumbers.map((n: string) => `'${n.replace(/'/g, "''")}'`).join(',');
+    const linesResult = await db.execute(sql`
+      SELECT je.reference as voucher_ref, jel.*, a.name as account_name, a.account_type as account_type
+      FROM journal_entries je
+      JOIN journal_entry_lines jel ON jel.journal_entry_id = je.id
+      LEFT JOIN accounts a ON a.id = jel.account_id
+      WHERE je.reference IN ${sql.raw('(' + placeholders + ')')}
+      ORDER BY jel.sort_order
+    `);
+    const allLines = normalizeDbResult(linesResult);
+    for (const line of allLines) {
+      const ref = line.voucherRef || line.voucher_ref;
+      if (!linesMap[ref]) linesMap[ref] = [];
+      linesMap[ref].push({
+        id: line.id,
+        accountId: line.accountId || line.account_id,
+        accountName: line.accountName || line.account_name,
+        accountType: line.accountType || line.account_type,
+        lineType: line.lineType || line.line_type,
+        amount: line.amount,
+      });
+    }
+  }
+
+  // جلب سطور السند (voucher_lines) مع entity_type و entity_id لعرض الحساب التحليلي
+  let voucherLinesMap: Record<number, any[]> = {};
+  if (voucherIds.length > 0) {
+    const vIdPlaceholders = voucherIds.join(',');
+    const vlResult = await db.execute(sql`
+      SELECT vl.voucher_id, vl.account_id, vl.entity_type, vl.entity_id, vl.amount, vl.description,
+        a.name as account_name, a.account_type as account_type
+      FROM voucher_lines vl
+      LEFT JOIN accounts a ON a.id = vl.account_id
+      WHERE vl.voucher_id IN ${sql.raw('(' + vIdPlaceholders + ')')}
+      ORDER BY vl.sort_order
+    `);
+    const allVoucherLines = normalizeDbResult(vlResult);
+    for (const vl of allVoucherLines) {
+      const vid = vl.voucherId || vl.voucher_id;
+      if (!voucherLinesMap[vid]) voucherLinesMap[vid] = [];
+      voucherLinesMap[vid].push({
+        accountId: vl.accountId || vl.account_id,
+        accountName: vl.accountName || vl.account_name,
+        accountType: vl.accountType || vl.account_type,
+        entityType: vl.entityType || vl.entity_type || null,
+        entityId: vl.entityId || vl.entity_id || null,
+        amount: vl.amount,
+        description: vl.description,
+      });
+    }
+  }
+
+  // جلب أسماء الكيانات التحليلية (شركاء، موظفين، موردين) من الجداول المناسبة
+  const allEntityRefs: { type: string; id: number }[] = [];
+  for (const lines of Object.values(voucherLinesMap)) {
+    for (const vl of lines) {
+      if (vl.entityType && vl.entityId) {
+        allEntityRefs.push({ type: vl.entityType, id: vl.entityId });
+      }
+    }
+  }
+  const entityNameCache: Record<string, string> = {};
+  if (allEntityRefs.length > 0) {
+    const partnerIds = [...new Set(allEntityRefs.filter(e => e.type === 'partner').map(e => e.id))];
+    const employeeIds = [...new Set(allEntityRefs.filter(e => e.type === 'employee').map(e => e.id))];
+    const supplierIds = [...new Set(allEntityRefs.filter(e => e.type === 'supplier').map(e => e.id))];
+    if (partnerIds.length > 0) {
+      const pResult = await db.execute(sql`SELECT id, full_name FROM business_partners WHERE id IN ${sql.raw('(' + partnerIds.join(',') + ')')}`);
+      for (const p of normalizeDbResult(pResult)) {
+        entityNameCache[`partner_${p.id}`] = p.fullName || p.full_name || '';
+      }
+    }
+    if (employeeIds.length > 0) {
+      const eResult = await db.execute(sql`SELECT id, full_name FROM employees WHERE id IN ${sql.raw('(' + employeeIds.join(',') + ')')}`);
+      for (const e of normalizeDbResult(eResult)) {
+        entityNameCache[`employee_${e.id}`] = e.fullName || e.full_name || '';
+      }
+    }
+    if (supplierIds.length > 0) {
+      const sResult = await db.execute(sql`SELECT id, name FROM suppliers WHERE id IN ${sql.raw('(' + supplierIds.join(',') + ')')}`);
+      for (const s of normalizeDbResult(sResult)) {
+        entityNameCache[`supplier_${s.id}`] = s.name || '';
+      }
+    }
+  }
+
+  // دمج أسماء الكيانات التحليلية في سطور السند
+  for (const lines of Object.values(voucherLinesMap)) {
+    for (const vl of lines) {
+      if (vl.entityType && vl.entityId) {
+        const key = `${vl.entityType}_${vl.entityId}`;
+        vl.entityName = entityNameCache[key] || null;
+      }
+    }
+  }
+
+  // دمج أسماء الكيانات في journalEntries أيضاً (لتوافق الفرونتند)
+  // نربط كل سطر journal بسطر voucher_line المقابل عبر accountId
+  for (const v of resultRows) {
+    const vNum = v.voucherNumber || v.voucher_number;
+    const vId = v.id;
+    const jLines = linesMap[vNum] || [];
+    const vlLines = voucherLinesMap[vId] || [];
+    for (const jl of jLines) {
+      const matchingVl = vlLines.find((vl: any) => vl.accountId === jl.accountId);
+      if (matchingVl && matchingVl.entityName) {
+        jl.entityType = matchingVl.entityType;
+        jl.entityId = matchingVl.entityId;
+        jl.entityName = matchingVl.entityName;
+      }
+    }
+  }
+
+  // إضافة journalEntries (سطور القيد) + voucherLineDetails لكل سند
+  const enrichedVouchers = resultRows.map((v: any) => {
+    const vNum = v.voucherNumber || v.voucher_number;
+    const vId = v.id;
+    return { ...v, journalEntries: linesMap[vNum] || [], voucherLineDetails: voucherLinesMap[vId] || [] };
+  });
+
+  return c.json({ vouchers: enrichedVouchers, total, stats, limit, offset });
 }));
 
 // 1.5 ط¥ظ†ط´ط§ط، ط³ظ†ط¯ ظ…طھط¹ط¯ط¯ ط§ظ„ط³ط·ظˆط± (ط³ظ†ط¯ ظˆط§ط­ط¯ ط¨ط¯ظ„ ط¹ط¯ط© ط³ظ†ط¯ط§طھ)

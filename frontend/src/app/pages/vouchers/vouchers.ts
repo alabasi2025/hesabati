@@ -136,7 +136,6 @@ export class VouchersComponent extends BasePageComponent {
   voucherType = signal<'receipt' | 'payment'>('payment');
   treasuryType = signal<TreasuryType | null>(null);
   selectedTreasuryId = signal<number | null>(null);
-  treasuryNumberFilter = signal('');
   treasurySearchQuery = signal('');
   showTreasurySuggestions = signal(false);
   activeTreasurySuggestionIndex = signal(-1);
@@ -180,7 +179,6 @@ export class VouchersComponent extends BasePageComponent {
   });
 
   filteredTreasuryOptions = computed(() => {
-    const numberFilter = String(this.treasuryNumberFilter() || '').trim();
     const textFilter = this.normalizeTreasurySearchText(this.treasurySearchQuery());
     let options = this.treasuryOptions();
 
@@ -193,10 +191,7 @@ export class VouchersComponent extends BasePageComponent {
       });
     }
 
-    if (!numberFilter) return options;
-    const parsed = Number.parseInt(numberFilter, 10);
-    if (!Number.isInteger(parsed) || parsed <= 0) return options;
-    return options.filter((item: any) => this.getTreasuryNumber(item) === parsed);
+    return options;
   });
 
   counterpartyAccounts = computed(() => {
@@ -739,7 +734,6 @@ export class VouchersComponent extends BasePageComponent {
     this.voucherType.set(normalized?.voucherType === 'receipt' ? 'receipt' : 'payment');
     this.treasuryType.set(treasury.type);
     this.selectedTreasuryId.set(treasury.id);
-    this.treasuryNumberFilter.set('');
     this.treasurySearchQuery.set(this.getVoucherTreasuryLabel(normalized) === '-' ? '' : this.getVoucherTreasuryLabel(normalized));
     this.showTreasurySuggestions.set(false);
     this.activeTreasurySuggestionIndex.set(-1);
@@ -1251,7 +1245,6 @@ export class VouchersComponent extends BasePageComponent {
     const valid: TreasuryType[] = ['fund', 'bank', 'exchange', 'e_wallet'];
     this.treasuryType.set(valid.includes(normalized as TreasuryType) ? (normalized as TreasuryType) : null);
     this.selectedTreasuryId.set(null);
-    this.treasuryNumberFilter.set('');
     this.treasurySearchQuery.set('');
     this.showTreasurySuggestions.set(false);
     this.activeTreasurySuggestionIndex.set(-1);
@@ -1415,7 +1408,6 @@ export class VouchersComponent extends BasePageComponent {
         await this.api.updateVoucher(this.bizId, editId, payload);
         this.voucherNumberPreview.set(editing?.voucherNumber || '');
         this.treasurySearchQuery.set(this.getVoucherTreasuryLabel(editing));
-        this.treasuryNumberFilter.set('');
         this.selectedTreasuryId.set(null);
         this.treasuryType.set(null);
         this.voucherLines.set([this.createEmptyVoucherLine()]);
@@ -1695,9 +1687,6 @@ export class VouchersComponent extends BasePageComponent {
     return type ? `اختر ${this.getTreasuryTypeObjectLabel(type)}...` : 'اختر الخزينة...';
   }
 
-  setTreasuryNumberFilter(value: string) {
-    this.treasuryNumberFilter.set(String(value || '').trim());
-  }
 
   setTreasurySearchQuery(value: string) {
     this.treasurySearchQuery.set(String(value || '').trim());
@@ -1828,12 +1817,6 @@ export class VouchersComponent extends BasePageComponent {
     return true;
   }
 
-  applyTreasuryNumberQuickPick() {
-    const options = this.filteredTreasuryOptions();
-    if (options.length === 1) {
-      this.setSelectedTreasury(options[0]?.id ?? null);
-    }
-  }
 
   getSelectedTreasuryLabel(): string {
     const type = this.treasuryType();
@@ -1945,10 +1928,38 @@ export class VouchersComponent extends BasePageComponent {
   }
 
   getVoucherCounterpartySummary(voucher: any): string {
+    // استخدام voucherLineDetails إذا كانت متوفرة (تحتوي على entityName)
+    const vlDetails = voucher?.voucherLineDetails;
+    if (Array.isArray(vlDetails) && vlDetails.length > 0) {
+      const names = Array.from(
+        new Set(
+          vlDetails
+            .map((vl: any) => {
+              const accountName = String(vl?.accountName || '').trim();
+              const entityName = String(vl?.entityName || '').trim();
+              if (entityName && accountName) return `${accountName} - ${entityName}`;
+              if (entityName) return entityName;
+              return accountName;
+            })
+            .filter(Boolean),
+        ),
+      );
+      if (names.length > 0) {
+        if (names.length <= 2) return names.join(' ، ');
+        return `${names.slice(0, 2).join(' ، ')} +${names.length - 2}`;
+      }
+    }
+    // fallback: استخدام journalEntries مع entityName إذا كانت متوفرة
     const names = Array.from(
       new Set(
         this.getVoucherCounterpartyLines(voucher)
-          .map((line) => String(line?.accountName || '').trim())
+          .map((line) => {
+            const accountName = String(line?.accountName || '').trim();
+            const entityName = String(line?.entityName || '').trim();
+            if (entityName && accountName) return `${accountName} - ${entityName}`;
+            if (entityName) return entityName;
+            return accountName;
+          })
           .filter(Boolean),
       ),
     );
@@ -2161,8 +2172,6 @@ export class VouchersComponent extends BasePageComponent {
     this.selectedTreasuryId.set(selectedId);
 
     const selectedItem = selectedId ? this.treasuryOptions().find((option) => option.id === selectedId) : null;
-    const selectedNumber = this.getTreasuryNumber(selectedItem);
-    this.treasuryNumberFilter.set(selectedNumber !== null ? String(selectedNumber) : '');
     if (syncInputText) {
       this.treasurySearchQuery.set(selectedItem ? this.getTreasuryOptionText(selectedItem) : '');
     }

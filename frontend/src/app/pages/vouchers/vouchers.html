@@ -397,16 +397,7 @@
                       <small class="treasury-search-summary">{{ getTreasurySearchSummary() }}</small>
                     }
                   </div>
-                  <input
-                    class="form-input treasury-number-input"
-                    type="number"
-                    min="1"
-                    placeholder="رقم"
-                    title="فلترة برقم الخزينة"
-                    [value]="treasuryNumberFilter()"
-                    (input)="setTreasuryNumberFilter($any($event.target).value)"
-                    (keydown.enter)="applyTreasuryNumberQuickPick()"
-                  />
+
                 </div>
               </div>
             </div>

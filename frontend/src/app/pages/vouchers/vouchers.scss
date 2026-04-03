@@ -428,7 +428,7 @@
 
 .treasury-picker {
   display: grid;
-  grid-template-columns: 1fr 92px;
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
@@ -503,10 +503,6 @@
   padding-inline: 2px;
 }
 
-.treasury-number-input {
-  text-align: center;
-  font-weight: 800;
-}
 
 .amount-input-wrap {
   display: flex; align-items: center;

@@ -89,11 +89,13 @@ export async function postMultiTransaction(
     let voucherNumber = data.voucherNumber || null;
     let accountSequence: string | null = null;
     let templateSequence: string | null = null;
+    let fullSequenceNumber: string | null = null;
 
     if (data.voucherType === "receipt" || data.voucherType === "payment") {
       const gen = await generateVoucherNumberByTreasuryMulti(tx, bizId, data);
       voucherNumber = voucherNumber ?? gen.voucherNumber;
       accountSequence = gen.accountSequence;
+      fullSequenceNumber = gen.voucherNumber;
 
       const tplPrefix = await resolveTemplatePrefix(
         tx,
@@ -146,6 +148,7 @@ export async function postMultiTransaction(
         createdBy: userId,
         accountSequence,
         templateSequence,
+        fullSequenceNumber: fullSequenceNumber || voucherNumber,
       })
       .returning();
 

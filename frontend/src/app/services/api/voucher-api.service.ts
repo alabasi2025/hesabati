@@ -39,7 +39,7 @@ export class VoucherApiService {
     operationTypeId?: number; treasuryType?: string; treasuryId?: number;
     limit?: number; offset?: number; sortBy?: string; sortDir?: string;
   }) {
-    let url = `/businesses/${bizId}/vouchers`;
+    let url = `/businesses/${bizId}/vouchers-enhanced`;
     const params: string[] = [];
     if (filters?.type) params.push(`type=${filters.type}`);
     if (filters?.status) params.push(`status=${filters.status}`);

@@ -126,7 +126,8 @@ export function resolveTreasuryCode(
   fromPage: string,
 ): { kindCode: string; treasuryCode: string } {
   const normalizedCode = (typeof code === "string" ? code : "").trim().toUpperCase();
-  const matched = /^([A-Z]+)-(\d+)$/.exec(normalizedCode);
+  // دعم أكواد الصناديق مثل FND-01/1 وأكواد الحسابات مثل BNK-01
+  const matched = /^([A-Z]+)-(.+)$/.exec(normalizedCode);
   if (matched) {
     return {
       kindCode: matched[1],
