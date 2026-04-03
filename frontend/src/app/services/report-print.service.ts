@@ -3,8 +3,6 @@
  * خدمة مشتركة لتوليد تقارير PDF واحترافية مع jsPDF + autoTable
  */
 import { Injectable } from '@angular/core';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 export interface PrintColumn {
   header: string;
@@ -36,7 +34,9 @@ export interface PrintOptions {
 export class ReportPrintService {
 
   /** تصدير PDF كامل للتقرير */
-  exportPDF(options: PrintOptions): void {
+  async exportPDF(options: PrintOptions): Promise<void> {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF({
       orientation: options.orientation || 'portrait',
       unit: 'mm',

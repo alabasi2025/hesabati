@@ -30,7 +30,7 @@ journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware
   const entries = await db.select().from(journalEntries).where(eq(journalEntries.businessId, bizId)).orderBy(desc(journalEntries.entryDate));
 
   const entryIds = entries.map(e => e.id);
-  type LineRow = { id: number; journalEntryId: number; accountId: number | null; lineType: string; amount: string; description: string | null; sortOrder: number | null; accountName: string | null };
+  type LineRow = { id: number; journalEntryId: number; accountId: number | null; lineType: string; amount: string; description: string | null; sortOrder: number | null; accountName: string | null; entityType: string | null; entityId: number | null; currencyId: number | null; foreignAmount: string | null; exchangeRate: string | null };
   let allLines: LineRow[] = [];
   if (entryIds.length > 0) {
     allLines = await db.select({
@@ -42,6 +42,11 @@ journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware
       description: journalEntryLines.description,
       sortOrder: journalEntryLines.sortOrder,
       accountName: accounts.name,
+      entityType: journalEntryLines.entityType,
+      entityId: journalEntryLines.entityId,
+      currencyId: journalEntryLines.currencyId,
+      foreignAmount: journalEntryLines.foreignAmount,
+      exchangeRate: journalEntryLines.exchangeRate,
     }).from(journalEntryLines)
       .leftJoin(accounts, eq(journalEntryLines.accountId, accounts.id))
       .where(inArray(journalEntryLines.journalEntryId, entryIds));
@@ -58,7 +63,7 @@ journalEntriesRoutes.get('/businesses/:bizId/journal-entries', bizAuthMiddleware
 
 journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('إضافة قيد محاسبي', async (c) => {
   const bizId = getBizId(c);
-  const body = await getBody(c) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string; currencyId?: number };
+  const body = await getBody(c) as { lines?: { accountId: number; amount: string | number; lineType?: string; type?: string; description?: string; entityType?: string; entityId?: number; currencyId?: number; foreignAmount?: string | number; exchangeRate?: string | number }[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; categoryKey?: string; currencyId?: number; status?: string };
   const { lines, ...entryData } = body;
   if (!lines || !Array.isArray(lines) || lines.length < 2) {
     return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل (مدين ودائن)' }, 400);
@@ -165,6 +170,11 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
       amount: String(line.amount),
       description: (line.description as string) ?? '',
       sortOrder: i,
+      entityType: (line.entityType as string) || null,
+      entityId: line.entityId ? Number(line.entityId) : null,
+      currencyId: line.currencyId ? Number(line.currencyId) : null,
+      foreignAmount: line.foreignAmount ? String(line.foreignAmount) : null,
+      exchangeRate: line.exchangeRate ? String(line.exchangeRate) : null,
     });
 
     // تحديث رصيد الحساب (مدين = +، دائن = -)
@@ -179,6 +189,65 @@ journalEntriesRoutes.post('/businesses/:bizId/journal-entries', bizAuthMiddlewar
   }
 
   return c.json(entry, 201);
+}));
+
+journalEntriesRoutes.put('/businesses/:bizId/journal-entries/:id', bizAuthMiddleware(), checkPermission('vouchers', 'create'), safeHandler('تعديل قيد محاسبي', async (c) => {
+  const bizId = getBizId(c);
+  const id = parseId(c.req.param('id'));
+  if (!id) return c.json({ error: 'معرّف القيد غير صالح' }, 400);
+
+  const body = await getBody(c) as { lines?: any[]; entryDate?: string; date?: string; reference?: string; description?: string; operationTypeId?: number; status?: string };
+  const { lines, ...entryData } = body;
+
+  if (!lines || !Array.isArray(lines) || lines.length < 2)
+    return c.json({ error: 'القيد يجب أن يحتوي على سطرين على الأقل' }, 400);
+
+  let totalDebit = 0, totalCredit = 0;
+  for (const line of lines) {
+    const lt = line.lineType || line.type;
+    const amt = Number.parseFloat(String(line.amount));
+    if (lt === 'debit') totalDebit += amt; else totalCredit += amt;
+  }
+  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
+  const entryDate = entryData.entryDate || entryData.date || new Date().toISOString().split('T')[0];
+
+  // حذف السطور القديمة وإعادة إنشائها
+  await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, id));
+
+  await db.update(journalEntries).set({
+    entryDate,
+    description: entryData.description || '',
+    reference: entryData.reference || null,
+    operationTypeId: entryData.operationTypeId || null,
+    totalDebit: String(totalDebit),
+    totalCredit: String(totalCredit),
+    isBalanced,
+    status: (entryData.status as any) || undefined,
+  }).where(and(eq(journalEntries.id, id), eq(journalEntries.businessId, bizId)));
+
+  const currencyId = 1;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineType = line.lineType || line.type;
+    const amt = Number.parseFloat(String(line.amount));
+    await db.insert(journalEntryLines).values({
+      journalEntryId: id,
+      accountId: line.accountId,
+      lineType: lineType as 'debit' | 'credit',
+      amount: String(amt),
+      description: line.description ?? '',
+      sortOrder: i,
+      entityType: line.entityType || null,
+      entityId: line.entityId ? Number(line.entityId) : null,
+      currencyId: line.currencyId ? Number(line.currencyId) : null,
+      foreignAmount: line.foreignAmount ? String(line.foreignAmount) : null,
+      exchangeRate: line.exchangeRate ? String(line.exchangeRate) : null,
+    });
+  }
+
+  const [updated] = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
+  return c.json(updated);
 }));
 
 journalEntriesRoutes.delete('/journal-entries/:id', safeHandler('حذف قيد محاسبي', async (c) => {

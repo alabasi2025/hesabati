@@ -468,6 +468,9 @@ export class ApiService {
   createJournalEntry(bizId: number, d: any) {
     return this.vou.createJournalEntry(bizId, d);
   }
+  updateJournalEntry(bizId: number, id: number, d: any) {
+    return this.vou.updateJournalEntry(bizId, id, d);
+  }
   deleteJournalEntry(id: number) {
     return this.vou.deleteJournalEntry(id);
   }

@@ -3,7 +3,6 @@
  * خدمة مشتركة لتصدير التقارير إلى Excel (xlsx)
  */
 import { Injectable } from '@angular/core';
-import * as XLSX from 'xlsx';
 
 export interface ExcelColumn {
   header: string;
@@ -27,7 +26,8 @@ export interface ExcelOptions {
 @Injectable({ providedIn: 'root' })
 export class ReportExportService {
 
-  exportExcel(options: ExcelOptions): void {
+  async exportExcel(options: ExcelOptions): Promise<void> {
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     for (const sheet of options.sheets) {
@@ -70,7 +70,7 @@ export class ReportExportService {
     columns: ExcelColumn[],
     rows: any[],
     totals?: Record<string, string | number>
-  ): void {
-    this.exportExcel({ filename, sheets: [{ name: sheetName, columns, rows, totals }] });
+  ): Promise<void> {
+    return this.exportExcel({ filename, sheets: [{ name: sheetName, columns, rows, totals }] });
   }
 }

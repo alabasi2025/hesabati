@@ -182,6 +182,13 @@ export const journalEntryLines = pgTable("journal_entry_lines", {
   amount: decimal("amount", { precision: 20, scale: 2 }).notNull(),
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
+  // الحساب التحليلي (كيان مرتبط بالسطر)
+  entityType: varchar("entity_type", { length: 30 }),   // supplier | employee | partner | fund | custody | warehouse
+  entityId: integer("entity_id"),
+  // دعم العملات الأجنبية
+  currencyId: integer("currency_id").references(() => currencies.id),
+  foreignAmount: decimal("foreign_amount", { precision: 20, scale: 2 }),
+  exchangeRate: decimal("exchange_rate", { precision: 20, scale: 6 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

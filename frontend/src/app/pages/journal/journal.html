@@ -1,407 +1,293 @@
-<div class="page-content">
-  <!-- Header -->
-  <div class="page-header">
-    <div class="header-right">
-      <h2><span class="material-icons-round">menu_book</span> القيود المحاسبية</h2>
-      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
-        <span class="material-icons-round">help_outline</span>
-      </button>
-    </div>
-    <div class="header-actions">
-      <button class="add-btn purple" (click)="openSimple()"><span class="material-icons-round">note_add</span> قيد بسيط</button>
-      <button class="add-btn indigo" (click)="openCompound()"><span class="material-icons-round">playlist_add</span> قيد متعدد</button>
-    </div>
-  </div>
+<div class="jrn-page" dir="rtl">
 
-  @if (error()) {
-    <div class="error-bar"><span class="material-icons-round">error</span> {{ error() }}</div>
-  }
-
-  <!-- Stats -->
-  <div class="stats-bar">
-    <div class="stat-item purple-stat">
-      <span class="stat-icon"><span class="material-icons-round">menu_book</span></span>
-      <div><span class="stat-num">{{ entries().length }}</span><span class="stat-label">إجمالي القيود</span></div>
-    </div>
-    <div class="stat-item green-stat">
-      <span class="stat-icon"><span class="material-icons-round">check_circle</span></span>
-      <div><span class="stat-num">{{ entries().filter(e => e.isBalanced).length }}</span><span class="stat-label">متوازن</span></div>
-    </div>
-    <div class="stat-item amber-stat">
-      <span class="stat-icon"><span class="material-icons-round">account_balance</span></span>
-      <div><span class="stat-num">{{ journalOpTypes().length }}</span><span class="stat-label">أنواع القيود</span></div>
-    </div>
-  </div>
-
-  @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
-  } @else if (!entries().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">menu_book</span>
-      <p>لا توجد قيود بعد</p>
-      <p class="sub-text">القيود تُستخدم لما ما يكون فيه صندوق أو بنك أو محفظة أو صراف كطرف</p>
-    </div>
-  } @else {
-    <!-- Journal Entries List -->
-    <div class="journal-list">
-      @for (entry of entries(); track entry.id) {
-        <div class="journal-card" [class.unbalanced]="!entry.isBalanced">
-          <div class="jc-header">
-            <div class="jc-badge"><span class="material-icons-round">menu_book</span> {{ entry.entryNumber }}</div>
-            @if (entry.fullSequenceNumber) {
-              <span class="card-seq-badge" style="font-size:12px">{{ entry.fullSequenceNumber }}</span>
-            }
-            <span class="status-badge" [class]="getStatusClass(entry.status)">{{ getStatusLabel(entry.status) }}</span>
-          </div>
-          <div class="jc-amount">{{ formatAmount(entry.totalDebit) }} <span class="currency">ر.ي</span></div>
-          @if (entry.description) { <div class="jc-desc"><span class="material-icons-round">notes</span> {{ entry.description }}</div> }
-
-          <!-- Lines -->
-          @if (entry.lines?.length) {
-            <div class="jc-lines">
-              @for (line of entry.lines; track line.id) {
-                <div class="jc-line" [class.debit-line]="line.lineType === 'debit'" [class.credit-line]="line.lineType === 'credit'">
-                  <span class="line-type-badge">{{ line.lineType === 'debit' ? 'مدين' : 'دائن' }}</span>
-                  <span class="line-account">{{ line.accountName || getAccountName(line.accountId) }}</span>
-                  <span class="line-amount">{{ formatAmount(line.amount) }}</span>
-                </div>
-              }
-            </div>
-          }
-
-          <div class="jc-footer">
-            <span class="jc-date"><span class="material-icons-round">calendar_today</span> {{ formatDate(entry.entryDate || entry.createdAt) }}</span>
-            @if (entry.isBalanced) {
-              <span class="balanced-badge"><span class="material-icons-round">check_circle</span> متوازن</span>
-            } @else {
-              <span class="unbalanced-badge"><span class="material-icons-round">warning</span> غير متوازن</span>
-            }
-            <button class="action-btn delete" (click)="deleteEntry(entry.id)" title="حذف"><span class="material-icons-round">delete</span></button>
-          </div>
-        </div>
-      }
-    </div>
-  }
-
-  <!-- ===================== Modal: قيد بسيط ===================== -->
-  @if (showForm() && journalType() === 'simple') {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon purple"><span class="material-icons-round">note_add</span></div>
-            <div><h2>قيد بسيط</h2><p>دائن واحد ← مدين واحد</p></div>
-          </div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          @if (error()) {
-            <div class="error-bar"><span class="material-icons-round">error</span> {{ error() }}</div>
-          }
-          <div class="form-hint">
-            <span class="material-icons-round">info</span>
-            <span>القيد البسيط: حساب دائن واحد يحوّل مبلغ لحساب مدين واحد (بدون صندوق أو بنك)</span>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>تصنيف القيد *</label>
-              <select [(ngModel)]="simpleForm.categoryKey">
-                <option [ngValue]="''">-- اختر التصنيف --</option>
-                @for (c of journalCategories(); track c.id) {
-                  <option [ngValue]="c.categoryKey">
-                    {{ c.name }}
-                    @if (c.sortOrder) { (#{{ c.sortOrder }}) }
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>اسم القيد (القالب) *</label>
-              <select [(ngModel)]="simpleForm.operationTypeId">
-                <option [ngValue]="null">-- اختر القالب --</option>
-                @for (ot of journalOpTypes(); track ot.id) {
-                  <option [ngValue]="ot.id">
-                    {{ ot.name }}
-                    @if (ot.code) { ({{ ot.code }}) }
-                  </option>
-                }
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>الحساب الدائن (المصدر) *</label>
-            <select [(ngModel)]="simpleForm.creditAccountId">
-              <option [ngValue]="null">-- اختر الحساب الدائن --</option>
-              @for (a of getAllAccounts(); track a.id) {
-                <option [ngValue]="a.id">{{ a.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>الحساب المدين (المستقبل) *</label>
-            <select [(ngModel)]="simpleForm.debitAccountId">
-              <option [ngValue]="null">-- اختر الحساب المدين --</option>
-              @for (a of getAccountsExcluding(simpleForm.creditAccountId); track a.id) {
-                <option [ngValue]="a.id">{{ a.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>المبلغ *</label>
-              <input type="number" [(ngModel)]="simpleForm.amount" placeholder="0" min="1" />
-            </div>
-            <div class="form-group">
-              <label>التاريخ</label>
-              <input type="date" [(ngModel)]="simpleForm.date" />
-            </div>
-            <div class="form-group">
-              <label>العملة</label>
-              <select [(ngModel)]="simpleForm.currencyId" title="العملة">
-                @for (c of currencies(); track c.id) {
-                  <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.symbol }})</option>
-                }
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>البيان *</label>
-            <textarea [(ngModel)]="simpleForm.description" rows="2" placeholder="وصف القيد..."></textarea>
-          </div>
-          <div class="form-group">
-            <label>المرجع</label>
-            <input [(ngModel)]="simpleForm.reference" placeholder="رقم مرجعي" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save purple-btn" (click)="saveSimple()" [disabled]="saving()">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-            {{ saving() ? 'جاري الحفظ...' : 'حفظ القيد' }}
-          </button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        </div>
+  <!-- ===== Page Header ===== -->
+  <div class="jrn-header">
+    <div class="jrn-header-left">
+      <div class="jrn-icon"><span class="material-icons-round">menu_book</span></div>
+      <div>
+        <div class="jrn-title">القيود المحاسبية</div>
+        <div class="jrn-subtitle">إدخال حر متعدد السطور · حساب تحليلي · متعدد العملات</div>
       </div>
     </div>
+    <div class="jrn-header-actions">
+      <button class="jrn-btn primary" (click)="openNew()">
+        <span class="material-icons-round">add</span> قيد جديد
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Stats ===== -->
+  <div class="jrn-stats">
+    <div class="jrn-stat purple"><span class="material-icons-round">menu_book</span>
+      <div><div class="jrn-stat-num">{{ entries().length }}</div><div class="jrn-stat-lbl">إجمالي القيود</div></div>
+    </div>
+    <div class="jrn-stat green"><span class="material-icons-round">balance</span>
+      <div><div class="jrn-stat-num">{{ entries().filter(e => e.isBalanced).length }}</div><div class="jrn-stat-lbl">متوازن</div></div>
+    </div>
+    <div class="jrn-stat amber"><span class="material-icons-round">edit_note</span>
+      <div><div class="jrn-stat-num">{{ entries().filter(e => e.status === 'draft' || !e.status).length }}</div><div class="jrn-stat-lbl">مسودة</div></div>
+    </div>
+    <div class="jrn-stat teal"><span class="material-icons-round">check_circle</span>
+      <div><div class="jrn-stat-num">{{ entries().filter(e => e.status === 'reviewed').length }}</div><div class="jrn-stat-lbl">مراجع</div></div>
+    </div>
+  </div>
+
+  @if (loading()) { <app-loading-state message="جاري التحميل..." /> }
+  @if (!loading() && error() && !showForm()) {
+    <div class="jrn-error"><span class="material-icons-round">error</span> {{ error() }}</div>
   }
 
-  <!-- ===================== Modal: قيد متعدد ===================== -->
-  @if (showForm() && journalType() === 'compound') {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon blue"><span class="material-icons-round">playlist_add</span></div>
-            <div><h2>قيد متعدد</h2><p>دائن واحد ← عدة مدينين (أو العكس)</p></div>
-          </div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          @if (error()) {
-            <div class="error-bar"><span class="material-icons-round">error</span> {{ error() }}</div>
-          }
-          <!-- Direction -->
-          <div class="direction-selector">
-            <button class="dir-btn" [class.active]="compoundDirection() === 'one_credit_many_debit'" (click)="compoundDirection.set('one_credit_many_debit')">
-              <span class="material-icons-round">arrow_forward</span>
-              دائن واحد ← عدة مدينين
-            </button>
-            <button class="dir-btn" [class.active]="compoundDirection() === 'one_debit_many_credit'" (click)="compoundDirection.set('one_debit_many_credit')">
-              <span class="material-icons-round">arrow_back</span>
-              عدة دائنين ← مدين واحد
-            </button>
-          </div>
-
-          <div class="form-hint">
-            <span class="material-icons-round">info</span>
-            @if (compoundDirection() === 'one_credit_many_debit') {
-              <span>حساب دائن واحد يوزّع مبلغ على عدة حسابات مدينة. المجموع لازم يتساوى.</span>
-            } @else {
-              <span>عدة حسابات دائنة تجمّع مبالغ في حساب مدين واحد. المجموع لازم يتساوى.</span>
-            }
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>تصنيف القيد *</label>
-              <select [(ngModel)]="compoundForm.categoryKey">
-                <option [ngValue]="''">-- اختر التصنيف --</option>
-                @for (c of journalCategories(); track c.id) {
-                  <option [ngValue]="c.categoryKey">
-                    {{ c.name }}
-                    @if (c.sortOrder) { (#{{ c.sortOrder }}) }
-                  </option>
+  <!-- ===== Entries List ===== -->
+  @if (!loading() && !showForm()) {
+    @if (entries().length === 0) {
+      <app-empty-state icon="menu_book" message="لا توجد قيود محاسبية" sub="اضغط قيد جديد لإنشاء أول قيد" />
+    } @else {
+      <div class="jrn-list">
+        @for (e of entries(); track e.id) {
+          <div class="jrn-card" [class.expanded]="expandedId() === e.id">
+            <div class="jrn-card-head" (click)="toggleExpand(e.id)">
+              <div class="jrn-card-num">
+                <span class="material-icons-round">receipt_long</span>
+                <span class="jrn-entry-no">{{ e.entryNumber || e.fullSequenceNumber || ('#' + e.id) }}</span>
+              </div>
+              <div class="jrn-card-meta">
+                <span class="jrn-date">{{ formatDate(e.entryDate) }}</span>
+                <span class="jrn-desc">{{ e.description }}</span>
+              </div>
+              <div class="jrn-card-amounts">
+                <span class="amt-debit">↑ {{ fmt(e.totalDebit) }}</span>
+                <span class="amt-credit">↓ {{ fmt(e.totalCredit) }}</span>
+              </div>
+              <div class="jrn-card-badges">
+                @if (e.isBalanced) {
+                  <span class="badge balanced"><span class="material-icons-round">check</span> متوازن</span>
+                } @else {
+                  <span class="badge unbalanced"><span class="material-icons-round">warning</span> غير متوازن</span>
                 }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>اسم القيد (القالب) *</label>
-              <select [(ngModel)]="compoundForm.operationTypeId">
-                <option [ngValue]="null">-- اختر القالب --</option>
-                @for (ot of journalOpTypes(); track ot.id) {
-                  <option [ngValue]="ot.id">
-                    {{ ot.name }}
-                    @if (ot.code) { ({{ ot.code }}) }
-                  </option>
+                @if (e.status === 'reviewed') {
+                  <span class="badge status-reviewed"><span class="material-icons-round">verified</span> مراجع</span>
+                } @else if (e.status === 'unreviewed') {
+                  <span class="badge status-unreviewed"><span class="material-icons-round">pending</span> غير مراجع</span>
+                } @else {
+                  <span class="badge status-draft"><span class="material-icons-round">edit_note</span> مسودة</span>
                 }
-              </select>
-            </div>
-          </div>
-
-          <!-- Main Account -->
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ compoundDirection() === 'one_credit_many_debit' ? 'الحساب الدائن (المصدر)' : 'الحساب المدين (المستقبل)' }} *</label>
-              <select [(ngModel)]="compoundForm.mainAccountId">
-                <option [ngValue]="null">-- اختر الحساب --</option>
-                @for (a of getAllAccounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.name }}</option>
-                }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>المبلغ الإجمالي *</label>
-              <input type="number" [(ngModel)]="compoundForm.totalAmount" placeholder="0" min="1" />
-            </div>
-          </div>
-
-          <!-- Lines -->
-          <div class="section-title">
-            <span class="material-icons-round">list</span>
-            {{ compoundDirection() === 'one_credit_many_debit' ? 'الحسابات المدينة (التوزيع)' : 'الحسابات الدائنة (المصادر)' }}
-          </div>
-
-          <div class="lines-container">
-            @for (line of compoundForm.lines; track $index; let i = $index) {
-              <div class="line-row">
-                <div class="line-num">{{ i + 1 }}</div>
-                <div class="form-group" style="flex:2">
-                  <select [(ngModel)]="line.accountId">
-                    <option [ngValue]="null">-- اختر حساب --</option>
-                    @for (a of getAccountsExcluding(compoundForm.mainAccountId); track a.id) {
-                      <option [ngValue]="a.id">{{ a.name }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="form-group" style="flex:1">
-                  <input type="number" [(ngModel)]="line.amount" placeholder="المبلغ" min="0" />
-                </div>
-                <div class="form-group" style="flex:1">
-                  <input [(ngModel)]="line.description" placeholder="ملاحظة" />
-                </div>
-                <button class="remove-line-btn" (click)="removeLine(i)" [disabled]="compoundForm.lines.length <= 1">
-                  <span class="material-icons-round">close</span>
+              </div>
+              <div class="jrn-card-actions" (click)="$event.stopPropagation()">
+                <button class="icon-btn danger" (click)="deleteEntry(e.id)" title="حذف">
+                  <span class="material-icons-round">delete</span>
                 </button>
+                <span class="material-icons-round expand-icon">{{ expandedId() === e.id ? 'expand_less' : 'expand_more' }}</span>
+              </div>
+            </div>
+            @if (expandedId() === e.id) {
+              <div class="jrn-lines-table">
+                <table>
+                  <thead>
+                    <tr><th>#</th><th>الحساب</th><th>الحساب التحليلي</th><th>البيان</th><th class="amt-col">مدين</th><th class="amt-col">دائن</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (l of (e.lines || []); track $index) {
+                      <tr [class]="l.lineType === 'debit' ? 'row-debit' : 'row-credit'">
+                        <td class="ln-idx">{{ $index + 1 }}</td>
+                        <td class="ln-account">{{ l.accountName || getAccountName(l.accountId) }}</td>
+                        <td class="ln-entity">
+                          @if (l.entityType && l.entityId) {
+                            <span class="entity-pill">{{ getEntityLabel(l.entityType, l.entityId) }}</span>
+                          } @else { <span class="text-muted">—</span> }
+                        </td>
+                        <td class="ln-desc">{{ l.description || '—' }}</td>
+                        <td class="ln-debit">{{ l.lineType === 'debit' ? fmt(l.amount) : '' }}</td>
+                        <td class="ln-credit">{{ l.lineType === 'credit' ? fmt(l.amount) : '' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="totals-row">
+                      <td colspan="4" class="totals-label">الإجمالي</td>
+                      <td class="ln-debit total">{{ fmt(e.totalDebit) }}</td>
+                      <td class="ln-credit total">{{ fmt(e.totalCredit) }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             }
           </div>
+        }
+      </div>
+    }
+  }
 
-          <button class="add-line-btn" (click)="addLine()">
-            <span class="material-icons-round">add</span> إضافة سطر
-          </button>
+  <!-- ===== نموذج القيد الاحترافي ===== -->
+  @if (showForm()) {
+    <div class="jrn-form-container">
+      <div class="jrn-form-header">
+        <div class="jfh-title"><span class="material-icons-round">edit_note</span> {{ editingId() ? 'تعديل قيد' : 'قيد محاسبي جديد' }}</div>
+        <div class="jfh-status">
+          @for (s of statusOptions; track s.key) {
+            <button class="status-chip" [class.active]="formHeader().status === s.key"
+                    (click)="formHeader.update(h => ({...h, status: $any(s.key)}))">
+              <span class="material-icons-round" [style.color]="s.color">{{ s.icon }}</span> {{ s.label }}
+            </button>
+          }
+        </div>
+        <button class="jrn-btn ghost" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
 
-          <!-- Balance Check -->
-          <div class="balance-check" [class.balanced]="isBalanced()" [class.unbalanced]="!isBalanced()">
-            <div class="balance-row">
-              <span>الإجمالي:</span>
-              <strong>{{ formatAmount(compoundForm.totalAmount) }}</strong>
-            </div>
-            <div class="balance-row">
-              <span>مجموع التوزيع:</span>
-              <strong>{{ formatAmount(getLinesTotal()) }}</strong>
-            </div>
-            <div class="balance-row remaining">
-              <span>المتبقي:</span>
-              <strong [class.red-text]="getRemaining() !== 0">{{ formatAmount(getRemaining()) }}</strong>
-            </div>
-            @if (isBalanced()) {
-              <div class="balance-status ok"><span class="material-icons-round">check_circle</span> متوازن - المجموع متساوي</div>
-            } @else {
-              <div class="balance-status not-ok"><span class="material-icons-round">warning</span> غير متوازن - وزّع المبلغ بالكامل</div>
-            }
-          </div>
+      <div class="jrn-form-meta">
+        <div class="jfm-group">
+          <label>التاريخ <span class="req">*</span></label>
+          <input type="date" [ngModel]="formHeader().date" (ngModelChange)="formHeader.update(h => ({...h, date: $event}))" />
+        </div>
+        <div class="jfm-group flex2">
+          <label>البيان العام <span class="req">*</span></label>
+          <input type="text" placeholder="وصف القيد..." [ngModel]="formHeader().description" (ngModelChange)="formHeader.update(h => ({...h, description: $event}))" />
+        </div>
+        <div class="jfm-group">
+          <label>المرجع / رقم الوثيقة</label>
+          <input type="text" placeholder="اختياري" [ngModel]="formHeader().reference" (ngModelChange)="formHeader.update(h => ({...h, reference: $event}))" />
+        </div>
+        <div class="jfm-group flex2">
+          <label>القالب / نوع العملية <span class="req">*</span></label>
+          <select [ngModel]="formHeader().operationTypeId" (ngModelChange)="formHeader.update(h => ({...h, operationTypeId: +$event || null}))">
+            <option [ngValue]="null">— اختر —</option>
+            @for (ot of journalOpTypes(); track ot.id) { <option [ngValue]="ot.id">{{ ot.name }}</option> }
+          </select>
+        </div>
+      </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>البيان *</label>
-              <textarea [(ngModel)]="compoundForm.description" rows="2" placeholder="وصف القيد..."></textarea>
-            </div>
-            <div class="form-group">
-              <label>التاريخ</label>
-              <input type="date" [(ngModel)]="compoundForm.date" />
-            </div>
-            <div class="form-group">
-              <label>العملة</label>
-              <select [(ngModel)]="compoundForm.currencyId" title="العملة">
-                @for (c of currencies(); track c.id) {
-                  <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.symbol }})</option>
+      <!-- جدول السطور -->
+      <div class="jrn-lines-wrapper">
+        <div class="jrn-table-scroll">
+          <table class="jrn-edit-table">
+            <thead>
+              <tr>
+                <th class="th-idx">#</th>
+                <th class="th-type">النوع</th>
+                <th class="th-account">الحساب الفرعي <span class="req">*</span></th>
+                <th class="th-etype">نوع الكيان</th>
+                <th class="th-entity">الحساب التحليلي</th>
+                <th class="th-desc">البيان</th>
+                <th class="th-cur">العملة</th>
+                <th class="th-debit">مدين</th>
+                <th class="th-credit">دائن</th>
+                @if (hasForeignCurrency()) {
+                  <th class="th-foreign">م. أجنبي</th>
+                  <th class="th-rate">سعر الصرف</th>
                 }
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>المرجع</label>
-            <input [(ngModel)]="compoundForm.reference" placeholder="رقم مرجعي" />
-          </div>
+                <th class="th-act"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of formLines(); track $index; let i = $index) {
+                <tr [class]="line.lineType === 'debit' ? 'edit-row-debit' : 'edit-row-credit'">
+                  <td class="td-idx">{{ i + 1 }}</td>
+                  <td class="td-type">
+                    <div class="type-toggle">
+                      <button [class.active-debit]="line.lineType === 'debit'" (click)="updateLine(i,'lineType','debit')" title="مدين">م</button>
+                      <button [class.active-credit]="line.lineType === 'credit'" (click)="updateLine(i,'lineType','credit')" title="دائن">د</button>
+                    </div>
+                  </td>
+                  <td class="td-account">
+                    <select [ngModel]="line.accountId" (ngModelChange)="updateLine(i,'accountId',+$event||null)">
+                      <option [ngValue]="null">— اختر الحساب —</option>
+                      @for (a of accounts(); track a.id) {
+                        <option [ngValue]="a.id">{{ a.code ? a.code + ' - ' : '' }}{{ a.name }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td class="td-etype">
+                    <select [ngModel]="line.entityType" (ngModelChange)="updateLine(i,'entityType',$event)">
+                      @for (et of entityTypes; track et.key) { <option [ngValue]="et.key">{{ et.label }}</option> }
+                    </select>
+                  </td>
+                  <td class="td-entity">
+                    @if (line.entityType) {
+                      <select [ngModel]="line.entityId" (ngModelChange)="updateLine(i,'entityId',+$event||null)">
+                        <option [ngValue]="null">— اختر —</option>
+                        @for (en of getEntityList(line.entityType); track en.id) {
+                          <option [ngValue]="en.id">{{ en.name || en.fullName || en.fundName }}</option>
+                        }
+                      </select>
+                    } @else { <span class="td-dash">—</span> }
+                  </td>
+                  <td class="td-desc">
+                    <input type="text" placeholder="بيان السطر..." [ngModel]="line.description" (ngModelChange)="updateLine(i,'description',$event)" />
+                  </td>
+                  <td class="td-currency">
+                    <select [ngModel]="line.currencyId" (ngModelChange)="updateLine(i,'currencyId',+$event||1)">
+                      @for (c of currencies(); track c.id) { <option [ngValue]="c.id">{{ c.code }}</option> }
+                    </select>
+                  </td>
+                  <td class="td-debit">
+                    @if (line.lineType === 'debit') {
+                      <input type="number" min="0" step="0.01" placeholder="0.00" [ngModel]="line.amount"
+                             (ngModelChange)="updateLine(i,'amount',+$event||0)" class="amt-input debit-input" />
+                    } @else { <span class="td-dash">—</span> }
+                  </td>
+                  <td class="td-credit">
+                    @if (line.lineType === 'credit') {
+                      <input type="number" min="0" step="0.01" placeholder="0.00" [ngModel]="line.amount"
+                             (ngModelChange)="updateLine(i,'amount',+$event||0)" class="amt-input credit-input" />
+                    } @else { <span class="td-dash">—</span> }
+                  </td>
+                  @if (hasForeignCurrency()) {
+                    <td class="td-foreign">
+                      @if (line.currencyId !== 1) {
+                        <input type="number" min="0" step="0.01" placeholder="0.00" [ngModel]="line.foreignAmount"
+                               (ngModelChange)="updateLine(i,'foreignAmount',+$event||null)" class="amt-input" />
+                      } @else { <span class="td-dash">—</span> }
+                    </td>
+                    <td class="td-rate">
+                      @if (line.currencyId !== 1) {
+                        <input type="number" min="0" step="0.000001" placeholder="1.000000" [ngModel]="line.exchangeRate"
+                               (ngModelChange)="updateLine(i,'exchangeRate',+$event||null)" class="amt-input small" />
+                      } @else { <span class="td-dash">—</span> }
+                    </td>
+                  }
+                  <td class="td-act">
+                    <button class="line-btn dup" (click)="duplicateLine(i)" title="نسخ"><span class="material-icons-round">content_copy</span></button>
+                    <button class="line-btn del" (click)="removeLine(i)" title="حذف" [disabled]="formLines().length <= 2"><span class="material-icons-round">close</span></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
-        <div class="modal-footer">
-          <button class="btn-save purple-btn" (click)="saveCompound()" [disabled]="!isBalanced() || saving()">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-            {{ saving() ? 'جاري الحفظ...' : 'حفظ القيد المتعدد' }}
-          </button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <button class="add-line-btn" (click)="addLine()"><span class="material-icons-round">add</span> إضافة سطر</button>
+      </div>
+
+      <!-- شريط التوازن -->
+      <div class="balance-bar" [class.balanced]="isBalanced()" [class.unbalanced]="!isBalanced()">
+        <div class="bal-col"><div class="bal-label">إجمالي المدين</div><div class="bal-amt debit">{{ fmt(totalDebit()) }}</div></div>
+        <div class="bal-sep">
+          @if (isBalanced()) { <span class="material-icons-round bal-ok">check_circle</span> }
+          @else { <span class="material-icons-round bal-err">warning</span> }
         </div>
+        <div class="bal-col"><div class="bal-label">إجمالي الدائن</div><div class="bal-amt credit">{{ fmt(totalCredit()) }}</div></div>
+        <div class="bal-col">
+          <div class="bal-label">الفرق</div>
+          <div class="bal-amt" [class.zero]="isBalanced()" [class.nonzero]="!isBalanced()">{{ fmt(difference()) }}</div>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="jrn-error"><span class="material-icons-round">error</span> {{ error() }}</div>
+      }
+
+      <div class="jrn-form-footer">
+        <button class="jrn-btn ghost" (click)="showForm.set(false)">إلغاء</button>
+        <button class="jrn-btn secondary" [disabled]="saving()"
+                (click)="formHeader.update(h => ({...h, status: 'draft'})); save()">
+          <span class="material-icons-round">save</span> حفظ كمسودة
+        </button>
+        <button class="jrn-btn primary" [disabled]="saving() || !isBalanced()"
+                (click)="formHeader.update(h => ({...h, status: 'unreviewed'})); save()">
+          @if (saving()) { <span class="material-icons-round rotating">sync</span> }
+          @else { <span class="material-icons-round">done_all</span> }
+          ترحيل القيد
+        </button>
       </div>
     </div>
   }
 
-  <!-- ===================== Modal: كيف يعمل ===================== -->
-  @if (showHowItWorks()) {
-    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
-      <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon amber"><span class="material-icons-round">help_outline</span></div>
-            <h2>كيف تعمل القيود المحاسبية؟</h2>
-          </div>
-          <button class="close-btn" (click)="showHowItWorks.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body how-it-works">
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">help</span> متى نستخدم القيود؟</h3>
-            <p>القيود تُستخدم لما ما يكون فيه صندوق أو بنك أو محفظة أو صراف كطرف في العملية. مثلاً: تحويل بين حسابات محاسبية داخلية.</p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">note_add</span> القيد البسيط</h3>
-            <p>حساب دائن واحد يحوّل مبلغ لحساب مدين واحد. مثال: حساب نظام المغربي (دائن) ← حساب المتحصلين (مدين) بمبلغ 50,000 ريال.</p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">playlist_add</span> القيد المتعدد</h3>
-            <p>دائن واحد بمبلغ 100,000 يوزعها على عدة مدينين: 10,000 + 15,000 + 25,000 + 50,000. أو العكس: عدة دائنين يجمّعون في مدين واحد.</p>
-            <p><strong>المهم:</strong> المجموع لازم يتساوى - الدائن = المدين.</p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">tag</span> ترقيم القيد</h3>
-            <p>
-              رقم القيد يُولّد حسب <strong>تصنيف القيد + اسم القيد (القالب) + السنة + تسلسل يبدأ من 1</strong>.
-            </p>
-            <p dir="ltr" style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
-              QYD-CategoryNo-TemplateCode-YYYY-Serial
-            </p>
-            <p>
-              <small>التسلسل يبدأ من <strong>1</strong> لكل (تصنيف + قالب) ولكل سنة (وكل عمل منفصل).</small>
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">filter_list</span> الفلترة التلقائية</h3>
-            <p>لما تختار الدائن أولاً، النظام يعرض فقط الحسابات المدينة المسموحة. والعكس صحيح.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
 </div>

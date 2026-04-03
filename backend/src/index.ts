@@ -247,6 +247,20 @@ app.notFound((c) => {
   }
 })();
 
+// ===================== Auto-migration: journal_entry_lines — حقول الحساب التحليلي والعملة =====================
+(async () => {
+  try {
+    await db.execute(sql`ALTER TABLE journal_entry_lines ADD COLUMN IF NOT EXISTS entity_type varchar(30)`);
+    await db.execute(sql`ALTER TABLE journal_entry_lines ADD COLUMN IF NOT EXISTS entity_id integer`);
+    await db.execute(sql`ALTER TABLE journal_entry_lines ADD COLUMN IF NOT EXISTS currency_id integer`);
+    await db.execute(sql`ALTER TABLE journal_entry_lines ADD COLUMN IF NOT EXISTS foreign_amount decimal(20,2)`);
+    await db.execute(sql`ALTER TABLE journal_entry_lines ADD COLUMN IF NOT EXISTS exchange_rate decimal(20,6)`);
+    console.log("✅ تم التحقق من أعمدة journal_entry_lines (entity/currency)");
+  } catch (e) {
+    console.warn("⚠️ تعذّر تحديث journal_entry_lines:", e);
+  }
+})();
+
 const port = Number.parseInt(process.env.PORT || "3000", 10);
 console.log(
   `🚀 حساباتي API يعمل على المنفذ ${port} (${process.env.NODE_ENV || "development"})`,
