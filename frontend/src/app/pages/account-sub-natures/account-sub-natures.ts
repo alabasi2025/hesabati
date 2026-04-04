@@ -1,14 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface AccountSubNatureForm { name: string; natureKey: string; icon: string; color: string; requiresStation: boolean; requiresEmployee: boolean; requiresProvider: boolean; requiresAccountNumber: boolean; requiresSupplierType: boolean; supportsCashOperations: boolean; canReceivePayment: boolean; canMakePayment: boolean; isActive: boolean; }
 
 @Component({
   selector: 'app-account-sub-natures',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './account-sub-natures.html',
   styleUrl: './account-sub-natures.scss',
 })
@@ -20,7 +21,7 @@ export class AccountSubNaturesComponent extends BasePageComponent {
   items = signal<any[]>([]);
   showForm = signal(false);
   editingId = signal<number | null>(null);
-  form: any = { name: '', natureKey: '', icon: 'category', color: '#64748b', requiresStation: false, requiresEmployee: false, requiresProvider: false, requiresAccountNumber: false, requiresSupplierType: false, supportsCashOperations: true, canReceivePayment: true, canMakePayment: true, isActive: true };
+  form: AccountSubNatureForm = { name: '', natureKey: '', icon: 'category', color: '#64748b', requiresStation: false, requiresEmployee: false, requiresProvider: false, requiresAccountNumber: false, requiresSupplierType: false, supportsCashOperations: true, canReceivePayment: true, canMakePayment: true, isActive: true };
 
   protected override onBizIdChange(): void { this.load(); }
 

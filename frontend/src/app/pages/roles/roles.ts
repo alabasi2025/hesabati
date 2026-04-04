@@ -1,12 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface RoleForm { name: string; description: string; color: string; maxVoucherAmount: number | null; maxDailyAmount: number | null; }
 
 const ALL_RESOURCES = [
   { key: 'vouchers', label: 'السندات', icon: 'receipt_long' },
@@ -26,7 +24,7 @@ const ACTION_LABELS: Record<string, string> = { create: 'إنشاء', read: 'ع�
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './roles.html',
   styleUrl: './roles.scss',
 })
@@ -39,7 +37,7 @@ export class RolesComponent extends BasePageComponent {
   userRoles = signal<any[]>([]);
   showForm = false;
   editId: number | null = null;
-  form: any = { name: '', description: '', color: '#8b5cf6', maxVoucherAmount: null, maxDailyAmount: null };
+  form: RoleForm = { name: '', description: '', color: '#8b5cf6', maxVoucherAmount: null, maxDailyAmount: null };
   permSet = new Set<string>();
   allResources = ALL_RESOURCES;
   allActions = ALL_ACTIONS;

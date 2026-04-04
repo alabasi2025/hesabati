@@ -1,18 +1,16 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface WarehouseForm { name: string; accountId: number | null; warehouseType: string; subType: string; stationId: number | null; responsiblePerson: string; location: string; notes: string; }
+interface WarehouseTypeForm { name: string; subTypeKey: string; description: string; icon: string; color: string; }
 
 @Component({
   selector: 'app-warehouse',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './warehouse.html',
   styleUrl: './warehouse.scss',
 })
@@ -34,7 +32,7 @@ export class WarehouseComponent extends BasePageComponent {
   filterSubType = signal<string>('all');
 
   // نموذج إضافة/تعديل مخزن
-  form: any = {
+  form: WarehouseForm = {
     name: '', accountId: null, warehouseType: 'main', subType: '',
     stationId: null, responsiblePerson: '', location: '', notes: '',
   };
@@ -42,7 +40,7 @@ export class WarehouseComponent extends BasePageComponent {
   // إدارة تصنيفات المخازن
   showTypeForm = signal(false);
   editingTypeId = signal<number | null>(null);
-  typeForm: any = {
+  typeForm: WarehouseTypeForm = {
     name: '', subTypeKey: '', description: '', icon: 'warehouse', color: '#4CAF50',
   };
 

@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface ExpenseCategoryForm { name: string; description: string; icon: string; color: string; sortOrder: number; isActive: boolean; }
 
 @Component({
   selector: 'app-expense-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './expense-categories.html',
   styleUrl: './expense-categories.scss',
 })
@@ -24,7 +22,7 @@ export class ExpenseCategoriesComponent extends BasePageComponent {
   showForm = signal(false);
   editingId = signal<number | null>(null);
 
-  form: any = { name: '', description: '', icon: 'receipt_long', color: '#3b82f6', sortOrder: 0, isActive: true };
+  form: ExpenseCategoryForm = { name: '', description: '', icon: 'receipt_long', color: '#3b82f6', sortOrder: 0, isActive: true };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();

@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface WalletForm { name: string; accountId: number | null; accountNumber: string; provider: string; responsiblePerson: string; description: string; notes: string; }
 
 @Component({
   selector: 'app-wallets',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './wallets.html',
   styleUrl: './wallets.scss',
 })
@@ -27,7 +25,7 @@ export class WalletsComponent extends BasePageComponent {
 
   showWalletForm = signal(false);
   editingWalletId = signal<number | null>(null);
-  walletForm: any = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+  walletForm: WalletForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
@@ -139,7 +137,7 @@ export class WalletsComponent extends BasePageComponent {
         return;
       }
 
-      const data = { ...this.walletForm };
+      const data: any = { ...this.walletForm };
       data.currencyIds = this.selectedCurrencyIds();
       data.defaultCurrencyId = this.defaultCurrencyId();
       delete data.sequenceNumber;

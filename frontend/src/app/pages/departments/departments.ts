@@ -1,17 +1,21 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface DepartmentForm {
+  name: string;
+  code: string;
+  description: string;
+  icon: string;
+  color: string;
+}
 
 @Component({
   selector: 'app-departments',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './departments.html',
   styleUrl: './departments.scss',
 })
@@ -24,9 +28,8 @@ export class DepartmentsComponent extends BasePageComponent {
   showForm = signal(false);
   editingId = signal<number | null>(null);
 
-  form: any = {
-    name: '', code: '', description: '', icon: 'business', color: '#8b5cf6',
-  };
+  private readonly defaultForm: DepartmentForm = { name: '', code: '', description: '', icon: 'business', color: '#8b5cf6' };
+  form: DepartmentForm = { ...this.defaultForm };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -42,7 +45,7 @@ export class DepartmentsComponent extends BasePageComponent {
   }
 
   openAdd() {
-    this.form = { name: '', code: '', description: '', icon: 'business', color: '#8b5cf6' };
+    this.form = { ...this.defaultForm };
     this.editingId.set(null);
     this.showForm.set(true);
   }

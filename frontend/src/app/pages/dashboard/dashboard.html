@@ -1,6 +1,6 @@
 <div class="dashboard-page" [class.presentation-mode]="presentationMode()">
-  <!-- Three.js 3D Background -->
-  <app-three-background variant="dashboard"></app-three-background>
+  <!-- CSS Background -->
+  <app-css-background variant="dashboard"></app-css-background>
   @if (loading()) {
     <div class="loading-container">
       <div class="spinner"></div>
@@ -124,93 +124,78 @@
       </div>
     </div>
 
-    <!-- 3D Charts Section - Main -->
+    <!-- Charts Section -->
     @if (chartData().length > 0) {
       <div class="section-card charts-section">
         <h3 class="section-title">
           <span class="material-icons-round">bar_chart</span>
-          نظرة عامة ثلاثية الأبعاد
-          <button class="presentation-toggle" (click)="togglePresentation()" title="وضع العرض التقديمي">
-            <span class="material-icons-round">{{ presentationMode() ? 'grid_view' : 'slideshow' }}</span>
-          </button>
+          نظرة عامة
         </h3>
         <div class="charts-grid">
           <div class="chart-wrapper">
-            <app-three-chart
-              type="bar"
-              [data]="chartData()"
-              title="توزيع الأصول"
-              [maxBarHeight]="4"
-              [autoRotate]="true"
-              [rotateSpeed]="0.08"
-              [interactive]="true"
-              (chartClick)="onChartClick($event)"
-            ></app-three-chart>
+            <apx-chart
+              [series]="[{ name: 'العدد', data: chartData().map(d => d.value) }]"
+              [chart]="{ type: 'bar', height: 300, fontFamily: 'Tajawal', toolbar: { show: false } }"
+              [xaxis]="{ categories: chartData().map(d => d.label) }"
+              [colors]="chartData().map(d => d.color || '#6366f1')"
+              [plotOptions]="{ bar: { borderRadius: 6, columnWidth: '55%', distributed: true } }"
+              [dataLabels]="{ enabled: false }"
+              [grid]="{ borderColor: 'var(--border-color)', strokeDashArray: 4 }"
+              [tooltip]="{ theme: 'dark' }"
+            ></apx-chart>
           </div>
           <div class="chart-wrapper">
-            <app-three-chart
-              type="donut"
-              [data]="chartData()"
-              title="النسب المئوية"
-              [autoRotate]="true"
-              [rotateSpeed]="0.12"
-              [interactive]="true"
-              (chartClick)="onChartClick($event)"
-            ></app-three-chart>
+            <apx-chart
+              [series]="chartData().map(d => d.value)"
+              [chart]="{ type: 'donut', height: 300, fontFamily: 'Tajawal' }"
+              [labels]="chartData().map(d => d.label)"
+              [colors]="chartData().map(d => d.color || '#6366f1')"
+              [legend]="{ position: 'bottom', fontFamily: 'Tajawal', fontWeight: 700 }"
+              [dataLabels]="{ enabled: true, style: { fontFamily: 'Tajawal', fontWeight: 700 } }"
+              [tooltip]="{ theme: 'dark' }"
+            ></apx-chart>
           </div>
         </div>
       </div>
     }
 
-    <!-- Advanced Charts Section -->
+    <!-- Advanced Charts -->
     @if (chartData().length > 1) {
-      <div class="section-card charts-section advanced-charts">
+      <div class="section-card charts-section">
         <h3 class="section-title">
           <span class="material-icons-round">insights</span>
           تحليلات متقدمة
         </h3>
         <div class="charts-grid charts-grid-3">
-          <!-- Waterfall Chart -->
-          @if (waterfallData().length > 0) {
-            <div class="chart-wrapper">
-              <app-three-chart
-                type="waterfall"
-                [data]="waterfallData()"
-                title="تدفق الموارد"
-                [maxBarHeight]="3"
-                [autoRotate]="true"
-                [rotateSpeed]="0.06"
-                [interactive]="true"
-              ></app-three-chart>
-            </div>
-          }
-
-          <!-- Gauge Chart -->
           <div class="chart-wrapper">
-            <app-three-chart
-              type="gauge"
-              [gaugeValue]="gaugeValue()"
-              [gaugeMax]="gaugeMax()"
-              gaugeLabel="إجمالي الأصول"
-              title="مؤشر الأداء"
-              [autoRotate]="true"
-              [rotateSpeed]="0.05"
-            ></app-three-chart>
+            <apx-chart
+              [series]="[{ name: 'الموارد', data: waterfallData().map(d => d.value) }]"
+              [chart]="{ type: 'bar', height: 280, fontFamily: 'Tajawal', toolbar: { show: false } }"
+              [xaxis]="{ categories: waterfallData().map(d => d.label) }"
+              [colors]="waterfallData().map(d => d.color || '#10b981')"
+              [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', distributed: true } }"
+              [dataLabels]="{ enabled: false }"
+              [tooltip]="{ theme: 'dark' }"
+            ></apx-chart>
           </div>
-
-          <!-- Treemap Chart -->
+          <div class="chart-wrapper">
+            <apx-chart
+              [series]="[gaugeValue()]"
+              [chart]="{ type: 'radialBar', height: 280, fontFamily: 'Tajawal' }"
+              [plotOptions]="{ radialBar: { hollow: { size: '60%' }, dataLabels: { name: { show: true, fontSize: '14px', fontFamily: 'Tajawal', offsetY: -10 }, value: { show: true, fontSize: '28px', fontFamily: 'Tajawal', fontWeight: 800 } } } }"
+              [labels]="['إجمالي الأصول']"
+              [colors]="['#6366f1']"
+            ></apx-chart>
+          </div>
           @if (treemapData().length > 0) {
             <div class="chart-wrapper">
-              <app-three-chart
-                type="treemap"
-                [data]="treemapData()"
-                title="خريطة الأصول"
-                [maxBarHeight]="3"
-                [autoRotate]="true"
-                [rotateSpeed]="0.06"
-                [interactive]="true"
-                (chartClick)="onChartClick($event)"
-              ></app-three-chart>
+              <apx-chart
+                [series]="[{ data: treemapData().map(d => ({ x: d.label, y: d.value })) }]"
+                [chart]="{ type: 'treemap', height: 280, fontFamily: 'Tajawal', toolbar: { show: false } }"
+                [colors]="['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']"
+                [dataLabels]="{ enabled: true, style: { fontSize: '13px', fontFamily: 'Tajawal', fontWeight: 700 } }"
+                [tooltip]="{ theme: 'dark' }"
+              ></apx-chart>
             </div>
           }
         </div>

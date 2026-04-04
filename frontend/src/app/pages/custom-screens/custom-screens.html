@@ -622,7 +622,15 @@
               @if (tab.type === 'chart') {
                 <div class="chart-content">
                   <div class="chart-container">
-                    <canvas baseChart [data]="barChartData" [options]="barChartOptions" type="bar"></canvas>
+                    <apx-chart
+                      [series]="chartSeries()"
+                      [chart]="{ type: 'bar', height: 300, fontFamily: 'Tajawal', toolbar: { show: false } }"
+                      [xaxis]="{ categories: chartCategories() }"
+                      [colors]="['#3b82f6', '#ef4444']"
+                      [plotOptions]="{ bar: { borderRadius: 6, columnWidth: '55%' } }"
+                      [dataLabels]="{ enabled: false }"
+                      [tooltip]="{ theme: 'dark' }"
+                    ></apx-chart>
                   </div>
                 </div>
               }

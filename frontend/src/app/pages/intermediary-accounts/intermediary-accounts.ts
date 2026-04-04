@@ -1,14 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
 
 @Component({
   selector: 'app-intermediary-accounts',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './intermediary-accounts.html',
   styleUrl: './intermediary-accounts.scss',
 })

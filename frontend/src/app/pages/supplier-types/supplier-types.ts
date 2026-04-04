@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface SupplierTypeForm { name: string; subTypeKey: string; description: string; icon: string; color: string; }
 
 @Component({
   selector: 'app-supplier-types',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './supplier-types.html',
   styleUrl: './supplier-types.scss',
 })
@@ -24,9 +22,7 @@ export class SupplierTypesComponent extends BasePageComponent {
   showForm = signal(false);
   editingId = signal<number | null>(null);
 
-  form: any = {
-    name: '', subTypeKey: '', description: '', icon: 'local_shipping', color: '#0ea5e9',
-  };
+  form: SupplierTypeForm = { name: '', subTypeKey: '', description: '', icon: 'local_shipping', color: '#0ea5e9' };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();

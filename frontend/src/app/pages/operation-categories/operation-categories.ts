@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface OperationCategoryForm { name: string; categoryKey: string; description: string; icon: string; color: string; }
 
 @Component({
   selector: 'app-operation-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './operation-categories.html',
   styleUrl: './operation-categories.scss',
 })
@@ -24,9 +22,7 @@ export class OperationCategoriesComponent extends BasePageComponent {
   showForm = signal(false);
   editingId = signal<number | null>(null);
 
-  form: any = {
-    name: '', categoryKey: '', description: '', icon: 'category', color: '#6366f1',
-  };
+  form: OperationCategoryForm = { name: '', categoryKey: '', description: '', icon: 'category', color: '#6366f1' };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();

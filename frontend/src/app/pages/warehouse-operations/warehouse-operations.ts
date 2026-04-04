@@ -1,11 +1,8 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
 
 interface WopItem {
   itemId:    number | null;
@@ -28,7 +25,7 @@ const OP_META: Record<string, { label: string; icon: string; color: string }> = 
 @Component({
   selector: 'app-warehouse-operations',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './warehouse-operations.html',
   styleUrl:    './warehouse-operations.scss',
 })

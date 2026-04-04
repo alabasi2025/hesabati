@@ -1,14 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface BudgetForm { name: string; stationId: number | null; amount: number; currencyId: number; expenseType: string; month: number | null; year: number | null; notes: string; accountId: number | null; }
 
 @Component({
   selector: 'app-expense-budget',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './expense-budget.html',
   styleUrl: './expense-budget.scss',
 })
@@ -30,7 +31,7 @@ export class ExpenseBudgetComponent extends BasePageComponent {
   budgetAccounts = signal<any[]>([]);
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyId = signal<number | null>(null);
-  form: any = { name: '', stationId: null as number | null, amount: 0, currencyId: 1, expenseType: 'variable', month: null as number | null, year: null as number | null, notes: '', accountId: null as number | null };
+  form: BudgetForm = { name: '', stationId: null, amount: 0, currencyId: 1, expenseType: 'variable', month: null, year: null, notes: '', accountId: null };
 
   override ngOnInit(): void {
     super.ngOnInit();

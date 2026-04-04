@@ -1,17 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface FundForm { name: string; fundType: string; sequenceNumber: string; responsiblePerson: string; stationId: number | null; accountId: number | null; description: string; notes: string; }
+interface FundTypeForm { name: string; subTypeKey: string; description: string; icon: string; color: string; }
 
 @Component({
   selector: 'app-funds',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './funds.html',
   styleUrl: './funds.scss',
 })
@@ -31,14 +30,14 @@ export class FundsComponent extends BasePageComponent {
   // Fund form
   showFundForm = signal(false);
   editingFundId = signal<number | null>(null);
-  fundForm: any = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, accountId: null, description: '', notes: '' };
+  fundForm: FundForm = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, accountId: null, description: '', notes: '' };
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
 
   // Type form
   showTypeForm = signal(false);
   editingTypeId = signal<number | null>(null);
-  typeForm: any = { name: '', subTypeKey: '', description: '', icon: 'savings', color: '#4CAF50' };
+  typeForm: FundTypeForm = { name: '', subTypeKey: '', description: '', icon: 'savings', color: '#4CAF50' };
 
   // Delete confirm
   showDeleteConfirm = signal(false);
@@ -113,6 +112,7 @@ export class FundsComponent extends BasePageComponent {
   openAddAccount(subType?: string) {
     this.fundForm = {
       name: '',
+      fundType: '',
       sequenceNumber: '',
       responsiblePerson: '',
       stationId: null,
@@ -150,7 +150,7 @@ export class FundsComponent extends BasePageComponent {
 
   async saveAccount() {
     try {
-      const data = { ...this.fundForm };
+      const data: any = { ...this.fundForm };
       if (!data.name?.trim()) {
         this.toast.error('اسم الصندوق مطلوب');
         return;

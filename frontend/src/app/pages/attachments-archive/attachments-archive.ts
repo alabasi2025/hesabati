@@ -1,12 +1,8 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
 
 type TreasuryType = 'fund' | 'bank' | 'exchange' | 'e_wallet';
 
@@ -20,7 +16,7 @@ interface ArchiveSettings {
 @Component({
   selector: 'app-attachments-archive',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './attachments-archive.html',
   styleUrl: './attachments-archive.scss',
 })

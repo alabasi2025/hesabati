@@ -34,6 +34,54 @@
 
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (showBankForm()) {
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon blue"><span class="material-icons-round">account_balance</span></div>
+          <h3>{{ editingBankId() ? 'تعديل بنك' : 'إضافة بنك جديد' }}</h3>
+          @if (editingBankId()) { <span class="edit-badge">تعديل</span> }
+        </div>
+        <button class="close-btn" (click)="showBankForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group full-width"><label>اسم البنك</label><input [(ngModel)]="bankForm.name" placeholder="مثال: كريمي الحديدة - جاري" /></div>
+        <div class="form-group full-width"><label>الحساب المرتبط</label>
+          <select [(ngModel)]="bankForm.accountId" (ngModelChange)="onAccountChange($event)" required>
+            <option [ngValue]="null" disabled>-- اختر الحساب --</option>
+            @for (acc of bankAccounts(); track acc.id) { <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option> }
+          </select>
+        </div>
+        @if (accountCurrencies().length > 0) {
+          <div class="form-group full-width"><label>العملات المسموحة</label>
+            <div class="currency-chips">
+              @for (curr of accountCurrencies(); track curr.currencyId) {
+                <button type="button" class="currency-chip" [class.selected]="isCurrencySelected(curr.currencyId)" [class.is-default]="defaultCurrencyId() === curr.currencyId" (click)="toggleCurrency(curr.currencyId)">
+                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                </button>
+              }
+            </div>
+            @if (selectedCurrencyIds().length > 0) {
+              <div class="default-currency-row"><label>الافتراضية:</label>
+                @for (cid of selectedCurrencyIds(); track cid) {
+                  <button type="button" class="default-chip" [class.active]="defaultCurrencyId() === cid" (click)="setDefaultCurrency(cid)">
+                    {{ (accountCurrencies().find(c => c.currencyId === cid))?.code || (accountCurrencies().find(c => c.currencyId === cid))?.currencyCode }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+        <div class="form-group"><label>رقم الحساب البنكي</label><input [(ngModel)]="bankForm.accountNumber" placeholder="رقم الحساب البنكي" dir="ltr" /></div>
+        <div class="form-group"><label>البنك / المزود</label><input [(ngModel)]="bankForm.provider" placeholder="اسم البنك" /></div>
+        <div class="form-group"><label>المسؤول</label><input [(ngModel)]="bankForm.responsiblePerson" placeholder="اسم المسؤول" /></div>
+        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="bankForm.notes" rows="2"></textarea></div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showBankForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="saveAccount()">{{ editingBankId() ? 'حفظ التعديلات' : 'إضافة البنك' }}</button>
+      </div>
+    </div>
   } @else if (!filteredData.length) {
     <div class="empty-state"><span class="material-icons-round">account_balance</span><p>لا توجد بنوك</p>
       <button class="add-btn small" (click)="openAddAccount()"><span class="material-icons-round">add</span> إضافة بنك</button>
@@ -70,71 +118,6 @@
           <div class="card-status"><span class="status-dot" [class.active]="acc.isActive"></span> {{ acc.isActive ? 'نشط' : 'متوقف' }}</div>
         </div>
       }
-    </div>
-  }
-
-  @if (showBankForm()) {
-    <div class="modal-overlay" (click)="showBankForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon blue"><span class="material-icons-round">account_balance</span></div>
-            <div><h2>{{ editingBankId() ? 'تعديل بنك' : 'إضافة بنك جديد' }}</h2><p>يجب ربطه بحساب من الدليل</p></div>
-          </div>
-          <button class="close-btn" (click)="showBankForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group"><label>اسم البنك</label><input [(ngModel)]="bankForm.name" placeholder="مثال: كريمي الحديدة - جاري" /></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>الحساب المرتبط</label>
-              <select [(ngModel)]="bankForm.accountId" (ngModelChange)="onAccountChange($event)" required>
-                <option [ngValue]="null" disabled>-- اختر الحساب --</option>
-                @for (acc of bankAccounts(); track acc.id) {
-                  <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
-                }
-              </select>
-            </div>
-          </div>
-          @if (accountCurrencies().length > 0) {
-            <div class="form-group">
-              <label>العملات المسموحة</label>
-              <div class="currency-chips">
-                @for (curr of accountCurrencies(); track curr.currencyId) {
-                  <button type="button" class="currency-chip" [class.selected]="isCurrencySelected(curr.currencyId)" [class.is-default]="defaultCurrencyId() === curr.currencyId" (click)="toggleCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
-                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
-                  </button>
-                }
-              </div>
-              @if (selectedCurrencyIds().length > 0) {
-                <div class="default-currency-row">
-                  <label>الافتراضية:</label>
-                  @for (cid of selectedCurrencyIds(); track cid) {
-                    <button type="button" class="default-chip" [class.active]="defaultCurrencyId() === cid" (click)="setDefaultCurrency(cid)" title="تعيين كافتراضية">
-                      {{ (accountCurrencies().find(c => c.currencyId === cid))?.code || (accountCurrencies().find(c => c.currencyId === cid))?.currencyCode }}
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-          }
-          <div class="form-row">
-            <div class="form-group"><label>رقم الحساب البنكي</label><input [(ngModel)]="bankForm.accountNumber" placeholder="رقم الحساب البنكي" dir="ltr" /></div>
-            <div class="form-group"><label>البنك / المزود</label><input [(ngModel)]="bankForm.provider" placeholder="اسم البنك" /></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>المسؤول</label><input [(ngModel)]="bankForm.responsiblePerson" placeholder="اسم المسؤول" /></div>
-          </div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="bankForm.notes" rows="2"></textarea></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="saveAccount()"><span class="material-icons-round">{{ editingBankId() ? 'save' : 'add' }}</span> {{ editingBankId() ? 'حفظ التعديلات' : 'إضافة البنك' }}</button>
-          <button class="btn-cancel" (click)="showBankForm.set(false)">إلغاء</button>
-        </div>
-      </div>
     </div>
   }
 

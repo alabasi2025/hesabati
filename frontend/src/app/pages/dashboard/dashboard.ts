@@ -2,15 +2,18 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { ThreeBackgroundComponent } from '../../components/three-background/three-background';
-import { ThreeChartComponent, ChartDataItem, ChartClickEvent } from '../../components/three-chart/three-chart';
+import { CssBackgroundComponent } from '../../shared/components/css-background/css-background.component';
 import { ThreeStatCardComponent } from '../../components/three-stat-card/three-stat-card';
+import { NgApexchartsModule } from 'ng-apexcharts';
 import { BasePageComponent } from '../../shared/base-page.component';
+
+export interface ChartDataItem { label: string; value: number; color?: string; }
+export interface ChartClickEvent { item: ChartDataItem; index: number; }
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ThreeBackgroundComponent, ThreeChartComponent, ThreeStatCardComponent],
+  imports: [CommonModule, CssBackgroundComponent, ThreeStatCardComponent, NgApexchartsModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

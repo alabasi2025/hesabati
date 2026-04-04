@@ -1,18 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
-import { BusinessService } from '../../services/business.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface PendingAccountForm { personOrEntity: string; description: string; status: string; estimatedAmount: number; notes: string; accountId: number | null; }
 
 @Component({
   selector: 'app-pending-accounts',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './pending-accounts.html',
   styleUrl: './pending-accounts.scss',
 })
@@ -27,7 +24,7 @@ export class PendingAccountsComponent extends BasePageComponent {
   filterStatus = signal<string>('all');
 
   pendingFilteredAccounts = signal<any[]>([]);
-  form: any = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '', accountId: null as number | null };
+  form: PendingAccountForm = { personOrEntity: '', description: '', status: 'pending', estimatedAmount: 0, notes: '', accountId: null };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -66,6 +63,7 @@ export class PendingAccountsComponent extends BasePageComponent {
     this.form = {
       personOrEntity: item.personOrEntity, description: item.description || '',
       status: item.status, estimatedAmount: Number(item.estimatedAmount || 0), notes: item.notes || '',
+      accountId: item.accountId || null,
     };
     this.editingId.set(item.id);
     this.showForm.set(true);

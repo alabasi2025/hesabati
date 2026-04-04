@@ -1,17 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface CustodyForm { custodyType: string; contentType: string; partyName: string; partyType: string; employeeId: number | null; description: string; amount: number; accountId: number | null; currencyId: number | null; }
+interface SettleForm { amount: number; notes: string; settledAt: string; }
 
 @Component({
   selector: 'app-custody',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './custody.html',
   styleUrl: './custody.scss',
 })
@@ -33,12 +32,12 @@ export class CustodyComponent extends BasePageComponent {
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyId = signal<number | null>(null);
 
-  form: any = {
+  form: CustodyForm = {
     custodyType: 'permanent', contentType: 'cash', partyName: '', partyType: 'employee',
-    employeeId: null, description: '', amount: 0, accountId: null as number | null, currencyId: null as number | null,
+    employeeId: null, description: '', amount: 0, accountId: null, currencyId: null,
   };
 
-  settleForm: any = { amount: 0, notes: '', settledAt: '' };
+  settleForm: SettleForm = { amount: 0, notes: '', settledAt: '' };
 
   partyTypes = [
     { key: 'employee', label: 'موظف' },
@@ -75,8 +74,8 @@ export class CustodyComponent extends BasePageComponent {
       this.records.set(custodyRecordsData || []);
       this.custodyAccounts.set(custodyAccountsData || []);
       this.filteredAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'custody'));
-    } catch (e) { 
-      console.error(e); 
+    } catch (e) {
+      console.error(e);
     }
     this.loading.set(false);
   }

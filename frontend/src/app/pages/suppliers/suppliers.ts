@@ -1,14 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface SupplierForm { name: string; supplierTypeId: number | null; category: string; phone: string; address: string; contactPerson: string; notes: string; }
 
 @Component({
   selector: 'app-suppliers',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './suppliers.html',
   styleUrl: './suppliers.scss',
 })
@@ -27,7 +28,7 @@ export class SuppliersComponent extends BasePageComponent {
   filterCategory = signal<string>('all');
   searchQuery = signal<string>('');
 
-  form: any = { name: '', supplierTypeId: null, category: '', phone: '', address: '', contactPerson: '', notes: '' };
+  form: SupplierForm = { name: '', supplierTypeId: null, category: '', phone: '', address: '', contactPerson: '', notes: '' };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();

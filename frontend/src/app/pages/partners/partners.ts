@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { BusinessService } from '../../services/business.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface PartnerForm { fullName: string; accountId: number | null; sharePercentage: number; phone: string; role: string; notes: string; }
 
 @Component({
   selector: 'app-partners',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './partners.html',
   styleUrl: './partners.scss',
 })
@@ -31,7 +29,7 @@ export class PartnersComponent extends BasePageComponent {
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
-  form: any = { fullName: '', accountId: null, sharePercentage: 0, phone: '', role: '', notes: '' };
+  form: PartnerForm = { fullName: '', accountId: null, sharePercentage: 0, phone: '', role: '', notes: '' };
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();

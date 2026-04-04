@@ -1,11 +1,8 @@
 import { Component, inject, signal, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
 import { ReportPrintService } from '../../services/report-print.service';
 import { ReportExportService } from '../../services/report-export.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
@@ -20,7 +17,7 @@ import { formatAmount as fmt } from '../../shared/helpers';
 @Component({
   selector: 'app-reports-advanced',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, NgApexchartsModule],
+  imports: [...PAGE_IMPORTS, NgApexchartsModule],
   templateUrl: './reports-advanced.html',
   styleUrl: './reports-advanced.scss',
 })

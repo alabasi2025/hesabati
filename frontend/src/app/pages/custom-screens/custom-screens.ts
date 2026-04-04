@@ -2,8 +2,7 @@ import { Component, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
-import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration } from 'chart.js';
+import { NgApexchartsModule } from 'ng-apexcharts';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -85,7 +84,7 @@ const TAB_TYPE_OPTIONS = [
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective, ColorPickerDirective, CdkDrag, CdkDropList,
+  imports: [CommonModule, FormsModule, NgApexchartsModule, ColorPickerDirective, CdkDrag, CdkDropList,
     LoadingStateComponent, StatusBadgeComponent],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
@@ -169,19 +168,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   // Stats tab
   widgetStats = signal<any>({ totalReceipts: 0, totalPayments: 0, operationsCount: 0, netBalance: 0 });
 
-  // Chart tab
-  barChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [
-    { data: [], label: 'التحصيل', backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 6 },
-    { data: [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
-  ]};
-  barChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', labels: { font: { family: 'Tajawal', size: 12 }, padding: 16 } } },
-    scales: {
-      y: { beginAtZero: true, ticks: { font: { family: 'Tajawal', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
-      x: { ticks: { font: { family: 'Tajawal', size: 11 } }, grid: { display: false } },
-    },
-  };
+  // Chart tab — ApexCharts data
+  chartSeries = signal<any[]>([]);
+  chartCategories = signal<string[]>([]);
 
   // ===================== Wizard State =====================
   wizardStep = signal(1); // 1=basic info, 2=add tabs, 3+=configure each tab, last=preview
@@ -529,23 +518,19 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         this.chartDateFrom() || undefined,
         this.chartDateTo() || undefined
       );
-      this.barChartData = {
-        labels: chartData.labels || [],
-        datasets: [
-          { data: chartData.receipts || [], label: 'التحصيل', backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 6 },
-          { data: chartData.payments || [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
-        ],
-      };
+      this.chartCategories.set(chartData.labels || []);
+      this.chartSeries.set([
+        { name: 'التحصيل', data: chartData.receipts || [] },
+        { name: 'الصرف', data: chartData.payments || [] },
+      ]);
     } catch (e) {
       try {
         const chartData = await this.api.getWidgetChart(this.bizId, 6);
-        this.barChartData = {
-          labels: chartData.labels || [],
-          datasets: [
-            { data: chartData.receipts || [], label: 'التحصيل', backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1, borderRadius: 6 },
-            { data: chartData.payments || [], label: 'الصرف', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, borderRadius: 6 },
-          ],
-        };
+        this.chartCategories.set(chartData.labels || []);
+        this.chartSeries.set([
+          { name: 'التحصيل', data: chartData.receipts || [] },
+          { name: 'الصرف', data: chartData.payments || [] },
+        ]);
       } catch (e2) { console.error('Error loading chart:', e2); }
     }
   }

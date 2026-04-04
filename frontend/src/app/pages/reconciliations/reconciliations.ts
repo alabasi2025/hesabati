@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface ReconciliationForm { title: string; reconciliationType: string; accountId: number | null; fundId: number | null; periodStart: string; periodEnd: string; expectedAmount: number; actualAmount: number; notes: string; }
 
 @Component({
   selector: 'app-reconciliations',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './reconciliations.html',
   styleUrl: './reconciliations.scss',
 })
@@ -25,7 +23,7 @@ export class ReconciliationsComponent extends BasePageComponent {
   editingId = signal<number | null>(null);
   viewingItem = signal<any | null>(null);
 
-  form: any = {
+  form: ReconciliationForm = {
     title: '', reconciliationType: 'manager', accountId: null, fundId: null,
     periodStart: '', periodEnd: '', expectedAmount: 0, actualAmount: 0, notes: '',
   };

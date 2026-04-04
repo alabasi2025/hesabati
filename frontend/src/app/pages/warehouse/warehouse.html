@@ -74,6 +74,105 @@
 
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (showForm()) {
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon amber"><span class="material-icons-round">warehouse</span></div>
+          <h3>{{ editingId() ? 'تعديل مخزن' : 'إضافة مخزن جديد' }}</h3>
+          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+        </div>
+        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="form-meta">
+        @if (!editingId()) {
+          <div class="form-group full-width"><label>حساب التحكم <span class="required">*</span></label>
+            <select [(ngModel)]="form.accountId" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
+              <option [ngValue]="null">-- اختر حساب المخازن --</option>
+              @for (a of warehouseAccounts(); track a.id) { <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option> }
+            </select>
+          </div>
+        }
+        @if (accountCurrencies().length > 0) {
+          <div class="form-group full-width"><label>العملات <span class="required">*</span></label>
+            <div class="currency-chips">
+              @for (curr of accountCurrencies(); track curr.currencyId) {
+                <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)">
+                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="form-group full-width"><label>العملة الافتراضية</label>
+            <div class="currency-chips">
+              @for (curr of accountCurrencies(); track curr.currencyId) {
+                @if (selectedCurrencyIds().includes(curr.currencyId)) {
+                  <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        }
+        <div class="form-group"><label>اسم المخزن <span class="required">*</span></label><input [(ngModel)]="form.name" placeholder="اسم المخزن" /></div>
+        <div class="form-group"><label>النوع</label>
+          <select [(ngModel)]="form.warehouseType"><option value="main">رئيسي</option><option value="station">محطة</option><option value="sub">فرعي</option></select>
+        </div>
+        <div class="form-group"><label>التصنيف الفرعي</label>
+          <select [(ngModel)]="form.subType"><option value="">بدون تصنيف</option>
+            @for (t of warehouseTypes(); track t.id) { <option [value]="t.subTypeKey">{{ t.name }}</option> }
+          </select>
+        </div>
+        <div class="form-group"><label>المحطة (اختياري)</label>
+          <select [(ngModel)]="form.stationId"><option [ngValue]="null">بدون محطة</option>
+            @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+          </select>
+        </div>
+        <div class="form-group"><label>المسؤول</label><input [(ngModel)]="form.responsiblePerson" placeholder="اسم المسؤول" /></div>
+        <div class="form-group"><label>الموقع</label><input [(ngModel)]="form.location" placeholder="موقع المخزن" /></div>
+        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة المخزن' }}</button>
+      </div>
+    </div>
+  } @else if (showTypeForm()) {
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon purple"><span class="material-icons-round">category</span></div>
+          <h3>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h3>
+          @if (editingTypeId()) { <span class="edit-badge">تعديل</span> }
+        </div>
+        <button class="close-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group"><label>اسم التصنيف</label><input [(ngModel)]="typeForm.name" placeholder="مثال: مخزن أدوات" /></div>
+        <div class="form-group"><label>المفتاح</label><input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: tools" dir="ltr" /></div>
+        <div class="form-group full-width"><label>الوصف</label><textarea [(ngModel)]="typeForm.description" rows="2" placeholder="وصف التصنيف..."></textarea></div>
+        <div class="form-group"><label>الأيقونة</label>
+          <div class="icon-picker">
+            @for (icon of availableIcons; track icon) {
+              <button class="icon-option" [class.selected]="typeForm.icon === icon" (click)="typeForm.icon = icon"><span class="material-icons-round">{{ icon }}</span></button>
+            }
+          </div>
+        </div>
+        <div class="form-group"><label>اللون</label>
+          <div class="color-picker">
+            @for (c of ['#4CAF50','#2196F3','#FF9800','#9C27B0','#607D8B','#E91E63','#00BCD4','#F44336','#795548','#3F51B5']; track c) {
+              <button class="color-option" [style.background]="c" [class.selected]="typeForm.color === c" (click)="typeForm.color = c"></button>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="saveType()">{{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
+      </div>
+    </div>
   } @else if (!filteredWarehouses().length) {
     <div class="empty-state"><span class="material-icons-round">inventory_2</span><p>لا يوجد مخازن</p></div>
   } @else {
@@ -121,195 +220,5 @@
     </div>
   }
 
-  <!-- نموذج إضافة/تعديل مخزن -->
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon amber"><span class="material-icons-round">warehouse</span></div>
-            <div>
-              <h2>{{ editingId() ? 'تعديل مخزن' : 'إضافة مخزن جديد' }}</h2>
-              <p>بيانات المخزن والموقع والتصنيف</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          @if (!editingId()) {
-            <div class="form-group">
-              <label>حساب التحكم <span class="required">*</span></label>
-              <select [(ngModel)]="form.accountId" title="حساب التحكم" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
-                <option [ngValue]="null">-- اختر حساب المخازن --</option>
-                @for (a of warehouseAccounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
-                }
-              </select>
-            </div>
-          }
-          @if (accountCurrencies().length > 0) {
-            <div class="form-group">
-              <label>العملات <span class="required">*</span></label>
-              <div class="currency-chips">
-                @for (curr of accountCurrencies(); track curr.currencyId) {
-                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
-                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-            <div class="form-group">
-              <label>العملة الافتراضية</label>
-              <div class="currency-chips">
-                @for (curr of accountCurrencies(); track curr.currencyId) {
-                  @if (selectedCurrencyIds().includes(curr.currencyId)) {
-                    <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
-                      <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                      @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
-                    </button>
-                  }
-                }
-              </div>
-            </div>
-          }
-          <div class="form-row">
-            <div class="form-group">
-              <label>اسم المخزن <span class="required">*</span></label>
-              <input [(ngModel)]="form.name" placeholder="اسم المخزن" />
-            </div>
-            <div class="form-group">
-              <label>النوع</label>
-              <select [(ngModel)]="form.warehouseType">
-                <option value="main">رئيسي</option>
-                <option value="station">محطة</option>
-                <option value="sub">فرعي</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>التصنيف الفرعي</label>
-              <select [(ngModel)]="form.subType">
-                <option value="">بدون تصنيف</option>
-                @for (t of warehouseTypes(); track t.id) {
-                  <option [value]="t.subTypeKey">{{ t.name }}</option>
-                }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>المحطة (اختياري)</label>
-              <select [(ngModel)]="form.stationId">
-                <option [ngValue]="null">بدون محطة</option>
-                @for (s of stations(); track s.id) {
-                  <option [ngValue]="s.id">{{ s.name }}</option>
-                }
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>المسؤول</label>
-              <input [(ngModel)]="form.responsiblePerson" placeholder="اسم المسؤول" />
-            </div>
-            <div class="form-group">
-              <label>الموقع</label>
-              <input [(ngModel)]="form.location" placeholder="موقع المخزن" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>ملاحظات</label>
-            <textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة المخزن' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
 
-  <!-- نموذج إدارة التصنيفات -->
-  @if (showTypeForm()) {
-    <div class="modal-overlay" (click)="showTypeForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon teal"><span class="material-icons-round">category</span></div>
-            <div>
-              <h2>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h2>
-              <p>تصنيفات المخازن تساعد في تنظيم وتصنيف المخازن</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <!-- قائمة التصنيفات الحالية -->
-          @if (!editingTypeId() && warehouseTypes().length > 0) {
-            <div class="existing-types">
-              <h4>التصنيفات الحالية</h4>
-              <div class="types-list">
-                @for (t of warehouseTypes(); track t.id) {
-                  <div class="type-item">
-                    <span class="material-icons-round" [style.color]="t.color">{{ t.icon || 'warehouse' }}</span>
-                    <div class="type-info">
-                      <span class="type-name">{{ t.name }}</span>
-                      <span class="type-key">{{ t.subTypeKey }}</span>
-                    </div>
-                    <div class="type-actions">
-                      <button class="action-btn edit" (click)="openEditType(t)"><span class="material-icons-round">edit</span></button>
-                      <button class="action-btn delete" (click)="removeType(t)"><span class="material-icons-round">delete</span></button>
-                    </div>
-                  </div>
-                }
-              </div>
-              <hr class="divider" />
-              <h4>{{ editingTypeId() ? 'تعديل التصنيف' : 'إضافة تصنيف جديد' }}</h4>
-            </div>
-          }
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>اسم التصنيف <span class="required">*</span></label>
-              <input [(ngModel)]="typeForm.name" placeholder="مثال: مخزن وقود" />
-            </div>
-            <div class="form-group">
-              <label>المفتاح <span class="required">*</span></label>
-              <input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: fuel" dir="ltr" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>الوصف</label>
-            <input [(ngModel)]="typeForm.description" placeholder="وصف مختصر للتصنيف" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>اللون</label>
-              <div class="color-picker-row">
-                <input type="color" [(ngModel)]="typeForm.color" />
-                <span class="color-preview" [style.background]="typeForm.color"></span>
-                <span>{{ typeForm.color }}</span>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>الأيقونة</label>
-              <div class="icon-grid">
-                @for (ic of availableIcons; track ic) {
-                  <button class="icon-btn" [class.selected]="typeForm.icon === ic" (click)="typeForm.icon = ic"
-                    [style.color]="typeForm.icon === ic ? typeForm.color : ''">
-                    <span class="material-icons-round">{{ ic }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="saveType()">{{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
-          <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
 </div>

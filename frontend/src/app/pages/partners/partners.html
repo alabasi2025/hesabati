@@ -26,6 +26,65 @@
 
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
+  } @else if (showForm()) {
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon amber"><span class="material-icons-round">handshake</span></div>
+          <h3>{{ editingId() ? 'تعديل شريك' : 'إضافة شريك جديد' }}</h3>
+          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+        </div>
+        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="form-meta">
+        @if (!editingId()) {
+          <div class="form-group full-width">
+            <label>حساب التحكم <span class="required">*</span></label>
+            <select [(ngModel)]="form.accountId" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
+              <option [ngValue]="null">-- اختر حساب الشركاء --</option>
+              @for (a of partnerAccounts(); track a.id) {
+                <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
+              }
+            </select>
+          </div>
+        }
+        @if (accountCurrencies().length > 0) {
+          <div class="form-group full-width">
+            <label>العملات <span class="required">*</span></label>
+            <div class="currency-chips">
+              @for (curr of accountCurrencies(); track curr.currencyId) {
+                <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)">
+                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                  <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label>العملة الافتراضية</label>
+            <div class="currency-chips">
+              @for (curr of accountCurrencies(); track curr.currencyId) {
+                @if (selectedCurrencyIds().includes(curr.currencyId)) {
+                  <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        }
+        <div class="form-group"><label>الاسم الكامل</label><input [(ngModel)]="form.fullName" placeholder="اسم الشريك" /></div>
+        <div class="form-group"><label>نسبة الحصة (%)</label><input type="number" [(ngModel)]="form.sharePercentage" placeholder="نسبة الحصة" min="0" max="100" step="0.01" /></div>
+        <div class="form-group"><label>الدور / المنصب</label><input [(ngModel)]="form.role" placeholder="مثال: شريك مؤسس" /></div>
+        <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="رقم الهاتف" /></div>
+        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة الشريك' }}</button>
+      </div>
+    </div>
   } @else if (!partners().length) {
     <div class="empty-state"><span class="material-icons-round">group_off</span><p>لا يوجد شركاء مسجلين</p>
       <button class="add-btn small" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة شريك</button>
@@ -60,69 +119,6 @@
     </div>
   }
 
-  <!-- نموذج إضافة/تعديل -->
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon amber"><span class="material-icons-round">handshake</span></div><div><h2>{{ editingId() ? 'تعديل شريك' : 'إضافة شريك جديد' }}</h2><p>بيانات الشريك ونسبة حصته</p></div></div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          @if (!editingId()) {
-            <div class="form-group">
-              <label>حساب التحكم <span class="required">*</span></label>
-              <select [(ngModel)]="form.accountId" title="حساب التحكم" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
-                <option [ngValue]="null">-- اختر حساب الشركاء --</option>
-                @for (a of partnerAccounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
-                }
-              </select>
-            </div>
-          }
-          @if (accountCurrencies().length > 0) {
-            <div class="form-group">
-              <label>العملات <span class="required">*</span></label>
-              <div class="currency-chips">
-                @for (curr of accountCurrencies(); track curr.currencyId) {
-                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)" [title]="curr.nameAr || curr.currencyName">
-                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-            <div class="form-group">
-              <label>العملة الافتراضية</label>
-              <div class="currency-chips">
-                @for (curr of accountCurrencies(); track curr.currencyId) {
-                  @if (selectedCurrencyIds().includes(curr.currencyId)) {
-                    <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
-                      <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                      @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
-                    </button>
-                  }
-                }
-              </div>
-            </div>
-          }
-          <div class="form-row">
-            <div class="form-group"><label>الاسم الكامل</label><input [(ngModel)]="form.fullName" title="الاسم الكامل" placeholder="اسم الشريك" /></div>
-            <div class="form-group"><label>نسبة الحصة (%)</label><input type="number" [(ngModel)]="form.sharePercentage" title="نسبة الحصة" placeholder="نسبة الحصة" min="0" max="100" step="0.01" /></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>الدور / المنصب</label><input [(ngModel)]="form.role" title="الدور / المنصب" placeholder="مثال: شريك مؤسس" /></div>
-            <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" title="الهاتف" placeholder="رقم الهاتف" /></div>
-          </div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" title="ملاحظات" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()"><span class="material-icons-round">{{ editingId() ? 'save' : 'add' }}</span> {{ editingId() ? 'حفظ التعديلات' : 'إضافة الشريك' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
 
   <!-- تأكيد الحذف -->
   @if (showDeleteConfirm()) {

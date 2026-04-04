@@ -1,16 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface ItemForm { name: string; itemNumber: string; description: string; itemTypeId: number | null; unit: string; minStock: number; isActive: boolean; }
+interface ItemTypeForm { name: string; subTypeKey: string; description: string; icon: string; color: string; }
 
 @Component({
   selector: 'app-inventory-item-types',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './inventory-item-types.html',
   styleUrl: './inventory-item-types.scss',
 })
@@ -29,12 +29,12 @@ export class InventoryItemTypesComponent extends BasePageComponent {
   // ===== Items Form =====
   showItemForm = signal(false);
   editingItemId = signal<number | null>(null);
-  itemForm: any = { name: '', itemNumber: '', description: '', itemTypeId: null, unit: '', minStock: 0, isActive: true };
+  itemForm: ItemForm = { name: '', itemNumber: '', description: '', itemTypeId: null, unit: '', minStock: 0, isActive: true };
 
   // ===== Types Form =====
   showTypeForm = signal(false);
   editingTypeId = signal<number | null>(null);
-  typeForm: any = { name: '', subTypeKey: '', description: '', icon: 'inventory_2', color: '#6366f1' };
+  typeForm: ItemTypeForm = { name: '', subTypeKey: '', description: '', icon: 'inventory_2', color: '#6366f1' };
 
   readonly availableIcons = [
     'inventory_2', 'category', 'widgets', 'view_in_ar', 'local_offer',

@@ -1,17 +1,15 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
+
+interface SalaryForm { employeeId: number | null; month: number; year: number; baseSalary: number; advance: number; deductions: number; currencyId: number; isPaid: boolean; paidDate?: string; attendanceDays: number | null; notes: string; }
 
 @Component({
   selector: 'app-salaries',
   standalone: true,
-  imports: [CommonModule, FormsModule, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS],
   templateUrl: './salaries.html',
   styleUrl: './salaries.scss',
 })
@@ -30,9 +28,9 @@ export class SalariesComponent extends BasePageComponent {
   filterYear = signal<number | null>(null);
   months = [1,2,3,4,5,6,7,8,9,10,11,12];
   years: number[] = [];
-  form: any = {
-    employeeId: null as number | null, month: new Date().getMonth() + 1, year: new Date().getFullYear(),
-    baseSalary: 0, advance: 0, deductions: 0, currencyId: 1, isPaid: false, attendanceDays: null as number | null, notes: '',
+  form: SalaryForm = {
+    employeeId: null, month: new Date().getMonth() + 1, year: new Date().getFullYear(),
+    baseSalary: 0, advance: 0, deductions: 0, currencyId: 1, isPaid: false, attendanceDays: null, notes: '',
   };
 
   netSalary = computed(() => {

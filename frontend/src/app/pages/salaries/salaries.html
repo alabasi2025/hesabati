@@ -37,7 +37,41 @@
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
+  } @else if (showForm()) {
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon blue"><span class="material-icons-round">payments</span></div>
+          <h3>{{ editingId() ? 'تعديل سجل راتب' : 'إضافة سجل راتب' }}</h3>
+          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+        </div>
+        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="form-meta cols-3">
+        <div class="form-group full-width">
+          <label>الموظف <span class="required">*</span></label>
+          <select [(ngModel)]="form.employeeId" required>
+            <option [ngValue]="null">-- اختر الموظف --</option>
+            @for (emp of employees(); track emp.id) { <option [ngValue]="emp.id">{{ emp.fullName }}</option> }
+          </select>
+        </div>
+        <div class="form-group"><label>الشهر</label><select [(ngModel)]="form.month">@for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }</select></div>
+        <div class="form-group"><label>السنة</label><select [(ngModel)]="form.year">@for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }</select></div>
+        <div class="form-group"><label>العملة</label><select [(ngModel)]="form.currencyId">@for (c of currencies(); track c.id) { <option [ngValue]="c.id">{{ c.code }}</option> }</select></div>
+        <div class="form-group"><label>الراتب الأساسي</label><input type="number" [(ngModel)]="form.baseSalary" min="0" /></div>
+        <div class="form-group"><label>السلفة</label><input type="number" [(ngModel)]="form.advance" min="0" /></div>
+        <div class="form-group"><label>الخصومات</label><input type="number" [(ngModel)]="form.deductions" min="0" /></div>
+        <div class="form-group"><label>صافي الراتب</label><div class="net-row"><strong>{{ netSalary() | number:'1.0-0' }}</strong></div></div>
+        <div class="form-group"><label>أيام الحضور</label><input type="number" [(ngModel)]="form.attendanceDays" min="0" placeholder="اختياري" /></div>
+        <div class="form-group checkbox-group"><label><input type="checkbox" [(ngModel)]="form.isPaid" /> تم الدفع</label></div>
+        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة السجل' }}</button>
+      </div>
+    </div>
   } @else if (!items().length) {
     <div class="empty-state">
       <span class="material-icons-round">payments</span>
@@ -73,51 +107,5 @@
     </table>
   }
 
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon blue"><span class="material-icons-round">payments</span></div>
-            <div>
-              <h2>{{ editingId() ? 'تعديل سجل راتب' : 'إضافة سجل راتب' }}</h2>
-              <p>صافي الراتب = الأساس - السلفة - الخصومات</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group full">
-              <label>الموظف <span class="required">*</span></label>
-              <select [(ngModel)]="form.employeeId" required>
-                <option [ngValue]="null">-- اختر الموظف --</option>
-                @for (emp of employees(); track emp.id) { <option [ngValue]="emp.id">{{ emp.fullName }}</option> }
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>الشهر</label><select [(ngModel)]="form.month">@for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }</select></div>
-            <div class="form-group"><label>السنة</label><select [(ngModel)]="form.year">@for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }</select></div>
-            <div class="form-group"><label>العملة</label><select [(ngModel)]="form.currencyId">@for (c of currencies(); track c.id) { <option [ngValue]="c.id">{{ c.code }}</option> }</select></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>الراتب الأساسي</label><input type="number" [(ngModel)]="form.baseSalary" min="0" /></div>
-            <div class="form-group"><label>السلفة</label><input type="number" [(ngModel)]="form.advance" min="0" /></div>
-            <div class="form-group"><label>الخصومات</label><input type="number" [(ngModel)]="form.deductions" min="0" /></div>
-          </div>
-          <div class="form-group net-row">صافي الراتب: <strong>{{ netSalary() | number:'1.0-0' }}</strong></div>
-          <div class="form-row">
-            <div class="form-group"><label>أيام الحضور</label><input type="number" [(ngModel)]="form.attendanceDays" min="0" placeholder="اختياري" /></div>
-            <div class="form-group checkbox-group"><label><input type="checkbox" [(ngModel)]="form.isPaid" /> تم الدفع</label></div>
-          </div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة السجل' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
+
 </div>

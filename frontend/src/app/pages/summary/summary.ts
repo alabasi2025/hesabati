@@ -1,10 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService, Business } from '../../services/api.service';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PAGE_IMPORTS } from '../../shared/page-imports';
 
 interface BusinessSummary {
   id: number;
@@ -24,7 +21,7 @@ interface BusinessSummary {
 @Component({
   selector: 'app-summary',
   standalone: true,
-  imports: [CommonModule, RouterLink, LoadingStateComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [...PAGE_IMPORTS, RouterLink],
   templateUrl: './summary.html',
   styleUrl: './summary.scss',
 })

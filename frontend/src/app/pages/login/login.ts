@@ -2,12 +2,12 @@ import { Component, signal, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { ThreeBackgroundComponent } from '../../components/three-background/three-background';
+import { CssBackgroundComponent } from '../../shared/components/css-background/css-background.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, RouterLink, ThreeBackgroundComponent],
+  imports: [FormsModule, RouterLink, CssBackgroundComponent],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })

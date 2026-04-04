@@ -21,6 +21,43 @@
 
   @if (loading()) {
     <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+  } @else if (showForm()) {
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon red"><span class="material-icons-round">pending_actions</span></div>
+          <h3>{{ editingId() ? 'تعديل حساب معلق' : 'إضافة حساب معلق' }}</h3>
+          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+        </div>
+        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group"><label>الشخص / الجهة</label><input [(ngModel)]="form.personOrEntity" placeholder="اسم الشخص أو الجهة" /></div>
+        <div class="form-group"><label>المبلغ التقديري</label><input type="number" [(ngModel)]="form.estimatedAmount" /></div>
+        <div class="form-group full-width"><label>الوصف</label><textarea [(ngModel)]="form.description" rows="2" placeholder="وصف الحساب المعلق..."></textarea></div>
+        <div class="form-group">
+          <label>الحالة</label>
+          <select [(ngModel)]="form.status">
+            <option value="pending">معلق</option><option value="in_progress">قيد المعالجة</option>
+            <option value="resolved">تم الحل</option><option value="written_off">مشطوب</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>الحساب المرتبط</label>
+          <select [(ngModel)]="form.accountId">
+            <option [ngValue]="null">-- اختر حساب معلق --</option>
+            @for (acc of pendingFilteredAccounts(); track acc.id) {
+              <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+            }
+          </select>
+        </div>
+        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
+      </div>
+    </div>
   } @else if (!filteredItems().length) {
     <div class="empty-state"><span class="material-icons-round">task_alt</span><p>لا يوجد حسابات معلقة</p></div>
   } @else {
@@ -51,45 +88,5 @@
     </table>
   }
 
-  @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon red"><span class="material-icons-round">pending_actions</span></div><div><h2>{{ editingId() ? 'تعديل حساب معلق' : 'إضافة حساب معلق' }}</h2><p>تتبع الحسابات والمبالغ المعلقة</p></div></div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group"><label>الشخص / الجهة</label><input [(ngModel)]="form.personOrEntity" placeholder="اسم الشخص أو الجهة" /></div>
-            <div class="form-group"><label>المبلغ التقديري</label><input type="number" [(ngModel)]="form.estimatedAmount" /></div>
-          </div>
-          <div class="form-group"><label>الوصف</label><textarea [(ngModel)]="form.description" rows="2" placeholder="وصف الحساب المعلق..."></textarea></div>
-          <div class="form-row">
-            <div class="form-group"><label>الحالة</label>
-              <select [(ngModel)]="form.status">
-                <option value="pending">معلق</option>
-                <option value="in_progress">قيد المعالجة</option>
-                <option value="resolved">تم الحل</option>
-                <option value="written_off">مشطوب</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>الحساب المرتبط</label>
-            <select [(ngModel)]="form.accountId">
-              <option [ngValue]="null">-- اختر حساب معلق --</option>
-              @for (acc of pendingFilteredAccounts(); track acc.id) {
-                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
-              }
-            </select>
-          </div>
-          <div class="form-group"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        </div>
-      </div>
-    </div>
-  }
+
 </div>
