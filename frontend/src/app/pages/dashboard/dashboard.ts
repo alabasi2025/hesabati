@@ -1,19 +1,25 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { CssBackgroundComponent } from '../../shared/components/css-background/css-background.component';
-import { ThreeStatCardComponent } from '../../components/three-stat-card/three-stat-card';
+import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { BasePageComponent } from '../../shared/base-page.component';
 
-export interface ChartDataItem { label: string; value: number; color?: string; }
-export interface ChartClickEvent { item: ChartDataItem; index: number; }
+export interface ChartDataItem {
+  label: string;
+  value: number;
+  color?: string;
+}
+export interface ChartClickEvent {
+  item: ChartDataItem;
+  index: number;
+}
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CssBackgroundComponent, ThreeStatCardComponent, NgApexchartsModule],
+  imports: [CssBackgroundComponent, StatCardComponent, NgApexchartsModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -81,9 +87,7 @@ export class DashboardComponent extends BasePageComponent {
       if (bizData?.partners) this.partners.set(bizData.partners);
 
       const emps = getValue(results[1], []);
-      this.totalSalaries.set(
-        emps.reduce((sum: number, e: any) => sum + Number(e.salary || 0), 0)
-      );
+      this.totalSalaries.set(emps.reduce((sum: number, e: any) => sum + Number(e.salary || 0), 0));
 
       this.buildChartData();
       this.buildWaterfallData();
@@ -97,9 +101,11 @@ export class DashboardComponent extends BasePageComponent {
         this.totalPayments.set(stats.totalPayments || 0);
         this.operationsCount.set(stats.operationsCount || 0);
         this.netBalance.set(stats.netBalance || 0);
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        /* ignore */
+      }
 
-      const failedCount = results.filter(r => r.status === 'rejected').length;
+      const failedCount = results.filter((r) => r.status === 'rejected').length;
       if (failedCount > 0 && failedCount < results.length) {
         this.loadError.set(`تم تحميل البيانات جزئياً (${failedCount} طلب فشل)`);
       } else if (failedCount === results.length) {
@@ -123,9 +129,13 @@ export class DashboardComponent extends BasePageComponent {
 
   getAccountTypeLabel(type: string): string {
     const map: Record<string, string> = {
-      e_wallet: 'محفظة إلكترونية', bank: 'بنك', exchange: 'صراف',
+      e_wallet: 'محفظة إلكترونية',
+      bank: 'بنك',
+      exchange: 'صراف',
       custody: 'عهدة',
-      warehouse: 'مخزن', fund: 'صندوق', billing: 'فوترة',
+      warehouse: 'مخزن',
+      fund: 'صندوق',
+      billing: 'فوترة',
       accounting: 'أخرى',
       budget: 'ميزانية',
       supplier: 'مورد',
@@ -139,15 +149,21 @@ export class DashboardComponent extends BasePageComponent {
 
   getFundTypeLabel(type: string): string {
     const map: Record<string, string> = {
-      collection: 'تحصيل', salary_advance: 'سلف', custody: 'عهدة',
-      safe: 'خزنة', expense: 'خرج', deposit: 'توريدات',
+      collection: 'تحصيل',
+      salary_advance: 'سلف',
+      custody: 'عهدة',
+      safe: 'خزنة',
+      expense: 'خرج',
+      deposit: 'توريدات',
     };
     return map[type] || type;
   }
 
   getWarehouseTypeLabel(type: string): string {
     const map: Record<string, string> = {
-      main: 'رئيسي', station: 'محطة', sub: 'فرعي',
+      main: 'رئيسي',
+      station: 'محطة',
+      sub: 'فرعي',
     };
     return map[type] || type;
   }
@@ -159,12 +175,12 @@ export class DashboardComponent extends BasePageComponent {
   /** معالجة النقر على عنصر في الرسم البياني */
   onChartClick(event: ChartClickEvent) {
     const labelToRoute: Record<string, string> = {
-      'محطات': 'stations',
-      'موظفون': 'employees',
-      'حسابات': 'accounts',
-      'صناديق': 'funds',
-      'موردون': 'suppliers',
-      'مخازن': 'warehouse',
+      محطات: 'stations',
+      موظفون: 'employees',
+      حسابات: 'accounts',
+      صناديق: 'funds',
+      موردون: 'suppliers',
+      مخازن: 'warehouse',
     };
     const route = labelToRoute[event.item.label];
     if (route) this.navigate(route);
@@ -172,7 +188,7 @@ export class DashboardComponent extends BasePageComponent {
 
   /** تبديل وضع العرض التقديمي */
   togglePresentation() {
-    this.presentationMode.update(v => !v);
+    this.presentationMode.update((v) => !v);
   }
 
   private buildChartData(): void {
@@ -232,8 +248,12 @@ export class DashboardComponent extends BasePageComponent {
 
   /** بناء بيانات Gauge - نسبة الاكتمال */
   private buildGaugeData(): void {
-    const totalAssets = this.stations().length + this.employees().length +
-      this.accounts().length + this.funds().length + this.suppliers().length +
+    const totalAssets =
+      this.stations().length +
+      this.employees().length +
+      this.accounts().length +
+      this.funds().length +
+      this.suppliers().length +
       this.warehouses().length;
     this.gaugeValue.set(totalAssets);
     this.gaugeMax.set(Math.max(totalAssets * 1.5, 20));

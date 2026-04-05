@@ -1,39 +1,82 @@
 <div class="page-content">
   <div class="page-header">
     <h2><span class="material-icons-round">groups</span> الموظفين والرواتب</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">person_add</span> إضافة موظف</button>
+    <button class="add-btn" (click)="openAdd()">
+      <span class="material-icons-round">person_add</span> إضافة موظف
+    </button>
   </div>
 
   <div class="summary-row">
-    <div class="summary-card blue"><span class="material-icons-round">groups</span><div><span class="num">{{ filteredEmployees().length }}</span><span class="lbl">موظف</span></div></div>
-    <div class="summary-card green"><span class="material-icons-round">payments</span><div><span class="num">{{ totalSalaries() | number:'1.0-0' }}</span><span class="lbl">إجمالي الرواتب (ر.ي)</span></div></div>
+    <div class="summary-card blue">
+      <span class="material-icons-round">groups</span>
+      <div>
+        <span class="num">{{ filteredEmployees().length }}</span
+        ><span class="lbl">موظف</span>
+      </div>
+    </div>
+    <div class="summary-card green">
+      <span class="material-icons-round">payments</span>
+      <div>
+        <span class="num">{{ totalSalaries() | number: '1.0-0' }}</span
+        ><span class="lbl">إجمالي الرواتب (ر.ي)</span>
+      </div>
+    </div>
   </div>
 
   <div class="filter-tabs">
-    <button class="filter-tab" [class.active]="filterStation() === 'all'" (click)="filterStation.set('all')">الكل</button>
-    <button class="filter-tab" [class.active]="filterStation() === 'admin'" (click)="filterStation.set('admin')">الإدارة</button>
+    <button
+      class="filter-tab"
+      [class.active]="filterStation() === 'all'"
+      (click)="filterStation.set('all')"
+    >
+      الكل
+    </button>
+    <button
+      class="filter-tab"
+      [class.active]="filterStation() === 'admin'"
+      (click)="filterStation.set('admin')"
+    >
+      الإدارة
+    </button>
     @for (s of stations(); track s.id) {
-      <button class="filter-tab" [class.active]="filterStation() === '' + s.id" (click)="filterStation.set('' + s.id)">{{ s.name }}</button>
+      <button
+        class="filter-tab"
+        [class.active]="filterStation() === '' + s.id"
+        (click)="filterStation.set('' + s.id)"
+      >
+        {{ s.name }}
+      </button>
     }
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <div class="loading-state">
+      <span class="material-icons-round spin">sync</span>
+      <p>جاري التحميل...</p>
+    </div>
   } @else if (showForm()) {
     <div class="page-form-container">
       <div class="form-header">
         <div class="form-header-title">
           <div class="page-icon green"><span class="material-icons-round">person</span></div>
           <h3>{{ editingId() ? 'تعديل موظف' : 'إضافة موظف جديد' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+          @if (editingId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="close-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
       <div class="form-meta">
         @if (!editingId()) {
           <div class="form-group full-width">
             <label>حساب التحكم <span class="required">*</span></label>
-            <select [(ngModel)]="form.accountId" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
+            <select
+              [(ngModel)]="form.accountId"
+              [class.error]="!form.accountId"
+              (ngModelChange)="onAccountChange($event)"
+            >
               <option [ngValue]="null">-- اختر حساب الموظفين --</option>
               @for (a of employeeAccounts(); track a.id) {
                 <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
@@ -46,7 +89,12 @@
             <label>عملة الراتب <span class="required">*</span></label>
             <div class="currency-chips">
               @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button type="button" class="currency-chip" [class.selected]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                <button
+                  type="button"
+                  class="currency-chip"
+                  [class.selected]="defaultCurrencyId() === curr.currencyId"
+                  (click)="setDefaultCurrency(curr.currencyId)"
+                >
                   <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
                   <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
                 </button>
@@ -54,66 +102,120 @@
             </div>
           </div>
         }
-        <div class="form-group"><label>الاسم الكامل</label><input [(ngModel)]="form.fullName" placeholder="الاسم الكامل" /></div>
+        <div class="form-group">
+          <label>الاسم الكامل</label
+          ><input [(ngModel)]="form.fullName" placeholder="الاسم الكامل" />
+        </div>
         <div class="form-group">
           <label>المسمى الوظيفي</label>
           <select [(ngModel)]="form.jobTitleId">
             <option [ngValue]="null">بدون مسمى</option>
-            @for (j of jobTitles(); track j.id) { <option [ngValue]="j.id">{{ j.name }}</option> }
+            @for (j of jobTitles(); track j.id) {
+              <option [ngValue]="j.id">{{ j.name }}</option>
+            }
           </select>
         </div>
         <div class="form-group">
           <label>المحطة</label>
           <select [(ngModel)]="form.stationId">
             <option [ngValue]="null">الإدارة</option>
-            @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            @for (s of stations(); track s.id) {
+              <option [ngValue]="s.id">{{ s.name }}</option>
+            }
           </select>
         </div>
         <div class="form-group">
           <label>القسم</label>
           <select [(ngModel)]="form.departmentId">
             <option [ngValue]="null">بدون قسم</option>
-            @for (d of departments(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+            @for (d of departments(); track d.id) {
+              <option [ngValue]="d.id">{{ d.name }}</option>
+            }
           </select>
         </div>
-        <div class="form-group"><label>الراتب</label><input type="number" [(ngModel)]="form.salary" placeholder="الراتب" /></div>
-        <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="الهاتف" /></div>
+        <div class="form-group">
+          <label>الراتب</label
+          ><input type="number" [(ngModel)]="form.salary" placeholder="الراتب" />
+        </div>
+        <div class="form-group">
+          <label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="الهاتف" />
+        </div>
         <div class="form-group">
           <label>الحالة</label>
-          <select [(ngModel)]="form.status"><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="suspended">موقوف</option></select>
+          <select [(ngModel)]="form.status">
+            <option value="active">نشط</option>
+            <option value="inactive">غير نشط</option>
+            <option value="suspended">موقوف</option>
+          </select>
         </div>
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات"></textarea></div>
+        <div class="form-group full-width">
+          <label>ملاحظات</label
+          ><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات"></textarea>
+        </div>
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
+        <button class="btn-save" (click)="save()">
+          {{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}
+        </button>
       </div>
     </div>
   } @else if (!filteredEmployees().length) {
-    <div class="empty-state"><span class="material-icons-round">person_off</span><p>لا يوجد موظفين</p></div>
+    <div class="empty-state">
+      <span class="material-icons-round">person_off</span>
+      <p>لا يوجد موظفين</p>
+    </div>
   } @else {
     <table class="data-table">
-      <thead><tr><th>#</th><th>الاسم</th><th>الكود</th><th>التسلسل</th><th>المسمى الوظيفي</th><th>المحطة</th><th>الراتب</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الاسم</th>
+          <th>الكود</th>
+          <th>التسلسل</th>
+          <th>المسمى الوظيفي</th>
+          <th>المحطة</th>
+          <th>الراتب</th>
+          <th>الحالة</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
       <tbody>
         @for (emp of filteredEmployees(); track emp.id; let i = $index) {
           <tr>
             <td>{{ i + 1 }}</td>
-            <td><div class="emp-cell"><div class="emp-avatar-sm"><span class="material-icons-round">person</span></div><span class="emp-name-cell">{{ emp.fullName }}</span></div></td>
-            <td><span class="code-badge">{{ emp.code || '-' }}</span></td>
+            <td>
+              <div class="emp-cell">
+                <div class="emp-avatar-sm"><span class="material-icons-round">person</span></div>
+                <span class="emp-name-cell">{{ emp.fullName }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="code-badge"
+                >{{ emp.accountLedgerCode ? emp.accountLedgerCode + ' | ' : ''
+                }}{{ emp.code || '-' }}</span
+              >
+            </td>
             <td>{{ emp.sequenceNumber || '-' }}</td>
             <td>{{ getJobTitleName(emp.jobTitleId) || emp.jobTitle || '-' }}</td>
             <td>{{ emp.stationName || 'الإدارة' }}</td>
-            <td class="salary-cell">{{ emp.salary | number:'1.0-0' }} ر.ي</td>
-            <td><span class="status-badge" [class]="getStatusClass(emp.status)">{{ getStatusLabel(emp.status) }}</span></td>
+            <td class="salary-cell">{{ emp.salary | number: '1.0-0' }} ر.ي</td>
             <td>
-              <button class="action-btn edit" (click)="openEdit(emp)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(emp.id)"><span class="material-icons-round">delete</span></button>
+              <span class="status-badge" [class]="getStatusClass(emp.status)">{{
+                getStatusLabel(emp.status)
+              }}</span>
+            </td>
+            <td>
+              <button class="action-btn edit" (click)="openEdit(emp)">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="action-btn delete" (click)="remove(emp.id)">
+                <span class="material-icons-round">delete</span>
+              </button>
             </td>
           </tr>
         }
       </tbody>
     </table>
   }
-
-
 </div>

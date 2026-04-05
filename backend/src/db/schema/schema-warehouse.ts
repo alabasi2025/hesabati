@@ -26,7 +26,7 @@ import {
   employees,
   employeeBillingAccounts,
 } from "./schema-business.ts";
-import { users } from "./schema-users.ts";
+import { users, currencies } from "./schema-users.ts";
 import { warehouses } from "./schema-finance.ts";
 
 export const operationCategories = pgTable(
@@ -85,12 +85,16 @@ export const operationTypes = pgTable(
     voucherType: varchar("voucher_type", { length: 30 }),
     paymentMethod: varchar("payment_method", { length: 30 }),
     sourceAccountId: integer("source_account_id").references(() => accounts.id),
-    sourceFundId: integer("source_fund_id").references(() => funds.id),
+    sourceFundId: integer("source_fund_id").references(() => funds.id, {
+      onDelete: "set null",
+    }),
     sourceWarehouseId: integer("source_warehouse_id").references(
       () => warehouses.id,
     ),
     mainAccountId: integer("main_account_id").references(() => accounts.id),
-    mainFundId: integer("main_fund_id").references(() => funds.id),
+    mainFundId: integer("main_fund_id").references(() => funds.id, {
+      onDelete: "set null",
+    }),
     templateTypeId: integer("template_type_id"),
     screens: text("screens").default("{}"),
     requiresAttachment: boolean("requires_attachment").notNull().default(false),
@@ -183,7 +187,7 @@ export const journalEntryLines = pgTable("journal_entry_lines", {
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
   // الحساب التحليلي (كيان مرتبط بالسطر)
-  entityType: varchar("entity_type", { length: 30 }),   // supplier | employee | partner | fund | custody | warehouse
+  entityType: varchar("entity_type", { length: 30 }), // supplier | employee | partner | fund | custody | warehouse
   entityId: integer("entity_id"),
   // دعم العملات الأجنبية
   currencyId: integer("currency_id").references(() => currencies.id),

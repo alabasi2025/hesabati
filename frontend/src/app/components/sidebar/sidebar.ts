@@ -109,6 +109,12 @@ const FALLBACK_MENU_DEF: FallbackSectionDef[] = [
         showFor: ['stations', 'single_station', 'personal'],
       },
       {
+        icon: 'account_tree',
+        label: 'الحسابات التحليلية',
+        path: 'analytical-accounts',
+        showFor: ['stations', 'single_station', 'personal'],
+      },
+      {
         icon: 'savings',
         label: 'الصناديق',
         path: 'funds',

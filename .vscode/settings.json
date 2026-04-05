@@ -62,5 +62,6 @@
     "**/backend/public/**"
   ],
   "fileLengthLint.maxLines": 2000,
-  "fileLengthLint.disabledLanguages": ["sql"]
+  "fileLengthLint.disabledLanguages": ["sql"],
+  "editor.linkedEditing": true
 }

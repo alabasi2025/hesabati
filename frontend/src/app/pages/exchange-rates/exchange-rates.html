@@ -1,5 +1,4 @@
 <div class="page-container">
-
   <!-- ===== Page Header ===== -->
   <div class="page-header">
     <div class="header-left">
@@ -32,8 +31,8 @@
     <div class="alert-banner alert-danger">
       <span class="material-icons-round">warning</span>
       <div>
-        <strong>⛔ تنبيه حرج:</strong> لا يوجد حساب فروقات العملة! لن تتمكن من تنفيذ أي عملية بعملة أجنبية.
-        يرجى إنشاء حساب وسيط باسم "فروقات عملة" من صفحة الحسابات.
+        <strong>⛔ تنبيه حرج:</strong> لا يوجد حساب فروقات العملة! لن تتمكن من تنفيذ أي عملية بعملة
+        أجنبية. يرجى إنشاء حساب وسيط باسم "فروقات عملة" من صفحة الحسابات.
       </div>
     </div>
   }
@@ -62,7 +61,11 @@
       </div>
     </div>
     <div class="stat-card-3d" [class]="exchangeDiffAccount.exists ? 'green' : 'red'">
-      <div class="sc-icon"><span class="material-icons-round">{{ exchangeDiffAccount.exists ? 'check_circle' : 'error' }}</span></div>
+      <div class="sc-icon">
+        <span class="material-icons-round">{{
+          exchangeDiffAccount.exists ? 'check_circle' : 'error'
+        }}</span>
+      </div>
       <div class="sc-body">
         <div class="sc-num">{{ exchangeDiffAccount.exists ? 'موجود' : 'مفقود' }}</div>
         <div class="sc-label">حساب فروقات العملة</div>
@@ -72,7 +75,11 @@
 
   <!-- ===== التبويبات ===== -->
   <div class="tabs-bar">
-    <button class="tab-btn" [class.active]="activeTab === 'currencies'" (click)="activeTab = 'currencies'">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'currencies'"
+      (click)="activeTab = 'currencies'"
+    >
       <span class="material-icons-round">paid</span>
       العملات
     </button>
@@ -80,11 +87,19 @@
       <span class="material-icons-round">currency_exchange</span>
       أسعار الصرف
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'converter'" (click)="activeTab = 'converter'">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'converter'"
+      (click)="activeTab = 'converter'"
+    >
       <span class="material-icons-round">swap_horiz</span>
       محول العملات
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'revaluation'" (click)="activeTab = 'revaluation'">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'revaluation'"
+      (click)="activeTab = 'revaluation'"
+    >
       <span class="material-icons-round">assessment</span>
       إعادة التقييم
     </button>
@@ -119,7 +134,9 @@
           <tbody>
             @for (c of activeCurrencies; track c.id) {
               <tr>
-                <td><span class="currency-code-badge">{{ c.code }}</span></td>
+                <td>
+                  <span class="currency-code-badge">{{ c.code }}</span>
+                </td>
                 <td>{{ c.nameAr }}</td>
                 <td>{{ c.symbol }}</td>
                 <td class="num-cell">{{ c.exchangeRate }}</td>
@@ -138,7 +155,11 @@
                       <span class="material-icons-round">edit</span>
                     </button>
                     @if (!c.isDefault) {
-                      <button class="icon-btn delete-btn" (click)="removeCurrency(c.id)" title="تعطيل">
+                      <button
+                        class="icon-btn delete-btn"
+                        (click)="removeCurrency(c.id)"
+                        title="تعطيل"
+                      >
                         <span class="material-icons-round">block</span>
                       </button>
                     }
@@ -160,13 +181,19 @@
             <tbody>
               @for (c of inactiveCurrencies; track c.id) {
                 <tr>
-                  <td><span class="currency-code-badge inactive">{{ c.code }}</span></td>
+                  <td>
+                    <span class="currency-code-badge inactive">{{ c.code }}</span>
+                  </td>
                   <td>{{ c.nameAr }}</td>
                   <td>{{ c.symbol }}</td>
                   <td class="num-cell">{{ c.exchangeRate }}</td>
                   <td colspan="2"><span class="status-badge badge-muted">معطّلة</span></td>
                   <td>
-                    <button class="icon-btn success-btn" (click)="reactivateCurrency(c.id)" title="إعادة تفعيل">
+                    <button
+                      class="icon-btn success-btn"
+                      (click)="reactivateCurrency(c.id)"
+                      title="إعادة تفعيل"
+                    >
                       <span class="material-icons-round">check_circle</span>
                     </button>
                   </td>
@@ -249,13 +276,21 @@
       <div class="converter-body">
         <div class="converter-field">
           <label class="form-label" for="convert-amount">المبلغ</label>
-          <input id="convert-amount" type="number" class="form-input" [(ngModel)]="convertAmount" placeholder="المبلغ">
+          <input
+            id="convert-amount"
+            type="number"
+            class="form-input"
+            [(ngModel)]="convertAmount"
+            placeholder="المبلغ"
+          />
         </div>
         <div class="converter-field">
           <label class="form-label" for="convert-from">من عملة</label>
           <select id="convert-from" class="form-select" [(ngModel)]="convertFrom" title="من عملة">
             <option value="">اختر...</option>
-            <option *ngFor="let c of activeCurrencies" [value]="c.id">{{c.nameAr || c.code}}</option>
+            @for (c of activeCurrencies; track c.id) {
+              <option [value]="c.id">{{ c.nameAr || c.code }}</option>
+            }
           </select>
         </div>
         <div class="converter-arrow">
@@ -265,7 +300,9 @@
           <label class="form-label" for="convert-to">إلى عملة</label>
           <select id="convert-to" class="form-select" [(ngModel)]="convertTo" title="إلى عملة">
             <option value="">اختر...</option>
-            <option *ngFor="let c of activeCurrencies" [value]="c.id">{{c.nameAr || c.code}}</option>
+            @for (c of activeCurrencies; track c.id) {
+              <option [value]="c.id">{{ c.nameAr || c.code }}</option>
+            }
           </select>
         </div>
         <div class="converter-action">
@@ -274,9 +311,11 @@
             تحويل
           </button>
         </div>
-        <div class="converter-result" *ngIf="convertResult !== null">
-          <span class="result-value">{{ convertResult | number:'1.2-4' }}</span>
-        </div>
+        @if (convertResult !== null) {
+          <div class="converter-result">
+            <span class="result-value">{{ convertResult | number: '1.2-4' }}</span>
+          </div>
+        }
       </div>
     </div>
   }
@@ -295,7 +334,7 @@
       <div class="reval-controls">
         <div class="form-group">
           <label class="form-label" for="reval-date">تاريخ التقييم</label>
-          <input id="reval-date" type="date" class="form-input" [(ngModel)]="revalDate">
+          <input id="reval-date" type="date" class="form-input" [(ngModel)]="revalDate" />
         </div>
         <button class="btn-3d btn-blue" (click)="loadRevalPreview()" [disabled]="revalLoading">
           <span class="material-icons-round">{{ revalLoading ? 'sync' : 'preview' }}</span>
@@ -321,21 +360,28 @@
               <span class="material-icons-round">trending_up</span>
               <div>
                 <span class="stat-label">أرباح صرف</span>
-                <span class="stat-value">{{ revalPreview.totalGain | number:'1.2-2' }}</span>
+                <span class="stat-value">{{ revalPreview.totalGain | number: '1.2-2' }}</span>
               </div>
             </div>
             <div class="reval-stat loss">
               <span class="material-icons-round">trending_down</span>
               <div>
                 <span class="stat-label">خسائر صرف</span>
-                <span class="stat-value">{{ revalPreview.totalLoss | number:'1.2-2' }}</span>
+                <span class="stat-value">{{ revalPreview.totalLoss | number: '1.2-2' }}</span>
               </div>
             </div>
-            <div class="reval-stat net" [class.positive]="revalPreview.netDifference >= 0" [class.negative]="revalPreview.netDifference < 0">
+            <div
+              class="reval-stat net"
+              [class.positive]="revalPreview.netDifference >= 0"
+              [class.negative]="revalPreview.netDifference < 0"
+            >
               <span class="material-icons-round">balance</span>
               <div>
                 <span class="stat-label">صافي الفرق</span>
-                <span class="stat-value">{{ revalPreview.netDifference | number:'1.2-2' }} {{ revalPreview.baseCurrencyCode }}</span>
+                <span class="stat-value"
+                  >{{ revalPreview.netDifference | number: '1.2-2' }}
+                  {{ revalPreview.baseCurrencyCode }}</span
+                >
               </div>
             </div>
           </div>
@@ -358,12 +404,18 @@
                   @if (line.difference !== 0) {
                     <tr>
                       <td>{{ line.accountName }}</td>
-                      <td><span class="currency-mini-badge">{{ line.currencyCode }}</span></td>
-                      <td class="num-cell">{{ line.balance | number:'1.2-2' }}</td>
-                      <td class="num-cell">{{ line.oldBaseValue | number:'1.2-2' }}</td>
-                      <td class="num-cell">{{ line.newBaseValue | number:'1.2-2' }}</td>
-                      <td class="num-cell" [class.gain]="line.difference > 0" [class.loss]="line.difference < 0">
-                        {{ line.difference | number:'1.2-2' }}
+                      <td>
+                        <span class="currency-mini-badge">{{ line.currencyCode }}</span>
+                      </td>
+                      <td class="num-cell">{{ line.balance | number: '1.2-2' }}</td>
+                      <td class="num-cell">{{ line.oldBaseValue | number: '1.2-2' }}</td>
+                      <td class="num-cell">{{ line.newBaseValue | number: '1.2-2' }}</td>
+                      <td
+                        class="num-cell"
+                        [class.gain]="line.difference > 0"
+                        [class.loss]="line.difference < 0"
+                      >
+                        {{ line.difference | number: '1.2-2' }}
                       </td>
                     </tr>
                   }
@@ -394,142 +446,201 @@
     </div>
   }
 
-  <!-- ===== نموذج العملة ===== -->
+  <!-- ===== نموذج العملة (Inline) ===== -->
   @if (showCurrencyForm) {
-    <div class="modal-overlay" (click)="showCurrencyForm = false">
-      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header blue-header">
-          <div class="modal-icon blue">
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon blue">
             <span class="material-icons-round">{{ currencyEditId ? 'edit' : 'add_circle' }}</span>
           </div>
-          <div>
-            <h2>{{ currencyEditId ? 'تعديل عملة' : 'عملة جديدة' }}</h2>
-            <p class="modal-subtitle">إدارة بيانات العملة وحدود سعر الصرف</p>
-          </div>
-          <button class="modal-close" (click)="showCurrencyForm = false" title="إغلاق">
-            <span class="material-icons-round">close</span>
-          </button>
+          <h3>{{ currencyEditId ? 'تعديل عملة' : 'عملة جديدة' }}</h3>
+          @if (currencyEditId) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <div class="modal-body">
-          <div class="form-step">
-            <div class="step-header"><div class="step-num">١</div><span>البيانات الأساسية</span></div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="cur-code">رمز العملة <span class="required">*</span></label>
-                <input id="cur-code" type="text" class="form-input" [(ngModel)]="currencyForm.code" placeholder="مثال: EUR" maxlength="5" [disabled]="!!currencyEditId">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cur-name">الاسم بالعربي <span class="required">*</span></label>
-                <input id="cur-name" type="text" class="form-input" [(ngModel)]="currencyForm.nameAr" placeholder="مثال: يورو">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cur-symbol">الرمز المختصر <span class="required">*</span></label>
-                <input id="cur-symbol" type="text" class="form-input" [(ngModel)]="currencyForm.symbol" placeholder="مثال: €" maxlength="5">
-              </div>
-            </div>
-          </div>
-          <div class="form-step">
-            <div class="step-header"><div class="step-num">٢</div><span>سعر الصرف والحدود</span></div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="cur-rate">سعر الصرف</label>
-                <input id="cur-rate" type="number" step="0.01" class="form-input" [(ngModel)]="currencyForm.exchangeRate" placeholder="1">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cur-min">الحد الأدنى (أرضية)</label>
-                <input id="cur-min" type="number" step="0.01" class="form-input" [(ngModel)]="currencyForm.minRate" placeholder="اختياري">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cur-max">الحد الأقصى (سقف)</label>
-                <input id="cur-max" type="number" step="0.01" class="form-input" [(ngModel)]="currencyForm.maxRate" placeholder="اختياري">
-              </div>
-            </div>
-          </div>
+        <button class="close-btn" (click)="showCurrencyForm = false" title="إغلاق">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta cols-3">
+        <div class="form-group">
+          <label class="form-label" for="cur-code"
+            >رمز العملة <span class="required">*</span></label
+          >
+          <input
+            id="cur-code"
+            type="text"
+            class="form-input"
+            [(ngModel)]="currencyForm.code"
+            placeholder="مثال: EUR"
+            maxlength="5"
+            [disabled]="!!currencyEditId"
+          />
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showCurrencyForm = false">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="saveCurrency()">
-            <span class="material-icons-round">{{ currencyEditId ? 'save' : 'add' }}</span>
-            {{ currencyEditId ? 'تحديث' : 'حفظ' }}
-          </button>
+        <div class="form-group">
+          <label class="form-label" for="cur-name"
+            >الاسم بالعربي <span class="required">*</span></label
+          >
+          <input
+            id="cur-name"
+            type="text"
+            class="form-input"
+            [(ngModel)]="currencyForm.nameAr"
+            placeholder="مثال: يورو"
+          />
         </div>
+        <div class="form-group">
+          <label class="form-label" for="cur-symbol"
+            >الرمز المختصر <span class="required">*</span></label
+          >
+          <input
+            id="cur-symbol"
+            type="text"
+            class="form-input"
+            [(ngModel)]="currencyForm.symbol"
+            placeholder="مثال: €"
+            maxlength="5"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cur-rate">سعر الصرف</label>
+          <input
+            id="cur-rate"
+            type="number"
+            step="0.01"
+            class="form-input"
+            [(ngModel)]="currencyForm.exchangeRate"
+            placeholder="1"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cur-min">الحد الأدنى (أرضية)</label>
+          <input
+            id="cur-min"
+            type="number"
+            step="0.01"
+            class="form-input"
+            [(ngModel)]="currencyForm.minRate"
+            placeholder="اختياري"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cur-max">الحد الأقصى (سقف)</label>
+          <input
+            id="cur-max"
+            type="number"
+            step="0.01"
+            class="form-input"
+            [(ngModel)]="currencyForm.maxRate"
+            placeholder="اختياري"
+          />
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showCurrencyForm = false">إلغاء</button>
+        <button class="btn-save" (click)="saveCurrency()">
+          <span class="material-icons-round">{{ currencyEditId ? 'save' : 'add' }}</span>
+          {{ currencyEditId ? 'تحديث' : 'حفظ' }}
+        </button>
       </div>
     </div>
   }
 
-  <!-- ===== نموذج سعر الصرف ===== -->
+  <!-- ===== نموذج سعر الصرف (Inline) ===== -->
   @if (showRateForm) {
-    <div class="modal-overlay" (click)="showRateForm = false">
-      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header blue-header">
-          <div class="modal-icon blue">
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon blue">
             <span class="material-icons-round">{{ rateEditId ? 'edit' : 'add_circle' }}</span>
           </div>
-          <div>
-            <h2>{{ rateEditId ? 'تعديل سعر الصرف' : 'سعر صرف جديد' }}</h2>
-            <p class="modal-subtitle">تحديد سعر الصرف بين عملتين</p>
-          </div>
-          <button class="modal-close" (click)="showRateForm = false" title="إغلاق">
-            <span class="material-icons-round">close</span>
-          </button>
+          <h3>{{ rateEditId ? 'تعديل سعر الصرف' : 'سعر صرف جديد' }}</h3>
+          @if (rateEditId) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <div class="modal-body">
-          <div class="form-step">
-            <div class="step-header"><div class="step-num">١</div><span>العملات</span></div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="rate-from">من عملة <span class="required">*</span></label>
-                <select id="rate-from" class="form-select" [(ngModel)]="rateForm.fromCurrencyId" title="من عملة">
-                  <option value="">اختر العملة...</option>
-                  <option *ngFor="let c of activeCurrencies" [value]="c.id">{{c.nameAr || c.code}} ({{c.code}})</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="rate-to">إلى عملة <span class="required">*</span></label>
-                <select id="rate-to" class="form-select" [(ngModel)]="rateForm.toCurrencyId" title="إلى عملة">
-                  <option value="">اختر العملة...</option>
-                  <option *ngFor="let c of activeCurrencies" [value]="c.id">{{c.nameAr || c.code}} ({{c.code}})</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="form-step">
-            <div class="step-header"><div class="step-num">٢</div><span>التفاصيل</span></div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="rate-value">سعر الصرف <span class="required">*</span></label>
-                <input id="rate-value" type="number" step="0.0001" class="form-input" [(ngModel)]="rateForm.rate" placeholder="0.0037">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="rate-date">تاريخ السريان</label>
-                <input id="rate-date" type="date" class="form-input" [(ngModel)]="rateForm.effectiveDate">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="rate-source">المصدر</label>
-                <select id="rate-source" class="form-select" [(ngModel)]="rateForm.source" title="المصدر">
-                  <option value="manual">يدوي</option>
-                  <option value="market">سوق</option>
-                  <option value="bank">بنك</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="rate-notes">ملاحظات</label>
-                <input id="rate-notes" type="text" class="form-input" [(ngModel)]="rateForm.notes" placeholder="ملاحظات اختيارية">
-              </div>
-            </div>
-          </div>
+        <button class="close-btn" (click)="showRateForm = false" title="إغلاق">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group">
+          <label class="form-label" for="rate-from">من عملة <span class="required">*</span></label>
+          <select
+            id="rate-from"
+            class="form-select"
+            [(ngModel)]="rateForm.fromCurrencyId"
+            title="من عملة"
+          >
+            <option value="">اختر العملة...</option>
+            @for (c of activeCurrencies; track c.id) {
+              <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.code }})</option>
+            }
+          </select>
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showRateForm = false">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="saveRate()">
-            <span class="material-icons-round">{{ rateEditId ? 'save' : 'add' }}</span>
-            {{ rateEditId ? 'تحديث' : 'حفظ' }}
-          </button>
+        <div class="form-group">
+          <label class="form-label" for="rate-to">إلى عملة <span class="required">*</span></label>
+          <select
+            id="rate-to"
+            class="form-select"
+            [(ngModel)]="rateForm.toCurrencyId"
+            title="إلى عملة"
+          >
+            <option value="">اختر العملة...</option>
+            @for (c of activeCurrencies; track c.id) {
+              <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.code }})</option>
+            }
+          </select>
         </div>
+        <div class="form-group">
+          <label class="form-label" for="rate-value"
+            >سعر الصرف <span class="required">*</span></label
+          >
+          <input
+            id="rate-value"
+            type="number"
+            step="0.0001"
+            class="form-input"
+            [(ngModel)]="rateForm.rate"
+            placeholder="0.0037"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="rate-date">تاريخ السريان</label>
+          <input
+            id="rate-date"
+            type="date"
+            class="form-input"
+            [(ngModel)]="rateForm.effectiveDate"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="rate-source">المصدر</label>
+          <select id="rate-source" class="form-select" [(ngModel)]="rateForm.source" title="المصدر">
+            <option value="manual">يدوي</option>
+            <option value="market">سوق</option>
+            <option value="bank">بنك</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="rate-notes">ملاحظات</label>
+          <input
+            id="rate-notes"
+            type="text"
+            class="form-input"
+            [(ngModel)]="rateForm.notes"
+            placeholder="ملاحظات اختيارية"
+          />
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showRateForm = false">إلغاء</button>
+        <button class="btn-save" (click)="saveRate()">
+          <span class="material-icons-round">{{ rateEditId ? 'save' : 'add' }}</span>
+          {{ rateEditId ? 'تحديث' : 'حفظ' }}
+        </button>
       </div>
     </div>
   }
-
 </div>

@@ -4,70 +4,274 @@ import { authGuard, loginGuard } from './guards/auth.guard';
 export const routes: Routes = [
   {
     path: 'login',
-    loadComponent: () => import('./pages/login/login').then(m => m.LoginComponent),
+    loadComponent: () => import('./pages/login/login').then((m) => m.LoginComponent),
     canActivate: [loginGuard],
   },
   {
     path: 'register',
-    loadComponent: () => import('./pages/register/register').then(m => m.RegisterComponent),
+    loadComponent: () => import('./pages/register/register').then((m) => m.RegisterComponent),
     canActivate: [loginGuard],
   },
   {
     path: 'businesses',
-    loadComponent: () => import('./pages/business-select/business-select').then(m => m.BusinessSelectComponent),
+    loadComponent: () =>
+      import('./pages/business-select/business-select').then((m) => m.BusinessSelectComponent),
     canActivate: [authGuard],
   },
   {
     path: 'biz/:bizId',
-    loadComponent: () => import('./pages/business-layout/business-layout').then(m => m.BusinessLayoutComponent),
+    loadComponent: () =>
+      import('./pages/business-layout/business-layout').then((m) => m.BusinessLayoutComponent),
     canActivate: [authGuard],
     children: [
-      { path: '', loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.DashboardComponent) },
-      { path: 'stations', loadComponent: () => import('./pages/stations/stations').then(m => m.StationsComponent) },
-      { path: 'accounts', loadComponent: () => import('./pages/accounts/accounts').then(m => m.AccountsComponent) },
-      { path: 'account-sub-natures', loadComponent: () => import('./pages/account-sub-natures/account-sub-natures').then(m => m.AccountSubNaturesComponent) },
-      { path: 'employees', loadComponent: () => import('./pages/employees/employees').then(m => m.EmployeesComponent) },
-      { path: 'funds', loadComponent: () => import('./pages/funds/funds').then(m => m.FundsComponent) },
-      { path: 'vouchers', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
-      { path: 'register-operation', loadComponent: () => import('./pages/register-operation/register-operation').then(m => m.RegisterOperationComponent) },
-      { path: 'vouchers/receipt', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
-      { path: 'vouchers/payment', loadComponent: () => import('./pages/vouchers/vouchers').then(m => m.VouchersComponent) },
-      { path: 'journal', loadComponent: () => import('./pages/journal/journal').then(m => m.JournalComponent) },
-      { path: 'operation-types', loadComponent: () => import('./pages/operation-types/operation-types').then(m => m.OperationTypesComponent) },
-      { path: 'operation-categories', loadComponent: () => import('./pages/operation-categories/operation-categories').then(m => m.OperationCategoriesComponent) },
-      { path: 'collections', loadComponent: () => import('./pages/collections/collections').then(m => m.CollectionsComponent) },
-      { path: 'billing-systems', loadComponent: () => import('./pages/billing-systems/billing-systems').then(m => m.BillingSystemsComponent) },
-      { path: 'sidebar-settings', loadComponent: () => import('./pages/sidebar-settings/sidebar-settings').then(m => m.SidebarSettingsComponent) },
-      { path: 'summary', loadComponent: () => import('./pages/summary/summary').then(m => m.SummaryComponent) },
-      { path: 'reports', loadComponent: () => import('./pages/reports/reports').then(m => m.ReportsComponent) },
-      { path: 'banks', loadComponent: () => import('./pages/banks/banks').then(m => m.BanksComponent) },
-      { path: 'exchangers', loadComponent: () => import('./pages/exchanges/exchanges').then(m => m.ExchangesComponent) },
-      { path: 'wallets', loadComponent: () => import('./pages/wallets/wallets').then(m => m.WalletsComponent) },
-      { path: 'partners', loadComponent: () => import('./pages/partners/partners').then(m => m.PartnersComponent) },
-      { path: 'warehouse', loadComponent: () => import('./pages/warehouse/warehouse').then(m => m.WarehouseComponent) },
-      { path: 'suppliers', loadComponent: () => import('./pages/suppliers/suppliers').then(m => m.SuppliersComponent) },
-      { path: 'purchase-invoices', loadComponent: () => import('./pages/purchase-invoices/purchase-invoices').then(m => m.PurchaseInvoicesComponent) },
-      { path: 'intermediary-accounts', loadComponent: () => import('./pages/intermediary-accounts/intermediary-accounts').then(m => m.IntermediaryAccountsComponent) },
-      { path: 'settlements', loadComponent: () => import('./pages/settlements/settlements').then(m => m.SettlementsComponent) },
-      { path: 'pending', loadComponent: () => import('./pages/pending-accounts/pending-accounts').then(m => m.PendingAccountsComponent) },
-      { path: 'custom-screens', loadComponent: () => import('./pages/custom-screens/custom-screens').then(m => m.CustomScreensComponent) },
-      { path: 'ui-builder', loadComponent: () => import('./pages/ui-builder/ui-builder').then(m => m.UiBuilderComponent) },
-      { path: 'exchange-rates', loadComponent: () => import('./pages/exchange-rates/exchange-rates').then(m => m.ExchangeRatesComponent) },
-      { path: 'fiscal-periods', loadComponent: () => import('./pages/fiscal-periods/fiscal-periods').then(m => m.FiscalPeriodsComponent) },
-      { path: 'roles', loadComponent: () => import('./pages/roles/roles').then(m => m.RolesComponent) },
-      { path: 'reports-advanced', loadComponent: () => import('./pages/reports-advanced/reports-advanced').then(m => m.ReportsAdvancedComponent) },
-      { path: 'journal-categories', loadComponent: () => import('./pages/journal-categories/journal-categories').then(m => m.JournalCategoriesComponent) },
-      { path: 'warehouse-operations', loadComponent: () => import('./pages/warehouse-operations/warehouse-operations').then(m => m.WarehouseOperationsComponent) },
-      { path: 'expense-categories', loadComponent: () => import('./pages/expense-categories/expense-categories').then(m => m.ExpenseCategoriesComponent) },
-      { path: 'expense-budget', loadComponent: () => import('./pages/expense-budget/expense-budget').then(m => m.ExpenseBudgetComponent) },
-      { path: 'salaries', loadComponent: () => import('./pages/salaries/salaries').then(m => m.SalariesComponent) },
-      { path: 'inventory-item-types', loadComponent: () => import('./pages/inventory-item-types/inventory-item-types').then(m => m.InventoryItemTypesComponent) },
-      { path: 'reconciliations', loadComponent: () => import('./pages/reconciliations/reconciliations').then(m => m.ReconciliationsComponent) },
-      { path: 'custody', loadComponent: () => import('./pages/custody/custody').then(m => m.CustodyComponent) },
-      { path: 'supplier-types', loadComponent: () => import('./pages/supplier-types/supplier-types').then(m => m.SupplierTypesComponent) },
-      { path: 'departments', loadComponent: () => import('./pages/departments/departments').then(m => m.DepartmentsComponent) },
-      { path: 'job-titles', loadComponent: () => import('./pages/job-titles/job-titles').then(m => m.JobTitlesComponent) },
-      { path: 'attachments-archive', loadComponent: () => import('./pages/attachments-archive/attachments-archive').then(m => m.AttachmentsArchiveComponent) },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/dashboard/dashboard').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'stations',
+        loadComponent: () => import('./pages/stations/stations').then((m) => m.StationsComponent),
+      },
+      {
+        path: 'accounts',
+        loadComponent: () => import('./pages/accounts/accounts').then((m) => m.AccountsComponent),
+      },
+      {
+        path: 'account-sub-natures',
+        loadComponent: () =>
+          import('./pages/account-sub-natures/account-sub-natures').then(
+            (m) => m.AccountSubNaturesComponent,
+          ),
+      },
+      {
+        path: 'analytical-accounts',
+        loadComponent: () =>
+          import('./pages/analytical-accounts/analytical-accounts').then(
+            (m) => m.AnalyticalAccountsComponent,
+          ),
+      },
+      {
+        path: 'employees',
+        loadComponent: () =>
+          import('./pages/employees/employees').then((m) => m.EmployeesComponent),
+      },
+      {
+        path: 'funds',
+        loadComponent: () => import('./pages/funds/funds').then((m) => m.FundsComponent),
+      },
+      {
+        path: 'vouchers',
+        loadComponent: () => import('./pages/vouchers/vouchers').then((m) => m.VouchersComponent),
+      },
+      {
+        path: 'register-operation',
+        loadComponent: () =>
+          import('./pages/register-operation/register-operation').then(
+            (m) => m.RegisterOperationComponent,
+          ),
+      },
+      {
+        path: 'vouchers/receipt',
+        loadComponent: () => import('./pages/vouchers/vouchers').then((m) => m.VouchersComponent),
+      },
+      {
+        path: 'vouchers/payment',
+        loadComponent: () => import('./pages/vouchers/vouchers').then((m) => m.VouchersComponent),
+      },
+      {
+        path: 'journal',
+        loadComponent: () => import('./pages/journal/journal').then((m) => m.JournalComponent),
+      },
+      {
+        path: 'operation-types',
+        loadComponent: () =>
+          import('./pages/operation-types/operation-types').then((m) => m.OperationTypesComponent),
+      },
+      {
+        path: 'operation-categories',
+        loadComponent: () =>
+          import('./pages/operation-categories/operation-categories').then(
+            (m) => m.OperationCategoriesComponent,
+          ),
+      },
+      {
+        path: 'collections',
+        loadComponent: () =>
+          import('./pages/collections/collections').then((m) => m.CollectionsComponent),
+      },
+      {
+        path: 'billing-systems',
+        loadComponent: () =>
+          import('./pages/billing-systems/billing-systems').then((m) => m.BillingSystemsComponent),
+      },
+      {
+        path: 'sidebar-settings',
+        loadComponent: () =>
+          import('./pages/sidebar-settings/sidebar-settings').then(
+            (m) => m.SidebarSettingsComponent,
+          ),
+      },
+      {
+        path: 'summary',
+        loadComponent: () => import('./pages/summary/summary').then((m) => m.SummaryComponent),
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./pages/reports/reports').then((m) => m.ReportsComponent),
+      },
+      {
+        path: 'banks',
+        loadComponent: () => import('./pages/banks/banks').then((m) => m.BanksComponent),
+      },
+      {
+        path: 'exchangers',
+        loadComponent: () =>
+          import('./pages/exchanges/exchanges').then((m) => m.ExchangesComponent),
+      },
+      {
+        path: 'wallets',
+        loadComponent: () => import('./pages/wallets/wallets').then((m) => m.WalletsComponent),
+      },
+      {
+        path: 'partners',
+        loadComponent: () => import('./pages/partners/partners').then((m) => m.PartnersComponent),
+      },
+      {
+        path: 'warehouse',
+        loadComponent: () =>
+          import('./pages/warehouse/warehouse').then((m) => m.WarehouseComponent),
+      },
+      {
+        path: 'suppliers',
+        loadComponent: () =>
+          import('./pages/suppliers/suppliers').then((m) => m.SuppliersComponent),
+      },
+      {
+        path: 'purchase-invoices',
+        loadComponent: () =>
+          import('./pages/purchase-invoices/purchase-invoices').then(
+            (m) => m.PurchaseInvoicesComponent,
+          ),
+      },
+      {
+        path: 'intermediary-accounts',
+        loadComponent: () =>
+          import('./pages/intermediary-accounts/intermediary-accounts').then(
+            (m) => m.IntermediaryAccountsComponent,
+          ),
+      },
+      {
+        path: 'settlements',
+        loadComponent: () =>
+          import('./pages/settlements/settlements').then((m) => m.SettlementsComponent),
+      },
+      {
+        path: 'pending',
+        loadComponent: () =>
+          import('./pages/pending-accounts/pending-accounts').then(
+            (m) => m.PendingAccountsComponent,
+          ),
+      },
+      {
+        path: 'custom-screens',
+        loadComponent: () =>
+          import('./pages/custom-screens/custom-screens').then((m) => m.CustomScreensComponent),
+      },
+      {
+        path: 'ui-builder',
+        loadComponent: () =>
+          import('./pages/ui-builder/ui-builder').then((m) => m.UiBuilderComponent),
+      },
+      {
+        path: 'exchange-rates',
+        loadComponent: () =>
+          import('./pages/exchange-rates/exchange-rates').then((m) => m.ExchangeRatesComponent),
+      },
+      {
+        path: 'fiscal-periods',
+        loadComponent: () =>
+          import('./pages/fiscal-periods/fiscal-periods').then((m) => m.FiscalPeriodsComponent),
+      },
+      {
+        path: 'roles',
+        loadComponent: () => import('./pages/roles/roles').then((m) => m.RolesComponent),
+      },
+      {
+        path: 'reports-advanced',
+        loadComponent: () =>
+          import('./pages/reports-advanced/reports-advanced').then(
+            (m) => m.ReportsAdvancedComponent,
+          ),
+      },
+      {
+        path: 'journal-categories',
+        loadComponent: () =>
+          import('./pages/journal-categories/journal-categories').then(
+            (m) => m.JournalCategoriesComponent,
+          ),
+      },
+      {
+        path: 'warehouse-operations',
+        loadComponent: () =>
+          import('./pages/warehouse-operations/warehouse-operations').then(
+            (m) => m.WarehouseOperationsComponent,
+          ),
+      },
+      {
+        path: 'expense-categories',
+        loadComponent: () =>
+          import('./pages/expense-categories/expense-categories').then(
+            (m) => m.ExpenseCategoriesComponent,
+          ),
+      },
+      {
+        path: 'expense-budget',
+        loadComponent: () =>
+          import('./pages/expense-budget/expense-budget').then((m) => m.ExpenseBudgetComponent),
+      },
+      {
+        path: 'salaries',
+        loadComponent: () => import('./pages/salaries/salaries').then((m) => m.SalariesComponent),
+      },
+      {
+        path: 'inventory-item-types',
+        loadComponent: () =>
+          import('./pages/inventory-item-types/inventory-item-types').then(
+            (m) => m.InventoryItemTypesComponent,
+          ),
+      },
+      {
+        path: 'reconciliations',
+        loadComponent: () =>
+          import('./pages/reconciliations/reconciliations').then((m) => m.ReconciliationsComponent),
+      },
+      {
+        path: 'custody',
+        loadComponent: () => import('./pages/custody/custody').then((m) => m.CustodyComponent),
+      },
+      {
+        path: 'supplier-types',
+        loadComponent: () =>
+          import('./pages/supplier-types/supplier-types').then((m) => m.SupplierTypesComponent),
+      },
+      {
+        path: 'departments',
+        loadComponent: () =>
+          import('./pages/departments/departments').then((m) => m.DepartmentsComponent),
+      },
+      {
+        path: 'job-titles',
+        loadComponent: () =>
+          import('./pages/job-titles/job-titles').then((m) => m.JobTitlesComponent),
+      },
+      {
+        path: 'attachments-archive',
+        loadComponent: () =>
+          import('./pages/attachments-archive/attachments-archive').then(
+            (m) => m.AttachmentsArchiveComponent,
+          ),
+      },
     ],
   },
   { path: '', redirectTo: 'login', pathMatch: 'full' },

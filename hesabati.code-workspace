@@ -19,6 +19,14 @@
       "**/drizzle/**",
       "**/backend/drizzle/**"
     ],
-    "powershell.cwd": "Frontend (Angular)"
+    "powershell.cwd": "Frontend (Angular)",
+    "editor.tabCompletion": "on",
+    "diffEditor.codeLens": true,
+    "files.associations": {
+      "*.dbclient-js": "javascript",
+      "*.erd": "json",
+      "*.vuerd": "json",
+      "plyconfig.json": "jsonc"
+    }
   }
 }

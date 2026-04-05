@@ -1,10 +1,18 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { PAGE_IMPORTS } from '../../shared/page-imports';
 
-interface BankForm { name: string; accountId: number | null; accountNumber: string; provider: string; responsiblePerson: string; description: string; notes: string; }
+interface BankForm {
+  name: string;
+  accountId: number | null;
+  accountNumber: string;
+  provider: string;
+  responsiblePerson: string;
+  description: string;
+  notes: string;
+}
 
 @Component({
   selector: 'app-banks',
@@ -25,7 +33,15 @@ export class BanksComponent extends BasePageComponent {
 
   showBankForm = signal(false);
   editingBankId = signal<number | null>(null);
-  bankForm: BankForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+  bankForm: BankForm = {
+    name: '',
+    accountId: null,
+    accountNumber: '',
+    provider: '',
+    responsiblePerson: '',
+    description: '',
+    notes: '',
+  };
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
@@ -34,11 +50,17 @@ export class BanksComponent extends BasePageComponent {
   deleteTarget = signal<{ type: 'bank'; id: number; name: string } | null>(null);
 
   // Backward compatibility
-  get accounts() { return this.banksData; }
+  get accounts() {
+    return this.banksData;
+  }
   showAccountForm = this.showBankForm;
   editingAccountId = this.editingBankId;
-  get accountForm() { return this.bankForm; }
-  set accountForm(v: any) { this.bankForm = v; }
+  get accountForm() {
+    return this.bankForm;
+  }
+  set accountForm(v: any) {
+    this.bankForm = v;
+  }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -47,49 +69,73 @@ export class BanksComponent extends BasePageComponent {
   async load() {
     this.loading.set(true);
     try {
-      const [banksList] = await Promise.all([
-        this.api.getBanks(this.bizId),
-      ]);
+      const [banksList] = await Promise.all([this.api.getBanks(this.bizId)]);
       this.banksData.set(banksList);
       this.activeFilter.set('all');
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
         this.bankAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'bank'));
-      } catch { this.bankAccounts.set([]); }
-    } catch (e: unknown) { console.error(e); }
+      } catch {
+        this.bankAccounts.set([]);
+      }
+    } catch (e: unknown) {
+      console.error(e);
+    }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
       { value: 'all', label: 'الكل', icon: 'apps', count: this.banksData().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.banksData().filter(b => b.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.banksData().filter(b => !b.isActive).length },
+      {
+        value: 'active',
+        label: 'نشط',
+        icon: 'check_circle',
+        count: this.banksData().filter((b) => b.isActive).length,
+      },
+      {
+        value: 'inactive',
+        label: 'غير نشط',
+        icon: 'cancel',
+        count: this.banksData().filter((b) => !b.isActive).length,
+      },
     ];
   }
 
-  get filteredData() {
+  filteredData = computed(() => {
     let data = this.banksData();
     const filter = this.activeFilter();
-    if (filter === 'active') data = data.filter(b => b.isActive);
-    else if (filter === 'inactive') data = data.filter(b => !b.isActive);
+    if (filter === 'active') data = data.filter((b) => b.isActive);
+    else if (filter === 'inactive') data = data.filter((b) => !b.isActive);
     const accId = this.accountFilter();
-    if (accId) data = data.filter(b => b.accountId === accId);
+    if (accId) data = data.filter((b) => b.accountId === accId);
     return data;
-  }
+  });
 
-  get uniqueAccounts() {
+  uniqueAccounts = computed(() => {
     const seen = new Map<number, { id: number; name: string; code: string }>();
     for (const b of this.banksData()) {
       if (b.accountId && !seen.has(b.accountId)) {
-        seen.set(b.accountId, { id: b.accountId, name: b.accountName || b.name, code: b.accountCode || b.code });
+        seen.set(b.accountId, {
+          id: b.accountId,
+          name: b.accountName || b.name,
+          code: b.accountCode || b.code,
+        });
       }
     }
     return Array.from(seen.values());
-  }
+  });
 
   openAddAccount(subType?: string) {
-    this.bankForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.bankForm = {
+      name: '',
+      accountId: null,
+      accountNumber: '',
+      provider: '',
+      responsiblePerson: '',
+      description: '',
+      notes: '',
+    };
     this.accountCurrencies.set([]);
     this.selectedCurrencyIds.set([]);
     this.defaultCurrencyId.set(null);
@@ -151,7 +197,10 @@ export class BanksComponent extends BasePageComponent {
       this.showBankForm.set(false);
       this.toast.success(this.editingBankId() ? 'تم تحديث البنك بنجاح' : 'تم إنشاء البنك بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ البنك'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ البنك');
+    }
   }
 
   confirmDelete(type: 'bank', id: number, name: string) {
@@ -168,12 +217,17 @@ export class BanksComponent extends BasePageComponent {
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
+    }
   }
 
   getBalanceDisplay(acc: any): string {
     if (!acc.balances || acc.balances.length === 0) return '0';
-    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+    return acc.balances
+      .map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`)
+      .join(' | ');
   }
 
   async loadAccountCurrencies(accountId: number) {
@@ -202,7 +256,7 @@ export class BanksComponent extends BasePageComponent {
   toggleCurrency(currencyId: number) {
     const current = this.selectedCurrencyIds();
     if (current.includes(currencyId)) {
-      this.selectedCurrencyIds.set(current.filter(id => id !== currencyId));
+      this.selectedCurrencyIds.set(current.filter((id) => id !== currencyId));
       if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(null);
     } else {
       this.selectedCurrencyIds.set([...current, currencyId]);

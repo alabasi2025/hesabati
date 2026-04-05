@@ -828,7 +828,7 @@
 
   <!-- ======================== CONFIG WIZARD MODAL ======================== -->
   @if (showConfigWizard()) {
-    <div class="modal-overlay" (click)="closeConfigWizard()">
+    <div class="page-form-container" (click)="closeConfigWizard()">
       <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>إعداد التبويبات</h3>
@@ -1020,7 +1020,7 @@
 
   <!-- ======================== SCREEN FORM MODAL ======================== -->
   @if (showScreenForm()) {
-    <div class="modal-overlay" (click)="closeScreenForm()">
+    <div class="page-form-container" (click)="closeScreenForm()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>تعديل الشاشة</h3>
@@ -1054,7 +1054,7 @@
 
   <!-- ======================== PERMISSIONS MODAL ======================== -->
   @if (showPermissionsModal()) {
-    <div class="modal-overlay" (click)="closePermissionsModal()">
+    <div class="page-form-container" (click)="closePermissionsModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>صلاحيات الشاشة: {{ permissionsScreen()?.name }}</h3>
@@ -1088,7 +1088,7 @@
 
   <!-- ======================== TEMPLATES MODAL ======================== -->
   @if (showTemplatesModal()) {
-    <div class="modal-overlay" (click)="showTemplatesModal.set(false)">
+    <div class="page-form-container" (click)="showTemplatesModal.set(false)">
       <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>قوالب شاشات جاهزة</h3>
@@ -1123,7 +1123,7 @@
 
   <!-- ======================== SIDEBAR MODAL ======================== -->
   @if (showSidebarModal()) {
-    <div class="modal-overlay" (click)="closeSidebarModal()">
+    <div class="page-form-container" (click)="closeSidebarModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>إضافة للقائمة الجانبية</h3>

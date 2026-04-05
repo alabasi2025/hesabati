@@ -20,54 +20,61 @@
 
     <!-- 3D Stats Row -->
     <div class="stats-row-3d">
-      <app-three-stat-card
+      <app-stat-card
         [value]="stations().length"
         label="محطة"
         icon="bolt"
         color="#f59e0b"
-        (click)="navigate('stations')">
-      </app-three-stat-card>
-      <app-three-stat-card
+        (click)="navigate('stations')"
+      >
+      </app-stat-card>
+      <app-stat-card
         [value]="employees().length"
         label="موظف"
         icon="groups"
         color="#3b82f6"
-        (click)="navigate('employees')">
-      </app-three-stat-card>
-      <app-three-stat-card
+        (click)="navigate('employees')"
+      >
+      </app-stat-card>
+      <app-stat-card
         [value]="accounts().length"
         label="حساب ومحفظة"
         icon="account_balance_wallet"
         color="#8b5cf6"
-        (click)="navigate('accounts')">
-      </app-three-stat-card>
-      <app-three-stat-card
+        (click)="navigate('accounts')"
+      >
+      </app-stat-card>
+      <app-stat-card
         [value]="funds().length"
         label="صندوق"
         icon="inventory_2"
         color="#06b6d4"
-        (click)="navigate('funds')">
-      </app-three-stat-card>
-      <app-three-stat-card
+        (click)="navigate('funds')"
+      >
+      </app-stat-card>
+      <app-stat-card
         [value]="totalSalaries()"
         label="إجمالي الرواتب (ر.ي)"
         icon="payments"
-        color="#ef4444">
-      </app-three-stat-card>
-      <app-three-stat-card
+        color="#ef4444"
+      >
+      </app-stat-card>
+      <app-stat-card
         [value]="suppliers().length"
         label="مورد"
         icon="local_shipping"
         color="#22c55e"
-        (click)="navigate('suppliers')">
-      </app-three-stat-card>
-      <app-three-stat-card
+        (click)="navigate('suppliers')"
+      >
+      </app-stat-card>
+      <app-stat-card
         [value]="warehouses().length"
         label="مخزن"
         icon="warehouse"
         color="#f59e0b"
-        (click)="navigate('warehouse')">
-      </app-three-stat-card>
+        (click)="navigate('warehouse')"
+      >
+      </app-stat-card>
     </div>
 
     <!-- ملخص مالي -->
@@ -104,7 +111,9 @@
 
     <!-- Quick Actions -->
     <div class="section-card">
-      <h3 class="section-title"><span class="material-icons-round">flash_on</span> إجراءات سريعة</h3>
+      <h3 class="section-title">
+        <span class="material-icons-round">flash_on</span> إجراءات سريعة
+      </h3>
       <div class="quick-actions">
         <button class="action-btn action-green" (click)="navigate('vouchers/receipt')">
           <span class="material-icons-round">arrow_downward</span> سند قبض
@@ -135,7 +144,12 @@
           <div class="chart-wrapper">
             <apx-chart
               [series]="[{ name: 'العدد', data: chartData().map(d => d.value) }]"
-              [chart]="{ type: 'bar', height: 300, fontFamily: 'Tajawal', toolbar: { show: false } }"
+              [chart]="{
+                type: 'bar',
+                height: 300,
+                fontFamily: 'Tajawal',
+                toolbar: { show: false },
+              }"
               [xaxis]="{ categories: chartData().map(d => d.label) }"
               [colors]="chartData().map(d => d.color || '#6366f1')"
               [plotOptions]="{ bar: { borderRadius: 6, columnWidth: '55%', distributed: true } }"
@@ -170,7 +184,12 @@
           <div class="chart-wrapper">
             <apx-chart
               [series]="[{ name: 'الموارد', data: waterfallData().map(d => d.value) }]"
-              [chart]="{ type: 'bar', height: 280, fontFamily: 'Tajawal', toolbar: { show: false } }"
+              [chart]="{
+                type: 'bar',
+                height: 280,
+                fontFamily: 'Tajawal',
+                toolbar: { show: false },
+              }"
               [xaxis]="{ categories: waterfallData().map(d => d.label) }"
               [colors]="waterfallData().map(d => d.color || '#10b981')"
               [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', distributed: true } }"
@@ -182,7 +201,15 @@
             <apx-chart
               [series]="[gaugeValue()]"
               [chart]="{ type: 'radialBar', height: 280, fontFamily: 'Tajawal' }"
-              [plotOptions]="{ radialBar: { hollow: { size: '60%' }, dataLabels: { name: { show: true, fontSize: '14px', fontFamily: 'Tajawal', offsetY: -10 }, value: { show: true, fontSize: '28px', fontFamily: 'Tajawal', fontWeight: 800 } } } }"
+              [plotOptions]="{
+                radialBar: {
+                  hollow: { size: '60%' },
+                  dataLabels: {
+                    name: { show: true, fontSize: '14px', fontFamily: 'Tajawal', offsetY: -10 },
+                    value: { show: true, fontSize: '28px', fontFamily: 'Tajawal', fontWeight: 800 },
+                  },
+                },
+              }"
               [labels]="['إجمالي الأصول']"
               [colors]="['#6366f1']"
             ></apx-chart>
@@ -191,9 +218,17 @@
             <div class="chart-wrapper">
               <apx-chart
                 [series]="[{ data: treemapData().map(d => ({ x: d.label, y: d.value })) }]"
-                [chart]="{ type: 'treemap', height: 280, fontFamily: 'Tajawal', toolbar: { show: false } }"
+                [chart]="{
+                  type: 'treemap',
+                  height: 280,
+                  fontFamily: 'Tajawal',
+                  toolbar: { show: false },
+                }"
                 [colors]="['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']"
-                [dataLabels]="{ enabled: true, style: { fontSize: '13px', fontFamily: 'Tajawal', fontWeight: 700 } }"
+                [dataLabels]="{
+                  enabled: true,
+                  style: { fontSize: '13px', fontFamily: 'Tajawal', fontWeight: 700 },
+                }"
                 [tooltip]="{ theme: 'dark' }"
               ></apx-chart>
             </div>
@@ -210,7 +245,11 @@
         <div class="items-list">
           @for (s of stations(); track s.id) {
             <div class="list-item" (click)="navigate('stations')">
-              <div class="item-icon" [style.background]="biz.currentBusinessColor() + '18'" [style.color]="biz.currentBusinessColor()">
+              <div
+                class="item-icon"
+                [style.background]="biz.currentBusinessColor() + '18'"
+                [style.color]="biz.currentBusinessColor()"
+              >
                 <span class="material-icons-round">location_on</span>
               </div>
               <div class="item-info">
@@ -258,16 +297,23 @@
     <!-- Warehouses Section -->
     @if (warehouses().length > 0) {
       <div class="section-card">
-        <h3 class="section-title"><span class="material-icons-round">warehouse</span> المخازن ({{ warehouses().length }})</h3>
+        <h3 class="section-title">
+          <span class="material-icons-round">warehouse</span> المخازن ({{ warehouses().length }})
+        </h3>
         <div class="items-list">
           @for (w of warehouses(); track w.id) {
             <div class="list-item" (click)="navigate('warehouse')">
-              <div class="item-icon" style="background: #f59e0b18; color: #f59e0b;">
-                <span class="material-icons-round">{{ w.warehouseType === 'main' ? 'store' : 'local_gas_station' }}</span>
+              <div class="item-icon" style="background: #f59e0b18; color: #f59e0b">
+                <span class="material-icons-round">{{
+                  w.warehouseType === 'main' ? 'store' : 'local_gas_station'
+                }}</span>
               </div>
               <div class="item-info">
                 <span class="item-name">{{ w.name }}</span>
-                <span class="item-detail">{{ getWarehouseTypeLabel(w.warehouseType) }}{{ w.code ? ' — ' + w.code : '' }}</span>
+                <span class="item-detail"
+                  >{{ getWarehouseTypeLabel(w.warehouseType)
+                  }}{{ w.code ? ' — ' + w.code : '' }}</span
+                >
               </div>
               @if (w.isActive) {
                 <span class="badge badge-active">نشط</span>
@@ -297,7 +343,9 @@
                 <span class="item-name">{{ p.personOrEntity }}</span>
                 <span class="item-detail">{{ p.description }}</span>
               </div>
-              <span class="badge badge-pending">{{ p.status === 'pending' ? 'معلق' : p.status }}</span>
+              <span class="badge badge-pending">{{
+                p.status === 'pending' ? 'معلق' : p.status
+              }}</span>
             </div>
           }
         </div>

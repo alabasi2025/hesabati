@@ -222,81 +222,87 @@
         </div>
       </div>
 
-      <!-- Section Form Modal -->
+      <!-- Section Form (Inline) -->
       @if (showSectionForm()) {
-        <div class="modal-overlay" (click)="closeSectionForm()">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header">
+        <div class="page-form-container">
+          <div class="form-header">
+            <div class="form-header-title">
+              <div class="page-icon purple">
+                <span class="material-icons-round">dashboard_customize</span>
+              </div>
               <h3>{{ editingSection() ? 'تعديل القسم' : 'قسم جديد' }}</h3>
-              <button class="close-btn" (click)="closeSectionForm()">
-                <span class="material-icons-round">close</span>
-              </button>
+              @if (editingSection()) {
+                <span class="edit-badge">تعديل</span>
+              }
             </div>
-            <div class="modal-body">
-              <div class="form-group">
-                <label>اسم القسم</label>
-                <input
-                  type="text"
-                  [value]="sectionForm().name"
-                  (input)="sectionForm.set({ ...sectionForm(), name: $any($event.target).value })"
-                  placeholder="مثال: العمليات المالية"
-                />
-              </div>
-              <div class="form-group">
-                <label>الأيقونة</label>
-                <div class="icon-picker">
-                  @for (icon of commonIcons; track icon) {
-                    <button
-                      class="icon-option"
-                      [class.selected]="sectionForm().icon === icon"
-                      (click)="sectionForm.set({ ...sectionForm(), icon: icon })"
-                    >
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>اللون</label>
-                <div class="color-picker">
-                  @for (c of commonColors; track c.value) {
-                    <button
-                      class="color-option"
-                      [class.selected]="sectionForm().color === c.value"
-                      [style.background]="c.value"
-                      [title]="c.label"
-                      (click)="sectionForm.set({ ...sectionForm(), color: c.value })"
-                    ></button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>الترتيب</label>
-                <input
-                  type="number"
-                  [value]="sectionForm().sortOrder"
-                  (input)="
-                    sectionForm.set({ ...sectionForm(), sortOrder: +$any($event.target).value })
-                  "
-                />
-              </div>
-              <div class="form-preview">
-                <label>معاينة</label>
-                <div class="preview-section-title" [style.color]="sectionForm().color">
-                  <span class="material-icons-round" [style.color]="sectionForm().color">{{
-                    sectionForm().icon
-                  }}</span>
-                  {{ sectionForm().name || 'اسم القسم' }}
-                </div>
+            <button class="close-btn" (click)="closeSectionForm()">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+          <div class="form-meta">
+            <div class="form-group">
+              <label>اسم القسم</label>
+              <input
+                type="text"
+                [value]="sectionForm().name"
+                (input)="sectionForm.set({ ...sectionForm(), name: $any($event.target).value })"
+                placeholder="مثال: العمليات المالية"
+              />
+            </div>
+            <div class="form-group">
+              <label>الأيقونة</label>
+              <div class="icon-picker">
+                @for (icon of commonIcons; track icon) {
+                  <button
+                    class="icon-option"
+                    [class.selected]="sectionForm().icon === icon"
+                    (click)="sectionForm.set({ ...sectionForm(), icon: icon })"
+                  >
+                    <span class="material-icons-round">{{ icon }}</span>
+                  </button>
+                }
               </div>
             </div>
-            <div class="modal-footer">
-              <button class="btn-cancel" (click)="closeSectionForm()">إلغاء</button>
-              <button class="btn-save" (click)="saveSection()">
-                <span class="material-icons-round">save</span>
-                حفظ
-              </button>
+            <div class="form-group">
+              <label>اللون</label>
+              <div class="color-picker">
+                @for (c of commonColors; track c.value) {
+                  <button
+                    class="color-option"
+                    [class.selected]="sectionForm().color === c.value"
+                    [style.background]="c.value"
+                    [title]="c.label"
+                    (click)="sectionForm.set({ ...sectionForm(), color: c.value })"
+                  ></button>
+                }
+              </div>
             </div>
+            <div class="form-group">
+              <label>الترتيب</label>
+              <input
+                type="number"
+                [value]="sectionForm().sortOrder"
+                (input)="
+                  sectionForm.set({ ...sectionForm(), sortOrder: +$any($event.target).value })
+                "
+              />
+            </div>
+            <div class="form-preview">
+              <label>معاينة</label>
+              <div class="preview-section-title" [style.color]="sectionForm().color">
+                <span class="material-icons-round" [style.color]="sectionForm().color">{{
+                  sectionForm().icon
+                }}</span>
+                {{ sectionForm().name || 'اسم القسم' }}
+              </div>
+            </div>
+          </div>
+          <div class="form-footer">
+            <button class="btn-cancel" (click)="closeSectionForm()">إلغاء</button>
+            <button class="btn-save" (click)="saveSection()">
+              <span class="material-icons-round">save</span>
+              حفظ
+            </button>
           </div>
         </div>
       }
@@ -351,108 +357,112 @@
         }
       </div>
 
-      <!-- Item Form Modal -->
+      <!-- Item Form (Inline) -->
       @if (showItemForm()) {
-        <div class="modal-overlay" (click)="closeItemForm()">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header">
+        <div class="page-form-container">
+          <div class="form-header">
+            <div class="form-header-title">
+              <div class="page-icon blue"><span class="material-icons-round">web</span></div>
               <h3>{{ editingItem() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h3>
-              <button class="close-btn" (click)="closeItemForm()">
-                <span class="material-icons-round">close</span>
-              </button>
+              @if (editingItem()) {
+                <span class="edit-badge">تعديل</span>
+              }
             </div>
-            <div class="modal-body">
-              <div class="form-group">
-                <label>القسم</label>
-                <select
-                  [value]="itemForm().sectionId"
-                  (change)="itemForm.set({ ...itemForm(), sectionId: +$any($event.target).value })"
-                >
-                  @for (sec of sections(); track sec.id) {
-                    <option [value]="sec.id">{{ sec.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group">
-                <label>معرّف الشاشة (screen key)</label>
-                <input
-                  type="text"
-                  [value]="itemForm().screenKey"
-                  (input)="itemForm.set({ ...itemForm(), screenKey: $any($event.target).value })"
-                  placeholder="مثال: accounts"
-                />
-              </div>
-              <div class="form-group">
-                <label>اسم الشاشة</label>
-                <input
-                  type="text"
-                  [value]="itemForm().label"
-                  (input)="itemForm.set({ ...itemForm(), label: $any($event.target).value })"
-                  placeholder="مثال: الحسابات"
-                />
-              </div>
-              <div class="form-group">
-                <label>المسار (route)</label>
-                <input
-                  type="text"
-                  [value]="itemForm().route"
-                  (input)="itemForm.set({ ...itemForm(), route: $any($event.target).value })"
-                  placeholder="مثال: /biz/{bizId}/accounts"
-                  dir="ltr"
-                />
-              </div>
-              <div class="form-group">
-                <label>الأيقونة</label>
-                <div class="icon-picker">
-                  @for (icon of commonIcons; track icon) {
-                    <button
-                      class="icon-option"
-                      [class.selected]="itemForm().icon === icon"
-                      (click)="itemForm.set({ ...itemForm(), icon: icon })"
-                    >
-                      <span class="material-icons-round">{{ icon }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>اللون (اختياري)</label>
-                <div class="color-picker">
+            <button class="close-btn" (click)="closeItemForm()">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+          <div class="form-meta">
+            <div class="form-group">
+              <label>القسم</label>
+              <select
+                [value]="itemForm().sectionId"
+                (change)="itemForm.set({ ...itemForm(), sectionId: +$any($event.target).value })"
+              >
+                @for (sec of sections(); track sec.id) {
+                  <option [value]="sec.id">{{ sec.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>معرّف الشاشة (screen key)</label>
+              <input
+                type="text"
+                [value]="itemForm().screenKey"
+                (input)="itemForm.set({ ...itemForm(), screenKey: $any($event.target).value })"
+                placeholder="مثال: accounts"
+              />
+            </div>
+            <div class="form-group">
+              <label>اسم الشاشة</label>
+              <input
+                type="text"
+                [value]="itemForm().label"
+                (input)="itemForm.set({ ...itemForm(), label: $any($event.target).value })"
+                placeholder="مثال: الحسابات"
+              />
+            </div>
+            <div class="form-group">
+              <label>المسار (route)</label>
+              <input
+                type="text"
+                [value]="itemForm().route"
+                (input)="itemForm.set({ ...itemForm(), route: $any($event.target).value })"
+                placeholder="مثال: /biz/{bizId}/accounts"
+                dir="ltr"
+              />
+            </div>
+            <div class="form-group">
+              <label>الأيقونة</label>
+              <div class="icon-picker">
+                @for (icon of commonIcons; track icon) {
                   <button
-                    class="color-option color-option-none"
-                    [class.selected]="!itemForm().color"
-                    title="بدون لون"
-                    (click)="itemForm.set({ ...itemForm(), color: '' })"
+                    class="icon-option"
+                    [class.selected]="itemForm().icon === icon"
+                    (click)="itemForm.set({ ...itemForm(), icon: icon })"
                   >
-                    <span class="material-icons-round">block</span>
+                    <span class="material-icons-round">{{ icon }}</span>
                   </button>
-                  @for (c of commonColors; track c.value) {
-                    <button
-                      class="color-option"
-                      [class.selected]="itemForm().color === c.value"
-                      [style.background]="c.value"
-                      [title]="c.label"
-                      (click)="itemForm.set({ ...itemForm(), color: c.value })"
-                    ></button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label>الترتيب</label>
-                <input
-                  type="number"
-                  [value]="itemForm().sortOrder"
-                  (input)="itemForm.set({ ...itemForm(), sortOrder: +$any($event.target).value })"
-                />
+                }
               </div>
             </div>
-            <div class="modal-footer">
-              <button class="btn-cancel" (click)="closeItemForm()">إلغاء</button>
-              <button class="btn-save" (click)="saveItem()">
-                <span class="material-icons-round">save</span>
-                حفظ
-              </button>
+            <div class="form-group">
+              <label>اللون (اختياري)</label>
+              <div class="color-picker">
+                <button
+                  class="color-option color-option-none"
+                  [class.selected]="!itemForm().color"
+                  title="بدون لون"
+                  (click)="itemForm.set({ ...itemForm(), color: '' })"
+                >
+                  <span class="material-icons-round">block</span>
+                </button>
+                @for (c of commonColors; track c.value) {
+                  <button
+                    class="color-option"
+                    [class.selected]="itemForm().color === c.value"
+                    [style.background]="c.value"
+                    [title]="c.label"
+                    (click)="itemForm.set({ ...itemForm(), color: c.value })"
+                  ></button>
+                }
+              </div>
             </div>
+            <div class="form-group">
+              <label>الترتيب</label>
+              <input
+                type="number"
+                [value]="itemForm().sortOrder"
+                (input)="itemForm.set({ ...itemForm(), sortOrder: +$any($event.target).value })"
+              />
+            </div>
+          </div>
+          <div class="form-footer">
+            <button class="btn-cancel" (click)="closeItemForm()">إلغاء</button>
+            <button class="btn-save" (click)="saveItem()">
+              <span class="material-icons-round">save</span>
+              حفظ
+            </button>
           </div>
         </div>
       }

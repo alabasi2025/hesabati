@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService, Business } from '../../services/api.service';
@@ -10,7 +9,7 @@ import { BusinessService, BusinessType } from '../../services/business.service';
 @Component({
   selector: 'app-business-select',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './business-select.html',
   styleUrl: './business-select.scss',
 })
@@ -32,10 +31,24 @@ export class BusinessSelectComponent implements OnInit {
   saving = signal(false);
   saveError = signal('');
   nextCode = signal('');
-  newBiz = signal({ name: '', type: 'stations', description: '', icon: 'business', color: '#3b82f6' });
+  newBiz = signal({
+    name: '',
+    type: 'stations',
+    description: '',
+    icon: 'business',
+    color: '#3b82f6',
+  });
 
   showEditModal = signal(false);
-  editingBiz = signal<{ id: number; code: string; name: string; type: string; description: string; icon: string; color: string } | null>(null);
+  editingBiz = signal<{
+    id: number;
+    code: string;
+    name: string;
+    type: string;
+    description: string;
+    icon: string;
+    color: string;
+  } | null>(null);
   editError = signal('');
 
   showDeleteConfirm = signal(false);
@@ -50,15 +63,25 @@ export class BusinessSelectComponent implements OnInit {
   ];
 
   readonly iconOptions = [
-    'business', 'store', 'local_gas_station', 'warehouse', 'factory',
-    'storefront', 'apartment', 'corporate_fare', 'domain', 'work',
+    'business',
+    'store',
+    'local_gas_station',
+    'warehouse',
+    'factory',
+    'storefront',
+    'apartment',
+    'corporate_fare',
+    'domain',
+    'work',
   ];
 
   ngOnInit() {
     this.userName.set(this.auth.getUserName() || 'المالك');
-    this.noAccessMessage.set(this.route.snapshot.queryParamMap.get('error') === 'no_access'
-      ? 'ليس لديك صلاحية على العمل المحدد. يرجى اختيار عمل آخر أو التواصل مع المسؤول.'
-      : '');
+    this.noAccessMessage.set(
+      this.route.snapshot.queryParamMap.get('error') === 'no_access'
+        ? 'ليس لديك صلاحية على العمل المحدد. يرجى اختيار عمل آخر أو التواصل مع المسؤول.'
+        : '',
+    );
     this.loadBusinesses();
   }
 
@@ -99,26 +122,41 @@ export class BusinessSelectComponent implements OnInit {
 
   openEditModal(biz: any, event: Event) {
     event.stopPropagation();
-    this.editingBiz.set({ id: biz.id, code: biz.code, name: biz.name, type: biz.type, description: biz.description || '', icon: biz.icon, color: biz.color });
+    this.editingBiz.set({
+      id: biz.id,
+      code: biz.code,
+      name: biz.name,
+      type: biz.type,
+      description: biz.description || '',
+      icon: biz.icon,
+      color: biz.color,
+    });
     this.editError.set('');
     this.showEditModal.set(true);
   }
 
-  closeEditModal() { this.showEditModal.set(false); }
+  closeEditModal() {
+    this.showEditModal.set(false);
+  }
 
   updateEditBiz(field: string, value: string) {
-    this.editingBiz.update(prev => prev ? { ...prev, [field]: value } : prev);
+    this.editingBiz.update((prev) => (prev ? { ...prev, [field]: value } : prev));
   }
 
   async submitEditBusiness() {
     const biz = this.editingBiz();
     if (!biz) return;
-    if (!biz.name.trim()) { this.editError.set('اسم العمل مطلوب'); return; }
+    if (!biz.name.trim()) {
+      this.editError.set('اسم العمل مطلوب');
+      return;
+    }
     this.saving.set(true);
     this.editError.set('');
     try {
       const updated = await this.api.updateBusiness(biz.id, biz);
-      this.businesses.update(prev => prev.map(b => b.id === biz.id ? { ...b, ...updated } : b));
+      this.businesses.update((prev) =>
+        prev.map((b) => (b.id === biz.id ? { ...b, ...updated } : b)),
+      );
       this.showEditModal.set(false);
     } catch (e: unknown) {
       this.editError.set(e instanceof Error ? e.message : 'فشل تعديل العمل');
@@ -129,7 +167,14 @@ export class BusinessSelectComponent implements OnInit {
 
   isEmptyBusiness(biz: any): boolean {
     const s = biz.stats;
-    return !s || (s.stations === 0 && s.employees === 0 && s.accounts === 0 && s.funds === 0 && s.suppliers === 0);
+    return (
+      !s ||
+      (s.stations === 0 &&
+        s.employees === 0 &&
+        s.accounts === 0 &&
+        s.funds === 0 &&
+        s.suppliers === 0)
+    );
   }
 
   openDeleteConfirm(biz: any, event: Event) {
@@ -139,7 +184,9 @@ export class BusinessSelectComponent implements OnInit {
     this.showDeleteConfirm.set(true);
   }
 
-  closeDeleteConfirm() { this.showDeleteConfirm.set(false); }
+  closeDeleteConfirm() {
+    this.showDeleteConfirm.set(false);
+  }
 
   async confirmDelete() {
     const biz = this.deletingBiz();
@@ -148,7 +195,7 @@ export class BusinessSelectComponent implements OnInit {
     this.deleteError.set('');
     try {
       await this.api.deleteBusiness(biz.id);
-      this.businesses.update(prev => prev.filter(b => b.id !== biz.id));
+      this.businesses.update((prev) => prev.filter((b) => b.id !== biz.id));
       this.showDeleteConfirm.set(false);
     } catch (e: unknown) {
       this.deleteError.set(e instanceof Error ? e.message : 'فشل حذف العمل');
@@ -158,7 +205,13 @@ export class BusinessSelectComponent implements OnInit {
   }
 
   async openAddModal() {
-    this.newBiz.set({ name: '', type: 'stations', description: '', icon: 'business', color: '#3b82f6' });
+    this.newBiz.set({
+      name: '',
+      type: 'stations',
+      description: '',
+      icon: 'business',
+      color: '#3b82f6',
+    });
     this.saveError.set('');
     this.nextCode.set('جاري التحميل...');
     this.showAddModal.set(true);
@@ -175,7 +228,7 @@ export class BusinessSelectComponent implements OnInit {
   }
 
   updateNewBiz(field: string, value: string) {
-    this.newBiz.update(prev => ({ ...prev, [field]: value }));
+    this.newBiz.update((prev) => ({ ...prev, [field]: value }));
   }
 
   autoFillCode() {
@@ -184,12 +237,15 @@ export class BusinessSelectComponent implements OnInit {
 
   async submitAddBusiness() {
     const biz = this.newBiz();
-    if (!biz.name.trim()) { this.saveError.set('اسم العمل مطلوب'); return; }
+    if (!biz.name.trim()) {
+      this.saveError.set('اسم العمل مطلوب');
+      return;
+    }
     this.saving.set(true);
     this.saveError.set('');
     try {
       const created = await this.api.createBusiness(biz);
-      this.businesses.update(prev => [...prev, created]);
+      this.businesses.update((prev) => [...prev, created]);
       this.showAddModal.set(false);
     } catch (e: unknown) {
       this.saveError.set(e instanceof Error ? e.message : 'فشل إنشاء العمل');

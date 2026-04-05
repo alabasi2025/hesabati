@@ -4,70 +4,31 @@
  */
 import { Hono } from "hono";
 import { db } from "../../db/index.ts";
-import { eq, and, inArray, ne, sql } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 import {
   accounts,
-  accountSubNatures,
   accountCurrencies,
   funds,
   fundBalances,
   vouchers,
   voucherLines,
   journalEntryLines,
-  stations,
-  currencies,
 } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { fundSchema, validateBody } from "../../middleware/validation.ts";
-import {
-  safeHandler,
-  parseId,
-  getBody,
-} from "../../middleware/helpers.ts";
-import {
-  buildAccountHierarchyCode,
-  getNextSequence,
-  TYPE_PREFIXES,
-} from "../../middleware/sequencing.ts";
+import { safeHandler, parseId, getBody } from "../../middleware/helpers.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import { requireResourceOwnership } from "./_shared/ownership.ts";
+import { generateFinancialEntityCodes } from "../../engines/sequencing-entity.engine.ts";
+import {
+  generateControlLedgerCode,
+  getNextControlSequence,
+} from "../../engines/ledger-code.engine.ts";
+import { accountSubNatures } from "../../db/schema/index.ts";
 import type { AppContext } from "./_shared/types.ts";
 
 const fundsRoutes = new Hono();
-
-/**
- * توليد كود الصندوق
- * الكود: FND-01, FND-02, FND-03...
- */
-function buildFundCode(sequenceNumber: number): string {
-  return `${TYPE_PREFIXES.fund || "FND"}-${String(sequenceNumber).padStart(2, "0")}`;
-}
-
-async function ensureCounterAtLeast(
-  businessId: number,
-  counterType: string,
-  entityId: number,
-  year: number,
-  lastNumber: number,
-): Promise<void> {
-  await db.execute(sql`
-    INSERT INTO sequence_counters (business_id, counter_type, entity_id, year, last_number)
-    VALUES (${businessId}, ${counterType}, ${entityId}, ${year}, ${lastNumber})
-    ON CONFLICT (business_id, counter_type, entity_id, year)
-    DO UPDATE SET
-      last_number = GREATEST(sequence_counters.last_number, EXCLUDED.last_number),
-      updated_at = NOW()
-  `);
-}
-
-
-function parsePositiveIntOrNull(raw: unknown): number | null {
-  if (typeof raw === "number") return raw;
-  if (typeof raw === "string") return Number.parseInt(raw, 10);
-  return null;
-}
-
 
 fundsRoutes.post(
   "/businesses/:bizId/funds",
@@ -79,21 +40,128 @@ fundsRoutes.post(
     const validation = validateBody(fundSchema, body);
     if (!validation.success) return c.json({ error: validation.error }, 400);
     const vd = validation.data as Record<string, unknown>;
-    // الحساب المرتبط إلزامي — يُنشأ أولاً من صفحة الحسابات
-    const accountId = body.accountId != null && Number(body.accountId) > 0 ? Number(body.accountId) : null;
-    if (!accountId) return c.json({ error: 'يجب اختيار حساب مرتبط بالصندوق' }, 400);
+    const providedAccountId =
+      body.accountId != null && Number(body.accountId) > 0
+        ? Number(body.accountId)
+        : null;
 
-    const [acc] = await db.select({ id: accounts.id, sequenceNumber: accounts.sequenceNumber, code: accounts.code })
-      .from(accounts)
-      .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)))
-      .limit(1);
-    if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
+    let accountId: number;
+    let fundCode: string;
+    let fundLedgerCode: string;
+    let fundSeqNumber: number;
 
-    // كود مركّب: كود الحساب/رقم فرعي (FND-01/1, FND-01/2)
-    const existingFunds = await db.select({ id: funds.id }).from(funds)
-      .where(and(eq(funds.businessId, bizId), eq(funds.accountId, accountId)));
-    const subSeq = existingFunds.length + 1;
-    const fundCode = `${acc.code}/${subSeq}`;
+    if (providedAccountId) {
+      // حساب موجود — كود مركّب حسب عدد الصناديق المرتبطة به
+      const [acc] = await db
+        .select({
+          id: accounts.id,
+          sequenceNumber: accounts.sequenceNumber,
+          code: accounts.code,
+          ledgerCode: accounts.ledgerCode,
+        })
+        .from(accounts)
+        .where(
+          and(
+            eq(accounts.id, providedAccountId),
+            eq(accounts.businessId, bizId),
+          ),
+        )
+        .limit(1);
+      if (!acc) return c.json({ error: "الحساب المحدد غير موجود" }, 400);
+      const existingFunds = await db
+        .select({ id: funds.id })
+        .from(funds)
+        .where(
+          and(
+            eq(funds.businessId, bizId),
+            eq(funds.accountId, providedAccountId),
+          ),
+        );
+      const subSeq = existingFunds.length + 1;
+      accountId = acc.id;
+      const paddedFundCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+      fundCode = paddedFundCode;
+      fundLedgerCode = paddedFundCode
+        .replace(
+          /^([A-Z]+)/,
+          (_m, p) =>
+            ({
+              FND: "001",
+              BNK: "002",
+              WLT: "003",
+              EXC: "004",
+              WHS: "005",
+              CUS: "006",
+              SUP: "007",
+              EMP: "008",
+              PRT: "009",
+              BIL: "010",
+              INT: "011",
+              BDG: "012",
+              STL: "013",
+              PNG: "014",
+            })[p] ?? "099",
+        )
+        .replace("/", "-");
+      fundSeqNumber = acc.sequenceNumber ?? subSeq;
+    } else {
+      // لا يوجد حساب — ينشئ المحرك حساباً مستقلاً جديداً تلقائياً
+      const [subNature] = await db
+        .select({ id: accountSubNatures.id })
+        .from(accountSubNatures)
+        .where(
+          and(
+            eq(accountSubNatures.businessId, bizId),
+            eq(accountSubNatures.natureKey, "fund"),
+          ),
+        )
+        .limit(1);
+      const codes = await generateFinancialEntityCodes(
+        bizId,
+        "fund",
+        db as any,
+      );
+      const controlSeq = await getNextControlSequence(bizId, "fund", db as any);
+      const accLedgerCode = generateControlLedgerCode("fund", controlSeq);
+      const [newAcc] = await db
+        .insert(accounts)
+        .values({
+          businessId: bizId,
+          name: String(vd.name),
+          accountType: "fund" as any,
+          accountSubNatureId: subNature?.id ?? null,
+          isLeafAccount: true,
+          code: codes.accountCode,
+          ledgerCode: accLedgerCode,
+          sequenceNumber: codes.sequenceNumber,
+        })
+        .returning();
+      accountId = newAcc.id;
+      fundCode = codes.entityCode;
+      fundLedgerCode = codes.entityCode
+        .replace(
+          /^([A-Z]+)/,
+          (_m, p) =>
+            ({
+              FND: "001",
+              BNK: "002",
+              WLT: "003",
+              EXC: "004",
+              WHS: "005",
+              CUS: "006",
+              SUP: "007",
+              EMP: "008",
+              PRT: "009",
+              BIL: "010",
+              INT: "011",
+              BDG: "012",
+              STL: "013",
+              PNG: "014",
+            })[p] ?? "099",
+        )
+        .replace("/", "-");
+      fundSeqNumber = codes.sequenceNumber;
+    }
 
     // تحديد العملة الافتراضية
     let defaultCurrencyId: number | null = null;
@@ -106,12 +174,25 @@ fundsRoutes.post(
       name: String(vd.name),
       accountId: accountId,
       defaultCurrencyId: defaultCurrencyId,
-      sequenceNumber: acc.sequenceNumber,
+      sequenceNumber: fundSeqNumber,
       code: fundCode,
-      stationId: vd.stationId != null && Number(vd.stationId) > 0 ? Number(vd.stationId) : null,
-      responsiblePerson: typeof vd.responsiblePerson === 'string' && vd.responsiblePerson.trim() ? vd.responsiblePerson.trim() : null,
-      description: typeof vd.description === 'string' && vd.description.trim() ? vd.description.trim() : null,
-      notes: typeof vd.notes === 'string' && vd.notes.trim() ? vd.notes.trim() : null,
+      ledgerCode: fundLedgerCode,
+      stationId:
+        vd.stationId != null && Number(vd.stationId) > 0
+          ? Number(vd.stationId)
+          : null,
+      responsiblePerson:
+        typeof vd.responsiblePerson === "string" && vd.responsiblePerson.trim()
+          ? vd.responsiblePerson.trim()
+          : null,
+      description:
+        typeof vd.description === "string" && vd.description.trim()
+          ? vd.description.trim()
+          : null,
+      notes:
+        typeof vd.notes === "string" && vd.notes.trim()
+          ? vd.notes.trim()
+          : null,
       isActive: vd.isActive !== false,
     };
 
@@ -123,9 +204,15 @@ fundsRoutes.post(
     // نسخ العملات المحددة أو جميع عملات الحساب إلى fund_balances
     let currencyIdsToAdd: number[] = [];
 
-    if (body.currencyIds && Array.isArray(body.currencyIds) && body.currencyIds.length > 0) {
+    if (
+      body.currencyIds &&
+      Array.isArray(body.currencyIds) &&
+      body.currencyIds.length > 0
+    ) {
       // استخدام العملات المحددة من المستخدم
-      currencyIdsToAdd = body.currencyIds.map((id: any) => Number(id)).filter((id: number) => id > 0);
+      currencyIdsToAdd = body.currencyIds
+        .map((id: any) => Number(id))
+        .filter((id: number) => id > 0);
     } else {
       // نسخ جميع عملات الحساب افتراضياً
       const accountCurrenciesRows = await db
@@ -139,7 +226,7 @@ fundsRoutes.post(
       const balanceValues = currencyIdsToAdd.map((currencyId) => ({
         fundId: created.id,
         currencyId: currencyId,
-        balance: '0',
+        balance: "0",
         updatedAt: new Date(),
       }));
       await db.insert(fundBalances).values(balanceValues);
@@ -164,28 +251,6 @@ fundsRoutes.put(
       return c.json({ error: "صندوق غير موجود أو لا ينتمي لهذا العمل" }, 404);
     const body = (await getBody(c)) as Record<string, unknown>;
     const payload: Record<string, unknown> = { ...body, updatedAt: new Date() };
-
-    const manualSeq = parsePositiveIntOrNull(body.sequenceNumber);
-
-    if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0 && manualSeq !== existing.sequenceNumber) {
-      const dup = await db
-        .select({ id: funds.id })
-        .from(funds)
-        .where(
-          and(
-            eq(funds.businessId, bizId),
-            eq(funds.sequenceNumber, manualSeq),
-            ne(funds.id, id),
-          ),
-        )
-        .limit(1);
-      if (dup.length > 0) {
-        return c.json({ error: "رقم الصندوق مستخدم مسبقاً" }, 400);
-      }
-      payload.sequenceNumber = manualSeq;
-      payload.code = buildFundCode(manualSeq);
-      await ensureCounterAtLeast(bizId, "fund", 0, 0, manualSeq);
-    }
 
     const [updated] = await db
       .update(funds)
@@ -213,26 +278,60 @@ fundsRoutes.delete(
       return c.json({ error: "صندوق غير موجود أو لا ينتمي لهذا العمل" }, 404);
 
     // حماية: لا يمكن حذف صندوق تم تنفيذ عمليات فيه
-    const [linkedVoucher] = await db.select({ id: vouchers.id }).from(vouchers)
-      .where(and(eq(vouchers.businessId, bizId), sql`(${vouchers.fromFundId} = ${id} OR ${vouchers.toFundId} = ${id})`))
+    const [linkedVoucher] = await db
+      .select({ id: vouchers.id })
+      .from(vouchers)
+      .where(
+        and(
+          eq(vouchers.businessId, bizId),
+          sql`(${vouchers.fromFundId} = ${id} OR ${vouchers.toFundId} = ${id})`,
+        ),
+      )
       .limit(1);
-    if (linkedVoucher) return c.json({ error: 'لا يمكن حذف الصندوق لأنه مرتبط بسندات. احذف السندات أولاً' }, 400);
+    if (linkedVoucher)
+      return c.json(
+        { error: "لا يمكن حذف الصندوق لأنه مرتبط بسندات. احذف السندات أولاً" },
+        400,
+      );
 
-    const [nonZeroBalance] = await db.select({ id: fundBalances.id }).from(fundBalances)
-      .where(and(eq(fundBalances.fundId, id), ne(fundBalances.balance, '0')))
+    const [nonZeroBalance] = await db
+      .select({ id: fundBalances.id })
+      .from(fundBalances)
+      .where(and(eq(fundBalances.fundId, id), ne(fundBalances.balance, "0")))
       .limit(1);
-    if (nonZeroBalance) return c.json({ error: 'لا يمكن حذف الصندوق لأنه يحتوي على رصيد غير صفري' }, 400);
+    if (nonZeroBalance)
+      return c.json(
+        { error: "لا يمكن حذف الصندوق لأنه يحتوي على رصيد غير صفري" },
+        400,
+      );
 
     if (existing.accountId) {
-      const [linkedVoucherLine] = await db.select({ id: voucherLines.id }).from(voucherLines)
-        .where(eq(voucherLines.accountId, existing.accountId)).limit(1);
-      if (linkedVoucherLine) return c.json({ error: 'لا يمكن حذف الصندوق لأن حسابه المرتبط يحتوي على قيود' }, 400);
+      const [linkedVoucherLine] = await db
+        .select({ id: voucherLines.id })
+        .from(voucherLines)
+        .where(eq(voucherLines.accountId, existing.accountId))
+        .limit(1);
+      if (linkedVoucherLine)
+        return c.json(
+          { error: "لا يمكن حذف الصندوق لأن حسابه المرتبط يحتوي على قيود" },
+          400,
+        );
 
-      const [linkedJournal] = await db.select({ id: journalEntryLines.id }).from(journalEntryLines)
-        .where(eq(journalEntryLines.accountId, existing.accountId)).limit(1);
-      if (linkedJournal) return c.json({ error: 'لا يمكن حذف الصندوق لأن حسابه المرتبط يحتوي على قيود يومية' }, 400);
+      const [linkedJournal] = await db
+        .select({ id: journalEntryLines.id })
+        .from(journalEntryLines)
+        .where(eq(journalEntryLines.accountId, existing.accountId))
+        .limit(1);
+      if (linkedJournal)
+        return c.json(
+          {
+            error: "لا يمكن حذف الصندوق لأن حسابه المرتبط يحتوي على قيود يومية",
+          },
+          400,
+        );
     }
 
+    await db.delete(fundBalances).where(eq(fundBalances.fundId, id));
     await db.delete(funds).where(eq(funds.id, id));
     return c.json({ success: true });
   }),
@@ -248,7 +347,12 @@ fundsRoutes.put(
     if (err) return err;
     const body = (await getBody(c)) as Record<string, unknown>;
     const payload: Record<string, unknown> = { ...body, updatedAt: new Date() };
-    const manualSeq = parsePositiveIntOrNull(body.sequenceNumber);
+    const manualSeq =
+      typeof body.sequenceNumber === "number"
+        ? body.sequenceNumber
+        : typeof body.sequenceNumber === "string"
+          ? Number.parseInt(body.sequenceNumber, 10)
+          : null;
     if (manualSeq != null && Number.isInteger(manualSeq) && manualSeq > 0) {
       const dup = await db
         .select({ id: funds.id })
@@ -278,6 +382,5 @@ fundsRoutes.put(
 );
 
 export default fundsRoutes;
-
 
 export { fundsRoutes as fundsWriteRoutes };

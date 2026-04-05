@@ -12,9 +12,7 @@ import {
   currencies,
 } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
-import {
-  safeHandler,
-} from "../../middleware/helpers.ts";
+import { safeHandler } from "../../middleware/helpers.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import type { AppContext } from "./_shared/types.ts";
 
@@ -42,6 +40,7 @@ banksRoutes.get(
         createdAt: banks.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(banks)
       .leftJoin(accounts, eq(banks.accountId, accounts.id))

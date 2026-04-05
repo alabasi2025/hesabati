@@ -1,6 +1,6 @@
 import { Component, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { ColorPickerDirective } from 'ngx-color-picker';
@@ -9,10 +9,9 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { WebSocketService } from '../../services/websocket.service';
 import { BasePageComponent } from '../../shared/base-page.component';
-import { ACCOUNT_TYPE_META, getAccTypeMeta } from '../../shared/constants/account-types';
-import { formatAmount as formatAmountShared, formatAmountPrecise, formatDate as formatDateShared } from '../../shared/helpers';
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { getAccTypeMeta } from '../../shared/constants/account-types';
+import { formatAmountPrecise, formatDate as formatDateShared } from '../../shared/helpers';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { takeUntil } from 'rxjs';
 
 // ===== Tab Type Definitions =====
@@ -71,21 +70,92 @@ interface AccountData {
 
 // ===== Tab Type Options (for wizard) =====
 const TAB_TYPE_OPTIONS = [
-  { value: 'operations', label: 'قوالب عمليات', icon: 'receipt_long', desc: 'أزرار لتنفيذ عمليات (تحصيل/توريد/تحويل)', color: '#3b82f6', defaultIcon: 'receipt_long', defaultColor: '#3b82f6' },
-  { value: 'log', label: 'سجل العمليات', icon: 'history', desc: 'جدول العمليات مع فلاتر وإحصائيات', color: '#22c55e', defaultIcon: 'history', defaultColor: '#6366f1' },
-  { value: 'accounts', label: 'مراقبة حسابات', icon: 'account_balance', desc: 'عرض أرصدة حسابات مع اتجاه وآخر حركة', color: '#f59e0b', defaultIcon: 'savings', defaultColor: '#10b981' },
-  { value: 'inventory', label: 'مراقبة أصناف', icon: 'inventory_2', desc: 'عرض أصناف المخازن مع الكميات والتكاليف وآخر حركة', color: '#0ea5e9', defaultIcon: 'inventory_2', defaultColor: '#0ea5e9' },
-  { value: 'stats', label: 'إحصائيات', icon: 'analytics', desc: 'أرقام ملخصة (تحصيل، صرف، عدد عمليات، صافي)', color: '#8b5cf6', defaultIcon: 'analytics', defaultColor: '#8b5cf6' },
-  { value: 'chart', label: 'رسم بياني', icon: 'bar_chart', desc: 'رسم بياني للتحصيل والصرف', color: '#14b8a6', defaultIcon: 'bar_chart', defaultColor: '#14b8a6' },
-  { value: 'reports', label: 'تقارير', icon: 'summarize', desc: 'استخراج تقارير للحسابات المختارة', color: '#ec4899', defaultIcon: 'summarize', defaultColor: '#ec4899' },
-  { value: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', desc: 'منطقة نص حر مع حفظ تلقائي', color: '#f97316', defaultIcon: 'sticky_note_2', defaultColor: '#f97316' },
+  {
+    value: 'operations',
+    label: 'قوالب عمليات',
+    icon: 'receipt_long',
+    desc: 'أزرار لتنفيذ عمليات (تحصيل/توريد/تحويل)',
+    color: '#3b82f6',
+    defaultIcon: 'receipt_long',
+    defaultColor: '#3b82f6',
+  },
+  {
+    value: 'log',
+    label: 'سجل العمليات',
+    icon: 'history',
+    desc: 'جدول العمليات مع فلاتر وإحصائيات',
+    color: '#22c55e',
+    defaultIcon: 'history',
+    defaultColor: '#6366f1',
+  },
+  {
+    value: 'accounts',
+    label: 'مراقبة حسابات',
+    icon: 'account_balance',
+    desc: 'عرض أرصدة حسابات مع اتجاه وآخر حركة',
+    color: '#f59e0b',
+    defaultIcon: 'savings',
+    defaultColor: '#10b981',
+  },
+  {
+    value: 'inventory',
+    label: 'مراقبة أصناف',
+    icon: 'inventory_2',
+    desc: 'عرض أصناف المخازن مع الكميات والتكاليف وآخر حركة',
+    color: '#0ea5e9',
+    defaultIcon: 'inventory_2',
+    defaultColor: '#0ea5e9',
+  },
+  {
+    value: 'stats',
+    label: 'إحصائيات',
+    icon: 'analytics',
+    desc: 'أرقام ملخصة (تحصيل، صرف، عدد عمليات، صافي)',
+    color: '#8b5cf6',
+    defaultIcon: 'analytics',
+    defaultColor: '#8b5cf6',
+  },
+  {
+    value: 'chart',
+    label: 'رسم بياني',
+    icon: 'bar_chart',
+    desc: 'رسم بياني للتحصيل والصرف',
+    color: '#14b8a6',
+    defaultIcon: 'bar_chart',
+    defaultColor: '#14b8a6',
+  },
+  {
+    value: 'reports',
+    label: 'تقارير',
+    icon: 'summarize',
+    desc: 'استخراج تقارير للحسابات المختارة',
+    color: '#ec4899',
+    defaultIcon: 'summarize',
+    defaultColor: '#ec4899',
+  },
+  {
+    value: 'notes',
+    label: 'ملاحظات',
+    icon: 'sticky_note_2',
+    desc: 'منطقة نص حر مع حفظ تلقائي',
+    color: '#f97316',
+    defaultIcon: 'sticky_note_2',
+    defaultColor: '#f97316',
+  },
 ];
 
 @Component({
   selector: 'app-custom-screens',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgApexchartsModule, ColorPickerDirective, CdkDrag, CdkDropList,
-    LoadingStateComponent, StatusBadgeComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    CdkDrag,
+    CdkDropList,
+    NgApexchartsModule,
+    ColorPickerDirective,
+  ],
   templateUrl: './custom-screens.html',
   styleUrl: './custom-screens.scss',
 })
@@ -166,7 +236,12 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   inventoryWarehouses = signal<any[]>([]);
 
   // Stats tab
-  widgetStats = signal<any>({ totalReceipts: 0, totalPayments: 0, operationsCount: 0, netBalance: 0 });
+  widgetStats = signal<any>({
+    totalReceipts: 0,
+    totalPayments: 0,
+    operationsCount: 0,
+    netBalance: 0,
+  });
 
   // Chart tab — ApexCharts data
   chartSeries = signal<any[]>([]);
@@ -192,23 +267,44 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
   accDynamicFilters = computed(() => {
     const all = this.allAccounts();
-    const typesInDB = [...new Set(all.map(a => a.accountType).filter(Boolean))];
-    const priority = ['billing', 'fund', 'bank', 'exchange', 'e_wallet', 'warehouse', 'custody', 'supplier', 'employee', 'partner', 'budget', 'settlement', 'pending', 'accounting'];
+    const typesInDB = [...new Set(all.map((a) => a.accountType).filter(Boolean))];
+    const priority = [
+      'billing',
+      'fund',
+      'bank',
+      'exchange',
+      'e_wallet',
+      'warehouse',
+      'custody',
+      'supplier',
+      'employee',
+      'partner',
+      'budget',
+      'settlement',
+      'pending',
+      'accounting',
+    ];
     const sorted = typesInDB.sort((a: string, b: string) => {
-      const ia = priority.indexOf(a); const ib = priority.indexOf(b);
+      const ia = priority.indexOf(a);
+      const ib = priority.indexOf(b);
       if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1; if (ib >= 0) return 1;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
       return getAccTypeMeta(a).label.localeCompare(getAccTypeMeta(b).label, 'ar');
     });
-    return sorted.map(type => ({ value: type, ...getAccTypeMeta(type) }));
+    return sorted.map((type) => ({ value: type, ...getAccTypeMeta(type) }));
   });
 
   accFiltered = computed(() => {
     const type = this.accFilterType();
     const q = this.accSearchQuery().toLowerCase();
-    return this.allAccounts().filter(a => {
+    return this.allAccounts().filter((a) => {
       const matchType = type === 'all' || a.accountType === type;
-      const matchQ = !q || (a.name || '').toLowerCase().includes(q) || (a.provider || '').toLowerCase().includes(q) || (a.subType || '').toLowerCase().includes(q);
+      const matchQ =
+        !q ||
+        (a.name || '').toLowerCase().includes(q) ||
+        (a.provider || '').toLowerCase().includes(q) ||
+        (a.subType || '').toLowerCase().includes(q);
       return matchType && matchQ;
     });
   });
@@ -249,18 +345,53 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   tabTypeOptions = TAB_TYPE_OPTIONS;
 
   icons = [
-    'dashboard', 'bolt', 'receipt_long', 'receipt', 'account_balance_wallet',
-    'category', 'savings', 'menu_book', 'currency_exchange', 'groups',
-    'handshake', 'warehouse', 'local_shipping', 'balance', 'assessment',
-    'monitor', 'grid_view', 'view_module', 'widgets', 'space_dashboard',
-    'analytics', 'pie_chart', 'bar_chart', 'trending_up', 'speed',
-    'history', 'sticky_note_2', 'arrow_downward', 'arrow_upward',
-    'call_received', 'call_made', 'payments', 'lock', 'miscellaneous_services',
+    'dashboard',
+    'bolt',
+    'receipt_long',
+    'receipt',
+    'account_balance_wallet',
+    'category',
+    'savings',
+    'menu_book',
+    'currency_exchange',
+    'groups',
+    'handshake',
+    'warehouse',
+    'local_shipping',
+    'balance',
+    'assessment',
+    'monitor',
+    'grid_view',
+    'view_module',
+    'widgets',
+    'space_dashboard',
+    'analytics',
+    'pie_chart',
+    'bar_chart',
+    'trending_up',
+    'speed',
+    'history',
+    'sticky_note_2',
+    'arrow_downward',
+    'arrow_upward',
+    'call_received',
+    'call_made',
+    'payments',
+    'lock',
+    'miscellaneous_services',
   ];
 
   colors = [
-    '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
-    '#14b8a6', '#f97316', '#ec4899', '#06b6d4', '#84cc16',
+    '#3b82f6',
+    '#22c55e',
+    '#f59e0b',
+    '#ef4444',
+    '#8b5cf6',
+    '#14b8a6',
+    '#f97316',
+    '#ec4899',
+    '#06b6d4',
+    '#84cc16',
   ];
 
   // ===================== Lifecycle =====================
@@ -272,7 +403,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       if (qp['screen']) {
         this.openedFromSidebar.set(true);
         const screenId = Number.parseInt(qp['screen'], 10);
-        const screen = this.screens().find(s => s.id === screenId);
+        const screen = this.screens().find((s) => s.id === screenId);
         if (screen) await this.openScreen(screen);
       }
     });
@@ -285,7 +416,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       if (this.auth.isLoggedIn() && this.bizId) {
         this.wsService.connect('cookie', this.bizId);
       }
-    } catch (e) { /* WebSocket optional */ }
+    } catch (e) {
+      /* WebSocket optional */
+    }
   }
 
   override ngOnDestroy(): void {
@@ -344,7 +477,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   async loadTabsData(tabs: TabDefinition[]) {
-    const types = new Set(tabs.map(t => t.type));
+    const types = new Set(tabs.map((t) => t.type));
     const promises: Promise<void>[] = [];
 
     if (types.has('log')) promises.push(this.loadLogData());
@@ -352,20 +485,24 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     if (types.has('chart')) promises.push(this.loadChartData());
 
     // Load accounts for accounts tabs
-    const accountTabs = tabs.filter(t => t.type === 'accounts');
+    const accountTabs = tabs.filter((t) => t.type === 'accounts');
     if (accountTabs.length > 0) {
       const allAccountIds = new Set<number>();
-      accountTabs.forEach(t => (t.config?.accountIds || []).forEach((id: number) => allAccountIds.add(id)));
+      accountTabs.forEach((t) =>
+        (t.config?.accountIds || []).forEach((id: number) => allAccountIds.add(id)),
+      );
       if (allAccountIds.size > 0) {
         promises.push(this.loadAccountsData(Array.from(allAccountIds)));
       }
     }
 
     // Load inventory for inventory tabs
-    const inventoryTabs = tabs.filter(t => t.type === 'inventory');
+    const inventoryTabs = tabs.filter((t) => t.type === 'inventory');
     if (inventoryTabs.length > 0) {
       const allWarehouseIds = new Set<number>();
-      inventoryTabs.forEach(t => (t.config?.warehouseIds || []).forEach((id: number) => allWarehouseIds.add(id)));
+      inventoryTabs.forEach((t) =>
+        (t.config?.warehouseIds || []).forEach((id: number) => allWarehouseIds.add(id)),
+      );
       if (allWarehouseIds.size > 0) {
         promises.push(this.loadInventoryData(Array.from(allWarehouseIds)));
       }
@@ -382,7 +519,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       };
       if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
       if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
-      if (this.logFilterOpType()) filters.operationTypeId = Number.parseInt(this.logFilterOpType(), 10);
+      if (this.logFilterOpType())
+        filters.operationTypeId = Number.parseInt(this.logFilterOpType(), 10);
       if (this.logSearchQuery()) filters.search = this.logSearchQuery();
       if (this.logMinAmount()) filters.minAmount = this.logMinAmount();
       if (this.logMaxAmount()) filters.maxAmount = this.logMaxAmount();
@@ -395,11 +533,14 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         const filters: any = { limit: 50 };
         if (this.logFilterDateFrom()) filters.dateFrom = this.logFilterDateFrom();
         if (this.logFilterDateTo()) filters.dateTo = this.logFilterDateTo();
-        if (this.logFilterOpType()) filters.operationTypeId = Number.parseInt(this.logFilterOpType(), 10);
+        if (this.logFilterOpType())
+          filters.operationTypeId = Number.parseInt(this.logFilterOpType(), 10);
         const result = await this.api.getWidgetLog(this.bizId, filters);
         this.logEntries.set(result.entries || []);
         this.logTotal.set(result.total || 0);
-      } catch (e2) { console.error('Error loading log:', e2); }
+      } catch (e2) {
+        console.error('Error loading log:', e2);
+      }
     }
   }
 
@@ -449,7 +590,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     this.autoRefreshEnabled.set(true);
     this.autoRefreshCountdown.set(30);
     this.countdownInterval = setInterval(() => {
-      this.autoRefreshCountdown.update(c => c - 1);
+      this.autoRefreshCountdown.update((c) => c - 1);
     }, 1000);
     this.autoRefreshInterval = setInterval(async () => {
       this.autoRefreshCountdown.set(30);
@@ -463,8 +604,14 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
   private stopAutoRefresh() {
     this.autoRefreshEnabled.set(false);
-    if (this.autoRefreshInterval) { clearInterval(this.autoRefreshInterval); this.autoRefreshInterval = null; }
-    if (this.countdownInterval) { clearInterval(this.countdownInterval); this.countdownInterval = null; }
+    if (this.autoRefreshInterval) {
+      clearInterval(this.autoRefreshInterval);
+      this.autoRefreshInterval = null;
+    }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
   }
 
   // Voucher Details
@@ -493,14 +640,16 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         this.bizId,
         this.statsPeriod() !== 'all' ? this.statsPeriod() : undefined,
         this.statsDateFrom() || undefined,
-        this.statsDateTo() || undefined
+        this.statsDateTo() || undefined,
       );
       this.widgetStats.set(stats);
     } catch (e) {
       try {
         const stats = await this.api.getWidgetStats(this.bizId);
         this.widgetStats.set(stats);
-      } catch (e2) { console.error('Error loading stats:', e2); }
+      } catch (e2) {
+        console.error('Error loading stats:', e2);
+      }
     }
   }
 
@@ -516,7 +665,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         this.chartGroupBy(),
         this.chartMonths(),
         this.chartDateFrom() || undefined,
-        this.chartDateTo() || undefined
+        this.chartDateTo() || undefined,
       );
       this.chartCategories.set(chartData.labels || []);
       this.chartSeries.set([
@@ -531,7 +680,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
           { name: 'التحصيل', data: chartData.receipts || [] },
           { name: 'الصرف', data: chartData.payments || [] },
         ]);
-      } catch (e2) { console.error('Error loading chart:', e2); }
+      } catch (e2) {
+        console.error('Error loading chart:', e2);
+      }
     }
   }
 
@@ -549,7 +700,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     try {
       const accounts = await this.api.getWidgetAccounts(this.bizId, accountIds);
       this.widgetAccounts.set(accounts);
-    } catch (e) { console.error('Error loading accounts:', e); }
+    } catch (e) {
+      console.error('Error loading accounts:', e);
+    }
   }
 
   async loadInventoryData(warehouseIds: number[]) {
@@ -560,11 +713,15 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         results.push(...(inventory || []));
       }
       this.widgetInventory.set(results);
-    } catch (e) { console.error('خطأ في تحميل بيانات المخزون:', e); }
+    } catch (e) {
+      console.error('خطأ في تحميل بيانات المخزون:', e);
+    }
   }
 
   // ===================== Tab Helpers =====================
-  setActiveTab(tabId: string) { this.activeTabId.set(tabId); }
+  setActiveTab(tabId: string) {
+    this.activeTabId.set(tabId);
+  }
 
   getTabOperationTypes(tab: TabDefinition): any[] {
     const ids = tab.config?.operationTypeIds || [];
@@ -587,10 +744,30 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   getStatsCards(): { label: string; value: string; icon: string; color: string }[] {
     const s = this.widgetStats();
     return [
-      { label: 'إجمالي التحصيل', value: this.formatNumber(s.totalReceipts), icon: 'trending_up', color: '#22c55e' },
-      { label: 'إجمالي الصرف', value: this.formatNumber(s.totalPayments), icon: 'trending_down', color: '#ef4444' },
-      { label: 'عدد العمليات', value: String(s.operationsCount), icon: 'receipt_long', color: '#3b82f6' },
-      { label: 'صافي الرصيد', value: this.formatNumber(s.netBalance), icon: 'account_balance', color: '#8b5cf6' },
+      {
+        label: 'إجمالي التحصيل',
+        value: this.formatNumber(s.totalReceipts),
+        icon: 'trending_up',
+        color: '#22c55e',
+      },
+      {
+        label: 'إجمالي الصرف',
+        value: this.formatNumber(s.totalPayments),
+        icon: 'trending_down',
+        color: '#ef4444',
+      },
+      {
+        label: 'عدد العمليات',
+        value: String(s.operationsCount),
+        icon: 'receipt_long',
+        color: '#3b82f6',
+      },
+      {
+        label: 'صافي الرصيد',
+        value: this.formatNumber(s.netBalance),
+        icon: 'account_balance',
+        color: '#8b5cf6',
+      },
     ];
   }
 
@@ -602,21 +779,28 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   selectOpType(ot: any) {
     this.csSelectedOpType.set(ot);
     const accounts = ot.linkedAccounts || ot.accounts || [];
-    const entries = accounts.filter((la: any) => la.isActive !== false).map((la: any) => ({
-      accountId: la.accountId || la.id,
-      accountName: la.label || la.accountName || '',
-      amount: '', notes: '',
-    }));
-    if (entries.length === 0) entries.push({ accountId: null, accountName: '', amount: '', notes: '' });
+    const entries = accounts
+      .filter((la: any) => la.isActive !== false)
+      .map((la: any) => ({
+        accountId: la.accountId || la.id,
+        accountName: la.label || la.accountName || '',
+        amount: '',
+        notes: '',
+      }));
+    if (entries.length === 0)
+      entries.push({ accountId: null, accountName: '', amount: '', notes: '' });
     this.csFormEntries.set(entries);
     this.csFormDescription.set('');
     this.csFormDate.set(new Date().toISOString().split('T')[0]);
   }
 
-  cancelOpType() { this.csSelectedOpType.set(null); this.csFormEntries.set([]); }
+  cancelOpType() {
+    this.csSelectedOpType.set(null);
+    this.csFormEntries.set([]);
+  }
 
   updateFormEntry(index: number, field: string, value: string) {
-    this.csFormEntries.update(entries => {
+    this.csFormEntries.update((entries) => {
       const updated = [...entries];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
@@ -624,15 +808,18 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   getFormTotal(): number {
-    return this.csFormEntries().reduce((sum, e) => { const amt = Number.parseFloat(e.amount); return sum + (Number.isNaN(amt) ? 0 : amt); }, 0);
+    return this.csFormEntries().reduce((sum, e) => {
+      const amt = Number.parseFloat(e.amount);
+      return sum + (Number.isNaN(amt) ? 0 : amt);
+    }, 0);
   }
 
   getFilledEntriesCount(): number {
-    return this.csFormEntries().filter(e => Number.parseFloat(e.amount) > 0).length;
+    return this.csFormEntries().filter((e) => Number.parseFloat(e.amount) > 0).length;
   }
 
   getAccountBalance(accountId: number): number {
-    const acc = this.widgetAccounts().find(a => a.id === accountId);
+    const acc = this.widgetAccounts().find((a) => a.id === accountId);
     return acc?.total_balance || 0;
   }
 
@@ -645,12 +832,22 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   csTransferAmount = signal<string>('');
 
   async loadCurrencies() {
-    try { const c = await this.api.getCurrencies(); this.currencies.set(c || []); } catch (e) { /* fallback */ }
+    try {
+      const c = await this.api.getCurrencies();
+      this.currencies.set(c || []);
+    } catch (e) {
+      /* fallback */
+    }
   }
 
   isTransferType(): boolean {
     const ot = this.csSelectedOpType();
-    return ot && (ot.voucherType === 'transfer' || ot.voucherType === 'journal' || (ot.name || '').includes('تحويل'));
+    return (
+      ot &&
+      (ot.voucherType === 'transfer' ||
+        ot.voucherType === 'journal' ||
+        (ot.name || '').includes('تحويل'))
+    );
   }
 
   async saveOperation() {
@@ -662,12 +859,21 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       const fromId = this.csTransferFromAccountId();
       const toId = this.csTransferToAccountId();
       const amount = Number.parseFloat(this.csTransferAmount());
-      if (!fromId || !toId) { this.toast.warning('اختر حساب المصدر والوجهة'); return; }
-      if (fromId === toId) { this.toast.warning('لا يمكن التحويل لنفس الحساب'); return; }
-      if (!amount || amount <= 0) { this.toast.warning('أدخل مبلغاً صحيحاً'); return; }
+      if (!fromId || !toId) {
+        this.toast.warning('اختر حساب المصدر والوجهة');
+        return;
+      }
+      if (fromId === toId) {
+        this.toast.warning('لا يمكن التحويل لنفس الحساب');
+        return;
+      }
+      if (!amount || amount <= 0) {
+        this.toast.warning('أدخل مبلغاً صحيحاً');
+        return;
+      }
 
-      const fromAcc = this.allAccounts().find(a => a.id === fromId);
-      const toAcc = this.allAccounts().find(a => a.id === toId);
+      const fromAcc = this.allAccounts().find((a) => a.id === fromId);
+      const toAcc = this.allAccounts().find((a) => a.id === toId);
       const confirmed = await this.toast.confirm({
         title: `تأكيد تحويل - ${opType.name}`,
         message: `تحويل ${amount.toLocaleString('en')} من "${fromAcc?.name || fromId}" إلى "${toAcc?.name || toId}"`,
@@ -678,38 +884,66 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       this.saving.set(true);
       try {
         const result = await this.api.createVoucher(this.bizId, {
-          voucherType: 'journal', operationTypeId: opType.id,
-          fromAccountId: fromId, toAccountId: toId,
-          amount, currencyId: this.csFormCurrencyId(),
+          voucherType: 'journal',
+          operationTypeId: opType.id,
+          fromAccountId: fromId,
+          toAccountId: toId,
+          amount,
+          currencyId: this.csFormCurrencyId(),
           description: this.csFormDescription() || `${opType.name} - تحويل`,
           voucherDate: this.csFormDate(),
         });
         this.toast.success(`تم التحويل بنجاح - ${amount.toLocaleString('en')}`);
-        this.csSelectedOpType.set(null); this.csTransferFromAccountId.set(null); this.csTransferToAccountId.set(null); this.csTransferAmount.set('');
+        this.csSelectedOpType.set(null);
+        this.csTransferFromAccountId.set(null);
+        this.csTransferToAccountId.set(null);
+        this.csTransferAmount.set('');
         const screen = this.activeScreen();
         if (screen) await this.openScreen(screen);
-      } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في التحويل'); }
-      finally { this.saving.set(false); }
+      } catch (e: unknown) {
+        this.toast.error(e instanceof Error ? e.message : 'خطأ في التحويل');
+      } finally {
+        this.saving.set(false);
+      }
       return;
     }
 
     // Regular operation (receipt/payment)
-    const entries = this.csFormEntries().filter(e => Number.parseFloat(e.amount) > 0);
-    if (!entries.length) { this.toast.warning('أدخل مبلغاً واحداً على الأقل'); return; }
+    const entries = this.csFormEntries().filter((e) => Number.parseFloat(e.amount) > 0);
+    if (!entries.length) {
+      this.toast.warning('أدخل مبلغاً واحداً على الأقل');
+      return;
+    }
 
     const total = this.getFormTotal();
-    const vTypeLabel = opType.voucherType === 'receipt' ? 'تحصيل' : opType.voucherType === 'payment' ? 'توريد' : 'عملية';
-    const vType: 'receipt' | 'payment' = (opType.voucherType === 'payment' ? 'payment' : 'receipt');
+    const vTypeLabel =
+      opType.voucherType === 'receipt'
+        ? 'تحصيل'
+        : opType.voucherType === 'payment'
+          ? 'توريد'
+          : 'عملية';
+    const vType: 'receipt' | 'payment' = opType.voucherType === 'payment' ? 'payment' : 'receipt';
     const useMulti = opType.hasMultiLines !== false;
     // إلزامية تحديد الخزينة (المصدر) في القالب قبل التنفيذ
     const pm = String(opType.paymentMethod || '').trim();
-    if (!pm) { this.toast.warning('حدد وسيلة الدفع والخزينة (المصدر) في القالب قبل التنفيذ'); return; }
-    if (pm === 'cash') {
-      if (!opType.sourceFundId) { this.toast.warning('حدد الخزينة (الصندوق) في القالب قبل التنفيذ'); return; }
-    } else {
-      if (!opType.sourceAccountId) { this.toast.warning('حدد الخزينة (حساب بنك/صراف/محفظة) في القالب قبل التنفيذ'); return; }
+    if (!pm) {
+      this.toast.warning('حدد وسيلة الدفع والخزينة (المصدر) في القالب قبل التنفيذ');
+      return;
     }
-    const summaryLines = entries.map(e => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('en')}`).join('\n');
+    if (pm === 'cash') {
+      if (!opType.sourceFundId) {
+        this.toast.warning('حدد الخزينة (الصندوق) في القالب قبل التنفيذ');
+        return;
+      }
+    } else {
+      if (!opType.sourceAccountId) {
+        this.toast.warning('حدد الخزينة (حساب بنك/صراف/محفظة) في القالب قبل التنفيذ');
+        return;
+      }
+    }
+    const summaryLines = entries
+      .map((e) => `\u2022 ${e.accountName}: ${Number.parseFloat(e.amount).toLocaleString('en')}`)
+      .join('\n');
     const confirmed = await this.toast.confirm({
       title: `تأكيد ${vTypeLabel} - ${opType.name}`,
       message: useMulti
@@ -720,7 +954,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     if (!confirmed) return;
 
     this.saving.set(true);
-    const results: any[] = []; const errors: string[] = [];
+    const results: any[] = [];
+    const errors: string[] = [];
     try {
       if (useMulti) {
         // سند واحد متعدد السطور - يعتمد على القالب لتحديد الطرف الأول (المصدر)
@@ -730,7 +965,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
           currencyId: this.csFormCurrencyId(),
           description: this.csFormDescription() || `${opType.name}`,
           voucherDate: this.csFormDate(),
-          entries: entries.map(e => ({
+          entries: entries.map((e) => ({
             accountId: e.accountId,
             amount: Number.parseFloat(e.amount),
             notes: e.notes || null,
@@ -771,19 +1006,30 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
       if (results.length > 0 && errors.length === 0) {
         const countLabel = useMulti ? 'سند واحد' : `${results.length} سند`;
-        const vNo = (results[0] as any)?.voucherNumber ? ` (رقم: ${(results[0] as any).voucherNumber})` : '';
-        this.toast.success(`تم تنفيذ ${countLabel} بنجاح - إجمالي: ${total.toLocaleString('en')}${vNo}`);
+        const vNo = (results[0] as any)?.voucherNumber
+          ? ` (رقم: ${(results[0] as any).voucherNumber})`
+          : '';
+        this.toast.success(
+          `تم تنفيذ ${countLabel} بنجاح - إجمالي: ${total.toLocaleString('en')}${vNo}`,
+        );
       } else if (results.length > 0) {
         this.toast.warning(`تم ${results.length} عملية بنجاح، فشلت ${errors.length}`);
       } else {
         this.toast.error(errors.length > 0 ? errors[0] : 'فشلت العمليات');
       }
 
-      if (results.length > 0) { this.csSelectedOpType.set(null); this.csFormEntries.set([]); this.csFormCurrencyId.set(1); }
+      if (results.length > 0) {
+        this.csSelectedOpType.set(null);
+        this.csFormEntries.set([]);
+        this.csFormCurrencyId.set(1);
+      }
       const screen = this.activeScreen();
       if (screen) await this.openScreen(screen);
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في تنفيذ العملية'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في تنفيذ العملية');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   // ===================== Log Filters =====================
@@ -792,8 +1038,12 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     await this.loadLogData();
   }
   async clearLogFilters() {
-    this.logFilterDateFrom.set(''); this.logFilterDateTo.set(''); this.logFilterOpType.set('');
-    this.logSearchQuery.set(''); this.logMinAmount.set(null); this.logMaxAmount.set(null);
+    this.logFilterDateFrom.set('');
+    this.logFilterDateTo.set('');
+    this.logFilterOpType.set('');
+    this.logSearchQuery.set('');
+    this.logMinAmount.set(null);
+    this.logMaxAmount.set(null);
     this.logPage.set(1);
     await this.loadLogData();
   }
@@ -808,7 +1058,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       try {
         const tabs = this.screenTabs();
         await this.api.saveCollectionStyleConfig(this.bizId, screen.id, { tabs, notes: text });
-      } catch (e) { console.error('Error auto-saving notes:', e); }
+      } catch (e) {
+        console.error('Error auto-saving notes:', e);
+      }
     }, 2000);
   }
 
@@ -842,10 +1094,14 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       this.operationTypes.set(opTypes);
       this.allAccounts.set(accountsData.accounts || []);
       this.inventoryWarehouses.set(warehouses || []);
-    } catch (e) { console.error('Error loading wizard data:', e); }
+    } catch (e) {
+      console.error('Error loading wizard data:', e);
+    }
   }
 
-  cancelWizard() { this.viewMode.set('list'); }
+  cancelWizard() {
+    this.viewMode.set('list');
+  }
 
   // Wizard: total steps = 2 (basic + tabs) + number of tabs that need config + 1 (preview)
   getWizardTotalSteps(): number {
@@ -853,7 +1109,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   getConfigurableTabs(): TabDefinition[] {
-    return this.wizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts' || t.type === 'inventory');
+    return this.wizardTabs().filter(
+      (t) => t.type === 'operations' || t.type === 'accounts' || t.type === 'inventory',
+    );
   }
 
   getWizardStepTitle(): string {
@@ -871,10 +1129,12 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   nextWizardStep() {
     const step = this.wizardStep();
     if (step === 1 && !this.wizardScreenName().trim()) {
-      this.toast.warning('يرجى إدخال اسم الشاشة'); return;
+      this.toast.warning('يرجى إدخال اسم الشاشة');
+      return;
     }
     if (step === 2 && this.wizardTabs().length === 0) {
-      this.toast.warning('يرجى إضافة تبويب واحد على الأقل'); return;
+      this.toast.warning('يرجى إضافة تبويب واحد على الأقل');
+      return;
     }
     const total = this.getWizardTotalSteps();
     if (step < total) {
@@ -894,7 +1154,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
   // Wizard: Add tab
   addWizardTab(typeValue: string) {
-    const typeInfo = TAB_TYPE_OPTIONS.find(t => t.value === typeValue);
+    const typeInfo = TAB_TYPE_OPTIONS.find((t) => t.value === typeValue);
     if (!typeInfo) return;
     const tabs = [...this.wizardTabs()];
     const newTab: TabDefinition = {
@@ -913,7 +1173,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   removeWizardTab(idx: number) {
     const tabs = [...this.wizardTabs()];
     tabs.splice(idx, 1);
-    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    tabs.forEach((t, i) => (t.sortOrder = i + 1));
     this.wizardTabs.set(tabs);
   }
 
@@ -922,7 +1182,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= tabs.length) return;
     [tabs[idx], tabs[targetIdx]] = [tabs[targetIdx], tabs[idx]];
-    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    tabs.forEach((t, i) => (t.sortOrder = i + 1));
     this.wizardTabs.set(tabs);
   }
 
@@ -938,7 +1198,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const tab = tabs[tabIdx];
     const ids = [...(tab.config?.operationTypeIds || [])];
     const idx = ids.indexOf(opTypeId);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(opTypeId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(opTypeId);
     tabs[tabIdx] = { ...tab, config: { ...tab.config, operationTypeIds: ids } };
     this.wizardTabs.set(tabs);
   }
@@ -949,13 +1210,18 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const tab = tabs[tabIdx];
     const ids = [...(tab.config?.accountIds || [])];
     const idx = ids.indexOf(accountId);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(accountId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(accountId);
     tabs[tabIdx] = { ...tab, config: { ...tab.config, accountIds: ids } };
     this.wizardTabs.set(tabs);
   }
 
-  setAccFilterType(type: string) { this.accFilterType.set(type); }
-  getAccTypeMeta(type: string) { return getAccTypeMeta(type); }
+  setAccFilterType(type: string) {
+    this.accFilterType.set(type);
+  }
+  getAccTypeMeta(type: string) {
+    return getAccTypeMeta(type);
+  }
 
   // Wizard: Toggle warehouse for inventory tab config
   toggleWizardTabWarehouse(tabIdx: number, warehouseId: number) {
@@ -963,7 +1229,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const tab = tabs[tabIdx];
     const ids = [...(tab.config?.warehouseIds || [])];
     const idx = ids.indexOf(warehouseId);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(warehouseId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(warehouseId);
     tabs[tabIdx] = { ...tab, config: { ...tab.config, warehouseIds: ids } };
     this.wizardTabs.set(tabs);
   }
@@ -973,21 +1240,28 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const tab = tabs[tabIdx];
     const ids = [...(tab.config?.warehouseIds || [])];
     const idx = ids.indexOf(warehouseId);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(warehouseId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(warehouseId);
     tabs[tabIdx] = { ...tab, config: { ...tab.config, warehouseIds: ids } };
     this.configWizardTabs.set(tabs);
   }
 
   async saveWizardScreen() {
     const name = this.wizardScreenName();
-    if (!name.trim()) { this.toast.warning('يرجى إدخال اسم الشاشة'); return; }
+    if (!name.trim()) {
+      this.toast.warning('يرجى إدخال اسم الشاشة');
+      return;
+    }
 
     this.saving.set(true);
     try {
       const payload: any = {
-        name, description: this.wizardScreenDesc(),
-        icon: this.wizardScreenIcon(), color: this.wizardScreenColor(),
-        templateKey: 'collection_style', widgets: [],
+        name,
+        description: this.wizardScreenDesc(),
+        icon: this.wizardScreenIcon(),
+        color: this.wizardScreenColor(),
+        templateKey: 'collection_style',
+        widgets: [],
         addToSidebar: this.wizardAddToSidebar(),
       };
       if (this.wizardAddToSidebar()) {
@@ -1000,7 +1274,12 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       if (this.wizardIsEditing() && this.activeScreen()) {
         // Update existing screen
         screenId = this.activeScreen()!.id;
-        await this.api.updateScreen(screenId, { name, description: this.wizardScreenDesc(), icon: this.wizardScreenIcon(), color: this.wizardScreenColor() });
+        await this.api.updateScreen(screenId, {
+          name,
+          description: this.wizardScreenDesc(),
+          icon: this.wizardScreenIcon(),
+          color: this.wizardScreenColor(),
+        });
       } else {
         // Create new screen
         const newScreen = await this.api.createScreen(this.bizId, payload);
@@ -1008,16 +1287,24 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       }
 
       // Save tabs config
-      await this.api.saveCollectionStyleConfig(this.bizId, screenId, { tabs: this.wizardTabs(), notes: '' });
+      await this.api.saveCollectionStyleConfig(this.bizId, screenId, {
+        tabs: this.wizardTabs(),
+        notes: '',
+      });
 
-      this.toast.success(this.wizardIsEditing() ? 'تم تحديث الشاشة بنجاح' : 'تم إنشاء الشاشة بنجاح');
+      this.toast.success(
+        this.wizardIsEditing() ? 'تم تحديث الشاشة بنجاح' : 'تم إنشاء الشاشة بنجاح',
+      );
       await this.loadScreens();
 
-      const screen = this.screens().find(s => s.id === screenId);
+      const screen = this.screens().find((s) => s.id === screenId);
       if (screen) await this.openScreen(screen);
       else this.viewMode.set('list');
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء الحفظ'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء الحفظ');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   // ===================== Config Wizard (Edit Existing Screen Tabs) =====================
@@ -1032,21 +1319,26 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     this.showConfigWizard.set(true);
   }
 
-  closeConfigWizard() { this.showConfigWizard.set(false); }
+  closeConfigWizard() {
+    this.showConfigWizard.set(false);
+  }
 
   getConfigWizardTotalSteps(): number {
     return 1 + this.getConfigWizardConfigurableTabs().length + 1;
   }
 
   getConfigWizardConfigurableTabs(): TabDefinition[] {
-    return this.configWizardTabs().filter(t => t.type === 'operations' || t.type === 'accounts' || t.type === 'inventory');
+    return this.configWizardTabs().filter(
+      (t) => t.type === 'operations' || t.type === 'accounts' || t.type === 'inventory',
+    );
   }
 
   nextConfigWizardStep() {
     const step = this.configWizardStep();
     const total = this.getConfigWizardTotalSteps();
     if (step === 1 && this.configWizardTabs().length === 0) {
-      this.toast.warning('يرجى إضافة تبويب واحد على الأقل'); return;
+      this.toast.warning('يرجى إضافة تبويب واحد على الأقل');
+      return;
     }
     if (step < total) {
       this.configWizardStep.set(step + 1);
@@ -1063,12 +1355,17 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   addConfigWizardTab(typeValue: string) {
-    const typeInfo = TAB_TYPE_OPTIONS.find(t => t.value === typeValue);
+    const typeInfo = TAB_TYPE_OPTIONS.find((t) => t.value === typeValue);
     if (!typeInfo) return;
     const tabs = [...this.configWizardTabs()];
     tabs.push({
-      id: `tab_${Date.now()}`, label: typeInfo.label, icon: typeInfo.defaultIcon,
-      color: typeInfo.defaultColor, type: typeValue as any, sortOrder: tabs.length + 1, config: {},
+      id: `tab_${Date.now()}`,
+      label: typeInfo.label,
+      icon: typeInfo.defaultIcon,
+      color: typeInfo.defaultColor,
+      type: typeValue as any,
+      sortOrder: tabs.length + 1,
+      config: {},
     });
     this.configWizardTabs.set(tabs);
   }
@@ -1076,7 +1373,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   removeConfigWizardTab(idx: number) {
     const tabs = [...this.configWizardTabs()];
     tabs.splice(idx, 1);
-    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    tabs.forEach((t, i) => (t.sortOrder = i + 1));
     this.configWizardTabs.set(tabs);
   }
 
@@ -1085,7 +1382,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= tabs.length) return;
     [tabs[idx], tabs[targetIdx]] = [tabs[targetIdx], tabs[idx]];
-    tabs.forEach((t, i) => t.sortOrder = i + 1);
+    tabs.forEach((t, i) => (t.sortOrder = i + 1));
     this.configWizardTabs.set(tabs);
   }
 
@@ -1100,7 +1397,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const tab = tabs[tabIdx];
     const ids = [...(tab.config?.operationTypeIds || [])];
     const idx = ids.indexOf(opTypeId);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(opTypeId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(opTypeId);
     tabs[tabIdx] = { ...tab, config: { ...tab.config, operationTypeIds: ids } };
     this.configWizardTabs.set(tabs);
   }
@@ -1110,7 +1408,8 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     const tab = tabs[tabIdx];
     const ids = [...(tab.config?.accountIds || [])];
     const idx = ids.indexOf(accountId);
-    if (idx >= 0) ids.splice(idx, 1); else ids.push(accountId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(accountId);
     tabs[tabIdx] = { ...tab, config: { ...tab.config, accountIds: ids } };
     this.configWizardTabs.set(tabs);
   }
@@ -1121,13 +1420,17 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     this.saving.set(true);
     try {
       await this.api.saveCollectionStyleConfig(this.bizId, screen.id, {
-        tabs: this.configWizardTabs(), notes: this.screenNotes(),
+        tabs: this.configWizardTabs(),
+        notes: this.screenNotes(),
       });
       this.toast.success('تم حفظ الإعداد بنجاح');
       this.closeConfigWizard();
       await this.openScreen(screen);
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في حفظ الإعداد'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في حفظ الإعداد');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   // ===================== Screen CRUD =====================
@@ -1141,18 +1444,29 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   openScreenForm(screen?: ScreenTemplate) {
     if (screen) {
       this.editingScreen.set(screen);
-      this.screenForm.set({ name: screen.name, description: screen.description || '', icon: screen.icon || 'dashboard', color: screen.color || '#3b82f6' });
+      this.screenForm.set({
+        name: screen.name,
+        description: screen.description || '',
+        icon: screen.icon || 'dashboard',
+        color: screen.color || '#3b82f6',
+      });
       this.showScreenForm.set(true);
     } else {
       this.startWizard();
     }
   }
 
-  closeScreenForm() { this.showScreenForm.set(false); this.editingScreen.set(null); }
+  closeScreenForm() {
+    this.showScreenForm.set(false);
+    this.editingScreen.set(null);
+  }
 
   async saveScreen() {
     const form = this.screenForm();
-    if (!form.name.trim()) { this.toast.warning('يرجى إدخال اسم الشاشة'); return; }
+    if (!form.name.trim()) {
+      this.toast.warning('يرجى إدخال اسم الشاشة');
+      return;
+    }
     this.saving.set(true);
     try {
       const editing = this.editingScreen();
@@ -1164,16 +1478,21 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       await this.loadScreens();
       // Refresh active screen if editing
       if (editing && this.activeScreen()?.id === editing.id) {
-        const updated = this.screens().find(s => s.id === editing.id);
+        const updated = this.screens().find((s) => s.id === editing.id);
         if (updated) this.activeScreen.set(updated);
       }
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   async deleteScreen(screen: ScreenTemplate) {
     const confirmed = await this.toast.confirm({
-      title: 'حذف الشاشة', message: `هل تريد حذف الشاشة "${screen.name}"؟`, type: 'danger',
+      title: 'حذف الشاشة',
+      message: `هل تريد حذف الشاشة "${screen.name}"؟`,
+      type: 'danger',
     });
     if (!confirmed) return;
     try {
@@ -1181,7 +1500,9 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       this.toast.success('تم حذف الشاشة');
       await this.loadScreens();
       if (this.activeScreen()?.id === screen.id) this.backToList();
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
+    }
   }
 
   async cloneScreen(screen: ScreenTemplate) {
@@ -1190,8 +1511,11 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       await this.api.cloneScreen(screen.id, { name: `${screen.name} (نسخة)` });
       this.toast.success('تم نسخ الشاشة بنجاح');
       await this.loadScreens();
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء النسخ'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء النسخ');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   // ===================== Permissions =====================
@@ -1200,24 +1524,36 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     this.permissionsLoading.set(true);
     this.showPermissionsModal.set(true);
     try {
-      const [users, perms] = await Promise.all([this.api.getUsers(), this.api.getScreenPermissions(screen.id)]);
+      const [users, perms] = await Promise.all([
+        this.api.getUsers(),
+        this.api.getScreenPermissions(screen.id),
+      ]);
       this.permissionsUsers.set(users);
       const map: { [userId: number]: string } = {};
       for (const p of perms) map[p.userId] = p.permission;
       this.permissionsMap.set(map);
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الصلاحيات'); }
-    finally { this.permissionsLoading.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الصلاحيات');
+    } finally {
+      this.permissionsLoading.set(false);
+    }
   }
 
-  closePermissionsModal() { this.showPermissionsModal.set(false); this.permissionsScreen.set(null); }
+  closePermissionsModal() {
+    this.showPermissionsModal.set(false);
+    this.permissionsScreen.set(null);
+  }
 
   setUserPermission(userId: number, permission: string) {
     const map = { ...this.permissionsMap() };
-    if (permission === 'none') delete map[userId]; else map[userId] = permission;
+    if (permission === 'none') delete map[userId];
+    else map[userId] = permission;
     this.permissionsMap.set(map);
   }
 
-  getUserPermission(userId: number): string { return this.permissionsMap()[userId] || 'none'; }
+  getUserPermission(userId: number): string {
+    return this.permissionsMap()[userId] || 'none';
+  }
 
   async savePermissions() {
     const screen = this.permissionsScreen();
@@ -1225,12 +1561,18 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     this.saving.set(true);
     try {
       const map = this.permissionsMap();
-      const permissions = Object.entries(map).map(([userId, permission]) => ({ userId: Number.parseInt(userId, 10), permission }));
+      const permissions = Object.entries(map).map(([userId, permission]) => ({
+        userId: Number.parseInt(userId, 10),
+        permission,
+      }));
       await this.api.batchUpdateScreenPermissions(screen.id, permissions);
       this.toast.success('تم حفظ الصلاحيات بنجاح');
       this.closePermissionsModal();
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء حفظ الصلاحيات'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء حفظ الصلاحيات');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   // ===================== Sidebar Modal =====================
@@ -1243,29 +1585,47 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       this.sidebarSections.set(sections);
       if (sections.length > 0) this.selectedSidebarSection.set(sections[0].id);
       this.showSidebarModal.set(true);
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الأقسام'); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ في تحميل الأقسام');
+    }
   }
 
-  closeSidebarModal() { this.showSidebarModal.set(false); this.sidebarScreen.set(null); }
+  closeSidebarModal() {
+    this.showSidebarModal.set(false);
+    this.sidebarScreen.set(null);
+  }
 
   async addToSidebar() {
     const screen = this.sidebarScreen();
     const sectionId = this.selectedSidebarSection();
-    if (!screen || !sectionId) { this.toast.warning('يرجى اختيار القسم'); return; }
+    if (!screen || !sectionId) {
+      this.toast.warning('يرجى اختيار القسم');
+      return;
+    }
     this.saving.set(true);
     try {
-      await this.api.addScreenToSidebar(this.bizId, screen.id, { sectionId, sortOrder: this.sidebarSortOrder() });
+      await this.api.addScreenToSidebar(this.bizId, screen.id, {
+        sectionId,
+        sortOrder: this.sidebarSortOrder(),
+      });
       this.toast.success('تم إضافة الشاشة للقائمة الجانبية');
       this.closeSidebarModal();
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء الإضافة'); }
-    finally { this.saving.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'خطأ أثناء الإضافة');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   // ===================== Color Picker =====================
   onColorPickerChange(color: string, target: string, idx?: number) {
     switch (target) {
-      case 'wizard': this.wizardScreenColor.set(color); break;
-      case 'screen': this.screenForm.set({ ...this.screenForm(), color }); break;
+      case 'wizard':
+        this.wizardScreenColor.set(color);
+        break;
+      case 'screen':
+        this.screenForm.set({ ...this.screenForm(), color });
+        break;
       case 'wizardTab':
         if (idx !== undefined) this.updateWizardTab(idx, 'color', color);
         break;
@@ -1290,11 +1650,29 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   getVoucherTypeLabel(type: string): string {
-    switch (type) { case 'receipt': return 'تحصيل'; case 'payment': return 'صرف'; case 'journal': return 'قيد'; default: return type || 'عملية'; }
+    switch (type) {
+      case 'receipt':
+        return 'تحصيل';
+      case 'payment':
+        return 'صرف';
+      case 'journal':
+        return 'قيد';
+      default:
+        return type || 'عملية';
+    }
   }
 
   getVoucherTypeClass(type: string): string {
-    switch (type) { case 'receipt': return 'collection'; case 'payment': return 'expense'; case 'journal': return 'transfer'; default: return 'collection'; }
+    switch (type) {
+      case 'receipt':
+        return 'collection';
+      case 'payment':
+        return 'expense';
+      case 'journal':
+        return 'transfer';
+      default:
+        return 'collection';
+    }
   }
 
   getAccountIcon(type: string): string {
@@ -1308,20 +1686,37 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   getTrendIcon(trend: string): string {
-    switch (trend) { case 'up': return 'trending_up'; case 'down': return 'trending_down'; default: return 'trending_flat'; }
+    switch (trend) {
+      case 'up':
+        return 'trending_up';
+      case 'down':
+        return 'trending_down';
+      default:
+        return 'trending_flat';
+    }
   }
 
   getTrendColor(trend: string): string {
-    switch (trend) { case 'up': return '#22c55e'; case 'down': return '#ef4444'; default: return '#94a3b8'; }
+    switch (trend) {
+      case 'up':
+        return '#22c55e';
+      case 'down':
+        return '#ef4444';
+      default:
+        return '#94a3b8';
+    }
   }
 
   getTabTypeInfo(type: string) {
-    return TAB_TYPE_OPTIONS.find(t => t.value === type) || TAB_TYPE_OPTIONS[0];
+    return TAB_TYPE_OPTIONS.find((t) => t.value === type) || TAB_TYPE_OPTIONS[0];
   }
 
   // ===== Inventory Helpers =====
   getInventoryTotalCost(tab: TabDefinition): number {
-    return this.getTabInventory(tab).reduce((sum: number, item: any) => sum + (Number(item.total_cost) || 0), 0);
+    return this.getTabInventory(tab).reduce(
+      (sum: number, item: any) => sum + (Number(item.total_cost) || 0),
+      0,
+    );
   }
 
   // ===== Reports =====
@@ -1332,16 +1727,31 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
     try {
       if (reportType === 'account_statement') {
         const accountIds = tab.config?.accountIds || [];
-        if (accountIds.length === 0) { this.toast.error('يرجى تحديد حسابات للتقرير'); this.reportLoading.set(false); return; }
+        if (accountIds.length === 0) {
+          this.toast.error('يرجى تحديد حسابات للتقرير');
+          this.reportLoading.set(false);
+          return;
+        }
         const results: any[] = [];
         for (const accId of accountIds) {
           try {
             const params: any = { accountId: accId };
             if (this.reportDateFrom()) params.dateFrom = this.reportDateFrom();
             if (this.reportDateTo()) params.dateTo = this.reportDateTo();
-            const data = await this.api.getAccountStatement(this.bizId, accId, this.reportDateFrom() || undefined, this.reportDateTo() || undefined);
-            results.push({ accountId: accId, accountName: this.allAccounts().find(a => a.id === accId)?.name || `حساب ${accId}`, ...data });
-          } catch (e) { results.push({ accountId: accId, error: true }); }
+            const data = await this.api.getAccountStatement(
+              this.bizId,
+              accId,
+              this.reportDateFrom() || undefined,
+              this.reportDateTo() || undefined,
+            );
+            results.push({
+              accountId: accId,
+              accountName: this.allAccounts().find((a) => a.id === accId)?.name || `حساب ${accId}`,
+              ...data,
+            });
+          } catch (e) {
+            results.push({ accountId: accId, error: true });
+          }
         }
         this.reportData.set({ type: 'account_statement', results });
       } else if (reportType === 'inventory_report') {
@@ -1352,18 +1762,32 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
             try {
               const items = await this.api.getWarehouseInventory(this.bizId, wId);
               data = data.concat(items || []);
-            } catch (e) { /* skip */ }
+            } catch (e) {
+              /* skip */
+            }
           }
           this.reportData.set({ type: 'inventory_report', data });
-        } catch (e) { this.reportData.set({ type: 'inventory_report', data: [], error: true }); }
+        } catch (e) {
+          this.reportData.set({ type: 'inventory_report', data: [], error: true });
+        }
       } else if (reportType === 'operations_summary') {
         try {
-          const data = await this.api.getWidgetStatsEnhanced(this.bizId, undefined, this.reportDateFrom() || undefined, this.reportDateTo() || undefined);
+          const data = await this.api.getWidgetStatsEnhanced(
+            this.bizId,
+            undefined,
+            this.reportDateFrom() || undefined,
+            this.reportDateTo() || undefined,
+          );
           this.reportData.set({ type: 'operations_summary', data });
-        } catch (e) { this.reportData.set({ type: 'operations_summary', data: null, error: true }); }
+        } catch (e) {
+          this.reportData.set({ type: 'operations_summary', data: null, error: true });
+        }
       }
-    } catch (e: unknown) { this.toast.error(e instanceof Error ? e.message : 'حدث خطأ'); }
-    finally { this.reportLoading.set(false); }
+    } catch (e: unknown) {
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ');
+    } finally {
+      this.reportLoading.set(false);
+    }
   }
 
   closeReport() {
@@ -1373,16 +1797,23 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
 
   // ===================== Export & Print =====================
   exportTableToCSV(data: any[], filename: string) {
-    if (!data || data.length === 0) { this.toast.warning('لا توجد بيانات للتصدير'); return; }
+    if (!data || data.length === 0) {
+      this.toast.warning('لا توجد بيانات للتصدير');
+      return;
+    }
     const BOM = '\uFEFF';
     const headers = Object.keys(data[0]);
     const csvRows = [headers.join(',')];
     for (const row of data) {
-      csvRows.push(headers.map(h => {
-        let val = row[h] ?? '';
-        val = String(val).replace(/"/g, '""');
-        return `"${val}"`;
-      }).join(','));
+      csvRows.push(
+        headers
+          .map((h) => {
+            let val = row[h] ?? '';
+            val = String(val).replace(/"/g, '""');
+            return `"${val}"`;
+          })
+          .join(','),
+      );
     }
     const blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -1393,21 +1824,21 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   }
 
   exportLogToCSV() {
-    const data = this.logEntries().map(e => ({
-      'التاريخ': this.formatDate(e.entry_date),
-      'النوع': this.getVoucherTypeLabel(e.voucher_type),
-      'الوصف': e.description || e.operation_type_name || '-',
-      'المدين': e.total_debit,
-      'الدائن': e.total_credit,
+    const data = this.logEntries().map((e) => ({
+      التاريخ: this.formatDate(e.entry_date),
+      النوع: this.getVoucherTypeLabel(e.voucher_type),
+      الوصف: e.description || e.operation_type_name || '-',
+      المدين: e.total_debit,
+      الدائن: e.total_credit,
     }));
     this.exportTableToCSV(data, 'سجل_العمليات');
   }
 
   exportAccountsToCSV() {
-    const data = this.widgetAccounts().map(a => ({
-      'الحساب': a.name,
-      'النوع': a.account_type,
-      'الرصيد': a.total_balance,
+    const data = this.widgetAccounts().map((a) => ({
+      الحساب: a.name,
+      النوع: a.account_type,
+      الرصيد: a.total_balance,
     }));
     this.exportTableToCSV(data, 'الحسابات');
   }
@@ -1415,10 +1846,10 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
   exportInventoryToCSV(tab: TabDefinition) {
     const items = this.getTabInventory(tab);
     const data = items.map((i: any) => ({
-      'الصنف': i.item_name,
-      'المخزن': i.warehouse_name,
-      'الكمية': i.quantity,
-      'التكلفة': i.total_cost,
+      الصنف: i.item_name,
+      المخزن: i.warehouse_name,
+      الكمية: i.quantity,
+      التكلفة: i.total_cost,
     }));
     this.exportTableToCSV(data, 'المخزون');
   }
@@ -1453,7 +1884,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         { type: 'accounts', label: 'الحسابات', icon: 'account_balance', color: '#f59e0b' },
         { type: 'stats', label: 'إحصائيات', icon: 'analytics', color: '#8b5cf6' },
         { type: 'chart', label: 'رسم بياني', icon: 'bar_chart', color: '#14b8a6' },
-      ]
+      ],
     },
     {
       name: 'شاشة مخزن',
@@ -1465,7 +1896,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         { type: 'operations', label: 'العمليات', icon: 'receipt_long', color: '#3b82f6' },
         { type: 'log', label: 'السجل', icon: 'history', color: '#22c55e' },
         { type: 'reports', label: 'تقارير', icon: 'summarize', color: '#ec4899' },
-      ]
+      ],
     },
     {
       name: 'شاشة حسابات شخصية',
@@ -1477,7 +1908,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         { type: 'log', label: 'السجل', icon: 'history', color: '#22c55e' },
         { type: 'stats', label: 'إحصائيات', icon: 'analytics', color: '#8b5cf6' },
         { type: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', color: '#f97316' },
-      ]
+      ],
     },
     {
       name: 'لوحة تحكم شاملة',
@@ -1493,7 +1924,7 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
         { type: 'inventory', label: 'المخزون', icon: 'inventory_2', color: '#0ea5e9' },
         { type: 'reports', label: 'تقارير', icon: 'summarize', color: '#ec4899' },
         { type: 'notes', label: 'ملاحظات', icon: 'sticky_note_2', color: '#f97316' },
-      ]
+      ],
     },
   ];
 
@@ -1505,7 +1936,14 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
           name: preset.name,
           icon: preset.icon,
           color: preset.color,
-          layoutConfig: { tabs: preset.tabs.map((t: any, i: number) => ({ ...t, id: Date.now() + i, sortOrder: i, config: {} })) },
+          layoutConfig: {
+            tabs: preset.tabs.map((t: any, i: number) => ({
+              ...t,
+              id: Date.now() + i,
+              sortOrder: i,
+              config: {},
+            })),
+          },
         });
         this.screens.set([...this.screens(), screen]);
         this.activeScreen.set(screen);
@@ -1518,7 +1956,12 @@ export class CustomScreensComponent extends BasePageComponent implements OnDestr
       }
     } else {
       // تطبيق القالب على الشاشة الحالية
-      const tabs = preset.tabs.map((t: any, i: number) => ({ ...t, id: Date.now() + i, sortOrder: i, config: {} }));
+      const tabs = preset.tabs.map((t: any, i: number) => ({
+        ...t,
+        id: Date.now() + i,
+        sortOrder: i,
+        config: {},
+      }));
       this.screenTabs.set(tabs);
       try {
         await this.api.updateScreen(this.activeScreen()!.id, {

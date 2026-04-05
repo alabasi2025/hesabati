@@ -2,28 +2,42 @@
  * screens-widget-basic.routes.ts â€” Phase 15
  * ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ†ط§طµط± ط§ظ„ط£ط³ط§ط³ظٹط©: stats, log, accounts, chart
  */
-import { Hono } from 'hono';
-import { db } from '../../db/index.ts';
-import { eq, and, sql, desc, between, gte, lte } from 'drizzle-orm';
+import { Hono } from "hono";
+import { db } from "../../db/index.ts";
+import { eq, and, sql, desc, between, gte, lte } from "drizzle-orm";
 import {
-  businesses, accounts, accountBalances, vouchers, voucherLines,
-  funds, fundBalances, screenWidgets, screenWidgetAccounts, screenWidgetWarehouses,
-  warehouseOperations, warehouseOperationItems, inventoryItems,
-} from '../../db/schema/index.ts';
-import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../../middleware/helpers.ts';
-import { getBizId } from './_shared/context-helpers.ts';
+  businesses,
+  accounts,
+  accountBalances,
+  vouchers,
+  voucherLines,
+  funds,
+  fundBalances,
+  screenWidgets,
+  screenWidgetAccounts,
+  screenWidgetWarehouses,
+  warehouseOperations,
+  warehouseOperationItems,
+  inventoryItems,
+} from "../../db/schema/index.ts";
+import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
+import { safeHandler, parseId } from "../../middleware/helpers.ts";
+import { getBizId } from "./_shared/context-helpers.ts";
+import { normalizeDbResult, getFirstRow } from "./_shared/db-helpers.ts";
 
 const widgetBasicApi = new Hono();
 
 // ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ط´ط§ط´ط© ط§ظ„ظ…ط®طµطµط© (KPIs)
-widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ط¹ظ†ط§طµط±', async (c) => {
-  const bizId = getBizId(c);
-  const dateFrom = c.req.query('dateFrom');
-  const dateTo = c.req.query('dateTo');
+widgetBasicApi.get(
+  "/businesses/:bizId/widget-stats",
+  bizAuthMiddleware(),
+  safeHandler("ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ط¹ظ†ط§طµط±", async (c) => {
+    const bizId = getBizId(c);
+    const dateFrom = c.req.query("dateFrom");
+    const dateTo = c.req.query("dateTo");
 
-  // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طھط­طµظٹظ„ (receipt vouchers)
-  const receiptResult = await db.execute(sql`
+    // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طھط­طµظٹظ„ (receipt vouchers)
+    const receiptResult = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(total_debit AS NUMERIC)), 0) as total
     FROM journal_entries
     WHERE business_id = ${bizId}
@@ -36,8 +50,8 @@ widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeH
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
   `);
 
-  // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طµط±ظپ (payment vouchers)
-  const paymentResult = await db.execute(sql`
+    // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طµط±ظپ (payment vouchers)
+    const paymentResult = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(total_debit AS NUMERIC)), 0) as total
     FROM journal_entries
     WHERE business_id = ${bizId}
@@ -50,50 +64,58 @@ widgetBasicApi.get('/businesses/:bizId/widget-stats', bizAuthMiddleware(), safeH
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
   `);
 
-  // ط¹ط¯ط¯ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
-  const opsResult = await db.execute(sql`
+    // ط¹ط¯ط¯ ط§ظ„ط¹ظ…ظ„ظٹط§طھ
+    const opsResult = await db.execute(sql`
     SELECT COUNT(*) as total FROM journal_entries
     WHERE business_id = ${bizId}
     ${dateFrom ? sql`AND entry_date >= ${dateFrom}` : sql``}
     ${dateTo ? sql`AND entry_date <= ${dateTo}` : sql``}
   `);
 
-  // طµط§ظپظٹ ط§ظ„ط±طµظٹط¯ (ظ…ط¬ظ…ظˆط¹ ط£ط±طµط¯ط© ط§ظ„ط­ط³ط§ط¨ط§طھ)
-  const balanceResult = await db.execute(sql`
+    // طµط§ظپظٹ ط§ظ„ط±طµظٹط¯ (ظ…ط¬ظ…ظˆط¹ ط£ط±طµط¯ط© ط§ظ„ط­ط³ط§ط¨ط§طھ)
+    const balanceResult = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(ab.balance AS NUMERIC)), 0) as total
     FROM account_balances ab
     INNER JOIN accounts a ON a.id = ab.account_id
     WHERE a.business_id = ${bizId}
   `);
 
-  const receiptRows = normalizeDbResult(receiptResult);
-  const paymentRows = normalizeDbResult(paymentResult);
-  const opsRows = normalizeDbResult(opsResult);
-  const balanceRows = normalizeDbResult(balanceResult);
+    const receiptRows = normalizeDbResult(receiptResult);
+    const paymentRows = normalizeDbResult(paymentResult);
+    const opsRows = normalizeDbResult(opsResult);
+    const balanceRows = normalizeDbResult(balanceResult);
 
-  return c.json({
-    totalReceipts: Number((receiptRows[0] as any)?.total || 0),
-    totalPayments: Number((paymentRows[0] as any)?.total || 0),
-    operationsCount: Number((opsRows[0] as any)?.total || 0),
-    netBalance: Number(getFirstRow<{ total: string }>(balanceRows)?.total || 0),
-  });
-}));
+    return c.json({
+      totalReceipts: Number((receiptRows[0] as any)?.total || 0),
+      totalPayments: Number((paymentRows[0] as any)?.total || 0),
+      operationsCount: Number((opsRows[0] as any)?.total || 0),
+      netBalance: Number(
+        getFirstRow<{ total: string }>(balanceRows)?.total || 0,
+      ),
+    });
+  }),
+);
 
 // ط¬ظ„ط¨ ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ط§ظ„ط­ظ‚ظٹظ‚ظٹ
-widgetBasicApi.get('/businesses/:bizId/widget-log', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ظ„ظ„ط¹ظ†طµط±', async (c) => {
-  const bizId = getBizId(c);
-  const dateFrom = c.req.query('dateFrom');
-  const dateTo = c.req.query('dateTo');
-  const opTypeId = c.req.query('operationTypeId');
-  const limitParam = c.req.query('limit') || '50';
-  const offsetParam = c.req.query('offset') || '0';
+widgetBasicApi.get(
+  "/businesses/:bizId/widget-log",
+  bizAuthMiddleware(),
+  safeHandler("ط¬ظ„ط¨ ط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ظ„ظ„ط¹ظ†طµط±", async (c) => {
+    const bizId = getBizId(c);
+    const dateFrom = c.req.query("dateFrom");
+    const dateTo = c.req.query("dateTo");
+    const opTypeId = c.req.query("operationTypeId");
+    const limitParam = c.req.query("limit") || "50";
+    const offsetParam = c.req.query("offset") || "0";
 
-  let conditions = sql`je.business_id = ${bizId}`;
-  if (dateFrom) conditions = sql`${conditions} AND je.entry_date >= ${dateFrom}`;
-  if (dateTo) conditions = sql`${conditions} AND je.entry_date <= ${dateTo}`;
-  if (opTypeId) conditions = sql`${conditions} AND je.operation_type_id = ${Number.parseInt(opTypeId)}`;
+    let conditions = sql`je.business_id = ${bizId}`;
+    if (dateFrom)
+      conditions = sql`${conditions} AND je.entry_date >= ${dateFrom}`;
+    if (dateTo) conditions = sql`${conditions} AND je.entry_date <= ${dateTo}`;
+    if (opTypeId)
+      conditions = sql`${conditions} AND je.operation_type_id = ${Number.parseInt(opTypeId)}`;
 
-  const rows = await db.execute(sql`
+    const rows = await db.execute(sql`
     SELECT
       je.id,
       je.entry_number,
@@ -116,34 +138,43 @@ widgetBasicApi.get('/businesses/:bizId/widget-log', bizAuthMiddleware(), safeHan
     LIMIT ${Number.parseInt(limitParam)} OFFSET ${Number.parseInt(offsetParam)}
   `);
 
-  const countResult = await db.execute(sql`
+    const countResult = await db.execute(sql`
     SELECT COUNT(*) as total FROM journal_entries je WHERE ${conditions}
   `);
-  const countRows = normalizeDbResult(countResult);
+    const countRows = normalizeDbResult(countResult);
 
-  const resultRows = normalizeDbResult(rows);
-  return c.json({
-    entries: resultRows,
-    total: Number((countRows[0] as any)?.total || 0),
-  });
-}));
+    const resultRows = normalizeDbResult(rows);
+    return c.json({
+      entries: resultRows,
+      total: Number((countRows[0] as any)?.total || 0),
+    });
+  }),
+);
 
 // ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ط­ط³ط§ط¨ط§طھ (ط£ط±طµط¯ط© ط­ظ‚ظٹظ‚ظٹط© + ط¢ط®ط± ط­ط±ظƒط§طھ)
-widgetBasicApi.get('/businesses/:bizId/widget-accounts', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ط­ط³ط§ط¨ط§طھ', async (c) => {
-  const bizId = getBizId(c);
-  const accountIdsParam = c.req.query('accountIds');
+widgetBasicApi.get(
+  "/businesses/:bizId/widget-accounts",
+  bizAuthMiddleware(),
+  safeHandler(
+    "ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ط­ط³ط§ط¨ط§طھ",
+    async (c) => {
+      const bizId = getBizId(c);
+      const accountIdsParam = c.req.query("accountIds");
 
-  let accountFilter = sql`a.business_id = ${bizId}`;
-  if (accountIdsParam) {
-    const ids = accountIdsParam.split(',').map(Number).filter((n: number) => !Number.isNaN(n));
-    if (ids.length > 0) {
-      const idFragments = ids.map((id: number) => sql`${id}`);
-      const inClause = sql.join(idFragments, sql`, `);
-      accountFilter = sql`a.business_id = ${bizId} AND a.id IN (${inClause})`;
-    }
-  }
+      let accountFilter = sql`a.business_id = ${bizId}`;
+      if (accountIdsParam) {
+        const ids = accountIdsParam
+          .split(",")
+          .map(Number)
+          .filter((n: number) => !Number.isNaN(n));
+        if (ids.length > 0) {
+          const idFragments = ids.map((id: number) => sql`${id}`);
+          const inClause = sql.join(idFragments, sql`, `);
+          accountFilter = sql`a.business_id = ${bizId} AND a.id IN (${inClause})`;
+        }
+      }
 
-  const rows = await db.execute(sql`
+      const rows = await db.execute(sql`
     SELECT
       a.id,
       a.name,
@@ -176,16 +207,21 @@ widgetBasicApi.get('/businesses/:bizId/widget-accounts', bizAuthMiddleware(), sa
     ORDER BY a.name
   `);
 
-  const resultRows = normalizeDbResult(rows);
-  return c.json(resultRows);
-}));
+      const resultRows = normalizeDbResult(rows);
+      return c.json(resultRows);
+    },
+  ),
+);
 
 // ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط±ط³ظ… ط§ظ„ط¨ظٹط§ظ†ظٹ (ط­ط±ظƒط§طھ ط´ظ‡ط±ظٹط©)
-widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeHandler('ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط±ط³ظ… ط§ظ„ط¨ظٹط§ظ†ظٹ', async (c) => {
-  const bizId = getBizId(c);
-  const months = Number.parseInt(c.req.query('months') || '6');
+widgetBasicApi.get(
+  "/businesses/:bizId/widget-chart",
+  bizAuthMiddleware(),
+  safeHandler("ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط±ط³ظ… ط§ظ„ط¨ظٹط§ظ†ظٹ", async (c) => {
+    const bizId = getBizId(c);
+    const months = Number.parseInt(c.req.query("months") || "6");
 
-  const rows = await db.execute(sql`
+    const rows = await db.execute(sql`
     SELECT
       TO_CHAR(je.entry_date, 'YYYY-MM') as period,
       TO_CHAR(je.entry_date, 'Mon') as period_label,
@@ -201,21 +237,34 @@ widgetBasicApi.get('/businesses/:bizId/widget-chart', bizAuthMiddleware(), safeH
     ORDER BY period
   `);
 
-  const resultRows = normalizeDbResult(rows);
+    const resultRows = normalizeDbResult(rows);
 
-  const arabicMonths: Record<number, string> = {
-    1: 'ظٹظ†ط§ظٹط±', 2: 'ظپط¨ط±ط§ظٹط±', 3: 'ظ…ط§ط±ط³', 4: 'ط£ط¨ط±ظٹظ„', 5: 'ظ…ط§ظٹظˆ', 6: 'ظٹظˆظ†ظٹظˆ',
-    7: 'ظٹظˆظ„ظٹظˆ', 8: 'ط£ط؛ط³ط·ط³', 9: 'ط³ط¨طھظ…ط¨ط±', 10: 'ط£ظƒطھظˆط¨ط±', 11: 'ظ†ظˆظپظ…ط¨ط±', 12: 'ط¯ظٹط³ظ…ط¨ط±',
-  };
+    const arabicMonths: Record<number, string> = {
+      1: "ظٹظ†ط§ظٹط±",
+      2: "ظپط¨ط±ط§ظٹط±",
+      3: "ظ…ط§ط±ط³",
+      4: "ط£ط¨ط±ظٹظ„",
+      5: "ظ…ط§ظٹظˆ",
+      6: "ظٹظˆظ†ظٹظˆ",
+      7: "ظٹظˆظ„ظٹظˆ",
+      8: "ط£ط؛ط³ط·ط³",
+      9: "ط³ط¨طھظ…ط¨ط±",
+      10: "ط£ظƒطھظˆط¨ط±",
+      11: "ظ†ظˆظپظ…ط¨ط±",
+      12: "ط¯ظٹط³ظ…ط¨ط±",
+    };
 
-  return c.json({
-    labels: (resultRows as any[]).map((r: any) => arabicMonths[Number(r.month_num)] || r.period_label),
-    receipts: (resultRows as any[]).map((r: any) => Number(r.receipts)),
-    payments: (resultRows as any[]).map((r: any) => Number(r.payments)),
-    operationsCounts: (resultRows as any[]).map((r: any) => Number(r.operations_count)),
-  });
-}));
-
+    return c.json({
+      labels: (resultRows as any[]).map(
+        (r: any) => arabicMonths[Number(r.month_num)] || r.period_label,
+      ),
+      receipts: (resultRows as any[]).map((r: any) => Number(r.receipts)),
+      payments: (resultRows as any[]).map((r: any) => Number(r.payments)),
+      operationsCounts: (resultRows as any[]).map((r: any) =>
+        Number(r.operations_count),
+      ),
+    });
+  }),
+);
 
 export { widgetBasicApi };
-

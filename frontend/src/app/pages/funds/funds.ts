@@ -1,11 +1,26 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { PAGE_IMPORTS } from '../../shared/page-imports';
 
-interface FundForm { name: string; fundType: string; sequenceNumber: string; responsiblePerson: string; stationId: number | null; accountId: number | null; description: string; notes: string; }
-interface FundTypeForm { name: string; subTypeKey: string; description: string; icon: string; color: string; }
+interface FundForm {
+  name: string;
+  fundType: string;
+  sequenceNumber: string;
+  responsiblePerson: string;
+  stationId: number | null;
+  accountId: number | null;
+  description: string;
+  notes: string;
+}
+interface FundTypeForm {
+  name: string;
+  subTypeKey: string;
+  description: string;
+  icon: string;
+  color: string;
+}
 
 @Component({
   selector: 'app-funds',
@@ -30,31 +45,64 @@ export class FundsComponent extends BasePageComponent {
   // Fund form
   showFundForm = signal(false);
   editingFundId = signal<number | null>(null);
-  fundForm: FundForm = { name: '', fundType: '', sequenceNumber: '', responsiblePerson: '', stationId: null, accountId: null, description: '', notes: '' };
+  fundForm: FundForm = {
+    name: '',
+    fundType: '',
+    sequenceNumber: '',
+    responsiblePerson: '',
+    stationId: null,
+    accountId: null,
+    description: '',
+    notes: '',
+  };
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
 
   // Type form
   showTypeForm = signal(false);
   editingTypeId = signal<number | null>(null);
-  typeForm: FundTypeForm = { name: '', subTypeKey: '', description: '', icon: 'savings', color: '#4CAF50' };
+  typeForm: FundTypeForm = {
+    name: '',
+    subTypeKey: '',
+    description: '',
+    icon: 'savings',
+    color: '#4CAF50',
+  };
 
   // Delete confirm
   showDeleteConfirm = signal(false);
   deleteTarget = signal<{ type: 'fund' | 'type'; id: number; name: string } | null>(null);
 
   iconOptions = [
-    'savings', 'account_balance_wallet', 'receipt_long', 'payments', 'lock',
-    'person', 'inventory_2', 'request_quote', 'shopping_cart', 'move_to_inbox',
-    'attach_money', 'monetization_on', 'credit_card', 'toll', 'local_atm',
+    'savings',
+    'account_balance_wallet',
+    'receipt_long',
+    'payments',
+    'lock',
+    'person',
+    'inventory_2',
+    'request_quote',
+    'shopping_cart',
+    'move_to_inbox',
+    'attach_money',
+    'monetization_on',
+    'credit_card',
+    'toll',
+    'local_atm',
   ];
 
   // Backward compatibility aliases
-  get accounts() { return this.fundsData; }
+  get accounts() {
+    return this.fundsData;
+  }
   showAccountForm = this.showFundForm;
   editingAccountId = this.editingFundId;
-  get accountForm() { return this.fundForm; }
-  set accountForm(v: any) { this.fundForm = v; }
+  get accountForm() {
+    return this.fundForm;
+  }
+  set accountForm(v: any) {
+    this.fundForm = v;
+  }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -75,38 +123,56 @@ export class FundsComponent extends BasePageComponent {
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
         this.fundAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'fund'));
-      } catch { this.fundAccounts.set([]); }
-    } catch (e: unknown) { console.error(e); }
+      } catch {
+        this.fundAccounts.set([]);
+      }
+    } catch (e: unknown) {
+      console.error(e);
+    }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
       { value: 'all', label: 'الكل', icon: 'apps', count: this.fundsData().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.fundsData().filter(f => f.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.fundsData().filter(f => !f.isActive).length },
+      {
+        value: 'active',
+        label: 'نشط',
+        icon: 'check_circle',
+        count: this.fundsData().filter((f) => f.isActive).length,
+      },
+      {
+        value: 'inactive',
+        label: 'غير نشط',
+        icon: 'cancel',
+        count: this.fundsData().filter((f) => !f.isActive).length,
+      },
     ];
   }
 
-  get filteredData() {
+  filteredData = computed(() => {
     let data = this.fundsData();
     const filter = this.activeFilter();
-    if (filter === 'active') data = data.filter(f => f.isActive);
-    else if (filter === 'inactive') data = data.filter(f => !f.isActive);
+    if (filter === 'active') data = data.filter((f) => f.isActive);
+    else if (filter === 'inactive') data = data.filter((f) => !f.isActive);
     const accId = this.accountFilter();
-    if (accId) data = data.filter(f => f.accountId === accId);
+    if (accId) data = data.filter((f) => f.accountId === accId);
     return data;
-  }
+  });
 
-  get uniqueAccounts() {
+  uniqueAccounts = computed(() => {
     const seen = new Map<number, { id: number; name: string; code: string }>();
     for (const f of this.fundsData()) {
       if (f.accountId && !seen.has(f.accountId)) {
-        seen.set(f.accountId, { id: f.accountId, name: f.accountName || f.name, code: f.accountCode || f.code });
+        seen.set(f.accountId, {
+          id: f.accountId,
+          name: f.accountName || f.name,
+          code: f.accountCode || f.code,
+        });
       }
     }
     return Array.from(seen.values());
-  }
+  });
 
   // ============ Fund CRUD ============
   openAddAccount(subType?: string) {
@@ -191,20 +257,37 @@ export class FundsComponent extends BasePageComponent {
         await this.api.createFund(this.bizId, data);
       }
       this.showFundForm.set(false);
-      this.toast.success(this.editingFundId() ? 'تم تحديث الصندوق بنجاح' : 'تم إنشاء الصندوق بنجاح');
+      this.toast.success(
+        this.editingFundId() ? 'تم تحديث الصندوق بنجاح' : 'تم إنشاء الصندوق بنجاح',
+      );
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الصندوق'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الصندوق');
+    }
   }
 
   // ============ Type CRUD ============
   openAddType() {
-    this.typeForm = { name: '', subTypeKey: '', description: '', icon: 'savings', color: '#4CAF50' };
+    this.typeForm = {
+      name: '',
+      subTypeKey: '',
+      description: '',
+      icon: 'savings',
+      color: '#4CAF50',
+    };
     this.editingTypeId.set(null);
     this.showTypeForm.set(true);
   }
 
   openEditType(t: any) {
-    this.typeForm = { name: t.name, subTypeKey: t.subTypeKey, description: t.description || '', icon: t.icon || 'savings', color: t.color || '#4CAF50' };
+    this.typeForm = {
+      name: t.name,
+      subTypeKey: t.subTypeKey,
+      description: t.description || '',
+      icon: t.icon || 'savings',
+      color: t.color || '#4CAF50',
+    };
     this.editingTypeId.set(t.id);
     this.showTypeForm.set(true);
   }
@@ -219,7 +302,10 @@ export class FundsComponent extends BasePageComponent {
       this.showTypeForm.set(false);
       this.toast.success(this.editingTypeId() ? 'تم تحديث النوع بنجاح' : 'تم إنشاء النوع بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ النوع');
+    }
   }
 
   // ============ Delete ============
@@ -242,7 +328,10 @@ export class FundsComponent extends BasePageComponent {
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
+    }
   }
 
   async loadAccountCurrencies(accountId: number) {
@@ -273,7 +362,7 @@ export class FundsComponent extends BasePageComponent {
   toggleCurrency(currencyId: number) {
     const current = this.selectedCurrencyIds();
     if (current.includes(currencyId)) {
-      this.selectedCurrencyIds.set(current.filter(id => id !== currencyId));
+      this.selectedCurrencyIds.set(current.filter((id) => id !== currencyId));
     } else {
       this.selectedCurrencyIds.set([...current, currencyId]);
     }
@@ -289,6 +378,8 @@ export class FundsComponent extends BasePageComponent {
 
   getBalanceDisplay(fund: any): string {
     if (!fund.balances || fund.balances.length === 0) return '0';
-    return fund.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+    return fund.balances
+      .map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`)
+      .join(' | ');
   }
 }

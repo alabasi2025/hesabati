@@ -6,7 +6,7 @@
  * محرك التقارير والتحليلات المركزي
  * ====================================
  * حسب الخطة التنفيذية - محرك 4
- * 
+ *
  * الدوال:
  * - getProfitAndLoss(bizId, filters) → تقرير الأرباح والخسائر
  * - getTrialBalance(bizId, filters) → ميزان المراجعة
@@ -17,24 +17,43 @@
  * - getCachedReport / cacheReport → التخزين المؤقت
  */
 
-import { db } from '../db/index.ts';
-import { eq, and, sql } from 'drizzle-orm';
+import { db } from "../db/index.ts";
+import { eq, and, sql } from "drizzle-orm";
 import {
-  accounts, accountBalances, funds, fundBalances, currencies,
-  businesses, analyticsSnapshots, vouchers,
-} from '../db/schema/index.ts';
+  accounts,
+  accountBalances,
+  funds,
+  fundBalances,
+  currencies,
+  businesses,
+  analyticsSnapshots,
+  vouchers,
+} from "../db/schema/index.ts";
 
-import type { ReportFilters, ProfitLossResult, TrialBalanceResult, AccountStatementResult } from './reporting.types';
-import { getCachedReport, cacheReport } from './reporting.types';
+import type {
+  ReportFilters,
+  ProfitLossResult,
+  TrialBalanceResult,
+  AccountStatementResult,
+} from "./reporting.types";
+import { getCachedReport, cacheReport } from "./reporting.types";
 
 // ===================== تقرير الأرباح والخسائر =====================
 
-export async function getProfitAndLoss(bizId: number, filters: ReportFilters): Promise<ProfitLossResult> {
-  const dateFrom = filters.dateFrom || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
-  const dateTo = filters.dateTo || new Date().toISOString().split('T')[0];
+export async function getProfitAndLoss(
+  bizId: number,
+  filters: ReportFilters,
+): Promise<ProfitLossResult> {
+  const dateFrom =
+    filters.dateFrom ||
+    new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
+  const dateTo = filters.dateTo || new Date().toISOString().split("T")[0];
 
   // التحقق من الكاش أولاً
-  const cached = await getCachedReport(bizId, 'profit_loss', { dateFrom, dateTo });
+  const cached = await getCachedReport(bizId, "profit_loss", {
+    dateFrom,
+    dateTo,
+  });
   if (cached) return cached as ProfitLossResult;
 
   const result = await db.execute(sql`
@@ -75,31 +94,43 @@ export async function getProfitAndLoss(bizId: number, filters: ReportFilters): P
     GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.voucher_type
     ORDER BY total DESC
   `);
-  const byCategory = Array.isArray(categoryResult) ? categoryResult : (categoryResult as any).rows || [];
+  const byCategory = Array.isArray(categoryResult)
+    ? categoryResult
+    : (categoryResult as any).rows || [];
 
   const report: ProfitLossResult = { dateFrom, dateTo, summary, byCategory };
 
   // تخزين مؤقت
-  await cacheReport(bizId, 'profit_loss', { dateFrom, dateTo }, report).catch(() => {});
+  await cacheReport(bizId, "profit_loss", { dateFrom, dateTo }, report).catch(
+    () => {},
+  );
 
   return report;
 }
 
 // ===================== ميزان المراجعة =====================
 
-export async function getTrialBalance(bizId: number, filters: ReportFilters): Promise<TrialBalanceResult> {
+export async function getTrialBalance(
+  bizId: number,
+  filters: ReportFilters,
+): Promise<TrialBalanceResult> {
   const { dateFrom, dateTo } = filters;
 
-  const cached = await getCachedReport(bizId, 'trial_balance', { dateFrom, dateTo });
+  const cached = await getCachedReport(bizId, "trial_balance", {
+    dateFrom,
+    dateTo,
+  });
   if (cached) return cached as TrialBalanceResult;
 
   let dateCondition = sql`AND je.business_id = ${bizId}`;
-  if (dateFrom) dateCondition = sql`${dateCondition} AND je.entry_date >= ${dateFrom}`;
-  if (dateTo) dateCondition = sql`${dateCondition} AND je.entry_date <= ${dateTo}`;
+  if (dateFrom)
+    dateCondition = sql`${dateCondition} AND je.entry_date >= ${dateFrom}`;
+  if (dateTo)
+    dateCondition = sql`${dateCondition} AND je.entry_date <= ${dateTo}`;
 
   const result = await db.execute(sql`
     SELECT
-      a.id as account_id, a.name as account_name, a.account_type,
+      a.id as account_id, a.name as account_name, a.account_type, a.ledger_code,
       COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as total_debit,
       COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as total_credit,
       COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) -
@@ -108,47 +139,73 @@ export async function getTrialBalance(bizId: number, filters: ReportFilters): Pr
     LEFT JOIN journal_entry_lines jel ON jel.account_id = a.id
     LEFT JOIN journal_entries je ON je.id = jel.journal_entry_id ${dateCondition}
     WHERE a.business_id = ${bizId}
-    GROUP BY a.id, a.name, a.account_type
+    GROUP BY a.id, a.name, a.account_type, a.ledger_code
     HAVING COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) > 0
     OR COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) > 0
-    ORDER BY a.account_type, a.name
+    ORDER BY a.ledger_code NULLS LAST, a.account_type, a.name
   `);
 
-  const accountRows = Array.isArray(result) ? result : (result as any).rows || [];
-  const totalDebit = accountRows.reduce((s: number, r: any) => s + Number(r.total_debit), 0);
-  const totalCredit = accountRows.reduce((s: number, r: any) => s + Number(r.total_credit), 0);
+  const accountRows = Array.isArray(result)
+    ? result
+    : (result as any).rows || [];
+  const totalDebit = accountRows.reduce(
+    (s: number, r: any) => s + Number(r.total_debit),
+    0,
+  );
+  const totalCredit = accountRows.reduce(
+    (s: number, r: any) => s + Number(r.total_credit),
+    0,
+  );
 
   const report: TrialBalanceResult = {
     dateFrom,
     dateTo,
     accounts: accountRows,
-    totals: { totalDebit, totalCredit, isBalanced: Math.abs(totalDebit - totalCredit) < 0.01 },
+    totals: {
+      totalDebit,
+      totalCredit,
+      isBalanced: Math.abs(totalDebit - totalCredit) < 0.01,
+    },
   };
 
-  await cacheReport(bizId, 'trial_balance', { dateFrom, dateTo }, report).catch(() => {});
+  await cacheReport(bizId, "trial_balance", { dateFrom, dateTo }, report).catch(
+    () => {},
+  );
 
   return report;
 }
 
 // ===================== كشف حساب =====================
 
-export async function getAccountStatement(bizId: number, accountId: number, filters: ReportFilters): Promise<AccountStatementResult> {
-  const dateFrom = filters.dateFrom || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
-  const dateTo = filters.dateTo || new Date().toISOString().split('T')[0];
-  const sourceType = String(filters.sourceType || 'all').toLowerCase();
+export async function getAccountStatement(
+  bizId: number,
+  accountId: number,
+  filters: ReportFilters,
+): Promise<AccountStatementResult> {
+  const dateFrom =
+    filters.dateFrom ||
+    new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
+  const dateTo = filters.dateTo || new Date().toISOString().split("T")[0];
+  const sourceType = String(filters.sourceType || "all").toLowerCase();
 
   // جلب بيانات الحساب
-  const [account] = await db.select().from(accounts)
+  const [account] = await db
+    .select()
+    .from(accounts)
     .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)));
   if (!account) {
     // fallback: دعم كشف الصندوق بنفس endpoint بدون بنية جديدة.
-    const [fund] = await db.select().from(funds)
+    const [fund] = await db
+      .select()
+      .from(funds)
       .where(and(eq(funds.id, accountId), eq(funds.businessId, bizId)));
-    if (!fund) throw new Error('الحساب/الصندوق غير موجود أو لا ينتمي لهذا العمل');
+    if (!fund)
+      throw new Error("الحساب/الصندوق غير موجود أو لا ينتمي لهذا العمل");
 
-    const sourceTypeCondition = sourceType === 'all'
-      ? sql`TRUE`
-      : sql`
+    const sourceTypeCondition =
+      sourceType === "all"
+        ? sql`TRUE`
+        : sql`
         (
           CASE
             WHEN v.voucher_type = 'payment' THEN 'payment_voucher'
@@ -185,26 +242,30 @@ export async function getAccountStatement(bizId: number, accountId: number, filt
       ORDER BY v.voucher_date ASC, v.id ASC
     `);
 
-    const fundMovements = Array.isArray(fundResult) ? fundResult : (fundResult as any).rows || [];
+    const fundMovements = Array.isArray(fundResult)
+      ? fundResult
+      : (fundResult as any).rows || [];
     let fundRunningBalance = 0;
     const fundEntries = fundMovements.map((m: any) => {
       const amt = Number(m.amount);
-      if (m.line_type === 'debit') fundRunningBalance += amt;
+      if (m.line_type === "debit") fundRunningBalance += amt;
       else fundRunningBalance -= amt;
       return { ...m, amount: amt, runningBalance: fundRunningBalance };
     });
 
-    const balances = await db.select({
-      currencyId: fundBalances.currencyId,
-      balance: fundBalances.balance,
-      currencyCode: currencies.code,
-      currencySymbol: currencies.symbol,
-    }).from(fundBalances)
+    const balances = await db
+      .select({
+        currencyId: fundBalances.currencyId,
+        balance: fundBalances.balance,
+        currencyCode: currencies.code,
+        currencySymbol: currencies.symbol,
+      })
+      .from(fundBalances)
       .leftJoin(currencies, eq(fundBalances.currencyId, currencies.id))
       .where(eq(fundBalances.fundId, accountId));
 
     return {
-      account: { ...fund, accountType: 'fund' },
+      account: { ...fund, accountType: "fund" },
       dateFrom,
       dateTo,
       entries: fundEntries,
@@ -215,9 +276,10 @@ export async function getAccountStatement(bizId: number, accountId: number, filt
 
   // جلب الحركات
   // تصنيف نوع الحركة: نستخدم JOIN مع vouchers للحصول على نوع السند الفعلي
-  const sourceTypeCondition = sourceType === 'all'
-    ? sql`TRUE`
-    : sql`
+  const sourceTypeCondition =
+    sourceType === "all"
+      ? sql`TRUE`
+      : sql`
       (
         CASE
           WHEN v.voucher_type = 'payment' THEN 'payment_voucher'
@@ -273,21 +335,29 @@ export async function getAccountStatement(bizId: number, accountId: number, filt
   let runningBalance = 0;
   const entries = movements.map((m: any) => {
     const amt = Number(m.amount);
-    if (m.line_type === 'debit') runningBalance += amt;
+    if (m.line_type === "debit") runningBalance += amt;
     else runningBalance -= amt;
     return { ...m, amount: amt, runningBalance };
   });
 
   // الأرصدة الحالية
-  const balances = await db.select({
-    currencyId: accountBalances.currencyId,
-    balance: accountBalances.balance,
-    currencyCode: currencies.code,
-    currencySymbol: currencies.symbol,
-  }).from(accountBalances)
+  const balances = await db
+    .select({
+      currencyId: accountBalances.currencyId,
+      balance: accountBalances.balance,
+      currencyCode: currencies.code,
+      currencySymbol: currencies.symbol,
+    })
+    .from(accountBalances)
     .leftJoin(currencies, eq(accountBalances.currencyId, currencies.id))
     .where(eq(accountBalances.accountId, accountId));
 
-  return { account, dateFrom, dateTo, entries, balances, totalEntries: entries.length };
+  return {
+    account,
+    dateFrom,
+    dateTo,
+    entries,
+    balances,
+    totalEntries: entries.length,
+  };
 }
-

@@ -1,5 +1,4 @@
 <div class="page-container">
-
   <!-- ===== Page Header ===== -->
   <div class="page-header">
     <div class="header-left">
@@ -53,10 +52,15 @@
       </div>
       @for (s of stats().bySys; track s.name) {
         @if (s.count > 0) {
-          <div class="stat-card clickable"
-               [class.active-stat]="activeSystem() === s.name"
-               [style.--card-color]="s.color"
-               (click)="activeTab.set('accounts'); activeSystem.set(activeSystem() === s.name ? 'all' : s.name)">
+          <div
+            class="stat-card clickable"
+            [class.active-stat]="activeSystem() === s.name"
+            [style.--card-color]="s.color"
+            (click)="
+              activeTab.set('accounts');
+              activeSystem.set(activeSystem() === s.name ? 'all' : s.name)
+            "
+          >
             <div class="stat-icon" [style.background]="s.color + '25'" [style.color]="s.color">
               <span class="material-icons-round">{{ s.icon }}</span>
             </div>
@@ -72,16 +76,28 @@
 
   <!-- ===== Main Tabs ===== -->
   <div class="main-tabs">
-    <button class="main-tab" [class.active]="activeTab() === 'accounts'" (click)="activeTab.set('accounts')">
+    <button
+      class="main-tab"
+      [class.active]="activeTab() === 'accounts'"
+      (click)="activeTab.set('accounts')"
+    >
       <span class="material-icons-round">receipt</span>
       حسابات الفوترة
     </button>
-    <button class="main-tab" [class.active]="activeTab() === 'systems'" (click)="activeTab.set('systems')">
+    <button
+      class="main-tab"
+      [class.active]="activeTab() === 'systems'"
+      (click)="activeTab.set('systems')"
+    >
       <span class="material-icons-round">settings</span>
       أنظمة الفوترة
       <span class="tab-badge">{{ billingSystems().length }}</span>
     </button>
-    <button class="main-tab" [class.active]="activeTab() === 'types'" (click)="activeTab.set('types')">
+    <button
+      class="main-tab"
+      [class.active]="activeTab() === 'types'"
+      (click)="activeTab.set('types')"
+    >
       <span class="material-icons-round">category</span>
       أنواع الحسابات
       <span class="tab-badge">{{ accountTypes().length }}</span>
@@ -93,23 +109,37 @@
   <!-- ===================================================== -->
   @if (activeTab() === 'accounts') {
     <div class="tab-content">
-
       <!-- شريط الفلترة والبحث -->
       <div class="filter-bar">
         <div class="search-box">
           <span class="material-icons-round search-icon">search</span>
-          <input type="text" placeholder="ابحث بالاسم أو الموظف..." class="search-input"
-                 [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
+          <input
+            type="text"
+            placeholder="ابحث بالاسم أو الموظف..."
+            class="search-input"
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+          />
         </div>
         <div class="filter-row">
           <div class="filter-group">
             <span class="filter-label">النظام:</span>
             <div class="type-tabs">
-              <button class="type-tab" [class.active]="activeSystem() === 'all'"
-                      [style.--tab-color]="'#64748b'" (click)="activeSystem.set('all')">الكل</button>
+              <button
+                class="type-tab"
+                [class.active]="activeSystem() === 'all'"
+                [style.--tab-color]="'#64748b'"
+                (click)="activeSystem.set('all')"
+              >
+                الكل
+              </button>
               @for (s of billingSystems(); track s.name) {
-                <button class="type-tab" [class.active]="activeSystem() === s.name"
-                        [style.--tab-color]="s.color" (click)="activeSystem.set(s.name)">
+                <button
+                  class="type-tab"
+                  [class.active]="activeSystem() === s.name"
+                  [style.--tab-color]="s.color"
+                  (click)="activeSystem.set(s.name)"
+                >
                   <span class="material-icons-round">{{ s.icon }}</span>
                   {{ s.name }}
                 </button>
@@ -119,11 +149,23 @@
           <div class="filter-group">
             <span class="filter-label">المحطة:</span>
             <div class="type-tabs">
-              <button class="type-tab" [class.active]="activeStation() === 'all'"
-                      [style.--tab-color]="'#64748b'" (click)="activeStation.set('all')">الكل</button>
+              <button
+                class="type-tab"
+                [class.active]="activeStation() === 'all'"
+                [style.--tab-color]="'#64748b'"
+                (click)="activeStation.set('all')"
+              >
+                الكل
+              </button>
               @for (name of stationNames(); track name) {
-                <button class="type-tab" [class.active]="activeStation() === name"
-                        [style.--tab-color]="'#06b6d4'" (click)="activeStation.set(name)">{{ name }}</button>
+                <button
+                  class="type-tab"
+                  [class.active]="activeStation() === name"
+                  [style.--tab-color]="'#06b6d4'"
+                  (click)="activeStation.set(name)"
+                >
+                  {{ name }}
+                </button>
               }
             </div>
           </div>
@@ -162,10 +204,18 @@
                 <div class="sys-info">
                   <h2 class="sys-name">{{ group.system }}</h2>
                   <div class="sys-meta-row">
-                    <span class="sys-count">{{ group.employees.length }} موظف · {{ group.employees.length }} حساب</span>
+                    <span class="sys-count"
+                      >{{ group.employees.length }} موظف · {{ group.employees.length }} حساب</span
+                    >
                     @if (group.info.accountCode) {
-                      <span class="acc-code-badge" [style.background]="group.info.color + '18'" [style.color]="group.info.color">
-                        <span class="material-icons-round" style="font-size:13px">account_tree</span>
+                      <span
+                        class="acc-code-badge"
+                        [style.background]="group.info.color + '18'"
+                        [style.color]="group.info.color"
+                      >
+                        <span class="material-icons-round" style="font-size: 13px"
+                          >account_tree</span
+                        >
                         {{ group.info.accountCode }}
                       </span>
                     }
@@ -187,18 +237,32 @@
                     </div>
                     <div class="emp-accounts">
                       @for (acc of emp.accounts; track acc.id) {
-                        <div class="acc-chip" [class.inactive-chip]="!acc.isActive"
-                             [style.--chip-color]="group.info.color">
-                          <span class="acc-chip-label">{{ getMethodDisplayName(acc.collectionMethod) }}</span>
+                        <div
+                          class="acc-chip"
+                          [class.inactive-chip]="!acc.isActive"
+                          [style.--chip-color]="group.info.color"
+                        >
+                          <span class="acc-chip-label">{{
+                            getMethodDisplayName(acc.collectionMethod)
+                          }}</span>
                           <div class="acc-chip-actions">
                             <button class="chip-btn" (click)="openEditAccount(acc)" title="تعديل">
                               <span class="material-icons-round">edit</span>
                             </button>
-                            <button class="chip-btn" (click)="toggleAccountActive(acc)"
-                                    [title]="acc.isActive ? 'إيقاف' : 'تفعيل'">
-                              <span class="material-icons-round">{{ acc.isActive ? 'pause' : 'play_arrow' }}</span>
+                            <button
+                              class="chip-btn"
+                              (click)="toggleAccountActive(acc)"
+                              [title]="acc.isActive ? 'إيقاف' : 'تفعيل'"
+                            >
+                              <span class="material-icons-round">{{
+                                acc.isActive ? 'pause' : 'play_arrow'
+                              }}</span>
                             </button>
-                            <button class="chip-btn danger" (click)="deleteAccount(acc)" title="حذف">
+                            <button
+                              class="chip-btn danger"
+                              (click)="deleteAccount(acc)"
+                              title="حذف"
+                            >
                               <span class="material-icons-round">delete</span>
                             </button>
                           </div>
@@ -223,7 +287,9 @@
       <div class="tab-header-row">
         <div>
           <h2 class="section-title">أنظمة الفوترة</h2>
-          <p class="section-desc">الأنظمة المتاحة لتحصيل الفواتير. كل نظام له حساباته المستقلة للموظفين.</p>
+          <p class="section-desc">
+            الأنظمة المتاحة لتحصيل الفواتير. كل نظام له حساباته المستقلة للموظفين.
+          </p>
         </div>
         <button class="btn-3d btn-primary" (click)="openSystemWizard()">
           <span class="material-icons-round">add</span>
@@ -253,12 +319,14 @@
                 </div>
                 <div class="sys-card-info">
                   <h3 class="sys-card-name">{{ sys.name }}</h3>
-                  <span class="sys-card-count">
-                    {{ getSysCount(sys.name) }} حساب
-                  </span>
+                  <span class="sys-card-count"> {{ getSysCount(sys.name) }} حساب </span>
                   @if (sys.accountCode) {
-                    <span class="acc-code-badge" [style.background]="sys.color + '18'" [style.color]="sys.color">
-                      <span class="material-icons-round" style="font-size:13px">account_tree</span>
+                    <span
+                      class="acc-code-badge"
+                      [style.background]="sys.color + '18'"
+                      [style.color]="sys.color"
+                    >
+                      <span class="material-icons-round" style="font-size: 13px">account_tree</span>
                       {{ sys.accountCode }}
                     </span>
                   }
@@ -270,15 +338,25 @@
               @if (sys.supportedTypes && sys.supportedTypes.length > 0) {
                 <div class="sys-types">
                   @for (t of sys.supportedTypes; track t) {
-                    <span class="sys-type-tag" [style.background]="sys.color + '20'" [style.color]="sys.color">
+                    <span
+                      class="sys-type-tag"
+                      [style.background]="sys.color + '20'"
+                      [style.color]="sys.color"
+                    >
                       {{ t }}
                     </span>
                   }
                 </div>
               }
               <div class="sys-scope-badge" [class.multi]="sys.stationScope === 'multi_station'">
-                <span class="material-icons-round">{{ sys.stationScope === 'per_station' ? 'location_on' : 'hub' }}</span>
-                {{ sys.stationScope === 'per_station' ? 'نظام مستقل لكل محطة' : 'نظام موحد لعدة محطات' }}
+                <span class="material-icons-round">{{
+                  sys.stationScope === 'per_station' ? 'location_on' : 'hub'
+                }}</span>
+                {{
+                  sys.stationScope === 'per_station'
+                    ? 'نظام مستقل لكل محطة'
+                    : 'نظام موحد لعدة محطات'
+                }}
               </div>
             </div>
           }
@@ -295,7 +373,9 @@
       <div class="tab-header-row">
         <div>
           <h2 class="section-title">أنواع حسابات الفوترة</h2>
-          <p class="section-desc">الأنواع المتاحة لحسابات الفوترة. كل نوع يمثل آلية تحصيل مختلفة.</p>
+          <p class="section-desc">
+            الأنواع المتاحة لحسابات الفوترة. كل نوع يمثل آلية تحصيل مختلفة.
+          </p>
         </div>
         <button class="btn-3d btn-primary" (click)="openCreateType()">
           <span class="material-icons-round">add</span>
@@ -346,84 +426,99 @@
   <!-- Modal: إضافة/تعديل حساب فوترة                         -->
   <!-- ===================================================== -->
   @if (showAccountForm()) {
-    <div class="modal-overlay" (click)="showAccountForm.set(false)">
-      <div class="modal-3d" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon purple">
-            <span class="material-icons-round">receipt</span>
-          </div>
-          <h2>{{ editingAccountId() ? 'تعديل حساب الفوترة' : 'حساب فوترة جديد' }}</h2>
-          <button class="modal-close" (click)="showAccountForm.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon purple"><span class="material-icons-round">receipt</span></div>
+          <h3>{{ editingAccountId() ? 'تعديل حساب الفوترة' : 'حساب فوترة جديد' }}</h3>
+          @if (editingAccountId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <div class="modal-body">
-
-          <div class="form-group">
-            <label class="form-label">المحطة <span class="required">*</span></label>
-            <select class="form-input" [value]="accountForm().stationId"
-                    (change)="setFormField('account', 'stationId', $any($event.target).value)">
-              <option value="">-- اختر المحطة --</option>
-              @for (s of stations(); track s.id) {
-                <option [value]="s.id">{{ s.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">الموظف <span class="required">*</span></label>
-            <select class="form-input" [value]="accountForm().employeeId"
-                    (change)="setFormField('account', 'employeeId', $any($event.target).value)">
-              <option value="">-- اختر الموظف --</option>
-              @for (e of employees(); track e.id) {
-                <option [value]="e.id">{{ e.fullName }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">نظام الفوترة <span class="required">*</span></label>
-            <select class="form-input" [value]="accountForm().billingSystemId"
-                    (change)="setFormField('account', 'billingSystemId', $any($event.target).value)">
-              <option value="">-- اختر النظام --</option>
-              @for (s of availableBillingSystems; track s.value) {
-                <option [value]="s.value">{{ s.label }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">طريقة التحصيل <span class="required">*</span></label>
-            <div class="type-selector-row">
-              @for (m of availableCollectionMethods; track m.value) {
-                <button class="type-option-btn" [class.selected]="accountForm().collectionMethod === m.value"
-                        (click)="setFormField('account', 'collectionMethod', m.value)">
-                  {{ m.label }}
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">العنوان</label>
-            <input class="form-input" type="text" placeholder="عنوان الحساب (اختياري - يُنشأ تلقائياً)"
-                   [value]="accountForm().label"
-                   (input)="setFormField('account', 'label', $any($event.target).value)">
-          </div>
-
-          <div class="form-info-box">
-            <span class="material-icons-round">info</span>
-            سيُنشأ حساب فوترة للموظف في النظام المحدد.
-          </div>
-
+        <button class="close-btn" (click)="showAccountForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group">
+          <label class="form-label">المحطة <span class="required">*</span></label>
+          <select
+            class="form-input"
+            [value]="accountForm().stationId"
+            (change)="setFormField('account', 'stationId', $any($event.target).value)"
+          >
+            <option value="">-- اختر المحطة --</option>
+            @for (s of stations(); track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showAccountForm.set(false)">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="saveAccountForm()">
-            <span class="material-icons-round">save</span>
-            {{ editingAccountId() ? 'حفظ التعديلات' : 'إنشاء الحساب' }}
-          </button>
+
+        <div class="form-group">
+          <label class="form-label">الموظف <span class="required">*</span></label>
+          <select
+            class="form-input"
+            [value]="accountForm().employeeId"
+            (change)="setFormField('account', 'employeeId', $any($event.target).value)"
+          >
+            <option value="">-- اختر الموظف --</option>
+            @for (e of employees(); track e.id) {
+              <option [value]="e.id">{{ e.fullName }}</option>
+            }
+          </select>
         </div>
+
+        <div class="form-group">
+          <label class="form-label">نظام الفوترة <span class="required">*</span></label>
+          <select
+            class="form-input"
+            [value]="accountForm().billingSystemId"
+            (change)="setFormField('account', 'billingSystemId', $any($event.target).value)"
+          >
+            <option value="">-- اختر النظام --</option>
+            @for (s of availableBillingSystems; track s.value) {
+              <option [value]="s.value">{{ s.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">طريقة التحصيل <span class="required">*</span></label>
+          <div class="type-selector-row">
+            @for (m of availableCollectionMethods; track m.value) {
+              <button
+                class="type-option-btn"
+                [class.selected]="accountForm().collectionMethod === m.value"
+                (click)="setFormField('account', 'collectionMethod', m.value)"
+              >
+                {{ m.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">العنوان</label>
+          <input
+            class="form-input"
+            type="text"
+            placeholder="عنوان الحساب (اختياري - يُنشأ تلقائياً)"
+            [value]="accountForm().label"
+            (input)="setFormField('account', 'label', $any($event.target).value)"
+          />
+        </div>
+
+        <div class="form-info-box">
+          <span class="material-icons-round">info</span>
+          سيُنشأ حساب فوترة للموظف في النظام المحدد.
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showAccountForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="saveAccountForm()">
+          <span class="material-icons-round">save</span>
+          {{ editingAccountId() ? 'حفظ التعديلات' : 'إنشاء الحساب' }}
+        </button>
       </div>
     </div>
   }
@@ -432,158 +527,180 @@
   <!-- Modal: wizard إضافة نظام فوترة جديد                   -->
   <!-- ===================================================== -->
   @if (showSystemWizard()) {
-    <div class="modal-overlay" (click)="showSystemWizard.set(false)">
-      <div class="modal-3d wizard-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon" [style.background]="systemForm().color">
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon" [style.background]="systemForm().color">
             <span class="material-icons-round">{{ systemForm().icon }}</span>
           </div>
-          <div class="wizard-header-info">
-            <h2>إضافة نظام فوترة جديد</h2>
-            <div class="wizard-steps">
-              <span class="wstep" [class.active]="wizardStep() >= 1" [class.done]="wizardStep() > 1">١</span>
-              <span class="wstep-line"></span>
-              <span class="wstep" [class.active]="wizardStep() >= 2" [class.done]="wizardStep() > 2">٢</span>
-              <span class="wstep-line"></span>
-              <span class="wstep" [class.active]="wizardStep() >= 3">٣</span>
-            </div>
+          <h3>إضافة نظام فوترة جديد</h3>
+          <div class="wizard-steps">
+            <span class="wstep" [class.active]="wizardStep() >= 1" [class.done]="wizardStep() > 1"
+              >١</span
+            >
+            <span class="wstep-line"></span>
+            <span class="wstep" [class.active]="wizardStep() >= 2" [class.done]="wizardStep() > 2"
+              >٢</span
+            >
+            <span class="wstep-line"></span>
+            <span class="wstep" [class.active]="wizardStep() >= 3">٣</span>
           </div>
-          <button class="modal-close" (click)="showSystemWizard.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
         </div>
-
-        <div class="modal-body">
-
-          @if (wizardStep() === 1) {
-            <div class="wizard-step-content">
-              <h3 class="step-title">
-                <span class="material-icons-round">edit</span>
-                الخطوة ١: اسم النظام والمظهر
-              </h3>
-              <div class="form-group">
-                <label class="form-label">اسم النظام <span class="required">*</span></label>
-                <input class="form-input" type="text" placeholder="مثال: المغربي، صندوق الدعم..."
-                       [value]="systemForm().name"
-                       (input)="setSystemFormField('name', $any($event.target).value)">
-              </div>
-              <div class="form-group">
-                <label class="form-label">اللون</label>
-                <div class="color-picker">
-                  @for (c of availableColors; track c) {
-                    <button class="color-dot" [style.background]="c"
-                            [class.selected]="systemForm().color === c"
-                            (click)="setSystemFormField('color', c)"></button>
-                  }
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">الأيقونة</label>
-                <div class="icon-picker">
-                  @for (ic of availableIcons; track ic) {
-                    <button class="icon-opt" [class.selected]="systemForm().icon === ic"
-                            [style.--ic-color]="systemForm().color"
-                            (click)="setSystemFormField('icon', ic)">
-                      <span class="material-icons-round">{{ ic }}</span>
-                    </button>
-                  }
-                </div>
-              </div>
+        <button class="close-btn" (click)="showSystemWizard.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta">
+        @if (wizardStep() === 1) {
+          <div class="wizard-step-content">
+            <h3 class="step-title">
+              <span class="material-icons-round">edit</span>
+              الخطوة ١: اسم النظام والمظهر
+            </h3>
+            <div class="form-group">
+              <label class="form-label">اسم النظام <span class="required">*</span></label>
+              <input
+                class="form-input"
+                type="text"
+                placeholder="مثال: المغربي، صندوق الدعم..."
+                [value]="systemForm().name"
+                (input)="setSystemFormField('name', $any($event.target).value)"
+              />
             </div>
-          }
-
-          @if (wizardStep() === 2) {
-            <div class="wizard-step-content">
-              <h3 class="step-title">
-                <span class="material-icons-round">location_on</span>
-                الخطوة ٢: نطاق المحطات
-              </h3>
-              <div class="scope-options">
-                <button class="scope-opt" [class.selected]="systemForm().stationScope === 'per_station'"
-                        (click)="setSystemFormField('stationScope', 'per_station')">
-                  <span class="material-icons-round">location_on</span>
-                  <strong>نظام مستقل لكل محطة</strong>
-                  <p>كل محطة لها حسابات مستقلة في هذا النظام (مثل المغربي)</p>
-                </button>
-                <button class="scope-opt" [class.selected]="systemForm().stationScope === 'multi_station'"
-                        (click)="setSystemFormField('stationScope', 'multi_station')">
-                  <span class="material-icons-round">hub</span>
-                  <strong>نظام موحد لعدة محطات</strong>
-                  <p>نظام واحد يخدم عدة محطات (مثل الدفع المسبق)</p>
-                </button>
-              </div>
-              @if (systemForm().stationScope === 'multi_station') {
-                <div class="form-group" style="margin-top: 16px;">
-                  <label class="form-label">اختر المحطات المرتبطة</label>
-                  <div class="stations-checkboxes">
-                    @for (s of stations(); track s.id) {
-                      <label class="checkbox-label">
-                        <input type="checkbox"
-                               [checked]="systemForm().stationIds.includes(s.id)"
-                               (change)="toggleWizardStation(s.id)">
-                        {{ s.name }}
-                      </label>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-
-          @if (wizardStep() === 3) {
-            <div class="wizard-step-content">
-              <h3 class="step-title">
-                <span class="material-icons-round">category</span>
-                الخطوة ٣: أنواع الحسابات المدعومة
-              </h3>
-              <p class="step-desc">اختر أنواع الحسابات التي يدعمها هذا النظام:</p>
-              <div class="types-checkboxes">
-                @for (t of accountTypes(); track t.name) {
-                  <label class="type-check-label" [class.selected]="systemForm().supportedTypes.includes(t.name)">
-                    <input type="checkbox"
-                           [checked]="systemForm().supportedTypes.includes(t.name)"
-                           (change)="toggleWizardType(t.name)">
-                    <div class="type-check-info">
-                      <strong>{{ t.name }}</strong>
-                      @if (t.description) {
-                        <span>{{ t.description }}</span>
-                      }
-                    </div>
-                  </label>
+            <div class="form-group">
+              <label class="form-label">اللون</label>
+              <div class="color-picker">
+                @for (c of availableColors; track c) {
+                  <button
+                    class="color-dot"
+                    [style.background]="c"
+                    [class.selected]="systemForm().color === c"
+                    (click)="setSystemFormField('color', c)"
+                  ></button>
                 }
               </div>
-              @if (systemForm().supportedTypes.length === 0) {
-                <div class="warn-box">
-                  <span class="material-icons-round">warning</span>
-                  اختر نوع حساب واحد على الأقل
+            </div>
+            <div class="form-group">
+              <label class="form-label">الأيقونة</label>
+              <div class="icon-picker">
+                @for (ic of availableIcons; track ic) {
+                  <button
+                    class="icon-opt"
+                    [class.selected]="systemForm().icon === ic"
+                    [style.--ic-color]="systemForm().color"
+                    (click)="setSystemFormField('icon', ic)"
+                  >
+                    <span class="material-icons-round">{{ ic }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (wizardStep() === 2) {
+          <div class="wizard-step-content">
+            <h3 class="step-title">
+              <span class="material-icons-round">location_on</span>
+              الخطوة ٢: نطاق المحطات
+            </h3>
+            <div class="scope-options">
+              <button
+                class="scope-opt"
+                [class.selected]="systemForm().stationScope === 'per_station'"
+                (click)="setSystemFormField('stationScope', 'per_station')"
+              >
+                <span class="material-icons-round">location_on</span>
+                <strong>نظام مستقل لكل محطة</strong>
+                <p>كل محطة لها حسابات مستقلة في هذا النظام (مثل المغربي)</p>
+              </button>
+              <button
+                class="scope-opt"
+                [class.selected]="systemForm().stationScope === 'multi_station'"
+                (click)="setSystemFormField('stationScope', 'multi_station')"
+              >
+                <span class="material-icons-round">hub</span>
+                <strong>نظام موحد لعدة محطات</strong>
+                <p>نظام واحد يخدم عدة محطات (مثل الدفع المسبق)</p>
+              </button>
+            </div>
+            @if (systemForm().stationScope === 'multi_station') {
+              <div class="form-group" style="margin-top: 16px">
+                <label class="form-label">اختر المحطات المرتبطة</label>
+                <div class="stations-checkboxes">
+                  @for (s of stations(); track s.id) {
+                    <label class="checkbox-label">
+                      <input
+                        type="checkbox"
+                        [checked]="systemForm().stationIds.includes(s.id)"
+                        (change)="toggleWizardStation(s.id)"
+                      />
+                      {{ s.name }}
+                    </label>
+                  }
                 </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (wizardStep() === 3) {
+          <div class="wizard-step-content">
+            <h3 class="step-title">
+              <span class="material-icons-round">category</span>
+              الخطوة ٣: أنواع الحسابات المدعومة
+            </h3>
+            <p class="step-desc">اختر أنواع الحسابات التي يدعمها هذا النظام:</p>
+            <div class="types-checkboxes">
+              @for (t of accountTypes(); track t.name) {
+                <label
+                  class="type-check-label"
+                  [class.selected]="systemForm().supportedTypes.includes(t.name)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="systemForm().supportedTypes.includes(t.name)"
+                    (change)="toggleWizardType(t.name)"
+                  />
+                  <div class="type-check-info">
+                    <strong>{{ t.name }}</strong>
+                    @if (t.description) {
+                      <span>{{ t.description }}</span>
+                    }
+                  </div>
+                </label>
               }
             </div>
-          }
+            @if (systemForm().supportedTypes.length === 0) {
+              <div class="warn-box">
+                <span class="material-icons-round">warning</span>
+                اختر نوع حساب واحد على الأقل
+              </div>
+            }
+          </div>
+        }
+      </div>
 
-        </div>
-
-        <div class="modal-footer">
-          @if (wizardStep() > 1) {
-            <button class="btn-3d btn-ghost" (click)="wizardBack()">
-              <span class="material-icons-round">arrow_forward</span>
-              السابق
-            </button>
-          } @else {
-            <button class="btn-3d btn-ghost" (click)="showSystemWizard.set(false)">إلغاء</button>
-          }
-          @if (wizardStep() < 3) {
-            <button class="btn-3d btn-primary" (click)="wizardNext()">
-              التالي
-              <span class="material-icons-round">arrow_back</span>
-            </button>
-          } @else {
-            <button class="btn-3d btn-success" (click)="saveSystemWizard()">
-              <span class="material-icons-round">check</span>
-              إضافة النظام
-            </button>
-          }
-        </div>
+      <div class="form-footer">
+        @if (wizardStep() > 1) {
+          <button class="btn-cancel" (click)="wizardBack()">
+            <span class="material-icons-round">arrow_forward</span>
+            السابق
+          </button>
+        } @else {
+          <button class="btn-cancel" (click)="showSystemWizard.set(false)">إلغاء</button>
+        }
+        @if (wizardStep() < 3) {
+          <button class="btn-save" (click)="wizardNext()">
+            التالي
+            <span class="material-icons-round">arrow_back</span>
+          </button>
+        } @else {
+          <button class="btn-save" (click)="saveSystemWizard()">
+            <span class="material-icons-round">check</span>
+            إضافة النظام
+          </button>
+        }
       </div>
     </div>
   }
@@ -592,74 +709,96 @@
   <!-- Modal: إضافة/تعديل نوع حساب                           -->
   <!-- ===================================================== -->
   @if (showTypeForm()) {
-    <div class="modal-overlay" (click)="showTypeForm.set(false)">
-      <div class="modal-3d small-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon teal">
-            <span class="material-icons-round">category</span>
-          </div>
-          <h2>{{ editingTypeId() ? 'تعديل نوع الحساب' : 'نوع حساب جديد' }}</h2>
-          <button class="modal-close" (click)="showTypeForm.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon green"><span class="material-icons-round">category</span></div>
+          <h3>{{ editingTypeId() ? 'تعديل نوع الحساب' : 'نوع حساب جديد' }}</h3>
+          @if (editingTypeId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label">اسم النوع <span class="required">*</span></label>
-            <input class="form-input" type="text" placeholder="مثال: نقدي جوال، إسناد يدوي..."
-                   [value]="typeForm().name"
-                   (input)="setFormField('type', 'name', $any($event.target).value)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">الوصف والآلية</label>
-            <textarea class="form-input" rows="3"
-                      placeholder="اشرح آلية هذا النوع وكيف يعمل..."
-                      [value]="typeForm().description"
-                      (input)="setFormField('type', 'description', $any($event.target).value)"></textarea>
-          </div>
+        <button class="close-btn" (click)="showTypeForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group">
+          <label class="form-label">اسم النوع <span class="required">*</span></label>
+          <input
+            class="form-input"
+            type="text"
+            placeholder="مثال: نقدي جوال، إسناد يدوي..."
+            [value]="typeForm().name"
+            (input)="setFormField('type', 'name', $any($event.target).value)"
+          />
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showTypeForm.set(false)">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="saveTypeForm()">
-            <span class="material-icons-round">save</span>
-            {{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة النوع' }}
-          </button>
+        <div class="form-group full-width">
+          <label class="form-label">الوصف والآلية</label>
+          <textarea
+            class="form-input"
+            rows="3"
+            placeholder="اشرح آلية هذا النوع وكيف يعمل..."
+            [value]="typeForm().description"
+            (input)="setFormField('type', 'description', $any($event.target).value)"
+          ></textarea>
         </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
+        <button class="btn-save" (click)="saveTypeForm()">
+          <span class="material-icons-round">save</span>
+          {{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة النوع' }}
+        </button>
       </div>
     </div>
   }
 
   <!-- ===== How It Works Modal ===== -->
   @if (showHowItWorks()) {
-    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
-      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon amber"><span class="material-icons-round">help_outline</span></div>
-          <h2>كيف تعمل أنظمة الفوترة؟</h2>
-          <button class="modal-close" (click)="showHowItWorks.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon amber"><span class="material-icons-round">help_outline</span></div>
+          <h3>كيف تعمل أنظمة الفوترة؟</h3>
         </div>
-        <div class="modal-body">
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">receipt_long</span> ما هي أنظمة الفوترة؟</h3>
-            <p>أنظمة الفوترة هي الأنظمة التي يستخدمها الموظفون لتحصيل فواتير المشتركين. كل موظف له حسابات في كل نظام يعمل فيه.</p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">account_balance_wallet</span> الحسابات في صفحة الحسابات</h3>
-            <p>كل حساب فوترة تُنشئه هنا يظهر تلقائياً في <strong>صفحة الحسابات</strong> بنوع "فوترة". لا تحتاج لإضافته يدوياً هناك.</p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">settings</span> إضافة نظام جديد</h3>
-            <p>من تبويب "أنظمة الفوترة" يمكنك إضافة نظام جديد عبر wizard خطوة بخطوة: الاسم والمظهر، نطاق المحطات، وأنواع الحسابات المدعومة.</p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">category</span> أنواع الحسابات</h3>
-            <p>من تبويب "أنواع الحسابات" يمكنك إضافة أنواع جديدة مع شرح آلية كل نوع. الأنواع الجديدة تظهر تلقائياً في نموذج إضافة الحساب.</p>
-          </div>
+        <button class="close-btn" (click)="showHowItWorks.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta">
+        <div class="hiw-section">
+          <h3><span class="material-icons-round">receipt_long</span> ما هي أنظمة الفوترة؟</h3>
+          <p>
+            أنظمة الفوترة هي الأنظمة التي يستخدمها الموظفون لتحصيل فواتير المشتركين. كل موظف له
+            حسابات في كل نظام يعمل فيه.
+          </p>
+        </div>
+        <div class="hiw-section">
+          <h3>
+            <span class="material-icons-round">account_balance_wallet</span> الحسابات في صفحة
+            الحسابات
+          </h3>
+          <p>
+            كل حساب فوترة تُنشئه هنا يظهر تلقائياً في <strong>صفحة الحسابات</strong> بنوع "فوترة".
+            لا تحتاج لإضافته يدوياً هناك.
+          </p>
+        </div>
+        <div class="hiw-section">
+          <h3><span class="material-icons-round">settings</span> إضافة نظام جديد</h3>
+          <p>
+            من تبويب "أنظمة الفوترة" يمكنك إضافة نظام جديد عبر wizard خطوة بخطوة: الاسم والمظهر،
+            نطاق المحطات، وأنواع الحسابات المدعومة.
+          </p>
+        </div>
+        <div class="hiw-section">
+          <h3><span class="material-icons-round">category</span> أنواع الحسابات</h3>
+          <p>
+            من تبويب "أنواع الحسابات" يمكنك إضافة أنواع جديدة مع شرح آلية كل نوع. الأنواع الجديدة
+            تظهر تلقائياً في نموذج إضافة الحساب.
+          </p>
         </div>
       </div>
     </div>
   }
-
 </div>

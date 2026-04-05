@@ -21,7 +21,7 @@
     </div>
 
     <!-- Form Section -->
-    <form (ngSubmit)="onLogin()" class="login-form">
+    <form (submit)="$event.preventDefault(); onLogin()" class="login-form">
       <!-- Error Message -->
       @if (error()) {
         <div class="error-message">
@@ -41,9 +41,7 @@
             type="text"
             class="input-3d"
             placeholder="أدخل اسم المستخدم"
-            [ngModel]="username()"
-            (ngModelChange)="username.set($event)"
-            name="username"
+            [formField]="loginForm.username"
             autocomplete="username"
           />
           <div class="input-highlight"></div>
@@ -62,9 +60,7 @@
               [type]="showPassword() ? 'text' : 'password'"
               class="input-3d"
               placeholder="أدخل كلمة المرور"
-              [ngModel]="password()"
-              (ngModelChange)="password.set($event)"
-              name="password"
+              [formField]="loginForm.password"
               autocomplete="current-password"
             />
             <button type="button" class="toggle-password" (click)="togglePassword()">

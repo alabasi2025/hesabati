@@ -44,13 +44,14 @@ warehousesReadRoutes.get(
         updatedAt: warehouses.updatedAt,
         accountCode: accounts.code,
         accountName: accounts.name,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(warehouses)
       .leftJoin(accounts, eq(accounts.id, warehouses.accountId))
       .where(whereCondition)
       .orderBy(warehouses.id);
     return c.json(rows);
-  })
+  }),
 );
 
 warehousesReadRoutes.get(
@@ -76,6 +77,7 @@ warehousesReadRoutes.get(
         updatedAt: warehouses.updatedAt,
         accountCode: accounts.code,
         accountName: accounts.name,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(warehouses)
       .leftJoin(accounts, eq(accounts.id, warehouses.accountId))
@@ -83,7 +85,7 @@ warehousesReadRoutes.get(
     const err = await requireResourceOwnership(c, warehouse ?? null);
     if (err) return err;
     return c.json(warehouse);
-  })
+  }),
 );
 
 export { warehousesReadRoutes };

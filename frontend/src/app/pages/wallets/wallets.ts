@@ -1,10 +1,18 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { PAGE_IMPORTS } from '../../shared/page-imports';
 
-interface WalletForm { name: string; accountId: number | null; accountNumber: string; provider: string; responsiblePerson: string; description: string; notes: string; }
+interface WalletForm {
+  name: string;
+  accountId: number | null;
+  accountNumber: string;
+  provider: string;
+  responsiblePerson: string;
+  description: string;
+  notes: string;
+}
 
 @Component({
   selector: 'app-wallets',
@@ -25,7 +33,15 @@ export class WalletsComponent extends BasePageComponent {
 
   showWalletForm = signal(false);
   editingWalletId = signal<number | null>(null);
-  walletForm: WalletForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+  walletForm: WalletForm = {
+    name: '',
+    accountId: null,
+    accountNumber: '',
+    provider: '',
+    responsiblePerson: '',
+    description: '',
+    notes: '',
+  };
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
@@ -34,11 +50,17 @@ export class WalletsComponent extends BasePageComponent {
   deleteTarget = signal<{ type: 'wallet'; id: number; name: string } | null>(null);
 
   // Backward compatibility
-  get accounts() { return this.walletsData; }
+  get accounts() {
+    return this.walletsData;
+  }
   showAccountForm = this.showWalletForm;
   editingAccountId = this.editingWalletId;
-  get accountForm() { return this.walletForm; }
-  set accountForm(v: any) { this.walletForm = v; }
+  get accountForm() {
+    return this.walletForm;
+  }
+  set accountForm(v: any) {
+    this.walletForm = v;
+  }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -52,42 +74,70 @@ export class WalletsComponent extends BasePageComponent {
       this.activeFilter.set('all');
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
-        this.walletAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'e_wallet'));
-      } catch { this.walletAccounts.set([]); }
-    } catch (e: unknown) { console.error(e); }
+        this.walletAccounts.set(
+          (allAccounts || []).filter((a: any) => a.accountType === 'e_wallet'),
+        );
+      } catch {
+        this.walletAccounts.set([]);
+      }
+    } catch (e: unknown) {
+      console.error(e);
+    }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
       { value: 'all', label: 'الكل', icon: 'apps', count: this.walletsData().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.walletsData().filter(w => w.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.walletsData().filter(w => !w.isActive).length },
+      {
+        value: 'active',
+        label: 'نشط',
+        icon: 'check_circle',
+        count: this.walletsData().filter((w) => w.isActive).length,
+      },
+      {
+        value: 'inactive',
+        label: 'غير نشط',
+        icon: 'cancel',
+        count: this.walletsData().filter((w) => !w.isActive).length,
+      },
     ];
   }
 
-  get filteredData() {
+  filteredData = computed(() => {
     let data = this.walletsData();
     const filter = this.activeFilter();
-    if (filter === 'active') data = data.filter(w => w.isActive);
-    else if (filter === 'inactive') data = data.filter(w => !w.isActive);
+    if (filter === 'active') data = data.filter((w) => w.isActive);
+    else if (filter === 'inactive') data = data.filter((w) => !w.isActive);
     const accId = this.accountFilter();
-    if (accId) data = data.filter(w => w.accountId === accId);
+    if (accId) data = data.filter((w) => w.accountId === accId);
     return data;
-  }
+  });
 
-  get uniqueAccounts() {
+  uniqueAccounts = computed(() => {
     const seen = new Map<number, { id: number; name: string; code: string }>();
     for (const w of this.walletsData()) {
       if (w.accountId && !seen.has(w.accountId)) {
-        seen.set(w.accountId, { id: w.accountId, name: w.accountName || w.name, code: w.accountCode || w.code });
+        seen.set(w.accountId, {
+          id: w.accountId,
+          name: w.accountName || w.name,
+          code: w.accountCode || w.code,
+        });
       }
     }
     return Array.from(seen.values());
-  }
+  });
 
   openAddAccount(subType?: string) {
-    this.walletForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.walletForm = {
+      name: '',
+      accountId: null,
+      accountNumber: '',
+      provider: '',
+      responsiblePerson: '',
+      description: '',
+      notes: '',
+    };
     this.accountCurrencies.set([]);
     this.selectedCurrencyIds.set([]);
     this.defaultCurrencyId.set(null);
@@ -147,9 +197,14 @@ export class WalletsComponent extends BasePageComponent {
         await this.api.createWallet(this.bizId, data);
       }
       this.showWalletForm.set(false);
-      this.toast.success(this.editingWalletId() ? 'تم تحديث المحفظة بنجاح' : 'تم إنشاء المحفظة بنجاح');
+      this.toast.success(
+        this.editingWalletId() ? 'تم تحديث المحفظة بنجاح' : 'تم إنشاء المحفظة بنجاح',
+      );
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ المحفظة'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ المحفظة');
+    }
   }
 
   confirmDelete(type: 'wallet', id: number, name: string) {
@@ -166,12 +221,17 @@ export class WalletsComponent extends BasePageComponent {
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
+    }
   }
 
   getBalanceDisplay(acc: any): string {
     if (!acc.balances || acc.balances.length === 0) return '0';
-    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+    return acc.balances
+      .map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`)
+      .join(' | ');
   }
 
   async loadAccountCurrencies(accountId: number) {
@@ -200,7 +260,7 @@ export class WalletsComponent extends BasePageComponent {
   toggleCurrency(currencyId: number) {
     const current = this.selectedCurrencyIds();
     if (current.includes(currencyId)) {
-      this.selectedCurrencyIds.set(current.filter(id => id !== currencyId));
+      this.selectedCurrencyIds.set(current.filter((id) => id !== currencyId));
       if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(null);
     } else {
       this.selectedCurrencyIds.set([...current, currencyId]);

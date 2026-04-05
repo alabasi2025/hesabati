@@ -1,13 +1,21 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { AuthService } from '../../services/auth.service';
 import { CssBackgroundComponent } from '../../shared/components/css-background/css-background.component';
+
+interface RegisterFormData {
+  fullName: string;
+  username: string;
+  password: string;
+  role: string;
+}
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [FormsModule, RouterLink, CssBackgroundComponent],
+  imports: [RouterLink, CssBackgroundComponent, FormField],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './register.html',
   styleUrl: './register.scss',
 })
@@ -15,15 +23,20 @@ export class RegisterComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  username = signal('');
-  password = signal('');
-  fullName = signal('');
-  role = signal('viewer');
+  // ===== Signal Form =====
+  registerModel = signal<RegisterFormData>({
+    fullName: '',
+    username: '',
+    password: '',
+    role: 'viewer',
+  });
+  registerForm = form(this.registerModel);
+
   isLoading = signal(false);
   error = signal('');
   showPassword = signal(false);
 
-  roleOptions = [
+  readonly roleOptions = [
     { value: 'viewer', label: 'مشاهد' },
     { value: 'accountant', label: 'محاسب' },
     { value: 'manager', label: 'مدير' },
@@ -31,9 +44,10 @@ export class RegisterComponent {
   ];
 
   async onRegister() {
-    const u = this.username().trim();
-    const p = this.password();
-    const name = this.fullName().trim();
+    const { fullName, username, password, role } = this.registerModel();
+    const u = username.trim();
+    const p = password;
+    const name = fullName.trim();
 
     if (!u || !p || !name) {
       this.error.set('يرجى تعبئة جميع الحقول المطلوبة');
@@ -56,9 +70,8 @@ export class RegisterComponent {
     this.error.set('');
 
     try {
-      await this.auth.register(u, p, name, this.role());
+      await this.auth.register(u, p, name, role);
       this.router.navigate(['/login']);
-      // يمكن عرض رسالة نجاح عبر خدمة أو query param
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'فشل إنشاء الحساب');
     } finally {

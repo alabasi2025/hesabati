@@ -1,5 +1,4 @@
 <div class="vou-page">
-
   <!-- Header -->
   <div class="vou-header">
     <div class="vou-header-left">
@@ -21,38 +20,67 @@
 
   <!-- Stats -->
   <div class="vou-stats">
-    <div class="vou-stat total"><span class="material-icons-round">receipt_long</span>
-      <div><div class="vou-stat-num">{{ stats().total }}</div><div class="vou-stat-lbl">إجمالي السندات</div></div>
+    <div class="vou-stat total">
+      <span class="material-icons-round">receipt_long</span>
+      <div>
+        <div class="vou-stat-num">{{ stats().total }}</div>
+        <div class="vou-stat-lbl">إجمالي السندات</div>
+      </div>
     </div>
-    <div class="vou-stat green"><span class="material-icons-round">call_received</span>
-      <div><div class="vou-stat-num">{{ stats().receipts }}</div><div class="vou-stat-lbl">سندات قبض</div>
-        <div class="vou-stat-amt">{{ fmt(stats().totalReceipt) }}</div></div>
+    <div class="vou-stat green">
+      <span class="material-icons-round">call_received</span>
+      <div>
+        <div class="vou-stat-num">{{ stats().receipts }}</div>
+        <div class="vou-stat-lbl">سندات قبض</div>
+        <div class="vou-stat-amt">{{ fmt(stats().totalReceipt) }}</div>
+      </div>
     </div>
-    <div class="vou-stat red"><span class="material-icons-round">call_made</span>
-      <div><div class="vou-stat-num">{{ stats().payments }}</div><div class="vou-stat-lbl">سندات صرف</div>
-        <div class="vou-stat-amt">{{ fmt(stats().totalPayment) }}</div></div>
+    <div class="vou-stat red">
+      <span class="material-icons-round">call_made</span>
+      <div>
+        <div class="vou-stat-num">{{ stats().payments }}</div>
+        <div class="vou-stat-lbl">سندات صرف</div>
+        <div class="vou-stat-amt">{{ fmt(stats().totalPayment) }}</div>
+      </div>
     </div>
   </div>
 
   <!-- Tabs -->
   @if (!loading() && !showForm()) {
     <div class="vou-tabs">
-      <button class="vou-tab" [class.active]="activeTab()==='all'" (click)="activeTab.set('all')" style="--tab-color:#8b5cf6">
+      <button
+        class="vou-tab"
+        [class.active]="activeTab() === 'all'"
+        (click)="activeTab.set('all')"
+        style="--tab-color: #8b5cf6"
+      >
         <span class="material-icons-round">menu_book</span> الكل
         <span class="tab-count">{{ vouchers().length }}</span>
       </button>
-      <button class="vou-tab" [class.active]="activeTab()==='receipt'" (click)="activeTab.set('receipt')" style="--tab-color:#16a34a">
+      <button
+        class="vou-tab"
+        [class.active]="activeTab() === 'receipt'"
+        (click)="activeTab.set('receipt')"
+        style="--tab-color: #16a34a"
+      >
         <span class="material-icons-round">call_received</span> قبض
         <span class="tab-count">{{ stats().receipts }}</span>
       </button>
-      <button class="vou-tab" [class.active]="activeTab()==='payment'" (click)="activeTab.set('payment')" style="--tab-color:#dc2626">
+      <button
+        class="vou-tab"
+        [class.active]="activeTab() === 'payment'"
+        (click)="activeTab.set('payment')"
+        style="--tab-color: #dc2626"
+      >
         <span class="material-icons-round">call_made</span> صرف
         <span class="tab-count">{{ stats().payments }}</span>
       </button>
     </div>
   }
 
-  @if (loading()) { <app-loading-state message="جاري التحميل..." /> }
+  @if (loading()) {
+    <app-loading-state message="جاري التحميل..." />
+  }
 
   @if (!loading() && error() && !showForm()) {
     <div class="vou-error"><span class="material-icons-round">error</span> {{ error() }}</div>
@@ -61,34 +89,48 @@
   <!-- Form -->
   @if (showForm()) {
     <div class="vou-form-container">
-
       <div class="vou-form-header">
         <div class="vfh-title">
-          <span class="material-icons-round" [style.color]="formHeader().voucherType==='receipt'?'#22c55e':'#ef4444'">
+          <span
+            class="material-icons-round"
+            [style.color]="formHeader().voucherType === 'receipt' ? '#22c55e' : '#ef4444'"
+          >
             {{ formHeader().voucherType === 'receipt' ? 'call_received' : 'call_made' }}
           </span>
           {{ formHeader().voucherType === 'receipt' ? 'سند قبض' : 'سند صرف' }}
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+          @if (editingId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
         <div class="vfh-type-toggle">
-          <button [class.active-receipt]="formHeader().voucherType==='receipt'"
-                  (click)="formHeader.update(h=>({...h,voucherType:'receipt'}))">
+          <button
+            [class.active-receipt]="formHeader().voucherType === 'receipt'"
+            (click)="formHeader.update(h=>({...h,voucherType:'receipt'}))"
+          >
             <span class="material-icons-round">call_received</span> قبض
           </button>
-          <button [class.active-payment]="formHeader().voucherType==='payment'"
-                  (click)="formHeader.update(h=>({...h,voucherType:'payment'}))">
+          <button
+            [class.active-payment]="formHeader().voucherType === 'payment'"
+            (click)="formHeader.update(h=>({...h,voucherType:'payment'}))"
+          >
             <span class="material-icons-round">call_made</span> صرف
           </button>
         </div>
         <div class="vfh-status">
           @for (s of statusOptions; track s.key) {
-            <button class="status-chip" [class.active]="formHeader().status===s.key"
-                    (click)="formHeader.update(h=>({...h,status:s.key}))">
-              <span class="material-icons-round" [style.color]="s.color">{{ s.icon }}</span> {{ s.label }}
+            <button
+              class="status-chip"
+              [class.active]="formHeader().status === s.key"
+              (click)="formHeader.update(h=>({...h,status:s.key}))"
+            >
+              <span class="material-icons-round" [style.color]="s.color">{{ s.icon }}</span>
+              {{ s.label }}
             </button>
           }
         </div>
-        <button class="vou-btn ghost" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="vou-btn ghost" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
 
       <div class="vou-form-meta">
@@ -98,31 +140,46 @@
         </div>
         <div class="vfm-group flex2">
           <label>البيان <span class="req">*</span></label>
-          <input type="text" placeholder="بيان السند..." [ngModel]="formHeader().description"
-                 (ngModelChange)="formHeader.update(h=>({...h,description:$event}))" />
+          <input
+            type="text"
+            placeholder="بيان السند..."
+            [ngModel]="formHeader().description"
+            (ngModelChange)="formHeader.update(h=>({...h,description:$event}))"
+          />
         </div>
         <div class="vfm-group">
           <label>المرجع</label>
-          <input type="text" placeholder="اختياري" [ngModel]="formHeader().reference"
-                 (ngModelChange)="formHeader.update(h=>({...h,reference:$event}))" />
+          <input
+            type="text"
+            placeholder="اختياري"
+            [ngModel]="formHeader().reference"
+            (ngModelChange)="formHeader.update(h=>({...h,reference:$event}))"
+          />
         </div>
         <div class="vfm-group flex2">
           <label>نوع العملية</label>
-          <select [ngModel]="formHeader().operationTypeId" (ngModelChange)="onOperationTypeChange(+$event||null)">
+          <select
+            [ngModel]="formHeader().operationTypeId"
+            (ngModelChange)="onOperationTypeChange(+$event || null)"
+          >
             <option [ngValue]="null">— اختياري —</option>
-            @for (ot of operationTypes(); track ot.id) { <option [ngValue]="ot.id">{{ ot.name }}</option> }
+            @for (ot of operationTypes(); track ot.id) {
+              <option [ngValue]="ot.id">{{ ot.name }}</option>
+            }
           </select>
         </div>
         <div class="vfm-group seq-preview">
           <label>رقم السند</label>
           <div class="seq-badge">
             @if (loadingPreview()) {
-              <span class="material-icons-round rotating" style="font-size:16px;color:#22c55e">sync</span>
+              <span class="material-icons-round rotating" style="font-size: 16px; color: #22c55e"
+                >sync</span
+              >
             } @else if (previewNumber()) {
-              <span class="material-icons-round" style="font-size:15px;color:#22c55e">tag</span>
+              <span class="material-icons-round" style="font-size: 15px; color: #22c55e">tag</span>
               <span class="seq-num">{{ previewNumber() }}</span>
             } @else {
-              <span style="font-size:12px;color:var(--text-muted)">يظهر بعد اختيار الخزينة</span>
+              <span style="font-size: 12px; color: var(--text-muted)">يظهر بعد اختيار الخزينة</span>
             }
           </div>
         </div>
@@ -134,20 +191,38 @@
           <span class="material-icons-round">
             {{ formHeader().voucherType === 'receipt' ? 'south_east' : 'north_west' }}
           </span>
-          {{ formHeader().voucherType === 'receipt' ? 'الوارد إلى (الخزينة)' : 'المصروف من (الخزينة)' }}
+          {{
+            formHeader().voucherType === 'receipt' ? 'الوارد إلى (الخزينة)' : 'المصروف من (الخزينة)'
+          }}
         </div>
         <div class="treasury-types">
           @for (tt of treasuryTypes; track tt.key) {
-            <button class="treasury-type-btn" [class.active]="treasuryType()===tt.key"
-                    (click)="treasuryType.set(tt.key); treasuryId.set(null)">
+            <button
+              class="treasury-type-btn"
+              [class.active]="treasuryType() === tt.key"
+              (click)="treasuryType.set(tt.key); treasuryId.set(null)"
+            >
               <span class="material-icons-round">{{ tt.icon }}</span> {{ tt.label }}
             </button>
           }
         </div>
         @if (treasuryType()) {
           <div class="treasury-select">
-            <select [ngModel]="treasuryId()" (ngModelChange)="treasuryId.set(+$event||null); fetchPreview()">
-              <option [ngValue]="null">— اختر {{ treasuryType() === 'fund' ? 'الصندوق' : treasuryType() === 'bank' ? 'البنك' : 'الحساب' }} —</option>
+            <select
+              [ngModel]="treasuryId()"
+              (ngModelChange)="treasuryId.set(+$event || null); fetchPreview()"
+            >
+              <option [ngValue]="null">
+                — اختر
+                {{
+                  treasuryType() === 'fund'
+                    ? 'الصندوق'
+                    : treasuryType() === 'bank'
+                      ? 'البنك'
+                      : 'الحساب'
+                }}
+                —
+              </option>
               @for (t of treasuryOptions(); track t.id) {
                 <option [ngValue]="t.id">{{ t.name || t.fundName }}</option>
               }
@@ -185,63 +260,116 @@
             <tbody>
               @for (line of formLines(); track $index; let i = $index) {
                 <tr class="edit-row">
-                  <td class="td-idx">{{ i+1 }}</td>
+                  <td class="td-idx">{{ i + 1 }}</td>
                   <td class="td-etype">
-                    <select [ngModel]="line.entityType" (ngModelChange)="updateLine(i,'entityType',$event)">
-                      @for (et of entityTypes; track et.key) { <option [ngValue]="et.key">{{ et.label }}</option> }
+                    <select
+                      [ngModel]="line.entityType"
+                      (ngModelChange)="updateLine(i, 'entityType', $event)"
+                    >
+                      @for (et of entityTypes; track et.key) {
+                        <option [ngValue]="et.key">{{ et.label }}</option>
+                      }
                     </select>
                   </td>
                   <td class="td-account">
-                    <select [ngModel]="line.accountId" (ngModelChange)="updateLine(i,'accountId',+$event||null)">
+                    <select
+                      [ngModel]="line.accountId"
+                      (ngModelChange)="updateLine(i, 'accountId', +$event || null)"
+                    >
                       <option [ngValue]="null">— اختر —</option>
                       @for (a of getAccountsForEntityType(line.entityType); track a.id) {
-                        <option [ngValue]="a.id">{{ a.code ? a.code + ' - ' : '' }}{{ a.name }}</option>
+                        <option [ngValue]="a.id">
+                          {{ a.code ? a.code + ' - ' : '' }}{{ a.name }}
+                        </option>
                       }
                     </select>
                   </td>
                   <td class="td-entity">
                     @if (line.entityType) {
-                      <select [ngModel]="line.entityId" (ngModelChange)="updateLine(i,'entityId',+$event||null)">
+                      <select
+                        [ngModel]="line.entityId"
+                        (ngModelChange)="updateLine(i, 'entityId', +$event || null)"
+                      >
                         <option [ngValue]="null">— اختر —</option>
                         @for (en of getEntityList(line.entityType, line.accountId); track en.id) {
-                          <option [ngValue]="en.id">{{ en.name || en.fullName || en.fundName }}</option>
+                          <option [ngValue]="en.id">
+                            {{ en.name || en.fullName || en.fundName }}
+                          </option>
                         }
                       </select>
-                    } @else { <span class="td-dash">—</span> }
+                    } @else {
+                      <span class="td-dash">—</span>
+                    }
                   </td>
                   <td class="td-desc">
-                    <input type="text" placeholder="بيان..." [ngModel]="line.description"
-                           (ngModelChange)="updateLine(i,'description',$event)" />
+                    <input
+                      type="text"
+                      placeholder="بيان..."
+                      [ngModel]="line.description"
+                      (ngModelChange)="updateLine(i, 'description', $event)"
+                    />
                   </td>
                   <td class="td-currency">
-                    <select [ngModel]="line.currencyId" (ngModelChange)="updateLine(i,'currencyId',+$event||1)">
+                    <select
+                      [ngModel]="line.currencyId"
+                      (ngModelChange)="updateLine(i, 'currencyId', +$event || 1)"
+                    >
                       <option [ngValue]="1">ر.ي</option>
                       @for (c of currencies(); track c.id) {
-                        @if (c.id !== 1) { <option [ngValue]="c.id">{{ c.code || c.name }}</option> }
+                        @if (c.id !== 1) {
+                          <option [ngValue]="c.id">{{ c.code || c.name }}</option>
+                        }
                       }
                     </select>
                   </td>
                   <td class="td-amt">
-                    <input type="number" placeholder="0" class="amt-input"
-                           [ngModel]="line.amount" (ngModelChange)="updateLine(i,'amount',+$event||0)" />
+                    <input
+                      type="number"
+                      placeholder="0"
+                      class="amt-input"
+                      [ngModel]="line.amount"
+                      (ngModelChange)="updateLine(i, 'amount', +$event || 0)"
+                    />
                   </td>
                   @if (hasForeignCurrency()) {
                     <td class="td-foreign">
                       @if (line.currencyId !== 1) {
-                        <input type="number" placeholder="0" class="amt-input small"
-                               [ngModel]="line.foreignAmount" (ngModelChange)="updateLine(i,'foreignAmount',+$event||null)" />
-                      } @else { <span class="td-dash">—</span> }
+                        <input
+                          type="number"
+                          placeholder="0"
+                          class="amt-input small"
+                          [ngModel]="line.foreignAmount"
+                          (ngModelChange)="updateLine(i, 'foreignAmount', +$event || null)"
+                        />
+                      } @else {
+                        <span class="td-dash">—</span>
+                      }
                     </td>
                     <td class="td-rate">
                       @if (line.currencyId !== 1) {
-                        <input type="number" placeholder="0" class="amt-input small"
-                               [ngModel]="line.exchangeRate" (ngModelChange)="updateLine(i,'exchangeRate',+$event||null)" />
-                      } @else { <span class="td-dash">—</span> }
+                        <input
+                          type="number"
+                          placeholder="0"
+                          class="amt-input small"
+                          [ngModel]="line.exchangeRate"
+                          (ngModelChange)="updateLine(i, 'exchangeRate', +$event || null)"
+                        />
+                      } @else {
+                        <span class="td-dash">—</span>
+                      }
                     </td>
                   }
                   <td class="td-act">
-                    <button class="line-btn dup" (click)="duplicateLine(i)"><span class="material-icons-round">content_copy</span></button>
-                    <button class="line-btn del" (click)="removeLine(i)" [disabled]="formLines().length<=1"><span class="material-icons-round">delete</span></button>
+                    <button class="line-btn dup" (click)="duplicateLine(i)">
+                      <span class="material-icons-round">content_copy</span>
+                    </button>
+                    <button
+                      class="line-btn del"
+                      (click)="removeLine(i)"
+                      [disabled]="formLines().length <= 1"
+                    >
+                      <span class="material-icons-round">delete</span>
+                    </button>
                   </td>
                 </tr>
               }
@@ -256,67 +384,110 @@
       <!-- Total -->
       <div class="vou-total-bar">
         <div class="total-label">إجمالي السند</div>
-        <div class="total-amount" [class.receipt-total]="formHeader().voucherType==='receipt'"
-             [class.payment-total]="formHeader().voucherType==='payment'">
+        <div
+          class="total-amount"
+          [class.receipt-total]="formHeader().voucherType === 'receipt'"
+          [class.payment-total]="formHeader().voucherType === 'payment'"
+        >
           {{ fmt(totalAmount()) }}
         </div>
       </div>
 
       @if (error()) {
-        <div class="vou-error form-error"><span class="material-icons-round">error</span> {{ error() }}</div>
+        <div class="vou-error form-error">
+          <span class="material-icons-round">error</span> {{ error() }}
+        </div>
       }
 
       <div class="vou-form-footer">
         <button class="vou-btn ghost" (click)="showForm.set(false)">إلغاء</button>
-        <button class="vou-btn secondary" [disabled]="saving()"
-                (click)="formHeader.update(h=>({...h,status:'draft'}));save()">
+        <button
+          class="vou-btn secondary"
+          [disabled]="saving()"
+          (click)="formHeader.update(h=>({...h,status:'draft'}));save()"
+        >
           <span class="material-icons-round">save</span> حفظ كمسودة
         </button>
-        <button class="vou-btn" [class]="formHeader().voucherType==='receipt'?'receipt-btn':'payment-btn'"
-                [disabled]="saving()" (click)="formHeader.update(h=>({...h,status:'unreviewed'}));save()">
-          @if (saving()) { <span class="material-icons-round rotating">sync</span> }
-          @else { <span class="material-icons-round">{{ formHeader().voucherType==='receipt'?'call_received':'call_made' }}</span> }
-          {{ editingId() ? 'تعديل السند' : (formHeader().voucherType==='receipt' ? 'ترحيل القبض' : 'ترحيل الصرف') }}
+        <button
+          class="vou-btn"
+          [class]="formHeader().voucherType === 'receipt' ? 'receipt-btn' : 'payment-btn'"
+          [disabled]="saving()"
+          (click)="formHeader.update(h=>({...h,status:'unreviewed'}));save()"
+        >
+          @if (saving()) {
+            <span class="material-icons-round rotating">sync</span>
+          } @else {
+            <span class="material-icons-round">{{
+              formHeader().voucherType === 'receipt' ? 'call_received' : 'call_made'
+            }}</span>
+          }
+          {{
+            editingId()
+              ? 'تعديل السند'
+              : formHeader().voucherType === 'receipt'
+                ? 'ترحيل القبض'
+                : 'ترحيل الصرف'
+          }}
         </button>
       </div>
-
     </div>
   }
 
   <!-- List -->
   @if (!loading() && !showForm()) {
     @if (filteredVouchers().length === 0) {
-      <app-empty-state icon="receipt_long" message="لا توجد سندات" sub="اضغط سند قبض أو سند صرف لإنشاء أول سند" />
+      <app-empty-state
+        icon="receipt_long"
+        message="لا توجد سندات"
+        sub="اضغط سند قبض أو سند صرف لإنشاء أول سند"
+      />
     } @else {
       <div class="vou-list">
         @for (v of filteredVouchers(); track v.id) {
-          <div class="vou-card" [class.expanded]="expandedId()===v.id"
-               [class.card-receipt]="v.voucherType==='receipt'"
-               [class.card-payment]="v.voucherType==='payment'">
+          <div
+            class="vou-card"
+            [class.expanded]="expandedId() === v.id"
+            [class.card-receipt]="v.voucherType === 'receipt'"
+            [class.card-payment]="v.voucherType === 'payment'"
+          >
             <div class="vou-card-head" (click)="toggleExpand(v.id)">
-              <div class="vou-type-badge" [class.receipt-badge]="v.voucherType==='receipt'"
-                                           [class.payment-badge]="v.voucherType==='payment'">
-                <span class="material-icons-round">{{ v.voucherType==='receipt'?'call_received':'call_made' }}</span>
-                {{ v.voucherType==='receipt'?'قبض':'صرف' }}
+              <div
+                class="vou-type-badge"
+                [class.receipt-badge]="v.voucherType === 'receipt'"
+                [class.payment-badge]="v.voucherType === 'payment'"
+              >
+                <span class="material-icons-round">{{
+                  v.voucherType === 'receipt' ? 'call_received' : 'call_made'
+                }}</span>
+                {{ v.voucherType === 'receipt' ? 'قبض' : 'صرف' }}
               </div>
               <div class="vou-card-num">
-                <span class="vou-voucher-no">{{ v.voucherNumber || ('#' + v.id) }}</span>
+                <span class="vou-voucher-no">{{ v.voucherNumber || '#' + v.id }}</span>
               </div>
               <div class="vou-card-meta">
                 <span class="vou-date">{{ formatDate(v.voucherDate) }}</span>
                 <span class="vou-desc">{{ v.description }}</span>
               </div>
-              <div class="vou-card-amount" [class.receipt-amt]="v.voucherType==='receipt'"
-                                            [class.payment-amt]="v.voucherType==='payment'">
+              <div
+                class="vou-card-amount"
+                [class.receipt-amt]="v.voucherType === 'receipt'"
+                [class.payment-amt]="v.voucherType === 'payment'"
+              >
                 {{ fmt(v.amount) }}
               </div>
               <div class="vou-card-badges">
                 @if (v.status === 'reviewed') {
-                  <span class="badge status-reviewed"><span class="material-icons-round">verified</span> مراجع</span>
+                  <span class="badge status-reviewed"
+                    ><span class="material-icons-round">verified</span> مراجع</span
+                  >
                 } @else if (v.status === 'unreviewed') {
-                  <span class="badge status-unreviewed"><span class="material-icons-round">pending</span> غير مراجع</span>
+                  <span class="badge status-unreviewed"
+                    ><span class="material-icons-round">pending</span> غير مراجع</span
+                  >
                 } @else {
-                  <span class="badge status-draft"><span class="material-icons-round">edit_note</span> مسودة</span>
+                  <span class="badge status-draft"
+                    ><span class="material-icons-round">edit_note</span> مسودة</span
+                  >
                 }
               </div>
               <div class="vou-card-actions" (click)="$event.stopPropagation()">
@@ -329,7 +500,9 @@
                 <button class="icon-btn danger" (click)="deleteVoucher(v.id)" title="حذف">
                   <span class="material-icons-round">delete</span>
                 </button>
-                <span class="material-icons-round expand-icon">{{ expandedId()===v.id?'expand_less':'expand_more' }}</span>
+                <span class="material-icons-round expand-icon">{{
+                  expandedId() === v.id ? 'expand_less' : 'expand_more'
+                }}</span>
               </div>
             </div>
 
@@ -338,21 +511,36 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>#</th><th>الحساب</th><th>الجهة</th><th>البيان</th><th class="amt-col">المبلغ</th>
+                      <th>#</th>
+                      <th>الحساب</th>
+                      <th>الجهة</th>
+                      <th>البيان</th>
+                      <th class="amt-col">المبلغ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    @for (l of (v.lines||[]); track $index) {
+                    @for (l of v.lines || []; track $index) {
                       <tr>
-                        <td class="ln-idx">{{ $index+1 }}</td>
-                        <td>{{ l.accountName || getAccountName(l.accountId) }}</td>
+                        <td class="ln-idx">{{ $index + 1 }}</td>
+                        <td>
+                          {{ l.ledgerCode ? l.ledgerCode + ' — ' : ''
+                          }}{{ l.accountName || getAccountName(l.accountId) }}
+                        </td>
                         <td>
                           @if (l.entityType && l.entityId) {
-                            <span class="entity-pill">{{ getEntityLabel(l.entityType, l.entityId) }}</span>
-                          } @else { <span class="text-muted">—</span> }
+                            <span class="entity-pill">{{
+                              getEntityLabel(l.entityType, l.entityId)
+                            }}</span>
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
                         </td>
-                        <td>{{ l.description||'—' }}</td>
-                        <td class="amt-col" [class.receipt-val]="v.voucherType==='receipt'" [class.payment-val]="v.voucherType==='payment'">
+                        <td>{{ l.description || '—' }}</td>
+                        <td
+                          class="amt-col"
+                          [class.receipt-val]="v.voucherType === 'receipt'"
+                          [class.payment-val]="v.voucherType === 'payment'"
+                        >
                           {{ fmt(l.amount) }}
                         </td>
                       </tr>
@@ -361,7 +549,11 @@
                   <tfoot>
                     <tr class="totals-row">
                       <td colspan="4" class="totals-label">الإجمالي</td>
-                      <td class="amt-col" [class.receipt-val]="v.voucherType==='receipt'" [class.payment-val]="v.voucherType==='payment'">
+                      <td
+                        class="amt-col"
+                        [class.receipt-val]="v.voucherType === 'receipt'"
+                        [class.payment-val]="v.voucherType === 'payment'"
+                      >
                         {{ fmt(v.amount) }}
                       </td>
                     </tr>
@@ -374,5 +566,4 @@
       </div>
     }
   }
-
 </div>

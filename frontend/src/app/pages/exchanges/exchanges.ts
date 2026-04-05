@@ -1,10 +1,18 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { PAGE_IMPORTS } from '../../shared/page-imports';
 
-interface ExchangeForm { name: string; accountId: number | null; accountNumber: string; provider: string; responsiblePerson: string; description: string; notes: string; }
+interface ExchangeForm {
+  name: string;
+  accountId: number | null;
+  accountNumber: string;
+  provider: string;
+  responsiblePerson: string;
+  description: string;
+  notes: string;
+}
 
 @Component({
   selector: 'app-exchanges',
@@ -25,7 +33,15 @@ export class ExchangesComponent extends BasePageComponent {
 
   showExchangeForm = signal(false);
   editingExchangeId = signal<number | null>(null);
-  exchangeForm: ExchangeForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+  exchangeForm: ExchangeForm = {
+    name: '',
+    accountId: null,
+    accountNumber: '',
+    provider: '',
+    responsiblePerson: '',
+    description: '',
+    notes: '',
+  };
   accountCurrencies = signal<any[]>([]);
   selectedCurrencyIds = signal<number[]>([]);
   defaultCurrencyId = signal<number | null>(null);
@@ -34,11 +50,17 @@ export class ExchangesComponent extends BasePageComponent {
   deleteTarget = signal<{ type: 'exchange'; id: number; name: string } | null>(null);
 
   // Backward compatibility
-  get accounts() { return this.exchangesData; }
+  get accounts() {
+    return this.exchangesData;
+  }
   showAccountForm = this.showExchangeForm;
   editingAccountId = this.editingExchangeId;
-  get accountForm() { return this.exchangeForm; }
-  set accountForm(v: any) { this.exchangeForm = v; }
+  get accountForm() {
+    return this.exchangeForm;
+  }
+  set accountForm(v: any) {
+    this.exchangeForm = v;
+  }
 
   protected override onBizIdChange(_bizId: number): void {
     this.load();
@@ -52,42 +74,70 @@ export class ExchangesComponent extends BasePageComponent {
       this.activeFilter.set('all');
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
-        this.exchangeAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'exchange'));
-      } catch { this.exchangeAccounts.set([]); }
-    } catch (e: unknown) { console.error(e); }
+        this.exchangeAccounts.set(
+          (allAccounts || []).filter((a: any) => a.accountType === 'exchange'),
+        );
+      } catch {
+        this.exchangeAccounts.set([]);
+      }
+    } catch (e: unknown) {
+      console.error(e);
+    }
     this.loading.set(false);
   }
 
   getFilterTabs() {
     return [
       { value: 'all', label: 'الكل', icon: 'apps', count: this.exchangesData().length },
-      { value: 'active', label: 'نشط', icon: 'check_circle', count: this.exchangesData().filter(e => e.isActive).length },
-      { value: 'inactive', label: 'غير نشط', icon: 'cancel', count: this.exchangesData().filter(e => !e.isActive).length },
+      {
+        value: 'active',
+        label: 'نشط',
+        icon: 'check_circle',
+        count: this.exchangesData().filter((e) => e.isActive).length,
+      },
+      {
+        value: 'inactive',
+        label: 'غير نشط',
+        icon: 'cancel',
+        count: this.exchangesData().filter((e) => !e.isActive).length,
+      },
     ];
   }
 
-  get filteredData() {
+  filteredData = computed(() => {
     let data = this.exchangesData();
     const filter = this.activeFilter();
-    if (filter === 'active') data = data.filter(e => e.isActive);
-    else if (filter === 'inactive') data = data.filter(e => !e.isActive);
+    if (filter === 'active') data = data.filter((e) => e.isActive);
+    else if (filter === 'inactive') data = data.filter((e) => !e.isActive);
     const accId = this.accountFilter();
-    if (accId) data = data.filter(e => e.accountId === accId);
+    if (accId) data = data.filter((e) => e.accountId === accId);
     return data;
-  }
+  });
 
-  get uniqueAccounts() {
+  uniqueAccounts = computed(() => {
     const seen = new Map<number, { id: number; name: string; code: string }>();
     for (const e of this.exchangesData()) {
       if (e.accountId && !seen.has(e.accountId)) {
-        seen.set(e.accountId, { id: e.accountId, name: e.accountName || e.name, code: e.accountCode || e.code });
+        seen.set(e.accountId, {
+          id: e.accountId,
+          name: e.accountName || e.name,
+          code: e.accountCode || e.code,
+        });
       }
     }
     return Array.from(seen.values());
-  }
+  });
 
   openAddAccount(subType?: string) {
-    this.exchangeForm = { name: '', accountId: null, accountNumber: '', provider: '', responsiblePerson: '', description: '', notes: '' };
+    this.exchangeForm = {
+      name: '',
+      accountId: null,
+      accountNumber: '',
+      provider: '',
+      responsiblePerson: '',
+      description: '',
+      notes: '',
+    };
     this.accountCurrencies.set([]);
     this.selectedCurrencyIds.set([]);
     this.defaultCurrencyId.set(null);
@@ -147,9 +197,14 @@ export class ExchangesComponent extends BasePageComponent {
         await this.api.createExchange(this.bizId, data);
       }
       this.showExchangeForm.set(false);
-      this.toast.success(this.editingExchangeId() ? 'تم تحديث الصراف بنجاح' : 'تم إنشاء الصراف بنجاح');
+      this.toast.success(
+        this.editingExchangeId() ? 'تم تحديث الصراف بنجاح' : 'تم إنشاء الصراف بنجاح',
+      );
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الصراف'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء حفظ الصراف');
+    }
   }
 
   confirmDelete(type: 'exchange', id: number, name: string) {
@@ -166,12 +221,17 @@ export class ExchangesComponent extends BasePageComponent {
       this.deleteTarget.set(null);
       this.toast.success('تم الحذف بنجاح');
       await this.load();
-    } catch (e: unknown) { console.error(e); this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف'); }
+    } catch (e: unknown) {
+      console.error(e);
+      this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء الحذف');
+    }
   }
 
   getBalanceDisplay(acc: any): string {
     if (!acc.balances || acc.balances.length === 0) return '0';
-    return acc.balances.map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`).join(' | ');
+    return acc.balances
+      .map((b: any) => `${Number(b.balance).toLocaleString()} ${b.currencySymbol || ''}`)
+      .join(' | ');
   }
 
   async loadAccountCurrencies(accountId: number) {
@@ -200,7 +260,7 @@ export class ExchangesComponent extends BasePageComponent {
   toggleCurrency(currencyId: number) {
     const current = this.selectedCurrencyIds();
     if (current.includes(currencyId)) {
-      this.selectedCurrencyIds.set(current.filter(id => id !== currencyId));
+      this.selectedCurrencyIds.set(current.filter((id) => id !== currencyId));
       if (this.defaultCurrencyId() === currencyId) this.defaultCurrencyId.set(null);
     } else {
       this.selectedCurrencyIds.set([...current, currencyId]);

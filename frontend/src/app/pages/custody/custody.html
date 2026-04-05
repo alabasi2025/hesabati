@@ -1,7 +1,9 @@
 <div class="page-content">
   <div class="page-header">
     <h2><span class="material-icons-round">lock</span> العهد</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إنشاء عهدة</button>
+    <button class="add-btn" (click)="openAdd()">
+      <span class="material-icons-round">add</span> إنشاء عهدة
+    </button>
   </div>
 
   <!-- حسابات العهدة -->
@@ -11,7 +13,9 @@
       <div class="accounts-grid">
         @for (acc of custodyAccounts(); track acc.id) {
           <div class="account-card">
-            <div class="account-code">{{ acc.code }}</div>
+            <div class="account-code">
+              {{ acc.accountLedgerCode ? acc.accountLedgerCode + ' | ' : '' }}{{ acc.code }}
+            </div>
             <div class="account-name">{{ acc.name }}</div>
             <div class="account-balance">
               <span class="material-icons-round">account_balance_wallet</span>
@@ -26,81 +30,144 @@
   <div class="summary-row">
     <div class="summary-card purple">
       <span class="material-icons-round">account_balance_wallet</span>
-      <div><span class="num">{{ custodyAccounts().length }}</span><span class="lbl">حسابات العهد</span></div>
+      <div>
+        <span class="num">{{ custodyAccounts().length }}</span
+        ><span class="lbl">حسابات العهد</span>
+      </div>
     </div>
     <div class="summary-card amber">
       <span class="material-icons-round">receipt</span>
-      <div><span class="num">{{ records().length }}</span><span class="lbl">سجلات العهد</span></div>
+      <div>
+        <span class="num">{{ records().length }}</span
+        ><span class="lbl">سجلات العهد</span>
+      </div>
     </div>
     <div class="summary-card green">
       <span class="material-icons-round">check_circle</span>
-      <div><span class="num">{{ records().filter(r => r.status === 'active').length }}</span><span class="lbl">نشطة</span></div>
+      <div>
+        <span class="num">{{ records().filter(r => r.status === 'active').length }}</span
+        ><span class="lbl">نشطة</span>
+      </div>
     </div>
     <div class="summary-card blue">
       <span class="material-icons-round">done_all</span>
-      <div><span class="num">{{ records().filter(r => r.status === 'settled').length }}</span><span class="lbl">مسوّاة</span></div>
+      <div>
+        <span class="num">{{ records().filter(r => r.status === 'settled').length }}</span
+        ><span class="lbl">مسوّاة</span>
+      </div>
     </div>
   </div>
 
   <!-- تبويبات -->
   <div class="tabs-bar">
-    <button class="tab-btn" [class.active]="activeTab() === 'permanent'" (click)="switchTab('permanent')">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'permanent'"
+      (click)="switchTab('permanent')"
+    >
       <span class="material-icons-round">lock</span> دائمة
     </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'temporary'" (click)="switchTab('temporary')">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'temporary'"
+      (click)="switchTab('temporary')"
+    >
       <span class="material-icons-round">schedule</span> مؤقتة
     </button>
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <div class="loading-state">
+      <span class="material-icons-round spin">sync</span>
+      <p>جاري التحميل...</p>
+    </div>
   } @else if (showForm()) {
     <div class="page-form-container">
       <div class="form-header">
         <div class="form-header-title">
-          <div class="page-icon purple"><span class="material-icons-round">account_balance_wallet</span></div>
+          <div class="page-icon purple">
+            <span class="material-icons-round">account_balance_wallet</span>
+          </div>
           <h3>{{ editingId() ? 'تعديل العهدة' : 'إنشاء عهدة جديدة' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+          @if (editingId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="close-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
       <div class="form-meta">
-        <div class="form-group"><label>نوع العهدة</label>
-          <select [(ngModel)]="form.custodyType"><option value="permanent">دائمة</option><option value="temporary">مؤقتة</option></select>
+        <div class="form-group">
+          <label>نوع العهدة</label>
+          <select [(ngModel)]="form.custodyType">
+            <option value="permanent">دائمة</option>
+            <option value="temporary">مؤقتة</option>
+          </select>
         </div>
-        <div class="form-group"><label>نوع المحتوى</label>
-          <select [(ngModel)]="form.contentType">@for (ct of contentTypes; track ct.key) { <option [value]="ct.key">{{ ct.label }}</option> }</select>
+        <div class="form-group">
+          <label>نوع المحتوى</label>
+          <select [(ngModel)]="form.contentType">
+            @for (ct of contentTypes; track ct.key) {
+              <option [value]="ct.key">{{ ct.label }}</option>
+            }
+          </select>
         </div>
-        <div class="form-group"><label>اسم الطرف <span class="required">*</span></label><input [(ngModel)]="form.partyName" placeholder="مثال: أحمد محمد" /></div>
-        <div class="form-group"><label>نوع الطرف</label>
-          <select [(ngModel)]="form.partyType">@for (pt of partyTypes; track pt.key) { <option [value]="pt.key">{{ pt.label }}</option> }</select>
+        <div class="form-group">
+          <label>اسم الطرف <span class="required">*</span></label
+          ><input [(ngModel)]="form.partyName" placeholder="مثال: أحمد محمد" />
         </div>
-        <div class="form-group full-width"><label>الحساب المرتبط <span class="required">*</span></label>
+        <div class="form-group">
+          <label>نوع الطرف</label>
+          <select [(ngModel)]="form.partyType">
+            @for (pt of partyTypes; track pt.key) {
+              <option [value]="pt.key">{{ pt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label>الحساب المرتبط <span class="required">*</span></label>
           <select [(ngModel)]="form.accountId" required (ngModelChange)="onAccountChange($event)">
             <option [ngValue]="null" disabled>-- اختر حساب العهدة --</option>
-            @for (acc of filteredAccounts(); track acc.id) { <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option> }
+            @for (acc of filteredAccounts(); track acc.id) {
+              <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+            }
           </select>
         </div>
         @if (accountCurrencies().length > 0) {
-          <div class="form-group full-width"><label>العملة <span class="required">*</span></label>
+          <div class="form-group full-width">
+            <label>العملة <span class="required">*</span></label>
             <div class="currency-chips">
               @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button type="button" class="currency-chip" [class.selected]="selectedCurrencyId() === curr.currencyId" (click)="selectCurrency(curr.currencyId)">
-                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                <button
+                  type="button"
+                  class="currency-chip"
+                  [class.selected]="selectedCurrencyId() === curr.currencyId"
+                  (click)="selectCurrency(curr.currencyId)"
+                >
+                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span
+                  ><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
                 </button>
               }
             </div>
           </div>
         }
-        <div class="form-group"><label>المبلغ</label><input type="number" [(ngModel)]="form.amount" placeholder="0" /></div>
-        <div class="form-group full-width"><label>الوصف</label><textarea [(ngModel)]="form.description" rows="3" placeholder="وصف العهدة..."></textarea></div>
+        <div class="form-group">
+          <label>المبلغ</label><input type="number" [(ngModel)]="form.amount" placeholder="0" />
+        </div>
+        <div class="form-group full-width">
+          <label>الوصف</label
+          ><textarea [(ngModel)]="form.description" rows="3" placeholder="وصف العهدة..."></textarea>
+        </div>
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء العهدة' }}</button>
+        <button class="btn-save" (click)="save()">
+          {{ editingId() ? 'حفظ التعديلات' : 'إنشاء العهدة' }}
+        </button>
       </div>
     </div>
-  } @else if (!filteredRecords.length) {
+  } @else if (!filteredRecords().length) {
     <div class="empty-state">
       <span class="material-icons-round">account_balance_wallet</span>
       <p>لا توجد عهد {{ activeTab() === 'permanent' ? 'دائمة' : 'مؤقتة' }} بعد</p>
@@ -120,18 +187,32 @@
         </tr>
       </thead>
       <tbody>
-        @for (c of filteredRecords; track c.id) {
+        @for (c of filteredRecords(); track c.id) {
           <tr>
             <td class="custody-num">{{ c.custodyNumber || c.id }}</td>
             <td class="party-name">{{ c.partyName }}</td>
-            <td><span class="type-badge">{{ getPartyTypeLabel(c.partyType) }}</span></td>
-            <td><span class="content-badge">{{ getContentTypeLabel(c.contentType) }}</span></td>
-            <td class="amount-cell">{{ (c.amount || 0) | number }}</td>
-            <td><span class="status-badge" [class]="getStatusClass(c.status)">{{ getStatusLabel(c.status) }}</span></td>
             <td>
-              <button class="action-btn" (click)="viewDetails(c)" title="عرض"><span class="material-icons-round">visibility</span></button>
-              <button class="action-btn edit" (click)="openEdit(c)" title="تعديل"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(c)" title="حذف"><span class="material-icons-round">delete</span></button>
+              <span class="type-badge">{{ getPartyTypeLabel(c.partyType) }}</span>
+            </td>
+            <td>
+              <span class="content-badge">{{ getContentTypeLabel(c.contentType) }}</span>
+            </td>
+            <td class="amount-cell">{{ c.amount || 0 | number }}</td>
+            <td>
+              <span class="status-badge" [class]="getStatusClass(c.status)">{{
+                getStatusLabel(c.status)
+              }}</span>
+            </td>
+            <td>
+              <button class="action-btn" (click)="viewDetails(c)" title="عرض">
+                <span class="material-icons-round">visibility</span>
+              </button>
+              <button class="action-btn edit" (click)="openEdit(c)" title="تعديل">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="action-btn delete" (click)="remove(c)" title="حذف">
+                <span class="material-icons-round">delete</span>
+              </button>
             </td>
           </tr>
         }
@@ -145,21 +226,49 @@
       <div class="modal-card wide" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title-row">
-            <div class="modal-icon purple"><span class="material-icons-round">account_balance_wallet</span></div>
+            <div class="modal-icon purple">
+              <span class="material-icons-round">account_balance_wallet</span>
+            </div>
             <div>
               <h2>تفاصيل العهدة</h2>
-              <p>{{ viewingRecord().partyName }} — {{ viewingRecord().custodyNumber || viewingRecord().id }}</p>
+              <p>
+                {{ viewingRecord().partyName }} —
+                {{ viewingRecord().custodyNumber || viewingRecord().id }}
+              </p>
             </div>
           </div>
-          <button class="close-btn" (click)="viewingRecord.set(null)"><span class="material-icons-round">close</span></button>
+          <button class="close-btn" (click)="viewingRecord.set(null)">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
         <div class="modal-body">
           <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">نوع العهدة</span><span class="detail-value">{{ viewingRecord().custodyType === 'permanent' ? 'دائمة' : 'مؤقتة' }}</span></div>
-            <div class="detail-item"><span class="detail-label">نوع المحتوى</span><span class="detail-value">{{ getContentTypeLabel(viewingRecord().contentType) }}</span></div>
-            <div class="detail-item"><span class="detail-label">نوع الطرف</span><span class="detail-value">{{ getPartyTypeLabel(viewingRecord().partyType) }}</span></div>
-            <div class="detail-item"><span class="detail-label">المبلغ</span><span class="detail-value amount">{{ (viewingRecord().amount || 0) | number }}</span></div>
-            <div class="detail-item"><span class="detail-label">الحالة</span><span class="status-badge" [class]="getStatusClass(viewingRecord().status)">{{ getStatusLabel(viewingRecord().status) }}</span></div>
+            <div class="detail-item">
+              <span class="detail-label">نوع العهدة</span
+              ><span class="detail-value">{{
+                viewingRecord().custodyType === 'permanent' ? 'دائمة' : 'مؤقتة'
+              }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">نوع المحتوى</span
+              ><span class="detail-value">{{
+                getContentTypeLabel(viewingRecord().contentType)
+              }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">نوع الطرف</span
+              ><span class="detail-value">{{ getPartyTypeLabel(viewingRecord().partyType) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">المبلغ</span
+              ><span class="detail-value amount">{{ viewingRecord().amount || 0 | number }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">الحالة</span
+              ><span class="status-badge" [class]="getStatusClass(viewingRecord().status)">{{
+                getStatusLabel(viewingRecord().status)
+              }}</span>
+            </div>
           </div>
           @if (viewingRecord().description) {
             <div class="notes-section">
@@ -172,19 +281,30 @@
           <div class="settlements-section">
             <div class="settlements-header">
               <h3><span class="material-icons-round">receipt_long</span> التسويات</h3>
-              @if (viewingRecord().status === 'active' || viewingRecord().status === 'partially_settled') {
-                <button class="add-btn small" (click)="openSettle()"><span class="material-icons-round">add</span> إضافة تسوية</button>
+              @if (
+                viewingRecord().status === 'active' ||
+                viewingRecord().status === 'partially_settled'
+              ) {
+                <button class="add-btn small" (click)="openSettle()">
+                  <span class="material-icons-round">add</span> إضافة تسوية
+                </button>
               }
             </div>
             @if (!settlements().length) {
               <p class="no-settlements">لا توجد تسويات بعد</p>
             } @else {
               <table class="data-table settlements-table">
-                <thead><tr><th>المبلغ</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>المبلغ</th>
+                    <th>التاريخ</th>
+                    <th>ملاحظات</th>
+                  </tr>
+                </thead>
                 <tbody>
                   @for (s of settlements(); track s.id) {
                     <tr>
-                      <td class="amount-cell">{{ (s.amount || 0) | number }}</td>
+                      <td class="amount-cell">{{ s.amount || 0 | number }}</td>
                       <td>{{ (s.settledAt || s.createdAt || '').split('T')[0] }}</td>
                       <td>{{ s.notes || '—' }}</td>
                     </tr>
@@ -210,7 +330,11 @@
               </div>
               <div class="form-group">
                 <label>ملاحظات</label>
-                <textarea [(ngModel)]="settleForm.notes" rows="2" placeholder="ملاحظات..."></textarea>
+                <textarea
+                  [(ngModel)]="settleForm.notes"
+                  rows="2"
+                  placeholder="ملاحظات..."
+                ></textarea>
               </div>
               <div class="settle-actions">
                 <button class="btn-save" (click)="submitSettle()">تأكيد التسوية</button>
@@ -225,6 +349,4 @@
       </div>
     </div>
   }
-
-
 </div>

@@ -141,7 +141,7 @@
 
 <!-- Modal تعديل عمل -->
 @if (showEditModal() && editingBiz()) {
-  <div class="modal-overlay" (click)="closeEditModal()">
+  <div class="page-form-container" (click)="closeEditModal()">
     <div class="modal-3d" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons-round">edit</span> تعديل عمل</h3>
@@ -218,7 +218,7 @@
 
 <!-- Modal تأكيد الحذف -->
 @if (showDeleteConfirm() && deletingBiz()) {
-  <div class="modal-overlay" (click)="closeDeleteConfirm()">
+  <div class="page-form-container" (click)="closeDeleteConfirm()">
     <div class="modal-3d modal-sm" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons-round" style="color:#ef4444">warning</span> تأكيد الحذف</h3>
@@ -247,7 +247,7 @@
 
 <!-- Modal إضافة عمل جديد -->
 @if (showAddModal()) {
-  <div class="modal-overlay" (click)="closeAddModal()">
+  <div class="page-form-container" (click)="closeAddModal()">
     <div class="modal-3d" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3><span class="material-icons-round">add_business</span> إضافة عمل جديد</h3>

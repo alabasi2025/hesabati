@@ -40,6 +40,7 @@ walletsRoutes.get(
         createdAt: wallets.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(wallets)
       .leftJoin(accounts, eq(wallets.accountId, accounts.id))

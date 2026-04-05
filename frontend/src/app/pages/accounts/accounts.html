@@ -2,14 +2,30 @@
   <div class="page-header">
     <h2><span class="material-icons-round">account_balance_wallet</span> دليل الحسابات</h2>
     <div class="header-actions">
-      <button class="add-btn parent-btn" type="button" (click)="openCreateParent()"><span class="material-icons-round">create_new_folder</span> حساب رئيسي</button>
-      <button class="add-btn" type="button" (click)="openCreateLeaf()"><span class="material-icons-round">add</span> حساب فرعي</button>
+      <button class="add-btn parent-btn" type="button" (click)="openCreateParent()">
+        <span class="material-icons-round">create_new_folder</span> حساب رئيسي
+      </button>
+      <button class="add-btn" type="button" (click)="openCreateLeaf()">
+        <span class="material-icons-round">add</span> حساب فرعي
+      </button>
     </div>
   </div>
 
   <div class="filter-row">
-    <input type="text" placeholder="ابحث..." class="search-box" [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
-    <select class="filter-select" aria-label="فلترة حسب التصنيف الفرعي" title="فلترة حسب التصنيف الفرعي" [value]="activeNatureFilter() || ''" (change)="setNatureFilter(($any($event.target).value ? +$any($event.target).value : null))">
+    <input
+      type="text"
+      placeholder="ابحث..."
+      class="search-box"
+      [value]="searchQuery()"
+      (input)="searchQuery.set($any($event.target).value)"
+    />
+    <select
+      class="filter-select"
+      aria-label="فلترة حسب التصنيف الفرعي"
+      title="فلترة حسب التصنيف الفرعي"
+      [value]="activeNatureFilter() || ''"
+      (change)="setNatureFilter($any($event.target).value ? +$any($event.target).value : null)"
+    >
       <option value="">كل التصنيفات الفرعية</option>
       @for (n of naturesStats(); track n.id) {
         @if (n.count > 0) {
@@ -18,53 +34,107 @@
       }
     </select>
     <div class="nature-chips">
-      <button class="chip" [class.active]="activeNatureFilter() === null" (click)="setNatureFilter(null)"><span class="material-icons-round">apps</span>الكل</button>
+      <button
+        class="chip"
+        [class.active]="activeNatureFilter() === null"
+        (click)="setNatureFilter(null)"
+      >
+        <span class="material-icons-round">apps</span>الكل
+      </button>
       @for (n of naturesStats(); track n.id) {
         @if (n.count > 0) {
-          <button class="chip" [class.active]="activeNatureFilter() === n.id" (click)="setNatureFilter(n.id)"><span class="material-icons-round">{{ n.icon }}</span>{{ n.name }} ({{ n.count }})</button>
+          <button
+            class="chip"
+            [class.active]="activeNatureFilter() === n.id"
+            (click)="setNatureFilter(n.id)"
+          >
+            <span class="material-icons-round">{{ n.icon }}</span
+            >{{ n.name }} ({{ n.count }})
+          </button>
         }
       }
     </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <div class="loading-state">
+      <span class="material-icons-round spin">sync</span>
+      <p>جاري التحميل...</p>
+    </div>
   } @else if (showForm()) {
     <div class="page-form-container">
       <div class="form-header">
         <div class="form-header-title">
-          <div class="page-icon" [class.blue]="form().isLeafAccount" [class.purple]="!form().isLeafAccount">
-            <span class="material-icons-round">{{ form().isLeafAccount ? 'account_balance_wallet' : 'create_new_folder' }}</span>
+          <div
+            class="page-icon"
+            [class.blue]="form().isLeafAccount"
+            [class.purple]="!form().isLeafAccount"
+          >
+            <span class="material-icons-round">{{
+              form().isLeafAccount ? 'account_balance_wallet' : 'create_new_folder'
+            }}</span>
           </div>
           <h3>
             @switch (formMode()) {
-              @case ('create-parent') { إنشاء حساب رئيسي }
-              @case ('create-leaf') { إنشاء حساب فرعي }
-              @case ('edit-parent') { تعديل حساب رئيسي }
-              @case ('edit-leaf') { تعديل حساب فرعي }
+              @case ('create-parent') {
+                إنشاء حساب رئيسي
+              }
+              @case ('create-leaf') {
+                إنشاء حساب فرعي
+              }
+              @case ('edit-parent') {
+                تعديل حساب رئيسي
+              }
+              @case ('edit-leaf') {
+                تعديل حساب فرعي
+              }
             }
           </h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+          @if (editingId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <button class="close-btn" type="button" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="close-btn" type="button" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
       <div class="form-meta">
         @if (editingLinkedEntity()) {
           <div class="form-group full-width">
             <div class="guard-notice">
               <span class="material-icons-round">lock</span>
-              <span>هذا الحساب مرتبط بكيان (صندوق/بنك/محفظة/صراف). لا يمكن تغيير النوع الفرعي أو تحويله لرئيسي.</span>
+              <span
+                >هذا الحساب مرتبط بكيان (صندوق/بنك/محفظة/صراف). لا يمكن تغيير النوع الفرعي أو تحويله
+                لرئيسي.</span
+              >
             </div>
           </div>
         }
-        <div class="form-group"><label>اسم الحساب <span class="required">*</span></label><input [(ngModel)]="form().name" placeholder="مثال: النقدية، صندوق الدهمية"></div>
-        <div class="form-group"><label>الحساب الأب</label><select [(ngModel)]="form().parentAccountId"><option [value]="null">جذر (مستوى أول)</option>@for (parent of parentAccountOptions(); track parent.id) {<option [value]="parent.id">{{ parent.code }} - {{ parent.name }}</option>}</select></div>
+        <div class="form-group">
+          <label>اسم الحساب <span class="required">*</span></label
+          ><input [(ngModel)]="form().name" placeholder="مثال: النقدية، صندوق الدهمية" />
+        </div>
+        <div class="form-group">
+          <label>الحساب الأب</label
+          ><select [(ngModel)]="form().parentAccountId">
+            <option [value]="null">جذر (مستوى أول)</option>
+            @for (parent of parentAccountOptions(); track parent.id) {
+              <option [value]="parent.id">{{ parent.code }} - {{ parent.name }}</option>
+            }
+          </select>
+        </div>
         @if (form().isLeafAccount) {
           <div class="form-group">
             <label>نوع الحساب الفرعي <span class="required">*</span></label>
-            <select [ngModel]="form().accountSubNatureId" (ngModelChange)="selectSubNature($event)" [disabled]="editingLinkedEntity()">
+            <select
+              [ngModel]="form().accountSubNatureId"
+              (ngModelChange)="selectSubNature($event)"
+              [disabled]="editingLinkedEntity()"
+            >
               <option [ngValue]="null">اختر النوع الفرعي</option>
-              @for (nature of accountSubNatures(); track nature.id) { <option [ngValue]="nature.id">{{ nature.name }}</option> }
+              @for (nature of accountSubNatures(); track nature.id) {
+                <option [ngValue]="nature.id">{{ nature.name }}</option>
+              }
             </select>
           </div>
           @if (subTypeOptions().length > 0) {
@@ -72,7 +142,9 @@
               <label>التصنيف <span class="required">*</span></label>
               <select [(ngModel)]="form().subTypeId">
                 <option [ngValue]="null">اختر التصنيف</option>
-                @for (item of subTypeOptions(); track item.id) { <option [ngValue]="item.id">{{ item.name }}</option> }
+                @for (item of subTypeOptions(); track item.id) {
+                  <option [ngValue]="item.id">{{ item.name }}</option>
+                }
               </select>
             </div>
           }
@@ -81,8 +153,15 @@
               <label>العملات المسموحة</label>
               <div class="currency-chips">
                 @for (cur of currencies(); track cur.id) {
-                  <button type="button" class="currency-chip" [class.selected]="accountCurrencyIds().includes(cur.id)" [class.is-default]="accountDefaultCurrencyId() === cur.id" (click)="toggleCurrency(cur.id)">
-                    <span class="chip-symbol">{{ cur.symbol }}</span><span class="chip-code">{{ cur.code }}</span>
+                  <button
+                    type="button"
+                    class="currency-chip"
+                    [class.selected]="accountCurrencyIds().includes(cur.id)"
+                    [class.is-default]="accountDefaultCurrencyId() === cur.id"
+                    (click)="toggleCurrency(cur.id)"
+                  >
+                    <span class="chip-symbol">{{ cur.symbol }}</span
+                    ><span class="chip-code">{{ cur.code }}</span>
                   </button>
                 }
               </div>
@@ -90,42 +169,83 @@
           }
         }
         @if (!form().isLeafAccount) {
-          <div class="form-group"><label>الرمز/الكود <span class="required">*</span></label><input [(ngModel)]="form().code" placeholder="مثال: 1, 2, 3" [disabled]="!!editingId()"></div>
+          <div class="form-group">
+            <label>الرمز/الكود <span class="required">*</span></label
+            ><input
+              [(ngModel)]="form().code"
+              placeholder="مثال: 1, 2, 3"
+              [disabled]="!!editingId()"
+            />
+          </div>
         }
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form().notes" rows="3" placeholder="ملاحظات إضافية..."></textarea></div>
+        <div class="form-group full-width">
+          <label>ملاحظات</label
+          ><textarea [(ngModel)]="form().notes" rows="3" placeholder="ملاحظات إضافية..."></textarea>
+        </div>
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="saveForm()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء الحساب' }}</button>
+        <button class="btn-save" (click)="saveForm()">
+          {{ editingId() ? 'حفظ التعديلات' : 'إنشاء الحساب' }}
+        </button>
       </div>
     </div>
   } @else if (treeRows().length === 0) {
-    <div class="empty-state"><span class="material-icons-round">account_balance_wallet</span><p>لا توجد حسابات</p></div>
+    <div class="empty-state">
+      <span class="material-icons-round">account_balance_wallet</span>
+      <p>لا توجد حسابات</p>
+    </div>
   } @else {
     <div class="tree-toolbar">
       <div class="tree-stats">
-        <span class="stat-pill"><span class="material-icons-round">account_tree</span>الكل: {{ treeSummary().total }}</span>
-        <span class="stat-pill main"><span class="material-icons-round">folder</span>رئيسي: {{ treeSummary().main }}</span>
-        <span class="stat-pill leaf"><span class="material-icons-round">account_balance_wallet</span>فرعي: {{ treeSummary().leaf }}</span>
+        <span class="stat-pill"
+          ><span class="material-icons-round">account_tree</span>الكل:
+          {{ treeSummary().total }}</span
+        >
+        <span class="stat-pill main"
+          ><span class="material-icons-round">folder</span>رئيسي: {{ treeSummary().main }}</span
+        >
+        <span class="stat-pill leaf"
+          ><span class="material-icons-round">account_balance_wallet</span>فرعي:
+          {{ treeSummary().leaf }}</span
+        >
       </div>
       <div class="tree-actions">
-        <button class="mini-btn" type="button" (click)="expandAll()"><span class="material-icons-round">unfold_more</span>فتح الكل</button>
-        <button class="mini-btn" type="button" (click)="collapseAll()"><span class="material-icons-round">unfold_less</span>طي الكل</button>
+        <button class="mini-btn" type="button" (click)="expandAll()">
+          <span class="material-icons-round">unfold_more</span>فتح الكل
+        </button>
+        <button class="mini-btn" type="button" (click)="collapseAll()">
+          <span class="material-icons-round">unfold_less</span>طي الكل
+        </button>
       </div>
     </div>
     <div class="tree-list">
       @for (row of treeRows(); track row.acc.id; let i = $index) {
-        <div class="card tree-card animate-3d-rise tilt-card glow-hover glow-blue" [class.root]="row.level === 0" [class.main-node]="row.acc.isLeafAccount === false" [style.margin-inline-start.px]="row.level * 24" [style.animation-delay.ms]="i * 16">
+        <div
+          class="card tree-card animate-3d-rise tilt-card glow-hover glow-blue"
+          [class.root]="row.level === 0"
+          [class.main-node]="row.acc.isLeafAccount === false"
+          [style.margin-inline-start.px]="row.level * 24"
+          [style.animation-delay.ms]="i * 16"
+        >
           <div class="head">
             <div class="title">
               @if (row.hasChildren) {
-                <button class="toggle-btn press-3d ripple" type="button" (click)="toggleNode(row.acc.id)">
-                  <span class="material-icons-round">{{ row.isCollapsed ? 'chevron_right' : 'expand_more' }}</span>
+                <button
+                  class="toggle-btn press-3d ripple"
+                  type="button"
+                  (click)="toggleNode(row.acc.id)"
+                >
+                  <span class="material-icons-round">{{
+                    row.isCollapsed ? 'chevron_right' : 'expand_more'
+                  }}</span>
                 </button>
               } @else {
                 <span class="leaf-dot"></span>
               }
-              <span class="material-icons-round">{{ row.acc.isLeafAccount ? 'account_balance_wallet' : 'folder' }}</span>
+              <span class="material-icons-round">{{
+                row.acc.isLeafAccount ? 'account_balance_wallet' : 'folder'
+              }}</span>
               <div>
                 <h3>
                   {{ row.acc.name }}
@@ -133,24 +253,37 @@
                     <span class="children-count">{{ row.childrenCount }}</span>
                   }
                 </h3>
-                <p>{{ row.acc.code || '---' }}</p>
+                <p>
+                  {{
+                    row.acc.ledgerCode
+                      ? row.acc.ledgerCode + ' | ' + row.acc.code
+                      : row.acc.code || '---'
+                  }}
+                </p>
               </div>
             </div>
             <div class="actions">
-              <button class="action-btn edit" (click)="openEdit(row.acc)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="deleteAccount(row.acc)"><span class="material-icons-round">delete</span></button>
+              <button class="action-btn edit" (click)="openEdit(row.acc)">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="action-btn delete" (click)="deleteAccount(row.acc)">
+                <span class="material-icons-round">delete</span>
+              </button>
             </div>
           </div>
           <div class="flags">
-            <span class="status-badge" [class.active]="row.acc.isLeafAccount">{{ row.acc.isLeafAccount ? 'حساب فرعي' : 'حساب رئيسي' }}</span>
+            <span class="status-badge" [class.active]="row.acc.isLeafAccount">{{
+              row.acc.isLeafAccount ? 'حساب فرعي' : 'حساب رئيسي'
+            }}</span>
             @if (row.acc.accountSubNatureId) {
-              <span class="status-badge partner">{{ (accountSubNatures().find(n => n.id === row.acc.accountSubNatureId))?.name || 'نوع' }}</span>
+              <span
+                class="status-badge partner"
+                >{{ (accountSubNatures().find(n => n.id === row.acc.accountSubNatureId))?.name || 'نوع' }}</span
+              >
             }
           </div>
         </div>
       }
     </div>
   }
-
-
 </div>

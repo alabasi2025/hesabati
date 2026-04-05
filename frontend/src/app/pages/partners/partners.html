@@ -1,14 +1,34 @@
 <div class="page-content">
   <div class="page-header">
     <h2><span class="material-icons-round">handshake</span> الشركاء</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">person_add</span> إضافة شريك</button>
+    <button class="add-btn" (click)="openAdd()">
+      <span class="material-icons-round">person_add</span> إضافة شريك
+    </button>
   </div>
 
   <!-- ملخص -->
   <div class="summary-row">
-    <div class="summary-card amber"><span class="material-icons-round">groups</span><div><span class="num">{{ partners().length }}</span><span class="lbl">شريك</span></div></div>
-    <div class="summary-card blue"><span class="material-icons-round">pie_chart</span><div><span class="num">{{ totalShares() | number:'1.0-2' }}%</span><span class="lbl">إجمالي الحصص</span></div></div>
-    <div class="summary-card green"><span class="material-icons-round">business</span><div><span class="num">{{ business()?.name || '-' }}</span><span class="lbl">العمل</span></div></div>
+    <div class="summary-card amber">
+      <span class="material-icons-round">groups</span>
+      <div>
+        <span class="num">{{ partners().length }}</span
+        ><span class="lbl">شريك</span>
+      </div>
+    </div>
+    <div class="summary-card blue">
+      <span class="material-icons-round">pie_chart</span>
+      <div>
+        <span class="num">{{ totalShares() | number: '1.0-2' }}%</span
+        ><span class="lbl">إجمالي الحصص</span>
+      </div>
+    </div>
+    <div class="summary-card green">
+      <span class="material-icons-round">business</span>
+      <div>
+        <span class="num">{{ business()?.name || '-' }}</span
+        ><span class="lbl">العمل</span>
+      </div>
+    </div>
   </div>
 
   <!-- الحصص البصرية -->
@@ -16,7 +36,12 @@
     <div class="shares-visual">
       <div class="shares-bar">
         @for (p of partners(); track p.id) {
-          <div class="share-segment" [style.width.%]="p.sharePercentage" [style.background]="getShareColor(+p.sharePercentage)" [title]="p.fullName + ': ' + p.sharePercentage + '%'">
+          <div
+            class="share-segment"
+            [style.width.%]="p.sharePercentage"
+            [style.background]="getShareColor(+p.sharePercentage)"
+            [title]="p.fullName + ': ' + p.sharePercentage + '%'"
+          >
             <span class="segment-label">{{ p.sharePercentage }}%</span>
           </div>
         }
@@ -32,15 +57,23 @@
         <div class="form-header-title">
           <div class="page-icon amber"><span class="material-icons-round">handshake</span></div>
           <h3>{{ editingId() ? 'تعديل شريك' : 'إضافة شريك جديد' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+          @if (editingId()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="close-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
       <div class="form-meta">
         @if (!editingId()) {
           <div class="form-group full-width">
             <label>حساب التحكم <span class="required">*</span></label>
-            <select [(ngModel)]="form.accountId" [class.error]="!form.accountId" (ngModelChange)="onAccountChange($event)">
+            <select
+              [(ngModel)]="form.accountId"
+              [class.error]="!form.accountId"
+              (ngModelChange)="onAccountChange($event)"
+            >
               <option [ngValue]="null">-- اختر حساب الشركاء --</option>
               @for (a of partnerAccounts(); track a.id) {
                 <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
@@ -53,7 +86,12 @@
             <label>العملات <span class="required">*</span></label>
             <div class="currency-chips">
               @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)">
+                <button
+                  type="button"
+                  class="currency-chip"
+                  [class.selected]="selectedCurrencyIds().includes(curr.currencyId)"
+                  (click)="toggleCurrency(curr.currencyId)"
+                >
                   <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
                   <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
                 </button>
@@ -65,69 +103,157 @@
             <div class="currency-chips">
               @for (curr of accountCurrencies(); track curr.currencyId) {
                 @if (selectedCurrencyIds().includes(curr.currencyId)) {
-                  <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                  <button
+                    type="button"
+                    class="currency-chip"
+                    [class.default]="defaultCurrencyId() === curr.currencyId"
+                    (click)="setDefaultCurrency(curr.currencyId)"
+                  >
                     <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                    @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
+                    @if (defaultCurrencyId() === curr.currencyId) {
+                      <span class="chip-badge">افتراضي</span>
+                    }
                   </button>
                 }
               }
             </div>
           </div>
         }
-        <div class="form-group"><label>الاسم الكامل</label><input [(ngModel)]="form.fullName" placeholder="اسم الشريك" /></div>
-        <div class="form-group"><label>نسبة الحصة (%)</label><input type="number" [(ngModel)]="form.sharePercentage" placeholder="نسبة الحصة" min="0" max="100" step="0.01" /></div>
-        <div class="form-group"><label>الدور / المنصب</label><input [(ngModel)]="form.role" placeholder="مثال: شريك مؤسس" /></div>
-        <div class="form-group"><label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="رقم الهاتف" /></div>
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
+        <div class="form-group">
+          <label>الاسم الكامل</label><input [(ngModel)]="form.fullName" placeholder="اسم الشريك" />
+        </div>
+        <div class="form-group">
+          <label>نسبة الحصة (%)</label
+          ><input
+            type="number"
+            [(ngModel)]="form.sharePercentage"
+            placeholder="نسبة الحصة"
+            min="0"
+            max="100"
+            step="0.01"
+          />
+        </div>
+        <div class="form-group">
+          <label>الدور / المنصب</label
+          ><input [(ngModel)]="form.role" placeholder="مثال: شريك مؤسس" />
+        </div>
+        <div class="form-group">
+          <label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="رقم الهاتف" />
+        </div>
+        <div class="form-group full-width">
+          <label>ملاحظات</label
+          ><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+        </div>
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة الشريك' }}</button>
+        <button class="btn-save" (click)="save()">
+          {{ editingId() ? 'حفظ التعديلات' : 'إضافة الشريك' }}
+        </button>
       </div>
     </div>
   } @else if (!partners().length) {
-    <div class="empty-state"><span class="material-icons-round">group_off</span><p>لا يوجد شركاء مسجلين</p>
-      <button class="add-btn small" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة شريك</button>
+    <div class="empty-state">
+      <span class="material-icons-round">group_off</span>
+      <p>لا يوجد شركاء مسجلين</p>
+      <button class="add-btn small" (click)="openAdd()">
+        <span class="material-icons-round">add</span> إضافة شريك
+      </button>
     </div>
   } @else {
     <div class="partners-grid">
       @for (p of partners(); track p.id) {
         <div class="partner-card">
           <div class="card-header-row">
-            <div class="partner-avatar" [style.background]="'linear-gradient(135deg, ' + getShareColor(+p.sharePercentage) + ', ' + getShareColor(+p.sharePercentage) + '99)'">
+            <div
+              class="partner-avatar"
+              [style.background]="
+                'linear-gradient(135deg, ' +
+                getShareColor(+p.sharePercentage) +
+                ', ' +
+                getShareColor(+p.sharePercentage) +
+                '99)'
+              "
+            >
               <span class="material-icons-round">person</span>
             </div>
             <div class="card-actions">
-              <button class="action-btn edit" (click)="openEdit(p)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="confirmDelete(p)"><span class="material-icons-round">delete</span></button>
+              <button class="action-btn edit" (click)="openEdit(p)">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="action-btn delete" (click)="confirmDelete(p)">
+                <span class="material-icons-round">delete</span>
+              </button>
             </div>
           </div>
           <h3 class="partner-name">{{ p.fullName }}</h3>
-          @if (p.role) { <span class="partner-role">{{ p.role }}</span> }
-          <div class="partner-detail"><span class="material-icons-round">tag</span> الكود: {{ p.accountCode || p.code || '-' }}</div>
-          <div class="partner-detail"><span class="material-icons-round">format_list_numbered</span> التسلسل: {{ p.accountSequence || p.sequenceNumber || '-' }}</div>
+          @if (p.role) {
+            <span class="partner-role">{{ p.role }}</span>
+          }
+          <div class="partner-detail">
+            <span class="material-icons-round">tag</span> الكود:
+            {{ p.accountLedgerCode ? p.accountLedgerCode + ' | ' : ''
+            }}{{ p.accountCode || p.code || '-' }}
+          </div>
+          <div class="partner-detail">
+            <span class="material-icons-round">format_list_numbered</span> التسلسل:
+            {{ p.accountSequence || p.sequenceNumber || '-' }}
+          </div>
           <div class="share-display">
-            <div class="share-ring" [style.background]="'conic-gradient(' + getShareColor(+p.sharePercentage) + ' ' + p.sharePercentage + '%, var(--bg-surface) 0)'">
+            <div
+              class="share-ring"
+              [style.background]="
+                'conic-gradient(' +
+                getShareColor(+p.sharePercentage) +
+                ' ' +
+                p.sharePercentage +
+                '%, var(--bg-surface) 0)'
+              "
+            >
               <div class="share-inner">{{ p.sharePercentage }}%</div>
             </div>
             <span class="share-label">نسبة الحصة</span>
           </div>
-          @if (p.phone) { <div class="partner-detail"><span class="material-icons-round">phone</span> {{ p.phone }}</div> }
-          @if (p.notes) { <div class="partner-detail notes"><span class="material-icons-round">notes</span> {{ p.notes }}</div> }
+          @if (p.phone) {
+            <div class="partner-detail">
+              <span class="material-icons-round">phone</span> {{ p.phone }}
+            </div>
+          }
+          @if (p.notes) {
+            <div class="partner-detail notes">
+              <span class="material-icons-round">notes</span> {{ p.notes }}
+            </div>
+          }
         </div>
       }
     </div>
   }
 
-
   <!-- تأكيد الحذف -->
   @if (showDeleteConfirm()) {
     <div class="modal-overlay" (click)="showDeleteConfirm.set(false)">
       <div class="modal-card small" (click)="$event.stopPropagation()">
-        <div class="modal-header"><div class="modal-title-row"><div class="modal-icon red"><span class="material-icons-round">warning</span></div><h2>تأكيد الحذف</h2></div>
-          <button class="close-btn" (click)="showDeleteConfirm.set(false)"><span class="material-icons-round">close</span></button></div>
-        <div class="modal-body"><p class="delete-msg">هل أنت متأكد من حذف <strong>{{ deleteTarget()?.fullName }}</strong>؟</p><p class="delete-warn">هذا الإجراء لا يمكن التراجع عنه</p></div>
-        <div class="modal-footer"><button class="btn-delete" (click)="executeDelete()"><span class="material-icons-round">delete</span> حذف</button><button class="btn-cancel" (click)="showDeleteConfirm.set(false)">إلغاء</button></div>
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <div class="modal-icon red"><span class="material-icons-round">warning</span></div>
+            <h2>تأكيد الحذف</h2>
+          </div>
+          <button class="close-btn" (click)="showDeleteConfirm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-msg">
+            هل أنت متأكد من حذف <strong>{{ deleteTarget()?.fullName }}</strong
+            >؟
+          </p>
+          <p class="delete-warn">هذا الإجراء لا يمكن التراجع عنه</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-delete" (click)="executeDelete()">
+            <span class="material-icons-round">delete</span> حذف</button
+          ><button class="btn-cancel" (click)="showDeleteConfirm.set(false)">إلغاء</button>
+        </div>
       </div>
     </div>
   }

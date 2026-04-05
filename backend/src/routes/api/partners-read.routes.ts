@@ -32,6 +32,7 @@ partnersReadRoutes.get(
         createdAt: businessPartners.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
         accountSequence: accounts.sequenceNumber,
       })
       .from(businessPartners)
@@ -39,7 +40,7 @@ partnersReadRoutes.get(
       .where(eq(businessPartners.businessId, bizId));
 
     return c.json(rows);
-  })
+  }),
 );
 
 export { partnersReadRoutes };

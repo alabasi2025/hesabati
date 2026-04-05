@@ -2,15 +2,18 @@
  * employees-read.routes.ts — Phase 12
  * قراءة الموظفين: قائمة + تفاصيل مع join للمحطة وحساب التحكم
  */
-import { Hono } from 'hono';
-import { db } from '../../db/index.ts';
-import { eq, and, count, sql } from 'drizzle-orm';
-import { accounts, employees, stations } from '../../db/schema/index.ts';
-import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
-import { safeHandler, parseId } from '../../middleware/helpers.ts';
-import { getPaginationParams, paginatedResult } from '../../middleware/pagination.ts';
-import { getBizId } from './_shared/context-helpers.ts';
-import type { AppContext } from './_shared/types.ts';
+import { Hono } from "hono";
+import { db } from "../../db/index.ts";
+import { eq, and, count, sql } from "drizzle-orm";
+import { accounts, employees, stations } from "../../db/schema/index.ts";
+import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
+import { safeHandler, parseId } from "../../middleware/helpers.ts";
+import {
+  getPaginationParams,
+  paginatedResult,
+} from "../../middleware/pagination.ts";
+import { getBizId } from "./_shared/context-helpers.ts";
+import type { AppContext } from "./_shared/types.ts";
 
 const employeesReadRoutes = new Hono();
 
@@ -25,26 +28,35 @@ async function getColSupport(): Promise<EmployeeColSupport> {
       AND column_name IN ('department_id', 'job_title_id')
   `);
   const rows = Array.isArray((result as any)?.rows) ? (result as any).rows : [];
-  const names = new Set(rows.map((r: any) => String(r?.column_name ?? '')));
-  colSupportCache = { departmentId: names.has('department_id'), jobTitleId: names.has('job_title_id') };
+  const names = new Set(rows.map((r: any) => String(r?.column_name ?? "")));
+  colSupportCache = {
+    departmentId: names.has("department_id"),
+    jobTitleId: names.has("job_title_id"),
+  };
   return colSupportCache;
 }
 
 employeesReadRoutes.get(
-  '/businesses/:bizId/employees',
+  "/businesses/:bizId/employees",
   bizAuthMiddleware(),
-  safeHandler('جلب الموظفين', async (c: AppContext) => {
+  safeHandler("جلب الموظفين", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const usePagination = c.req.query('page') !== undefined;
-    const stationId = c.req.query('stationId') ? Number(c.req.query('stationId')) : null;
-    const accountId = c.req.query('accountId') ? Number(c.req.query('accountId')) : null;
+    const usePagination = c.req.query("page") !== undefined;
+    const stationId = c.req.query("stationId")
+      ? Number(c.req.query("stationId"))
+      : null;
+    const accountId = c.req.query("accountId")
+      ? Number(c.req.query("accountId"))
+      : null;
     const cs = await getColSupport();
 
     const buildWhere = () => {
       const conditions: any[] = [eq(employees.businessId, bizId)];
       if (stationId) conditions.push(eq(employees.stationId, stationId));
       if (accountId) conditions.push(eq(employees.accountId, accountId));
-      return conditions.length === 1 ? conditions[0] : and(...conditions as [any, ...any[]]);
+      return conditions.length === 1
+        ? conditions[0]
+        : and(...(conditions as [any, ...any[]]));
     };
 
     const selectFields = {
@@ -54,8 +66,12 @@ employeesReadRoutes.get(
       sequenceNumber: employees.sequenceNumber,
       accountId: employees.accountId,
       jobTitle: employees.jobTitle,
-      departmentId: cs.departmentId ? employees.departmentId : sql<number | null>`NULL`,
-      jobTitleId: cs.jobTitleId ? employees.jobTitleId : sql<number | null>`NULL`,
+      departmentId: cs.departmentId
+        ? employees.departmentId
+        : sql<number | null>`NULL`,
+      jobTitleId: cs.jobTitleId
+        ? employees.jobTitleId
+        : sql<number | null>`NULL`,
       stationId: employees.stationId,
       department: employees.department,
       salary: employees.salary,
@@ -71,11 +87,15 @@ employeesReadRoutes.get(
       // من حساب التحكم
       accountName: accounts.name,
       accountCode: accounts.code,
+      accountLedgerCode: accounts.ledgerCode,
     };
 
     if (usePagination) {
       const params = getPaginationParams(c);
-      const [{ total }] = await db.select({ total: count() }).from(employees).where(buildWhere());
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(employees)
+        .where(buildWhere());
       const rows = await db
         .select(selectFields)
         .from(employees)
@@ -100,12 +120,12 @@ employeesReadRoutes.get(
 );
 
 employeesReadRoutes.get(
-  '/businesses/:bizId/employees/:id',
+  "/businesses/:bizId/employees/:id",
   bizAuthMiddleware(),
-  safeHandler('جلب تفاصيل موظف', async (c: AppContext) => {
+  safeHandler("جلب تفاصيل موظف", async (c: AppContext) => {
     const bizId = getBizId(c);
-    const id = parseId(c.req.param('id'));
-    if (!id) return c.json({ error: 'معرّف الموظف غير صالح' }, 400);
+    const id = parseId(c.req.param("id"));
+    if (!id) return c.json({ error: "معرّف الموظف غير صالح" }, 400);
     const cs = await getColSupport();
 
     const [row] = await db
@@ -116,8 +136,12 @@ employeesReadRoutes.get(
         sequenceNumber: employees.sequenceNumber,
         accountId: employees.accountId,
         jobTitle: employees.jobTitle,
-        departmentId: cs.departmentId ? employees.departmentId : sql<number | null>`NULL`,
-        jobTitleId: cs.jobTitleId ? employees.jobTitleId : sql<number | null>`NULL`,
+        departmentId: cs.departmentId
+          ? employees.departmentId
+          : sql<number | null>`NULL`,
+        jobTitleId: cs.jobTitleId
+          ? employees.jobTitleId
+          : sql<number | null>`NULL`,
         stationId: employees.stationId,
         department: employees.department,
         salary: employees.salary,
@@ -131,6 +155,7 @@ employeesReadRoutes.get(
         stationName: stations.name,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(employees)
       .leftJoin(stations, eq(stations.id, employees.stationId))
@@ -138,7 +163,7 @@ employeesReadRoutes.get(
       .where(and(eq(employees.id, id), eq(employees.businessId, bizId)))
       .limit(1);
 
-    if (!row) return c.json({ error: 'موظف غير موجود' }, 404);
+    if (!row) return c.json({ error: "موظف غير موجود" }, 404);
     return c.json(row);
   }),
 );

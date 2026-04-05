@@ -6,30 +6,49 @@
  *  - billing-employees.routes.ts (حسابات الموظفين في الفوترة)
  *  - legacy-compat.routes.ts     (مسارات التوافق القديمة)
  */
-import { Hono } from 'hono';
-import { db } from '../../db/index.ts';
-import { wsService } from '../../services/websocket.service.ts';
-import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
-import path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { eq, desc, sql, and, inArray, count } from 'drizzle-orm';
+import { Hono } from "hono";
+import { db } from "../../db/index.ts";
+import { wsService } from "../../services/websocket.service.ts";
+import { mkdir, readFile, writeFile, readdir, stat } from "node:fs/promises";
+import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { eq, desc, sql, and, inArray, count } from "drizzle-orm";
 import {
-  stations, employees, accounts, accountBalances,
-  accountAllowedLinks, employeeBillingAccounts,
-  funds, fundBalances, vouchers, currencies,
-  attachments, inventoryItems,
-  operationTypes, operationTypeAccounts,
-  sidebarSections, sidebarItems, userSidebarConfig,
-  users, businesses,
+  stations,
+  employees,
+  accounts,
+  accountBalances,
+  accountAllowedLinks,
+  employeeBillingAccounts,
+  funds,
+  fundBalances,
+  vouchers,
+  currencies,
+  attachments,
+  inventoryItems,
+  operationTypes,
+  operationTypeAccounts,
+  sidebarSections,
+  sidebarItems,
+  userSidebarConfig,
+  users,
+  businesses,
   billingSystemsConfig,
-  screenTemplates, screenWidgets, screenWidgetTemplates, screenWidgetAccounts, screenPermissions,
+  screenTemplates,
+  screenWidgets,
+  screenWidgetTemplates,
+  screenWidgetAccounts,
+  screenPermissions,
   customScreenConfig,
   auditLog,
-  exchangeRates, roles, rolePermissions, userRoles,
-  warehouseTypes, journalEntryCategories,
-} from '../../db/schema/index.ts';
-import { bizAuthMiddleware } from '../../middleware/bizAuth.ts';
+  exchangeRates,
+  roles,
+  rolePermissions,
+  userRoles,
+  journalEntryCategories,
+} from "../../db/schema/index.ts";
+import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import {
   voucherSchema,
   typeSchema,
@@ -37,78 +56,121 @@ import {
   validateBody,
   sidebarSectionSchema,
   employeeBillingAccountSchema,
-} from '../../middleware/validation.ts';
-import { safeHandler, normalizeBody, parseId, validateRequired, toErrorMessage } from '../../middleware/helpers.ts';
-import { getNextSequence, getNextCategorySequence, getNextItemInCategorySequence } from '../../middleware/sequencing.ts';
-import { postTransaction, cancelTransaction } from '../../engines/transaction.engine.ts';
-import { checkPermission, validateConstraints } from '../../middleware/permissions.ts';
+} from "../../middleware/validation.ts";
+import {
+  safeHandler,
+  normalizeBody,
+  parseId,
+  validateRequired,
+  toErrorMessage,
+} from "../../middleware/helpers.ts";
+import {
+  getNextSequence,
+  getNextCategorySequence,
+  getNextItemInCategorySequence,
+} from "../../middleware/sequencing.ts";
+import {
+  postTransaction,
+  cancelTransaction,
+} from "../../engines/transaction.engine.ts";
+import {
+  checkPermission,
+  validateConstraints,
+} from "../../middleware/permissions.ts";
 import {
   getExchangeRate,
   addExchangeRate,
   getExchangeRateHistory,
   getUnifiedBalances,
   clearRateCache,
-} from '../../engines/currency.engine.ts';
-import { getBizId, getUserId } from './_shared/context-helpers.ts';
-import { normalizeDbResult, getFirstRow } from './_shared/db-helpers.ts';
-import { verifyAccountOwnership, requireResourceOwnership } from './_shared/ownership.ts';
+} from "../../engines/currency.engine.ts";
+import { getBizId, getUserId } from "./_shared/context-helpers.ts";
+import { normalizeDbResult, getFirstRow } from "./_shared/db-helpers.ts";
+import {
+  verifyAccountOwnership,
+  requireResourceOwnership,
+} from "./_shared/ownership.ts";
 
 const api = new Hono();
 const execFileAsync = promisify(execFile);
 
 type ArchiveSettingsPayload = {
   basePath: string;
-  folderByType: { fund: string; bank: string; exchange: string; e_wallet: string };
+  folderByType: {
+    fund: string;
+    bank: string;
+    exchange: string;
+    e_wallet: string;
+  };
   voucherFolders: { receipt: string; payment: string };
   importanceLevels: string[];
 };
 
 function getArchiveSettingsDefaults(): ArchiveSettingsPayload {
   return {
-    basePath: 'D:\\Archive\\Attachments',
+    basePath: "D:\\Archive\\Attachments",
     folderByType: {
-      fund: 'صندوق',
-      bank: 'بنك',
-      exchange: 'صراف',
-      e_wallet: 'محفظة',
+      fund: "صندوق",
+      bank: "بنك",
+      exchange: "صراف",
+      e_wallet: "محفظة",
     },
     voucherFolders: {
-      receipt: 'سند قبض',
-      payment: 'سند صرف',
+      receipt: "سند قبض",
+      payment: "سند صرف",
     },
-    importanceLevels: ['عاجل', 'مهم', 'عادي'],
+    importanceLevels: ["عاجل", "مهم", "عادي"],
   };
 }
 
 function getArchiveSettingsFilePath(bizId: number): string {
-  return path.join(process.cwd(), 'storage', 'attachments-archive', `${bizId}.json`);
+  return path.join(
+    process.cwd(),
+    "storage",
+    "attachments-archive",
+    `${bizId}.json`,
+  );
 }
 
 function normalizeArchiveSettings(raw: any): ArchiveSettingsPayload {
   const defaults = getArchiveSettingsDefaults();
   const importance = Array.isArray(raw?.importanceLevels)
-    ? raw.importanceLevels.map((v: any) => String(v || '').trim()).filter(Boolean)
+    ? raw.importanceLevels
+        .map((v: any) => String(v || "").trim())
+        .filter(Boolean)
     : [];
   return {
     basePath: String(raw?.basePath || defaults.basePath),
     folderByType: {
       fund: String(raw?.folderByType?.fund || defaults.folderByType.fund),
       bank: String(raw?.folderByType?.bank || defaults.folderByType.bank),
-      exchange: String(raw?.folderByType?.exchange || defaults.folderByType.exchange),
-      e_wallet: String(raw?.folderByType?.e_wallet || defaults.folderByType.e_wallet),
+      exchange: String(
+        raw?.folderByType?.exchange || defaults.folderByType.exchange,
+      ),
+      e_wallet: String(
+        raw?.folderByType?.e_wallet || defaults.folderByType.e_wallet,
+      ),
     },
     voucherFolders: {
-      receipt: String(raw?.voucherFolders?.receipt || defaults.voucherFolders.receipt),
-      payment: String(raw?.voucherFolders?.payment || defaults.voucherFolders.payment),
+      receipt: String(
+        raw?.voucherFolders?.receipt || defaults.voucherFolders.receipt,
+      ),
+      payment: String(
+        raw?.voucherFolders?.payment || defaults.voucherFolders.payment,
+      ),
     },
-    importanceLevels: importance.length ? importance : defaults.importanceLevels,
+    importanceLevels: importance.length
+      ? importance
+      : defaults.importanceLevels,
   };
 }
 
-async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayload> {
+async function readArchiveSettings(
+  bizId: number,
+): Promise<ArchiveSettingsPayload> {
   const filePath = getArchiveSettingsFilePath(bizId);
   try {
-    const raw = await readFile(filePath, 'utf8');
+    const raw = await readFile(filePath, "utf8");
     return normalizeArchiveSettings(JSON.parse(raw));
   } catch {
     return getArchiveSettingsDefaults();
@@ -116,18 +178,23 @@ async function readArchiveSettings(bizId: number): Promise<ArchiveSettingsPayloa
 }
 
 function sanitizePathSegment(value: unknown): string {
-  const s = typeof value === 'string' ? value.trim() : '';
-  if (!s) return 'غير-محدد';
-  return s.replaceAll(/[\\/:*?"<>|]/g, '-');
+  const s = typeof value === "string" ? value.trim() : "";
+  if (!s) return "غير-محدد";
+  return s.replaceAll(/[\\/:*?"<>|]/g, "-");
 }
 
 function detectImportanceFromPath(filePath: unknown, levels: string[]): string {
-  const normalized = typeof filePath === 'string' ? filePath : '';
-  const parts = new Set(normalized.split(/[\\/]/).map((p) => p.trim()).filter(Boolean));
+  const normalized = typeof filePath === "string" ? filePath : "";
+  const parts = new Set(
+    normalized
+      .split(/[\\/]/)
+      .map((p) => p.trim())
+      .filter(Boolean),
+  );
   for (const level of levels) {
     if (parts.has(level)) return level;
   }
-  return levels.at(-1) || 'عادي';
+  return levels.at(-1) || "عادي";
 }
 
 async function resolveVoucherArchivePath(
@@ -150,42 +217,51 @@ async function resolveVoucherArchivePath(
 
   if (!voucher) return null;
 
-  const type = String(voucher.voucherType || '').toLowerCase();
-  const isPayment = type === 'payment';
-  const fundId = isPayment ? (voucher.fromFundId ?? null) : (voucher.toFundId ?? null);
-  const accountId = isPayment ? (voucher.fromAccountId ?? null) : (voucher.toAccountId ?? null);
+  const type = String(voucher.voucherType || "").toLowerCase();
+  const isPayment = type === "payment";
+  const fundId = isPayment
+    ? (voucher.fromFundId ?? null)
+    : (voucher.toFundId ?? null);
+  const accountId = isPayment
+    ? (voucher.fromAccountId ?? null)
+    : (voucher.toAccountId ?? null);
 
-  let treasuryType: 'fund' | 'bank' | 'exchange' | 'e_wallet' | null = null;
-  let treasuryName = '';
+  let treasuryType: "fund" | "bank" | "exchange" | "e_wallet" | null = null;
+  let treasuryName = "";
 
   if (fundId) {
-    treasuryType = 'fund';
+    treasuryType = "fund";
     const [fund] = await db
       .select({ name: funds.name })
       .from(funds)
       .where(and(eq(funds.id, fundId), eq(funds.businessId, bizId)))
       .limit(1);
-    treasuryName = String(fund?.name || '');
+    treasuryName = String(fund?.name || "");
   } else if (accountId) {
     const [account] = await db
       .select({ name: accounts.name, accountType: accounts.accountType })
       .from(accounts)
       .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)))
       .limit(1);
-    const t = String(account?.accountType || '').toLowerCase();
-    if (t === 'bank' || t === 'exchange' || t === 'e_wallet' || t === 'fund') {
+    const t = String(account?.accountType || "").toLowerCase();
+    if (t === "bank" || t === "exchange" || t === "e_wallet" || t === "fund") {
       treasuryType = t;
     }
-    treasuryName = String(account?.name || '');
+    treasuryName = String(account?.name || "");
   }
 
-  if (!treasuryType) treasuryType = 'fund';
-  if (!treasuryName) treasuryName = 'خزينة-غير-محددة';
+  if (!treasuryType) treasuryType = "fund";
+  if (!treasuryName) treasuryName = "خزينة-غير-محددة";
 
   const settings = await readArchiveSettings(bizId);
   const typeFolder = settings.folderByType[treasuryType] || treasuryType;
-  const voucherFolder = type === 'payment' ? settings.voucherFolders.payment : settings.voucherFolders.receipt;
-  const normalizedImportance = sanitizePathSegment(importance || settings.importanceLevels[2] || 'عادي');
+  const voucherFolder =
+    type === "payment"
+      ? settings.voucherFolders.payment
+      : settings.voucherFolders.receipt;
+  const normalizedImportance = sanitizePathSegment(
+    importance || settings.importanceLevels[2] || "عادي",
+  );
 
   return path.join(
     settings.basePath,
@@ -211,40 +287,58 @@ async function ensureArchiveTreeForBusiness(
       .where(eq(accounts.businessId, bizId)),
   ]);
 
-  const byType: Record<'fund' | 'bank' | 'exchange' | 'e_wallet', string[]> = {
-    fund: fundRows.map((f: any) => String(f?.name || '')).filter(Boolean),
+  const byType: Record<"fund" | "bank" | "exchange" | "e_wallet", string[]> = {
+    fund: fundRows.map((f: any) => String(f?.name || "")).filter(Boolean),
     bank: [],
     exchange: [],
     e_wallet: [],
   };
 
   for (const acc of accountRows) {
-    const type = String(acc?.accountType || '').toLowerCase();
-    if (type === 'bank' || type === 'exchange' || type === 'e_wallet' || type === 'fund') {
-      byType[type].push(String(acc?.name || '').trim());
+    const type = String(acc?.accountType || "").toLowerCase();
+    if (
+      type === "bank" ||
+      type === "exchange" ||
+      type === "e_wallet" ||
+      type === "fund"
+    ) {
+      byType[type].push(String(acc?.name || "").trim());
     }
   }
 
   const uniqueDirs = new Set<string>();
   const voucherFolders = [
-    settings.voucherFolders.receipt || 'سند قبض',
-    settings.voucherFolders.payment || 'سند صرف',
+    settings.voucherFolders.receipt || "سند قبض",
+    settings.voucherFolders.payment || "سند صرف",
   ];
-  const levels = (settings.importanceLevels || []).length ? settings.importanceLevels : ['عادي'];
+  const levels = (settings.importanceLevels || []).length
+    ? settings.importanceLevels
+    : ["عادي"];
 
-  for (const treasuryType of ['fund', 'bank', 'exchange', 'e_wallet'] as const) {
-    const typeFolder = sanitizePathSegment(settings.folderByType[treasuryType] || treasuryType);
-    const names = byType[treasuryType].length ? byType[treasuryType] : ['خزينة-افتراضية'];
+  for (const treasuryType of [
+    "fund",
+    "bank",
+    "exchange",
+    "e_wallet",
+  ] as const) {
+    const typeFolder = sanitizePathSegment(
+      settings.folderByType[treasuryType] || treasuryType,
+    );
+    const names = byType[treasuryType].length
+      ? byType[treasuryType]
+      : ["خزينة-افتراضية"];
     for (const name of names) {
       for (const voucherFolder of voucherFolders) {
         for (const level of levels) {
-          uniqueDirs.add(path.join(
-            settings.basePath,
-            typeFolder,
-            sanitizePathSegment(name),
-            sanitizePathSegment(voucherFolder),
-            sanitizePathSegment(level),
-          ));
+          uniqueDirs.add(
+            path.join(
+              settings.basePath,
+              typeFolder,
+              sanitizePathSegment(name),
+              sanitizePathSegment(voucherFolder),
+              sanitizePathSegment(level),
+            ),
+          );
         }
       }
     }
@@ -271,6 +365,5 @@ async function listWindowsDrives(): Promise<string[]> {
   }
   return drives;
 }
-
 
 export { api };

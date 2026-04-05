@@ -179,7 +179,7 @@
 
 <!-- ======================== PAGE MODAL ======================== -->
 @if (showPageModal()) {
-  <div class="modal-overlay" (click)="showPageModal.set(false)">
+  <div class="page-form-container" (click)="showPageModal.set(false)">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ editingPage() ? 'تعديل الصفحة' : 'صفحة جديدة' }}</h3>
@@ -229,7 +229,7 @@
 
 <!-- ======================== COMPONENT MODAL ======================== -->
 @if (showComponentModal()) {
-  <div class="modal-overlay" (click)="showComponentModal.set(false)">
+  <div class="page-form-container" (click)="showComponentModal.set(false)">
     <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ editingComponent() ? 'تعديل المكون' : 'إضافة مكون' }}</h3>
@@ -298,7 +298,7 @@
 
 <!-- ======================== DATA SOURCE MODAL ======================== -->
 @if (showDataSourceModal()) {
-  <div class="modal-overlay" (click)="showDataSourceModal.set(false)">
+  <div class="page-form-container" (click)="showDataSourceModal.set(false)">
     <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>مصادر البيانات</h3>

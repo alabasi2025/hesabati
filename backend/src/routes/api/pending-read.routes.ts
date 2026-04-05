@@ -5,10 +5,7 @@
 import { Hono } from "hono";
 import { db } from "../../db/index.ts";
 import { eq } from "drizzle-orm";
-import {
-  accounts,
-  pendingAccounts,
-} from "../../db/schema/index.ts";
+import { accounts, pendingAccounts } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { safeHandler } from "../../middleware/helpers.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
@@ -36,6 +33,7 @@ pendingReadRoutes.get(
         updatedAt: pendingAccounts.updatedAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
         accountSequence: accounts.sequenceNumber,
       })
       .from(pendingAccounts)
@@ -43,7 +41,7 @@ pendingReadRoutes.get(
       .where(eq(pendingAccounts.businessId, bizId));
 
     return c.json(rows);
-  })
+  }),
 );
 
 export { pendingReadRoutes };

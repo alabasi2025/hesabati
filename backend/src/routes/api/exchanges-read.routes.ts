@@ -40,6 +40,7 @@ exchangesRoutes.get(
         createdAt: exchanges.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(exchanges)
       .leftJoin(accounts, eq(exchanges.accountId, accounts.id))

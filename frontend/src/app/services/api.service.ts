@@ -234,6 +234,18 @@ export class ApiService {
   deleteAccountSubNature(bizId: number, id: number) {
     return this.acc.deleteAccountSubNature(bizId, id);
   }
+  getAnalyticalAccounts(bizId: number) {
+    return this.acc.getAnalyticalAccounts(bizId);
+  }
+  createAnalyticalAccount(bizId: number, d: any) {
+    return this.acc.createAnalyticalAccount(bizId, d);
+  }
+  updateAnalyticalAccount(bizId: number, id: number, d: any) {
+    return this.acc.updateAnalyticalAccount(bizId, id, d);
+  }
+  deleteAnalyticalAccount(bizId: number, id: number) {
+    return this.acc.deleteAnalyticalAccount(bizId, id);
+  }
   getAccountLinks(accountId: number) {
     return this.acc.getAccountLinks(accountId);
   }
@@ -465,7 +477,12 @@ export class ApiService {
   getJournalEntries(bizId: number) {
     return this.vou.getJournalEntries(bizId);
   }
-  getJournalEntryPreviewNumber(bizId: number, categoryKey: string, operationTypeId?: number, year?: number) {
+  getJournalEntryPreviewNumber(
+    bizId: number,
+    categoryKey: string,
+    operationTypeId?: number,
+    year?: number,
+  ) {
     return this.vou.getJournalEntryPreviewNumber(bizId, categoryKey, operationTypeId, year);
   }
   createJournalEntry(bizId: number, d: any) {

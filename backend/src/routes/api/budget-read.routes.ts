@@ -5,10 +5,7 @@
 import { Hono } from "hono";
 import { db } from "../../db/index.ts";
 import { eq, and, desc } from "drizzle-orm";
-import {
-  accounts,
-  expenseBudget,
-} from "../../db/schema/index.ts";
+import { accounts, expenseBudget } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { safeHandler } from "../../middleware/helpers.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
@@ -40,6 +37,7 @@ budgetReadRoutes.get(
         createdAt: expenseBudget.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(expenseBudget)
       .leftJoin(accounts, eq(expenseBudget.accountId, accounts.id))
@@ -47,10 +45,11 @@ budgetReadRoutes.get(
       .orderBy(desc(expenseBudget.createdAt));
 
     let result = rows;
-    if (month) result = result.filter((r) => r.month === Number.parseInt(month));
+    if (month)
+      result = result.filter((r) => r.month === Number.parseInt(month));
     if (year) result = result.filter((r) => r.year === Number.parseInt(year));
     return c.json(result);
-  })
+  }),
 );
 
 export { budgetReadRoutes };

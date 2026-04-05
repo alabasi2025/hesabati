@@ -113,8 +113,16 @@ accountsReadRoutes.get(
       )
       .orderBy(accounts.code);
 
-    const accountIds = rows.map(r => r.accounts.id);
-    let balancesMap: Record<number, { currencyId: number; balance: string; currencySymbol: string; currencyCode: string }[]> = {};
+    const accountIds = rows.map((r) => r.accounts.id);
+    let balancesMap: Record<
+      number,
+      {
+        currencyId: number;
+        balance: string;
+        currencySymbol: string;
+        currencyCode: string;
+      }[]
+    > = {};
     if (accountIds.length > 0) {
       const balRows = await db
         .select({
@@ -132,16 +140,18 @@ accountsReadRoutes.get(
         balancesMap[b.accountId].push({
           currencyId: b.currencyId,
           balance: b.balance,
-          currencySymbol: b.currencySymbol || '',
-          currencyCode: b.currencyCode || '',
+          currencySymbol: b.currencySymbol || "",
+          currencyCode: b.currencyCode || "",
         });
       }
     }
 
-    return c.json(rows.map((r) => ({
-      ...r.accounts,
-      balances: balancesMap[r.accounts.id] || [],
-    })));
+    return c.json(
+      rows.map((r) => ({
+        ...r.accounts,
+        balances: balancesMap[r.accounts.id] || [],
+      })),
+    );
   }),
 );
 
@@ -238,7 +248,6 @@ accountsReadRoutes.get(
       const billing = billingByAccountId.get(acc.id);
       return {
         ...acc,
-        subType: acc.subType ?? billing?.billingSystemName ?? null,
         billingSystemKey: billing?.billingSystemKey ?? null,
         _source: "billing",
       };

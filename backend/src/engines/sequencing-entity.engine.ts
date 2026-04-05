@@ -3,11 +3,20 @@
  * ترقيم الكيانات: سندات + مخازن + قيود + قوالب + فواتير + الدوال الموحّدة
  * (مستخرجة من sequencing.engine.ts)
  */
-import { type DbOrTx, ARABIC_LABELS, TYPE_PREFIXES } from './sequencing.types.ts';
-import { getNextSequence, getCurrentSequence } from './sequencing-core.engine.ts';
-import { db } from '../db/index.ts';
-import { sql } from 'drizzle-orm';
-import { getFirstRow } from '../utils/db-result.ts';
+import {
+  type DbOrTx,
+  ARABIC_LABELS,
+  TYPE_PREFIXES,
+  generateLeafAccountCode,
+} from "./sequencing.types.ts";
+import { NATURE_PREFIXES } from "./ledger-code.engine.ts";
+import {
+  getNextSequence,
+  getCurrentSequence,
+} from "./sequencing-core.engine.ts";
+import { db } from "../db/index.ts";
+import { sql } from "drizzle-orm";
+import { getFirstRow } from "../utils/db-result.ts";
 
 // ===================== ترقيم السندات (صرف/قبض) =====================
 
@@ -36,10 +45,14 @@ export async function generateVoucherFullSequence(
   const executor = tx || db;
 
   // --- تنسيق أجزاء الرقم ---
-  const prefix = TYPE_PREFIXES[treasuryType] || treasuryType.toUpperCase().substring(0, 3);
+  const prefix =
+    TYPE_PREFIXES[treasuryType] || treasuryType.toUpperCase().substring(0, 3);
   const voucherLabel = ARABIC_LABELS[voucherType] || voucherType;
-  const codeWithoutPrefix = treasuryCode.replace(new RegExp(`^${prefix}-?`, 'i'), '');
-  const treasuryCodePart = codeWithoutPrefix || '00';
+  const codeWithoutPrefix = treasuryCode.replace(
+    new RegExp(`^${prefix}-?`, "i"),
+    "",
+  );
+  const treasuryCodePart = codeWithoutPrefix || "00";
 
   // --- البحث عن أول فجوة في التسلسل ---
   // جلب كل الأرقام التسلسلية المستخدمة لهذه الخزينة + النوع + السنة
@@ -48,15 +61,19 @@ export async function generateVoucherFullSequence(
     SELECT voucher_number FROM vouchers
     WHERE business_id = ${businessId}
       AND voucher_type = ${voucherType}
-      AND voucher_number LIKE ${patternPrefix + '%'}
+      AND voucher_number LIKE ${patternPrefix + "%"}
     ORDER BY voucher_number
   `);
 
   // استخراج الأرقام التسلسلية المستخدمة
-  const rows = Array.isArray(usedResult) ? usedResult : (usedResult as any)?.rows || [];
+  const rows = Array.isArray(usedResult)
+    ? usedResult
+    : (usedResult as any)?.rows || [];
   const usedNumbers = new Set<number>();
   for (const row of rows) {
-    const vn = String((row as any).voucher_number || (row as any).voucherNumber || '');
+    const vn = String(
+      (row as any).voucher_number || (row as any).voucherNumber || "",
+    );
     const match = vn.match(/-(\d{4})$/);
     if (match) usedNumbers.add(parseInt(match[1], 10));
   }
@@ -84,7 +101,14 @@ export async function previewVoucherFullSequence(
   year?: number,
 ): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
   // نستخدم نفس منطق generate بدون tx
-  return generateVoucherFullSequence(businessId, treasuryCode, treasuryType, voucherType, treasuryId, year);
+  return generateVoucherFullSequence(
+    businessId,
+    treasuryCode,
+    treasuryType,
+    voucherType,
+    treasuryId,
+    year,
+  );
 }
 
 // ===================== ترقيم عمليات المخازن =====================
@@ -103,14 +127,25 @@ export async function previewVoucherFullSequence(
 export async function generateWarehouseOpFullSequence(
   businessId: number,
   warehouseSeqNum: number,
-  operationType: "receive_purchase" | "direct_supply" | "dispatch" | "transfer_out" | "receive_transfer",
+  operationType:
+    | "receive_purchase"
+    | "direct_supply"
+    | "dispatch"
+    | "transfer_out"
+    | "receive_transfer",
   warehouseId: number,
   year?: number,
   tx?: DbOrTx,
 ): Promise<{ fullSequenceNumber: string; sequentialNumber: number }> {
   const currentYear = year || new Date().getFullYear();
   const counterType = `warehouse_${operationType}` as const;
-  const sequentialNumber = await getNextSequence(businessId, counterType, warehouseId, currentYear, tx);
+  const sequentialNumber = await getNextSequence(
+    businessId,
+    counterType,
+    warehouseId,
+    currentYear,
+    tx,
+  );
   const opLabel = ARABIC_LABELS[operationType] || operationType;
   const fullSequenceNumber = `WHS-${String(warehouseSeqNum).padStart(2, "0")}-${currentYear}-${opLabel}-${String(sequentialNumber).padStart(4, "0")}`;
   return { fullSequenceNumber, sequentialNumber };
@@ -184,7 +219,6 @@ export async function generateOperationTemplateFullSequence(
   return { fullSequenceNumber, sequentialNumber };
 }
 
-
 // ===================== ترقيم تصنيفات العمليات =====================
 
 /**
@@ -212,7 +246,13 @@ export async function getNextOperationTypeSequence(
   categoryId: number,
   tx?: DbOrTx,
 ): Promise<number> {
-  return getNextSequence(businessId, "operation_type_in_category", categoryId, 0, tx);
+  return getNextSequence(
+    businessId,
+    "operation_type_in_category",
+    categoryId,
+    0,
+    tx,
+  );
 }
 
 // ===================== ترقيم فواتير المشتريات =====================
@@ -238,7 +278,13 @@ export async function getNextPurchaseInvoiceSequence(
   const currentYear = year || new Date().getFullYear();
   const [globalSeq, supplierSeq] = await Promise.all([
     getNextSequence(businessId, "purchase_invoice_global", 0, currentYear, tx),
-    getNextSequence(businessId, "purchase_invoice_supplier", supplierId, currentYear, tx),
+    getNextSequence(
+      businessId,
+      "purchase_invoice_supplier",
+      supplierId,
+      currentYear,
+      tx,
+    ),
   ]);
   return {
     globalSequenceNumber: `PI-${currentYear}-${String(globalSeq).padStart(5, "0")}`,
@@ -261,7 +307,13 @@ export async function getNextWarehouseSequence(
   warehouseTypeId: number,
   tx?: DbOrTx,
 ): Promise<number> {
-  return getNextSequence(businessId, "item_in_warehouse_type", warehouseTypeId, 0, tx);
+  return getNextSequence(
+    businessId,
+    "item_in_warehouse_type",
+    warehouseTypeId,
+    0,
+    tx,
+  );
 }
 
 export async function getNextBankSequence(
@@ -277,7 +329,13 @@ export async function getNextExchangeSequence(
   exchangeTypeId: number,
   tx?: DbOrTx,
 ): Promise<number> {
-  return getNextSequence(businessId, "item_in_exchange_type", exchangeTypeId, 0, tx);
+  return getNextSequence(
+    businessId,
+    "item_in_exchange_type",
+    exchangeTypeId,
+    0,
+    tx,
+  );
 }
 
 export async function getNextEWalletSequence(
@@ -285,7 +343,13 @@ export async function getNextEWalletSequence(
   eWalletTypeId: number,
   tx?: DbOrTx,
 ): Promise<number> {
-  return getNextSequence(businessId, "item_in_ewallet_type", eWalletTypeId, 0, tx);
+  return getNextSequence(
+    businessId,
+    "item_in_ewallet_type",
+    eWalletTypeId,
+    0,
+    tx,
+  );
 }
 
 export async function getNextEmployeeSequence(
@@ -293,7 +357,13 @@ export async function getNextEmployeeSequence(
   departmentId: number,
   tx?: DbOrTx,
 ): Promise<number> {
-  return getNextSequence(businessId, "employee_in_department", departmentId, 0, tx);
+  return getNextSequence(
+    businessId,
+    "employee_in_department",
+    departmentId,
+    0,
+    tx,
+  );
 }
 
 export async function getNextStationSequence(
@@ -367,6 +437,40 @@ export async function getNextAccountSequence(
 }
 
 /**
+ * توليد أكواد الكيان المالي (صندوق/بنك/محفظة/صراف) مع إنشاء حساب مستقل تلقائياً
+ *
+ * الآلية: كل كيان يحصل على حسابه المستقل + كود مركّب + ledgerCode
+ *   - كود الحساب:  FND-01, FND-02, FND-03...  (عداد مستقل لكل نوع)
+ *   - كود الكيان:  FND-01/1  (دائماً /1 لحساب جديد مستقل)
+ *   - ledgerCode:  FND-01-01 (للتقارير — نفس البادئة والـ padding)
+ *
+ * @param bizId      - معرّف العمل
+ * @param natureKey  - نوع الكيان: fund | bank | e_wallet | exchange
+ * @param tx         - اختياري: كائن المعاملة
+ */
+export async function generateFinancialEntityCodes(
+  bizId: number,
+  natureKey: string,
+  tx?: DbOrTx,
+): Promise<{
+  accountCode: string;
+  entityCode: string;
+  ledgerCode: string;
+  sequenceNumber: number;
+}> {
+  const { code: accountCode, sequenceNumber } = await generateLeafAccountCode(
+    bizId,
+    natureKey,
+    tx,
+  );
+  const entityCode = `${accountCode}/1`;
+  // ledgerCode يستخدم البادئة الرقمية (001-XX-01، 002-XX-01...)
+  const numericPrefix = NATURE_PREFIXES[natureKey] || "099";
+  const ledgerCode = `${numericPrefix}-${String(sequenceNumber).padStart(2, "0")}-01`;
+  return { accountCode, entityCode, ledgerCode, sequenceNumber };
+}
+
+/**
  * رقم تسلسلي للمورد داخل تصنيفه
  */
 export async function getNextSupplierSequence(
@@ -374,7 +478,11 @@ export async function getNextSupplierSequence(
   supplierTypeId: number,
   tx?: DbOrTx,
 ): Promise<number> {
-  return getNextSequence(businessId, "item_in_supplier_type", supplierTypeId, 0, tx);
+  return getNextSequence(
+    businessId,
+    "item_in_supplier_type",
+    supplierTypeId,
+    0,
+    tx,
+  );
 }
-
-

@@ -57,6 +57,7 @@ custodyReadRoutes.get(
         createdAt: custodyRecords.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(custodyRecords)
       .leftJoin(accounts, eq(custodyRecords.accountId, accounts.id))
@@ -64,7 +65,7 @@ custodyReadRoutes.get(
       .orderBy(desc(custodyRecords.createdAt));
 
     return c.json(records);
-  })
+  }),
 );
 
 custodyReadRoutes.get(
@@ -96,14 +97,12 @@ custodyReadRoutes.get(
         updatedAt: custodyRecords.updatedAt,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountLedgerCode: accounts.ledgerCode,
       })
       .from(custodyRecords)
       .leftJoin(accounts, eq(custodyRecords.accountId, accounts.id))
       .where(
-        and(
-          eq(custodyRecords.id, id),
-          eq(custodyRecords.businessId, bizId)
-        )
+        and(eq(custodyRecords.id, id), eq(custodyRecords.businessId, bizId)),
       );
 
     if (!record) {
@@ -117,7 +116,7 @@ custodyReadRoutes.get(
       .orderBy(desc(custodySettlements.createdAt));
 
     return c.json({ ...record, settlements });
-  })
+  }),
 );
 
 export { custodyReadRoutes };

@@ -1,5 +1,4 @@
 <div class="page-container">
-
   <!-- ===== Page Header ===== -->
   <div class="page-header">
     <div class="header-left">
@@ -51,12 +50,20 @@
 
   <!-- ===== التبويبات الرئيسية: القوالب | التصنيفات ===== -->
   <div class="main-tabs-bar">
-    <button class="main-tab" [class.active]="activeTab() === 'templates'" (click)="switchTab('templates')">
+    <button
+      class="main-tab"
+      [class.active]="activeTab() === 'templates'"
+      (click)="switchTab('templates')"
+    >
       <span class="material-icons-round">receipt_long</span>
       القوالب
       <span class="cat-count">{{ operationTypes().length }}</span>
     </button>
-    <button class="main-tab" [class.active]="activeTab() === 'categories'" (click)="switchTab('categories')">
+    <button
+      class="main-tab"
+      [class.active]="activeTab() === 'categories'"
+      (click)="switchTab('categories')"
+    >
       <span class="material-icons-round">folder</span>
       التصنيفات
       <span class="cat-count">{{ dynamicCategories().length }}</span>
@@ -66,7 +73,7 @@
   <!-- ===== Loading ===== -->
   @if (loading()) {
     <div class="loading-grid">
-      @for (i of [1,2,3,4,5,6]; track i) {
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
         <div class="skeleton-card"></div>
       }
     </div>
@@ -139,7 +146,12 @@
     <div class="search-bar-row">
       <div class="search-input-wrapper">
         <span class="material-icons-round">search</span>
-        <input type="text" placeholder="بحث في القوالب..." [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)">
+        <input
+          type="text"
+          placeholder="بحث في القوالب..."
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
         @if (searchQuery()) {
           <button class="clear-search" (click)="searchQuery.set('')">
             <span class="material-icons-round">close</span>
@@ -153,8 +165,11 @@
     @if (categoryFilters().length > 1) {
       <div class="category-tabs">
         @for (cat of categoryFilters(); track cat.value) {
-          <button class="cat-tab" [class.active]="activeCategory() === cat.value"
-                  (click)="activeCategory.set(cat.value)">
+          <button
+            class="cat-tab"
+            [class.active]="activeCategory() === cat.value"
+            (click)="activeCategory.set(cat.value)"
+          >
             <span class="material-icons-round">{{ cat.icon }}</span>
             {{ cat.label }}
             @if (cat.value !== 'all') {
@@ -206,15 +221,24 @@
                   </div>
                   <div class="ot-meta">
                     @if (ot.voucherType) {
-                      <span class="ot-type-badge" [attr.data-vtype]="ot.voucherType">{{ getVoucherTypeLabel(ot.voucherType) }}</span>
+                      <span class="ot-type-badge" [attr.data-vtype]="ot.voucherType">{{
+                        getVoucherTypeLabel(ot.voucherType)
+                      }}</span>
                     }
                   </div>
                   <div class="ot-actions-top">
                     <button class="icon-btn" (click)="cloneOT(ot)" title="نسخ القالب">
                       <span class="material-icons-round">content_copy</span>
                     </button>
-                    <button class="icon-btn" [class.active-toggle]="ot.isActive" (click)="toggleOT(ot)" [title]="ot.isActive ? 'تعطيل' : 'تفعيل'">
-                      <span class="material-icons-round">{{ ot.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                    <button
+                      class="icon-btn"
+                      [class.active-toggle]="ot.isActive"
+                      (click)="toggleOT(ot)"
+                      [title]="ot.isActive ? 'تعطيل' : 'تفعيل'"
+                    >
+                      <span class="material-icons-round">{{
+                        ot.isActive ? 'toggle_on' : 'toggle_off'
+                      }}</span>
                     </button>
                     <button class="icon-btn edit-btn" (click)="openEditWizard(ot)" title="تعديل">
                       <span class="material-icons-round">edit</span>
@@ -292,7 +316,9 @@
                         </div>
                       }
                       @if (ot.linkedAccounts.length > 4) {
-                        <div class="more-accounts" (click)="openAccountsView(ot)">+{{ ot.linkedAccounts.length - 4 }} أكثر</div>
+                        <div class="more-accounts" (click)="openAccountsView(ot)">
+                          +{{ ot.linkedAccounts.length - 4 }} أكثر
+                        </div>
                       }
                     </div>
                   }
@@ -309,51 +335,72 @@
   <!-- ========= نموذج إضافة/تعديل تصنيف (Modal) ================= -->
   <!-- ============================================================ -->
   @if (showCategoryForm()) {
-    <div class="modal-overlay" (click)="closeCategoryForm()">
-      <div class="modal-3d" style="max-width: 480px" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon" style="background: #3b82f6">
-            <span class="material-icons-round">{{ editingCategoryOld() ? 'edit' : 'create_new_folder' }}</span>
+    <div class="page-form-container">
+      <div class="form-header">
+        <div class="form-header-title">
+          <div class="page-icon blue">
+            <span class="material-icons-round">{{
+              editingCategoryOld() ? 'edit' : 'create_new_folder'
+            }}</span>
           </div>
-          <h2>{{ editingCategoryOld() ? 'تعديل تصنيف' : 'تصنيف جديد' }}</h2>
-          <button class="modal-close" (click)="closeCategoryForm()">
-            <span class="material-icons-round">close</span>
-          </button>
+          <h3>{{ editingCategoryOld() ? 'تعديل تصنيف' : 'تصنيف جديد' }}</h3>
+          @if (editingCategoryOld()) {
+            <span class="edit-badge">تعديل</span>
+          }
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label">اسم التصنيف <span class="required">*</span></label>
-            <input class="form-input" type="text" placeholder="مثال: تحصيل، توريد، سندات، قيود"
-                   [value]="newCategoryName()" (input)="newCategoryName.set($any($event.target).value)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">الأيقونة</label>
-            <div class="icon-picker">
-              @for (ic of categoryIcons; track ic) {
-                <button class="icon-option" [class.selected]="newCategoryIcon() === ic" (click)="newCategoryIcon.set(ic)">
-                  <span class="material-icons-round">{{ ic }}</span>
-                </button>
-              }
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">اللون</label>
-            <div class="color-picker">
-              @for (c of colors; track c) {
-                <button class="color-dot" [class.selected]="newCategoryColor() === c"
-                        [style.background]="c" (click)="newCategoryColor.set(c)">
-                </button>
-              }
-            </div>
+        <button class="close-btn" (click)="closeCategoryForm()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="form-meta">
+        <div class="form-group">
+          <label class="form-label">اسم التصنيف <span class="required">*</span></label>
+          <input
+            class="form-input"
+            type="text"
+            placeholder="مثال: تحصيل، توريد، سندات، قيود"
+            [value]="newCategoryName()"
+            (input)="newCategoryName.set($any($event.target).value)"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">الأيقونة</label>
+          <div class="icon-picker">
+            @for (ic of categoryIcons; track ic) {
+              <button
+                class="icon-option"
+                [class.selected]="newCategoryIcon() === ic"
+                (click)="newCategoryIcon.set(ic)"
+              >
+                <span class="material-icons-round">{{ ic }}</span>
+              </button>
+            }
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="closeCategoryForm()">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="saveCategory()" [disabled]="saving() || !newCategoryName().trim()">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-            {{ saving() ? 'جاري الحفظ...' : (editingCategoryOld() ? 'حفظ التعديل' : 'إنشاء التصنيف') }}
-          </button>
+        <div class="form-group">
+          <label class="form-label">اللون</label>
+          <div class="color-picker">
+            @for (c of colors; track c) {
+              <button
+                class="color-dot"
+                [class.selected]="newCategoryColor() === c"
+                [style.background]="c"
+                (click)="newCategoryColor.set(c)"
+              ></button>
+            }
+          </div>
         </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="closeCategoryForm()">إلغاء</button>
+        <button
+          class="btn-save"
+          (click)="saveCategory()"
+          [disabled]="saving() || !newCategoryName().trim()"
+        >
+          <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+          {{ saving() ? 'جاري الحفظ...' : editingCategoryOld() ? 'حفظ التعديل' : 'إنشاء التصنيف' }}
+        </button>
       </div>
     </div>
   }
@@ -362,9 +409,8 @@
   <!-- ========= WIZARD إنشاء/تعديل قالب (6 خطوات) =============== -->
   <!-- ============================================================ -->
   @if (showWizard()) {
-    <div class="modal-overlay" (click)="showWizard.set(false)">
+    <div class="page-form-container" (click)="showWizard.set(false)">
       <div class="wizard-modal" (click)="$event.stopPropagation()">
-
         <!-- Wizard Header -->
         <div class="wizard-header">
           <div class="wizard-header-top">
@@ -377,10 +423,12 @@
           <!-- Step Indicators - Dynamic -->
           <div class="wizard-steps-bar">
             @for (step of getStepLabels(); track step.num; let last = $last) {
-              <div class="wstep"
-                   [class.active]="wizardStep() === step.num"
-                   [class.done]="wizardStep() > step.num"
-                   (click)="step.num < wizardStep() ? wizardStep.set(step.num) : null">
+              <div
+                class="wstep"
+                [class.active]="wizardStep() === step.num"
+                [class.done]="wizardStep() > step.num"
+                (click)="step.num < wizardStep() ? wizardStep.set(step.num) : null"
+              >
                 <div class="wstep-num">{{ step.num }}</div>
                 <span>{{ step.label }}</span>
               </div>
@@ -420,8 +468,11 @@
               } @else {
                 <div class="type-cards">
                   @for (cat of dynamicCategories(); track cat.id) {
-                    <div class="type-card" [class.selected]="wiz().categoryId === cat.id"
-                         (click)="selectCategory(cat)">
+                    <div
+                      class="type-card"
+                      [class.selected]="wiz().categoryId === cat.id"
+                      (click)="selectCategory(cat)"
+                    >
                       <div class="tc-icon" [style.background]="cat.color">
                         <span class="material-icons-round">{{ cat.icon }}</span>
                       </div>
@@ -450,9 +501,12 @@
 
               <div class="type-cards">
                 @for (opt of operationTypeOptions; track opt.value) {
-                  <div class="type-card" [class.selected]="wiz().voucherType === opt.value"
-                       [style.--type-color]="opt.color"
-                       (click)="selectVoucherType(opt.value)">
+                  <div
+                    class="type-card"
+                    [class.selected]="wiz().voucherType === opt.value"
+                    [style.--type-color]="opt.color"
+                    (click)="selectVoucherType(opt.value)"
+                  >
                     <div class="tc-icon" [style.background]="opt.color">
                       <span class="material-icons-round">{{ opt.icon }}</span>
                     </div>
@@ -476,12 +530,17 @@
                 <span class="material-icons-round">payments</span>
                 وسيلة {{ wiz().voucherType === 'receipt' ? 'القبض' : 'الصرف' }}
               </h3>
-              <p class="step-desc">كيف يتم {{ wiz().voucherType === 'receipt' ? 'استلام' : 'صرف' }} الأموال؟</p>
+              <p class="step-desc">
+                كيف يتم {{ wiz().voucherType === 'receipt' ? 'استلام' : 'صرف' }} الأموال؟
+              </p>
 
               <div class="method-cards">
                 @for (pm of paymentMethods; track pm.value) {
-                  <div class="method-card" [class.selected]="wiz().paymentMethod === pm.value"
-                       (click)="selectPaymentMethod(pm.value)">
+                  <div
+                    class="method-card"
+                    [class.selected]="wiz().paymentMethod === pm.value"
+                    (click)="selectPaymentMethod(pm.value)"
+                  >
                     <div class="mc-icon">
                       <span class="material-icons-round">{{ pm.icon }}</span>
                     </div>
@@ -504,7 +563,16 @@
                 الطرف الأول (المصدر)
               </h3>
               <p class="step-desc">
-                اختر {{ wiz().paymentMethod === 'cash' ? 'الصندوق' : (wiz().paymentMethod === 'bank' ? 'البنك' : (wiz().paymentMethod === 'exchange' ? 'الصراف' : 'المحفظة')) }}
+                اختر
+                {{
+                  wiz().paymentMethod === 'cash'
+                    ? 'الصندوق'
+                    : wiz().paymentMethod === 'bank'
+                      ? 'البنك'
+                      : wiz().paymentMethod === 'exchange'
+                        ? 'الصراف'
+                        : 'المحفظة'
+                }}
                 الذي {{ wiz().voucherType === 'receipt' ? 'يستقبل' : 'يصرف من' }}ه المبلغ
               </p>
 
@@ -513,21 +581,36 @@
                 <span class="material-icons-round">lightbulb</span>
                 <div>
                   <strong>ما هو الطرف الأول؟</strong>
-                  <p>هو {{ wiz().paymentMethod === 'cash' ? 'الصندوق' : (wiz().paymentMethod === 'bank' ? 'الحساب البنكي' : (wiz().paymentMethod === 'exchange' ? 'حساب الصراف' : 'المحفظة الإلكترونية')) }}
-                  الذي ينفذ العملية. مثلاً: "صندوق محطة الدهمية" أو "بنك الأهلي".</p>
+                  <p>
+                    هو
+                    {{
+                      wiz().paymentMethod === 'cash'
+                        ? 'الصندوق'
+                        : wiz().paymentMethod === 'bank'
+                          ? 'الحساب البنكي'
+                          : wiz().paymentMethod === 'exchange'
+                            ? 'حساب الصراف'
+                            : 'المحفظة الإلكترونية'
+                    }}
+                    الذي ينفذ العملية. مثلاً: "صندوق محطة الدهمية" أو "بنك الأهلي".
+                  </p>
                 </div>
               </div>
 
               @if (sourceAccounts().length === 0) {
                 <div class="no-accounts-msg">
                   <span class="material-icons-round">info</span>
-                  لا توجد {{ wiz().paymentMethod === 'cash' ? 'صناديق' : 'حسابات' }} متاحة. أضفها أولاً من الصفحة المناسبة.
+                  لا توجد {{ wiz().paymentMethod === 'cash' ? 'صناديق' : 'حسابات' }} متاحة. أضفها
+                  أولاً من الصفحة المناسبة.
                 </div>
               } @else {
                 <div class="source-accounts-list">
                   @for (src of sourceAccounts(); track src.id) {
-                    <div class="source-acc-item" [class.selected]="isSourceSelected(src)"
-                         (click)="selectSource(src)">
+                    <div
+                      class="source-acc-item"
+                      [class.selected]="isSourceSelected(src)"
+                      (click)="selectSource(src)"
+                    >
                       <div class="sai-icon">
                         <span class="material-icons-round">{{ src.icon }}</span>
                       </div>
@@ -558,7 +641,9 @@
                 اختيار المخزن
               </h3>
               <p class="step-desc">
-                @if (wiz().voucherType === 'supply_invoice' || wiz().voucherType === 'supply_order') {
+                @if (
+                  wiz().voucherType === 'supply_invoice' || wiz().voucherType === 'supply_order'
+                ) {
                   اختر المخزن الذي سيتم التوريد إليه
                 } @else if (wiz().voucherType === 'dispatch') {
                   اختر المخزن الذي سيتم الصرف منه
@@ -574,7 +659,10 @@
                 <span class="material-icons-round">lightbulb</span>
                 <div>
                   <strong>ما هو المخزن الافتراضي؟</strong>
-                  <p>هو المخزن الذي سيتم اختياره تلقائياً عند استخدام هذا القالب. يمكن للمستخدم تغييره عند إنشاء العملية.</p>
+                  <p>
+                    هو المخزن الذي سيتم اختياره تلقائياً عند استخدام هذا القالب. يمكن للمستخدم
+                    تغييره عند إنشاء العملية.
+                  </p>
                 </div>
               </div>
 
@@ -586,8 +674,11 @@
               } @else {
                 <div class="source-accounts-list">
                   @for (wh of sourceWarehouses(); track wh.id) {
-                    <div class="source-acc-item" [class.selected]="wiz().sourceWarehouseId === wh.id"
-                         (click)="selectWarehouse(wh)">
+                    <div
+                      class="source-acc-item"
+                      [class.selected]="wiz().sourceWarehouseId === wh.id"
+                      (click)="selectWarehouse(wh)"
+                    >
                       <div class="sai-icon" style="background: #06b6d4">
                         <span class="material-icons-round">warehouse</span>
                       </div>
@@ -615,13 +706,18 @@
             <div class="wizard-step">
               <h3 class="step-title">
                 <span class="material-icons-round">group</span>
-                {{ wiz().voucherType === 'journal' ? 'حسابات القيد' : 'الطرف الثاني (الحسابات المرتبطة)' }}
+                {{
+                  wiz().voucherType === 'journal'
+                    ? 'حسابات القيد'
+                    : 'الطرف الثاني (الحسابات المرتبطة)'
+                }}
               </h3>
               <p class="step-desc">
                 @if (wiz().voucherType === 'journal') {
                   اختر الحسابات المدينة والدائنة من دليل الحسابات
                 } @else {
-                  اختر الحسابات المقابلة التي {{ wiz().voucherType === 'receipt' ? 'يُقبض منها' : 'يُصرف لها' }}
+                  اختر الحسابات المقابلة التي
+                  {{ wiz().voucherType === 'receipt' ? 'يُقبض منها' : 'يُصرف لها' }}
                 }
               </p>
 
@@ -629,7 +725,9 @@
               @if (wiz().voucherType !== 'journal' && selectedSourceName()) {
                 <div class="source-summary-chip">
                   <span class="material-icons-round">{{ getPaymentMethodIcon() }}</span>
-                  <span>المصدر: <strong>{{ selectedSourceName() }}</strong></span>
+                  <span
+                    >المصدر: <strong>{{ selectedSourceName() }}</strong></span
+                  >
                 </div>
               }
 
@@ -638,16 +736,24 @@
                 <div class="acc-type-selector">
                   <label class="form-label">فلتر حسب نوع الحساب:</label>
                   <div class="acc-type-chips">
-                    <button class="acc-type-chip" [class.active]="selectedAccountType() === ''"
-                            (click)="selectedAccountType.set('')">
+                    <button
+                      class="acc-type-chip"
+                      [class.active]="selectedAccountType() === ''"
+                      (click)="selectedAccountType.set('')"
+                    >
                       <span class="material-icons-round">apps</span>
                       الكل
                       <span class="atc-count">{{ availableAccounts().length }}</span>
                     </button>
                     @for (at of availableAccountTypes(); track at) {
-                      <button class="acc-type-chip" [class.active]="selectedAccountType() === at"
-                              (click)="selectedAccountType.set(at)">
-                        <span class="material-icons-round">{{ accountTypeIcons[at] || 'label' }}</span>
+                      <button
+                        class="acc-type-chip"
+                        [class.active]="selectedAccountType() === at"
+                        (click)="selectedAccountType.set(at)"
+                      >
+                        <span class="material-icons-round">{{
+                          accountTypeIcons[at] || 'label'
+                        }}</span>
                         {{ getAccountTypeLabel(at) }}
                         <span class="atc-count">{{ countAccountsByType(at) }}</span>
                       </button>
@@ -667,10 +773,15 @@
                 </div>
                 <div class="counter-accounts-grid">
                   @for (acc of filteredAccountsByType(); track acc.id) {
-                    <div class="counter-acc-item" [class.selected]="linkedAccountIds().has(acc.id)"
-                         (click)="toggleLinkedAccount(acc)">
+                    <div
+                      class="counter-acc-item"
+                      [class.selected]="linkedAccountIds().has(acc.id)"
+                      (click)="toggleLinkedAccount(acc)"
+                    >
                       <span class="material-icons-round cai-icon">
-                        {{ linkedAccountIds().has(acc.id) ? 'check_box' : 'check_box_outline_blank' }}
+                        {{
+                          linkedAccountIds().has(acc.id) ? 'check_box' : 'check_box_outline_blank'
+                        }}
                       </span>
                       <div class="cai-details">
                         <span class="cai-name">{{ acc.name }}</span>
@@ -679,7 +790,9 @@
                         }
                       </div>
                       <span class="cai-type">
-                        <span class="material-icons-round">{{ accountTypeIcons[acc.accountType] || 'label' }}</span>
+                        <span class="material-icons-round">{{
+                          accountTypeIcons[acc.accountType] || 'label'
+                        }}</span>
                         {{ getAccountTypeLabel(acc.accountType) }}
                       </span>
                     </div>
@@ -723,14 +836,20 @@
                 <span class="material-icons-round">route</span>
                 سير العمل (اختياري)
               </h3>
-              <p class="step-desc">حدد حالات السند والانتقالات بينها. إذا لم تفعّل سير العمل، سيعمل السند بالطريقة الافتراضية (مسودة → معتمد).</p>
+              <p class="step-desc">
+                حدد حالات السند والانتقالات بينها. إذا لم تفعّل سير العمل، سيعمل السند بالطريقة
+                الافتراضية (مسودة → معتمد).
+              </p>
 
               <!-- تفعيل سير العمل -->
-              <div class="form-group" style="margin-bottom:20px">
-                <label class="toggle-label" style="font-size:15px;font-weight:600">
+              <div class="form-group" style="margin-bottom: 20px">
+                <label class="toggle-label" style="font-size: 15px; font-weight: 600">
                   <span>تفعيل سير العمل المخصص</span>
-                  <div class="toggle-switch" [class.on]="wiz().workflowEnabled"
-                       (click)="setWizField('workflowEnabled', !wiz().workflowEnabled)">
+                  <div
+                    class="toggle-switch"
+                    [class.on]="wiz().workflowEnabled"
+                    (click)="setWizField('workflowEnabled', !wiz().workflowEnabled)"
+                  >
                     <div class="toggle-knob"></div>
                   </div>
                 </label>
@@ -740,26 +859,56 @@
                 <!-- الحالات -->
                 <div class="form-group">
                   <label class="form-label">حالات السند</label>
-                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px">
                     @for (state of wiz().workflowStates; track state) {
-                      <div style="display:flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500"
-                           [style.background]="getStateColor(state) + '18'" [style.color]="getStateColor(state)">
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 4px;
+                          padding: 4px 12px;
+                          border-radius: 20px;
+                          font-size: 13px;
+                          font-weight: 500;
+                        "
+                        [style.background]="getStateColor(state) + '18'"
+                        [style.color]="getStateColor(state)"
+                      >
                         <span>{{ getStateLabel(state) }}</span>
                         @if (state !== 'draft') {
-                          <button style="background:none;border:none;cursor:pointer;padding:0;color:inherit;font-size:16px;line-height:1"
-                                  (click)="removeWorkflowState(state)">
-                            <span class="material-icons-round" style="font-size:16px">close</span>
+                          <button
+                            style="
+                              background: none;
+                              border: none;
+                              cursor: pointer;
+                              padding: 0;
+                              color: inherit;
+                              font-size: 16px;
+                              line-height: 1;
+                            "
+                            (click)="removeWorkflowState(state)"
+                          >
+                            <span class="material-icons-round" style="font-size: 16px">close</span>
                           </button>
                         }
                       </div>
                     }
                   </div>
-                  <div style="display:flex;gap:8px">
-                    <input class="form-input" type="text" placeholder="اسم الحالة الجديدة (مثل: pending_approval)"
-                           [value]="newWfState()" (input)="newWfState.set($any($event.target).value)"
-                           style="flex:1">
-                    <button class="btn-3d btn-primary" style="padding:8px 16px" (click)="addWorkflowState()">
-                      <span class="material-icons-round" style="font-size:18px">add</span>
+                  <div style="display: flex; gap: 8px">
+                    <input
+                      class="form-input"
+                      type="text"
+                      placeholder="اسم الحالة الجديدة (مثل: pending_approval)"
+                      [value]="newWfState()"
+                      (input)="newWfState.set($any($event.target).value)"
+                      style="flex: 1"
+                    />
+                    <button
+                      class="btn-3d btn-primary"
+                      style="padding: 8px 16px"
+                      (click)="addWorkflowState()"
+                    >
+                      <span class="material-icons-round" style="font-size: 18px">add</span>
                     </button>
                   </div>
                 </div>
@@ -767,8 +916,11 @@
                 <!-- الحالة الابتدائية -->
                 <div class="form-group">
                   <label class="form-label">الحالة الابتدائية</label>
-                  <select class="form-input" [value]="wiz().workflowInitialState"
-                          (change)="setWizField('workflowInitialState', $any($event.target).value)">
+                  <select
+                    class="form-input"
+                    [value]="wiz().workflowInitialState"
+                    (change)="setWizField('workflowInitialState', $any($event.target).value)"
+                  >
                     @for (state of wiz().workflowStates; track state) {
                       <option [value]="state">{{ getStateLabel(state) }}</option>
                     }
@@ -779,31 +931,72 @@
                 <div class="form-group">
                   <label class="form-label">الانتقالات (من حالة إلى حالة)</label>
                   @if (wiz().workflowTransitions.length > 0) {
-                    <div style="margin-bottom:12px">
+                    <div style="margin-bottom: 12px">
                       @for (tr of wiz().workflowTransitions; track $index) {
-                        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:6px;font-size:13px">
-                          <span style="padding:2px 8px;border-radius:12px;font-weight:500"
-                                [style.background]="getStateColor(tr.fromState) + '18'" [style.color]="getStateColor(tr.fromState)">
+                        <div
+                          style="
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            padding: 8px 12px;
+                            background: #f8fafc;
+                            border-radius: 8px;
+                            margin-bottom: 6px;
+                            font-size: 13px;
+                          "
+                        >
+                          <span
+                            style="padding: 2px 8px; border-radius: 12px; font-weight: 500"
+                            [style.background]="getStateColor(tr.fromState) + '18'"
+                            [style.color]="getStateColor(tr.fromState)"
+                          >
                             {{ getStateLabel(tr.fromState) }}
                           </span>
-                          <span class="material-icons-round" style="font-size:16px;color:#94a3b8">arrow_back</span>
-                          <span style="padding:2px 8px;border-radius:12px;font-weight:500"
-                                [style.background]="getStateColor(tr.toState) + '18'" [style.color]="getStateColor(tr.toState)">
+                          <span class="material-icons-round" style="font-size: 16px; color: #94a3b8"
+                            >arrow_back</span
+                          >
+                          <span
+                            style="padding: 2px 8px; border-radius: 12px; font-weight: 500"
+                            [style.background]="getStateColor(tr.toState) + '18'"
+                            [style.color]="getStateColor(tr.toState)"
+                          >
                             {{ getStateLabel(tr.toState) }}
                           </span>
-                          <span style="color:#64748b;font-size:12px">({{ tr.actionName }})</span>
-                          <button style="margin-right:auto;background:none;border:none;cursor:pointer;color:#ef4444"
-                                  (click)="removeWorkflowTransition($index)">
-                            <span class="material-icons-round" style="font-size:18px">delete</span>
+                          <span style="color: #64748b; font-size: 12px">({{ tr.actionName }})</span>
+                          <button
+                            style="
+                              margin-right: auto;
+                              background: none;
+                              border: none;
+                              cursor: pointer;
+                              color: #ef4444;
+                            "
+                            (click)="removeWorkflowTransition($index)"
+                          >
+                            <span class="material-icons-round" style="font-size: 18px">delete</span>
                           </button>
                         </div>
                       }
                     </div>
                   }
-                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+                  <div
+                    style="
+                      display: grid;
+                      grid-template-columns: 1fr 1fr 1fr auto;
+                      gap: 8px;
+                      align-items: end;
+                    "
+                  >
                     <div>
-                      <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block">من حالة</label>
-                      <select class="form-input" [value]="newTrFrom()" (change)="newTrFrom.set($any($event.target).value)">
+                      <label
+                        style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block"
+                        >من حالة</label
+                      >
+                      <select
+                        class="form-input"
+                        [value]="newTrFrom()"
+                        (change)="newTrFrom.set($any($event.target).value)"
+                      >
                         <option value="">اختر...</option>
                         @for (state of wiz().workflowStates; track state) {
                           <option [value]="state">{{ getStateLabel(state) }}</option>
@@ -811,8 +1004,15 @@
                       </select>
                     </div>
                     <div>
-                      <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block">إلى حالة</label>
-                      <select class="form-input" [value]="newTrTo()" (change)="newTrTo.set($any($event.target).value)">
+                      <label
+                        style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block"
+                        >إلى حالة</label
+                      >
+                      <select
+                        class="form-input"
+                        [value]="newTrTo()"
+                        (change)="newTrTo.set($any($event.target).value)"
+                      >
                         <option value="">اختر...</option>
                         @for (state of wiz().workflowStates; track state) {
                           <option [value]="state">{{ getStateLabel(state) }}</option>
@@ -820,20 +1020,34 @@
                       </select>
                     </div>
                     <div>
-                      <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block">اسم الإجراء</label>
-                      <input class="form-input" type="text" placeholder="مثل: اعتماد"
-                             [value]="newTrAction()" (input)="newTrAction.set($any($event.target).value)">
+                      <label
+                        style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block"
+                        >اسم الإجراء</label
+                      >
+                      <input
+                        class="form-input"
+                        type="text"
+                        placeholder="مثل: اعتماد"
+                        [value]="newTrAction()"
+                        (input)="newTrAction.set($any($event.target).value)"
+                      />
                     </div>
-                    <button class="btn-3d btn-primary" style="padding:8px 16px;height:40px" (click)="addWorkflowTransition()">
-                      <span class="material-icons-round" style="font-size:18px">add</span>
+                    <button
+                      class="btn-3d btn-primary"
+                      style="padding: 8px 16px; height: 40px"
+                      (click)="addWorkflowTransition()"
+                    >
+                      <span class="material-icons-round" style="font-size: 18px">add</span>
                     </button>
                   </div>
                 </div>
               } @else {
-                <div style="text-align:center;padding:30px;color:#94a3b8">
-                  <span class="material-icons-round" style="font-size:48px;margin-bottom:12px">route</span>
+                <div style="text-align: center; padding: 30px; color: #94a3b8">
+                  <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px"
+                    >route</span
+                  >
                   <p>سير العمل الافتراضي: مسودة → معتمد</p>
-                  <p style="font-size:12px">فعّل سير العمل المخصص لإضافة حالات وانتقالات مخصصة</p>
+                  <p style="font-size: 12px">فعّل سير العمل المخصص لإضافة حالات وانتقالات مخصصة</p>
                 </div>
               }
             </div>
@@ -847,53 +1061,83 @@
                 اسم القالب والتفاصيل
               </h3>
               <p class="step-desc">سمّي القالب واختر الأيقونة واللون</p>
-              <p class="step-hint"><span class="material-icons-round">tag</span> الرمز والرقم التسلسلي يُولَّدان تلقائياً حسب التصنيف</p>
+              <p class="step-hint">
+                <span class="material-icons-round">tag</span> الرمز والرقم التسلسلي يُولَّدان
+                تلقائياً حسب التصنيف
+              </p>
 
               <!-- ملخص الاختيارات السابقة -->
               <div class="wizard-summary">
                 <div class="ws-item">
                   <span class="material-icons-round">folder</span>
-                  <span>التصنيف: <strong>{{ wiz().category }}</strong></span>
+                  <span
+                    >التصنيف: <strong>{{ wiz().category }}</strong></span
+                  >
                 </div>
                 <div class="ws-item">
                   <span class="material-icons-round">description</span>
-                  <span>النوع: <strong>{{ getVoucherTypeOption(wiz().voucherType)?.label || getVoucherTypeLabel(wiz().voucherType) }}</strong></span>
+                  <span
+                    >النوع:
+                    <strong>{{
+                      getVoucherTypeOption(wiz().voucherType)?.label ||
+                        getVoucherTypeLabel(wiz().voucherType)
+                    }}</strong></span
+                  >
                 </div>
                 @if (wiz().paymentMethod) {
                   <div class="ws-item">
                     <span class="material-icons-round">payments</span>
-                    <span>الوسيلة: <strong>{{ getPaymentMethodLabel(wiz().paymentMethod) }}</strong></span>
+                    <span
+                      >الوسيلة:
+                      <strong>{{ getPaymentMethodLabel(wiz().paymentMethod) }}</strong></span
+                    >
                   </div>
                 }
                 @if (selectedSourceName()) {
                   <div class="ws-item">
                     <span class="material-icons-round">account_balance_wallet</span>
-                    <span>المصدر: <strong>{{ selectedSourceName() }}</strong></span>
+                    <span
+                      >المصدر: <strong>{{ selectedSourceName() }}</strong></span
+                    >
                   </div>
                 }
                 @if (wiz().sourceWarehouseId) {
                   <div class="ws-item">
                     <span class="material-icons-round">warehouse</span>
-                    <span>المخزن: <strong>{{ getWarehouseName(wiz().sourceWarehouseId) }}</strong></span>
+                    <span
+                      >المخزن:
+                      <strong>{{ getWarehouseName(wiz().sourceWarehouseId) }}</strong></span
+                    >
                   </div>
                 }
                 <div class="ws-item">
                   <span class="material-icons-round">group</span>
-                  <span>الحسابات: <strong>{{ wiz().linkedAccounts.length }} حساب</strong></span>
+                  <span
+                    >الحسابات: <strong>{{ wiz().linkedAccounts.length }} حساب</strong></span
+                  >
                 </div>
               </div>
 
               <!-- Name & Description -->
               <div class="form-group">
                 <label class="form-label">اسم القالب <span class="required">*</span></label>
-                <input class="form-input" type="text" placeholder="مثال: تحصيل يومي - الدهمية"
-                       [value]="wiz().name" (input)="setWizField('name', $any($event.target).value)">
+                <input
+                  class="form-input"
+                  type="text"
+                  placeholder="مثال: تحصيل يومي - الدهمية"
+                  [value]="wiz().name"
+                  (input)="setWizField('name', $any($event.target).value)"
+                />
               </div>
               <div class="form-group">
                 <label class="form-label">وصف مختصر</label>
-                <textarea class="form-input" rows="2" placeholder="وصف اختياري للقالب..."
-                          [value]="wiz().description"
-                          (input)="setWizField('description', $any($event.target).value)"></textarea>
+                <textarea
+                  class="form-input"
+                  rows="2"
+                  placeholder="وصف اختياري للقالب..."
+                  [value]="wiz().description"
+                  (input)="setWizField('description', $any($event.target).value)"
+                ></textarea>
               </div>
 
               <!-- Icon & Color -->
@@ -902,8 +1146,11 @@
                   <label class="form-label">الأيقونة</label>
                   <div class="icon-picker">
                     @for (ic of icons; track ic) {
-                      <button class="icon-option" [class.selected]="wiz().icon === ic"
-                              (click)="setWizField('icon', ic)">
+                      <button
+                        class="icon-option"
+                        [class.selected]="wiz().icon === ic"
+                        (click)="setWizField('icon', ic)"
+                      >
                         <span class="material-icons-round">{{ ic }}</span>
                       </button>
                     }
@@ -913,9 +1160,12 @@
                   <label class="form-label">اللون</label>
                   <div class="color-picker">
                     @for (c of colors; track c) {
-                      <button class="color-dot" [class.selected]="wiz().color === c"
-                              [style.background]="c" (click)="setWizField('color', c)">
-                      </button>
+                      <button
+                        class="color-dot"
+                        [class.selected]="wiz().color === c"
+                        [style.background]="c"
+                        (click)="setWizField('color', c)"
+                      ></button>
                     }
                   </div>
                 </div>
@@ -925,22 +1175,27 @@
               <div class="form-row flags-row">
                 <label class="toggle-label">
                   <span>يتطلب مرفق</span>
-                  <div class="toggle-switch" [class.on]="wiz().requiresAttachment"
-                       (click)="setWizField('requiresAttachment', !wiz().requiresAttachment)">
+                  <div
+                    class="toggle-switch"
+                    [class.on]="wiz().requiresAttachment"
+                    (click)="setWizField('requiresAttachment', !wiz().requiresAttachment)"
+                  >
                     <div class="toggle-knob"></div>
                   </div>
                 </label>
                 <label class="toggle-label">
                   <span>مفعّل</span>
-                  <div class="toggle-switch" [class.on]="wiz().isActive"
-                       (click)="setWizField('isActive', !wiz().isActive)">
+                  <div
+                    class="toggle-switch"
+                    [class.on]="wiz().isActive"
+                    (click)="setWizField('isActive', !wiz().isActive)"
+                  >
                     <div class="toggle-knob"></div>
                   </div>
                 </label>
               </div>
             </div>
           }
-
         </div>
 
         <!-- Wizard Footer -->
@@ -960,20 +1215,23 @@
               <span class="material-icons-round">arrow_back</span>
             </button>
           } @else {
-            <button class="btn-3d btn-primary" [disabled]="!canGoNext() || saving()" (click)="saveWizard()">
+            <button
+              class="btn-3d btn-primary"
+              [disabled]="!canGoNext() || saving()"
+              (click)="saveWizard()"
+            >
               <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-              {{ saving() ? 'جاري الحفظ...' : (editingId() ? 'حفظ التعديلات' : 'إنشاء القالب') }}
+              {{ saving() ? 'جاري الحفظ...' : editingId() ? 'حفظ التعديلات' : 'إنشاء القالب' }}
             </button>
           }
         </div>
-
       </div>
     </div>
   }
 
   <!-- ===== Accounts View Modal ===== -->
   @if (showAccountsModal() && selectedOT()) {
-    <div class="modal-overlay" (click)="showAccountsModal.set(false)">
+    <div class="page-form-container" (click)="showAccountsModal.set(false)">
       <div class="modal-3d accounts-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-icon" [style.background]="selectedOT().color">
@@ -992,7 +1250,9 @@
           @if (selectedOT().sourceAccountId || selectedOT().sourceFundId) {
             <div class="source-summary-chip" style="margin-bottom: 16px">
               <span class="material-icons-round">account_balance_wallet</span>
-              <span>المصدر (الطرف الأول): <strong>{{ getSourceLabel(selectedOT()) }}</strong></span>
+              <span
+                >المصدر (الطرف الأول): <strong>{{ getSourceLabel(selectedOT()) }}</strong></span
+              >
             </div>
           }
 
@@ -1020,7 +1280,10 @@
         </div>
         <div class="modal-footer">
           <button class="btn-3d btn-ghost" (click)="showAccountsModal.set(false)">إغلاق</button>
-          <button class="btn-3d btn-primary" (click)="showAccountsModal.set(false); openEditWizard(selectedOT())">
+          <button
+            class="btn-3d btn-primary"
+            (click)="showAccountsModal.set(false); openEditWizard(selectedOT())"
+          >
             <span class="material-icons-round">edit</span>
             تعديل القالب
           </button>
@@ -1031,7 +1294,7 @@
 
   <!-- ===== How It Works Modal ===== -->
   @if (showHowItWorks()) {
-    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
+    <div class="page-form-container" (click)="showHowItWorks.set(false)">
       <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-icon amber">
@@ -1044,29 +1307,54 @@
         </div>
         <div class="modal-body hiw-body">
           <div class="hiw-section">
-            <h3><span class="material-icons-round">auto_awesome</span> القالب = عملية مقيدة بالكامل</h3>
+            <h3>
+              <span class="material-icons-round">auto_awesome</span> القالب = عملية مقيدة بالكامل
+            </h3>
             <p>
-              المستخدم بس يختار القالب ويعبي المبلغ ويحفظ. كل شي محدد مسبقاً:
-              نوع العملية، طريقة الدفع، المصدر، والحسابات المرتبطة.
+              المستخدم بس يختار القالب ويعبي المبلغ ويحفظ. كل شي محدد مسبقاً: نوع العملية، طريقة
+              الدفع، المصدر، والحسابات المرتبطة.
             </p>
           </div>
           <div class="hiw-section">
-            <h3><span class="material-icons-round">format_list_numbered</span> خطوات إنشاء القالب</h3>
+            <h3>
+              <span class="material-icons-round">format_list_numbered</span> خطوات إنشاء القالب
+            </h3>
             <div class="hiw-steps">
-              <div class="hiw-step"><span class="hs-num">1</span> <strong>التصنيف:</strong> اختر التصنيف من القائمة الموجودة</div>
-              <div class="hiw-step"><span class="hs-num">2</span> <strong>نوع السند:</strong> سند قبض / سند صرف / قيد محاسبي</div>
-              <div class="hiw-step"><span class="hs-num">3</span> <strong>وسيلة الدفع:</strong> نقداً / بنك / صراف / محفظة إلكترونية</div>
-              <div class="hiw-step"><span class="hs-num">4</span> <strong>المصدر (الطرف الأول):</strong> أي صندوق أو بنك أو صراف أو محفظة بالتحديد</div>
-              <div class="hiw-step"><span class="hs-num">5</span> <strong>الحسابات (الطرف الثاني):</strong> الحسابات المقابلة المرتبطة</div>
-              <div class="hiw-step"><span class="hs-num">6</span> <strong>الاسم والتفاصيل:</strong> سمّي القالب واختر الأيقونة واللون</div>
+              <div class="hiw-step">
+                <span class="hs-num">1</span> <strong>التصنيف:</strong> اختر التصنيف من القائمة
+                الموجودة
+              </div>
+              <div class="hiw-step">
+                <span class="hs-num">2</span> <strong>نوع السند:</strong> سند قبض / سند صرف / قيد
+                محاسبي
+              </div>
+              <div class="hiw-step">
+                <span class="hs-num">3</span> <strong>وسيلة الدفع:</strong> نقداً / بنك / صراف /
+                محفظة إلكترونية
+              </div>
+              <div class="hiw-step">
+                <span class="hs-num">4</span> <strong>المصدر (الطرف الأول):</strong> أي صندوق أو بنك
+                أو صراف أو محفظة بالتحديد
+              </div>
+              <div class="hiw-step">
+                <span class="hs-num">5</span> <strong>الحسابات (الطرف الثاني):</strong> الحسابات
+                المقابلة المرتبطة
+              </div>
+              <div class="hiw-step">
+                <span class="hs-num">6</span> <strong>الاسم والتفاصيل:</strong> سمّي القالب واختر
+                الأيقونة واللون
+              </div>
             </div>
           </div>
           <div class="hiw-section">
             <h3><span class="material-icons-round">rule</span> قواعد مهمة</h3>
             <p>
-              <strong>التصنيفات أولاً:</strong> أنشئ التصنيفات من تبويب "التصنيفات" قبل إنشاء القوالب.<br>
-              <strong>سند قبض/صرف:</strong> اختر الوسيلة → المصدر (الطرف الأول) → الحسابات (الطرف الثاني).<br>
-              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو بنوك).<br>
+              <strong>التصنيفات أولاً:</strong> أنشئ التصنيفات من تبويب "التصنيفات" قبل إنشاء
+              القوالب.<br />
+              <strong>سند قبض/صرف:</strong> اختر الوسيلة → المصدر (الطرف الأول) → الحسابات (الطرف
+              الثاني).<br />
+              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو
+              بنوك).<br />
               <strong>عملية مخزنية:</strong> اختر المخزن الافتراضي → الحسابات المرتبطة (اختياري).
             </p>
           </div>
@@ -1074,5 +1362,4 @@
       </div>
     </div>
   }
-
 </div>

@@ -3,7 +3,7 @@
  * محرك سجل التدقيق (Audit Engine)
  * =====================================================================
  * Phase 2 — بناء من الصفر (كان db.insert مباشر فقط)
- * 
+ *
  * يوحّد منطق سجل التدقيق:
  *   - logAction()        → تسجيل حدث في audit_log
  *   - getAuditLog()      → جلب سجل التدقيق مع فلاتر
@@ -12,23 +12,32 @@
  *   - purgeOldLogs()     → حذف سجلات قديمة (maintenance)
  */
 
-import { db } from '../db/index.ts';
-import { eq, and, gte, lte, desc, like } from 'drizzle-orm';
-import { auditLog } from '../db/schema/index.ts';
+import { db } from "../db/index.ts";
+import { eq, and, gte, lte, desc, like } from "drizzle-orm";
+import { auditLog } from "../db/schema/index.ts";
 
 // ── واجهات ────────────────────────────────────────────────────────────────
 
-export type AuditAction = 'create' | 'update' | 'delete' | 'cancel' | 'confirm' | 'approve' | 'login' | 'logout' | 'export' | 'import';
+export type AuditAction =
+  | "create"
+  | "update"
+  | "delete"
+  | "cancel"
+  | "confirm"
+  | "approve"
+  | "login"
+  | "logout"
+  | "export"
+  | "import";
 
 export interface AuditLogInput {
-  bizId: number;
+  businessId: number;
   userId: number;
   action: AuditAction | string;
   tableName: string;
   recordId: number | null;
   oldData?: Record<string, unknown> | null;
   newData?: Record<string, unknown> | null;
-  description?: string | null;
   ipAddress?: string | null;
 }
 
@@ -41,7 +50,6 @@ export interface AuditLogEntry {
   recordId: number | null;
   oldData: Record<string, unknown> | null;
   newData: Record<string, unknown> | null;
-  description: string | null;
   createdAt: Date | null;
 }
 
@@ -73,19 +81,24 @@ export interface AuditReport {
 export async function logAction(input: AuditLogInput): Promise<void> {
   try {
     await db.insert(auditLog).values({
-      businessId: input.bizId,
+      businessId: input.businessId,
       userId: input.userId,
       action: input.action,
       tableName: input.tableName,
       recordId: input.recordId,
       oldData: input.oldData ? JSON.stringify(input.oldData) : null,
       newData: input.newData ? JSON.stringify(input.newData) : null,
-      description: input.description ?? null,
+      ipAddress: input.ipAddress ?? null,
       createdAt: new Date(),
     });
   } catch {
     // سجل التدقيق لا يجب أن يوقف العمليات الرئيسية
-    console.error('[AuditEngine] فشل تسجيل حدث:', input.action, input.tableName, input.recordId);
+    console.error(
+      "[AuditEngine] فشل تسجيل حدث:",
+      input.action,
+      input.tableName,
+      input.recordId,
+    );
   }
 }
 
@@ -98,12 +111,17 @@ export async function getAuditLog(
 ): Promise<AuditLogEntry[]> {
   const conditions = [eq(auditLog.businessId, bizId)];
 
-  if (filters.tableName) conditions.push(eq(auditLog.tableName, filters.tableName));
-  if (filters.recordId !== undefined) conditions.push(eq(auditLog.recordId, filters.recordId));
-  if (filters.userId !== undefined) conditions.push(eq(auditLog.userId, filters.userId));
+  if (filters.tableName)
+    conditions.push(eq(auditLog.tableName, filters.tableName));
+  if (filters.recordId !== undefined)
+    conditions.push(eq(auditLog.recordId, filters.recordId));
+  if (filters.userId !== undefined)
+    conditions.push(eq(auditLog.userId, filters.userId));
   if (filters.action) conditions.push(eq(auditLog.action, filters.action));
-  if (filters.fromDate) conditions.push(gte(auditLog.createdAt, new Date(filters.fromDate)));
-  if (filters.toDate) conditions.push(lte(auditLog.createdAt, new Date(filters.toDate)));
+  if (filters.fromDate)
+    conditions.push(gte(auditLog.createdAt, new Date(filters.fromDate)));
+  if (filters.toDate)
+    conditions.push(lte(auditLog.createdAt, new Date(filters.toDate)));
 
   const limit = filters.limit ?? 100;
   const offset = filters.offset ?? 0;
@@ -118,14 +136,13 @@ export async function getAuditLog(
 
   return rows.map((r) => ({
     id: r.id,
-    businessId: r.businessId,
+    businessId: r.businessId ?? 0,
     userId: r.userId ?? null,
-    action: r.action ?? '',
-    tableName: r.tableName ?? '',
+    action: r.action ?? "",
+    tableName: r.tableName ?? "",
     recordId: r.recordId ?? null,
     oldData: r.oldData ? JSON.parse(r.oldData as string) : null,
     newData: r.newData ? JSON.parse(r.newData as string) : null,
-    description: r.description ?? null,
     createdAt: r.createdAt ?? null,
   }));
 }
@@ -163,18 +180,16 @@ export async function exportAuditReport(
  * حذف سجلات التدقيق الأقدم من N يوم (للصيانة)
  * تُستدعى في maintenance scripts فقط
  */
-export async function purgeOldLogs(bizId: number, olderThanDays: number): Promise<number> {
+export async function purgeOldLogs(
+  bizId: number,
+  olderThanDays: number,
+): Promise<number> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - olderThanDays);
 
   const deleted = await db
     .delete(auditLog)
-    .where(
-      and(
-        eq(auditLog.businessId, bizId),
-        lte(auditLog.createdAt, cutoff),
-      ),
-    )
+    .where(and(eq(auditLog.businessId, bizId), lte(auditLog.createdAt, cutoff)))
     .returning({ id: auditLog.id });
 
   return deleted.length;
@@ -186,7 +201,11 @@ export async function purgeOldLogs(bizId: number, olderThanDays: number): Promis
 export async function getAuditStats(
   bizId: number,
   fromDate?: string,
-): Promise<{ total: number; byAction: Record<string, number>; byTable: Record<string, number> }> {
+): Promise<{
+  total: number;
+  byAction: Record<string, number>;
+  byTable: Record<string, number>;
+}> {
   const filters: AuditLogFilters = { limit: 10000 };
   if (fromDate) filters.fromDate = fromDate;
 

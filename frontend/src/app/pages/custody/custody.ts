@@ -1,11 +1,25 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
 import { PAGE_IMPORTS } from '../../shared/page-imports';
 
-interface CustodyForm { custodyType: string; contentType: string; partyName: string; partyType: string; employeeId: number | null; description: string; amount: number; accountId: number | null; currencyId: number | null; }
-interface SettleForm { amount: number; notes: string; settledAt: string; }
+interface CustodyForm {
+  custodyType: string;
+  contentType: string;
+  partyName: string;
+  partyType: string;
+  employeeId: number | null;
+  description: string;
+  amount: number;
+  accountId: number | null;
+  currencyId: number | null;
+}
+interface SettleForm {
+  amount: number;
+  notes: string;
+  settledAt: string;
+}
 
 @Component({
   selector: 'app-custody',
@@ -33,8 +47,15 @@ export class CustodyComponent extends BasePageComponent {
   selectedCurrencyId = signal<number | null>(null);
 
   form: CustodyForm = {
-    custodyType: 'permanent', contentType: 'cash', partyName: '', partyType: 'employee',
-    employeeId: null, description: '', amount: 0, accountId: null, currencyId: null,
+    custodyType: 'permanent',
+    contentType: 'cash',
+    partyName: '',
+    partyType: 'employee',
+    employeeId: null,
+    description: '',
+    amount: 0,
+    accountId: null,
+    currencyId: null,
   };
 
   settleForm: SettleForm = { amount: 0, notes: '', settledAt: '' };
@@ -55,9 +76,9 @@ export class CustodyComponent extends BasePageComponent {
     this.load();
   }
 
-  get filteredRecords(): any[] {
-    return this.records().filter(r => r.custodyType === this.activeTab());
-  }
+  filteredRecords = computed(() =>
+    this.records().filter((r) => r.custodyType === this.activeTab()),
+  );
 
   switchTab(tab: 'permanent' | 'temporary') {
     this.activeTab.set(tab);
@@ -73,7 +94,9 @@ export class CustodyComponent extends BasePageComponent {
       ]);
       this.records.set(custodyRecordsData || []);
       this.custodyAccounts.set(custodyAccountsData || []);
-      this.filteredAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'custody'));
+      this.filteredAccounts.set(
+        (allAccounts || []).filter((a: any) => a.accountType === 'custody'),
+      );
     } catch (e) {
       console.error(e);
     }
@@ -82,8 +105,15 @@ export class CustodyComponent extends BasePageComponent {
 
   openAdd() {
     this.form = {
-      custodyType: this.activeTab(), contentType: 'cash', partyName: '', partyType: 'employee',
-      employeeId: null, description: '', amount: 0, accountId: null, currencyId: null,
+      custodyType: this.activeTab(),
+      contentType: 'cash',
+      partyName: '',
+      partyType: 'employee',
+      employeeId: null,
+      description: '',
+      amount: 0,
+      accountId: null,
+      currencyId: null,
     };
     this.accountCurrencies.set([]);
     this.selectedCurrencyId.set(null);
@@ -93,10 +123,15 @@ export class CustodyComponent extends BasePageComponent {
 
   openEdit(c: any) {
     this.form = {
-      custodyType: c.custodyType || 'permanent', contentType: c.contentType || 'cash',
-      partyName: c.partyName || '', partyType: c.partyType || 'employee',
-      employeeId: c.employeeId, description: c.description || '', amount: c.amount || 0,
-      accountId: c.accountId ?? null, currencyId: c.currencyId ?? null,
+      custodyType: c.custodyType || 'permanent',
+      contentType: c.contentType || 'cash',
+      partyName: c.partyName || '',
+      partyType: c.partyType || 'employee',
+      employeeId: c.employeeId,
+      description: c.description || '',
+      amount: c.amount || 0,
+      accountId: c.accountId ?? null,
+      currencyId: c.currencyId ?? null,
     };
     this.accountCurrencies.set([]);
     this.selectedCurrencyId.set(null);
@@ -172,7 +207,9 @@ export class CustodyComponent extends BasePageComponent {
     try {
       const detail = await this.api.getCustodyRecord(this.bizId, c.id);
       this.settlements.set(detail.settlements || []);
-    } catch { this.settlements.set([]); }
+    } catch {
+      this.settlements.set([]);
+    }
   }
 
   openSettle() {
@@ -198,25 +235,29 @@ export class CustodyComponent extends BasePageComponent {
 
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
-      active: 'نشطة', partially_settled: 'مسوّاة جزئياً',
-      settled: 'مسوّاة', cancelled: 'ملغاة',
+      active: 'نشطة',
+      partially_settled: 'مسوّاة جزئياً',
+      settled: 'مسوّاة',
+      cancelled: 'ملغاة',
     };
     return map[status] || status;
   }
 
   getStatusClass(status: string): string {
     const map: Record<string, string> = {
-      active: 'st-active', partially_settled: 'st-partial',
-      settled: 'st-settled', cancelled: 'st-cancelled',
+      active: 'st-active',
+      partially_settled: 'st-partial',
+      settled: 'st-settled',
+      cancelled: 'st-cancelled',
     };
     return map[status] || '';
   }
 
   getPartyTypeLabel(type: string): string {
-    return this.partyTypes.find(t => t.key === type)?.label || type;
+    return this.partyTypes.find((t) => t.key === type)?.label || type;
   }
 
   getContentTypeLabel(type: string): string {
-    return this.contentTypes.find(t => t.key === type)?.label || type;
+    return this.contentTypes.find((t) => t.key === type)?.label || type;
   }
 }
