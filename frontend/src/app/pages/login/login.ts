@@ -1,39 +1,31 @@
 import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { form, FormField } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { CssBackgroundComponent } from '../../shared/components/css-background/css-background.component';
-
-interface LoginFormData {
-  username: string;
-  password: string;
-}
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [RouterLink, CssBackgroundComponent, FormField],
+  imports: [RouterLink, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
 export class LoginComponent {
-  private readonly auth = inject(AuthService);
+  private readonly auth   = inject(AuthService);
   private readonly router = inject(Router);
 
-  // ===== Signal Form =====
-  loginModel = signal<LoginFormData>({ username: '', password: '' });
-  loginForm = form(this.loginModel);
-
-  isLoading = signal(false);
-  error = signal('');
+  username     = signal('');
+  password     = signal('');
+  isLoading    = signal(false);
+  error        = signal('');
   showPassword = signal(false);
 
   async onLogin() {
-    const username = this.loginModel().username.trim();
-    const password = this.loginModel().password.trim();
+    const u = this.username().trim();
+    const p = this.password().trim();
 
-    if (!username || !password) {
+    if (!u || !p) {
       this.error.set('يرجى إدخال اسم المستخدم وكلمة المرور');
       return;
     }
@@ -42,7 +34,7 @@ export class LoginComponent {
     this.error.set('');
 
     try {
-      await this.auth.login(username, password);
+      await this.auth.login(u, p);
       this.router.navigate(['/businesses']);
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'فشل تسجيل الدخول');

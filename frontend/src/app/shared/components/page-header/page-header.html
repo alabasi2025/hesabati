@@ -1,0 +1,36 @@
+<div class="page-header-valex">
+  <!-- Breadcrumb -->
+  @if (breadcrumb().length > 0) {
+    <nav class="breadcrumb-nav" aria-label="breadcrumb">
+      <ol class="breadcrumb-list">
+        @for (crumb of breadcrumb(); track $index; let last = $last) {
+          <li class="breadcrumb-item" [class.active]="last">
+            @if (!last) {
+              <span>{{ crumb }}</span>
+              <span class="breadcrumb-sep material-icons-round">chevron_left</span>
+            } @else {
+              <span>{{ crumb }}</span>
+            }
+          </li>
+        }
+      </ol>
+    </nav>
+  }
+
+  <!-- Title Row -->
+  <div class="page-header-row">
+    <div class="page-title-group">
+      @if (icon()) {
+        <div class="page-icon-wrap">
+          <span class="material-icons-round">{{ icon() }}</span>
+        </div>
+      }
+      <h1 class="page-title">{{ title() }}</h1>
+    </div>
+
+    <!-- Projected Buttons -->
+    <div class="page-header-actions">
+      <ng-content></ng-content>
+    </div>
+  </div>
+</div>

@@ -1,122 +1,118 @@
-<div class="auth-container">
-  <app-css-background variant="login"></app-css-background>
+<div class="register-page">
+  <!-- Background -->
+  <div class="register-bg"></div>
 
-  <div class="auth-card">
-    <div class="card-glow"></div>
+  <!-- Card -->
+  <div class="register-card">
 
-    <div class="logo-section">
-      <div class="logo-icon">
-        <div class="logo-inner">
-          <span class="material-icons-round">person_add</span>
-        </div>
+    <!-- Logo -->
+    <div class="register-logo">
+      <div class="logo-icon-wrap">
+        <span class="material-icons-round">bolt</span>
       </div>
-      <h1 class="app-title">إنشاء حساب جديد</h1>
-      <p class="app-subtitle">سجّل مستخدماً جديداً في نظام حساباتي</p>
+      <h1 class="app-name">حساباتي</h1>
+      <p class="app-desc">إنشاء حساب مستخدم جديد</p>
     </div>
 
-    <form (submit)="$event.preventDefault(); onRegister()" class="auth-form">
+    <!-- Form -->
+    <form class="register-form" (submit)="$event.preventDefault(); onRegister()">
+
+      <!-- Error -->
       @if (error()) {
-        <div class="error-message">
+        <div class="alert-error">
           <span class="material-icons-round">error_outline</span>
           <span>{{ error() }}</span>
         </div>
       }
 
-      <div class="field-group">
-        <label class="field-label">
-          <span class="material-icons-round">person</span>
-          الاسم الكامل
-        </label>
-        <div class="input-wrapper">
+      <!-- Full Name -->
+      <div class="form-field">
+        <label class="field-label">الاسم الكامل</label>
+        <div class="input-with-icon">
+          <span class="input-icon material-icons-round">person_outline</span>
           <input
             type="text"
-            class="input-3d"
-            placeholder="الاسم الكامل"
-            [formField]="registerForm.fullName"
+            class="valex-input"
+            placeholder="أدخل الاسم الكامل"
+            [value]="fullName()"
+            (input)="fullName.set($any($event.target).value)"
             autocomplete="name"
           />
-          <div class="input-highlight"></div>
         </div>
       </div>
 
-      <div class="field-group">
-        <label class="field-label">
-          <span class="material-icons-round">badge</span>
-          اسم المستخدم
-        </label>
-        <div class="input-wrapper">
+      <!-- Username -->
+      <div class="form-field">
+        <label class="field-label">اسم المستخدم</label>
+        <div class="input-with-icon">
+          <span class="input-icon material-icons-round">badge</span>
           <input
             type="text"
-            class="input-3d"
+            class="valex-input"
             placeholder="اسم الدخول"
-            [formField]="registerForm.username"
+            [value]="username()"
+            (input)="username.set($any($event.target).value)"
             autocomplete="username"
           />
-          <div class="input-highlight"></div>
         </div>
       </div>
 
-      <div class="field-group">
-        <label class="field-label">
-          <span class="material-icons-round">lock</span>
-          كلمة المرور
-        </label>
-        <div class="input-wrapper">
-          <div class="password-wrapper">
-            <input
-              [type]="showPassword() ? 'text' : 'password'"
-              class="input-3d"
-              placeholder="8 أحرف على الأقل، حرف ورقم"
-              [formField]="registerForm.password"
-              autocomplete="new-password"
-            />
-            <button type="button" class="toggle-password" (click)="togglePassword()">
-              <span class="material-icons-round">
-                {{ showPassword() ? 'visibility_off' : 'visibility' }}
-              </span>
-            </button>
-          </div>
-          <div class="input-highlight"></div>
+      <!-- Password -->
+      <div class="form-field">
+        <label class="field-label">كلمة المرور</label>
+        <div class="input-with-icon">
+          <span class="input-icon material-icons-round">lock_outline</span>
+          <input
+            [type]="showPassword() ? 'text' : 'password'"
+            class="valex-input has-toggle"
+            placeholder="8 أحرف على الأقل، حرف ورقم"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+            autocomplete="new-password"
+          />
+          <button type="button" class="toggle-btn" (click)="togglePassword()">
+            <span class="material-icons-round">
+              {{ showPassword() ? 'visibility_off' : 'visibility' }}
+            </span>
+          </button>
         </div>
       </div>
 
-      <div class="field-group">
-        <label class="field-label">
-          <span class="material-icons-round">admin_panel_settings</span>
-          الدور
-        </label>
-        <div class="input-wrapper">
+      <!-- Role -->
+      <div class="form-field">
+        <label class="field-label">الدور الوظيفي</label>
+        <div class="input-with-icon">
+          <span class="input-icon material-icons-round">admin_panel_settings</span>
           <select
-            class="input-3d"
-            [value]="registerModel().role"
-            (change)="registerModel.update(v => ({...v, role: $any($event.target).value}))"
+            class="valex-input valex-select"
+            [value]="role()"
+            (change)="role.set($any($event.target).value)"
           >
             @for (opt of roleOptions; track opt.value) {
               <option [value]="opt.value">{{ opt.label }}</option>
             }
           </select>
-          <div class="input-highlight"></div>
         </div>
       </div>
 
-      <button type="submit" class="submit-btn" [disabled]="isLoading()">
+      <!-- Submit -->
+      <button type="submit" class="btn-submit" [disabled]="isLoading()">
         @if (isLoading()) {
-          <div class="spinner"></div>
+          <div class="btn-spinner"></div>
           <span>جاري إنشاء الحساب...</span>
         } @else {
           <span class="material-icons-round">person_add</span>
           <span>إنشاء الحساب</span>
         }
-        <div class="btn-shine"></div>
       </button>
+
     </form>
 
-    <div class="auth-footer">
-      <div class="footer-line"></div>
-      <p>
-        لديك حساب؟
-        <a routerLink="/login" class="link">تسجيل الدخول</a>
-      </p>
+    <!-- Footer -->
+    <div class="register-footer">
+      <span class="footer-text">لديك حساب بالفعل؟</span>
+      <a routerLink="/login" class="footer-link">تسجيل الدخول</a>
     </div>
+
   </div>
 </div>

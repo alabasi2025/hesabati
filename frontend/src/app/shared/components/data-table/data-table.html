@@ -1,0 +1,71 @@
+<!-- Data Table Valex -->
+<div class="valex-table-wrapper">
+
+  <!-- Loading Skeleton -->
+  @if (loading()) {
+    <div class="table-loading">
+      <div class="valex-spinner spinner-md"></div>
+      <span class="loading-text">جاري التحميل...</span>
+    </div>
+  } @else if (data().length === 0) {
+    <!-- Empty State -->
+    <div class="table-empty">
+      <span class="material-icons-round empty-icon">inbox</span>
+      <p class="empty-text">{{ emptyMessage() }}</p>
+    </div>
+  } @else {
+    <!-- Table -->
+    <div class="table-scroll">
+      <table class="valex-table">
+        <thead>
+          <tr>
+            @for (col of columns(); track col.key) {
+              <th>{{ col.label }}</th>
+            }
+            <th class="actions-col">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of data(); track $index) {
+            <tr>
+              @for (col of columns(); track col.key) {
+                <td>
+                  @switch (col.type) {
+                    @case ('badge') {
+                      <span class="valex-badge">{{ getCellValue(row, col) }}</span>
+                    }
+                    @case ('amount') {
+                      <span class="amount-cell">
+                        {{ getCellValue(row, col) | number: '1.2-2' }}
+                      </span>
+                    }
+                    @case ('date') {
+                      <span class="date-cell">
+                        {{ getCellValue(row, col) | date: 'yyyy/MM/dd' }}
+                      </span>
+                    }
+                    @default {
+                      {{ getCellValue(row, col) }}
+                    }
+                  }
+                </td>
+              }
+              <!-- Actions -->
+              <td class="actions-col">
+                <div class="row-actions">
+                  <button class="action-btn edit-btn" (click)="onEdit(row)" title="تعديل">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="action-btn delete-btn" (click)="onDelete(row)" title="حذف">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>

@@ -1,0 +1,23 @@
+<div class="filter-bar-valex">
+  <!-- Search Input -->
+  <div class="search-group">
+    <span class="search-icon material-icons-round">search</span>
+    <input
+      type="text"
+      class="search-input"
+      [placeholder]="searchPlaceholder()"
+      [(ngModel)]="searchValue"
+      (ngModelChange)="onSearch($event)"
+    />
+    @if (searchValue) {
+      <button class="clear-btn" (click)="clearSearch()" type="button">
+        <span class="material-icons-round">close</span>
+      </button>
+    }
+  </div>
+
+  <!-- Content Projection for extra filters -->
+  <div class="extra-filters">
+    <ng-content></ng-content>
+  </div>
+</div>

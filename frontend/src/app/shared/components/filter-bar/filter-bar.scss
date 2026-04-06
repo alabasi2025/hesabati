@@ -1,0 +1,89 @@
+// ============================================
+//  FILTER BAR — Valex Design System
+//  RTL · Search · Extra Filters Slot
+// ============================================
+
+:host {
+  display: block;
+}
+
+.filter-bar-valex {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+// ===== Search Group =====
+.search-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  font-size: 19px;
+  color: var(--color-textmuted, #8b97a9);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.55rem 2.5rem 0.55rem 2.5rem;
+  border: 1px solid var(--color-border, #dee2e8);
+  border-radius: 10px;
+  background: var(--color-cardbg, #fff);
+  font-size: 0.875rem;
+  color: var(--color-textprimary, #1e2533);
+  font-family: var(--font-primary, 'Tajawal', sans-serif);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  direction: rtl;
+
+  &::placeholder {
+    color: var(--color-textmuted, #8b97a9);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary, #6366f1);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 99, 102, 241), 0.1);
+  }
+}
+
+.clear-btn {
+  position: absolute;
+  left: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  color: var(--color-textmuted, #8b97a9);
+  transition: color 0.15s;
+  border-radius: 50%;
+
+  &:hover {
+    color: var(--color-textprimary, #1e2533);
+    background: var(--color-bodybg, #f5f7fb);
+  }
+
+  .material-icons-round {
+    font-size: 16px;
+  }
+}
+
+// ===== Extra Filters Slot =====
+.extra-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

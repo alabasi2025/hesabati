@@ -1,99 +1,85 @@
-<div class="login-container">
-  <!-- CSS Background -->
-  <app-css-background variant="login"></app-css-background>
+<div class="login-page">
+  <!-- Background -->
+  <div class="login-bg"></div>
 
-  <!-- Login Card -->
+  <!-- Card -->
   <div class="login-card">
-    <!-- Glow Effect -->
-    <div class="card-glow"></div>
 
-    <!-- Logo Section -->
-    <div class="logo-section">
-      <div class="logo-icon">
-        <div class="logo-inner">
-          <span class="material-icons-round">bolt</span>
-        </div>
-        <div class="logo-ring"></div>
-        <div class="logo-ring ring-2"></div>
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="logo-icon-wrap">
+        <span class="material-icons-round">bolt</span>
       </div>
-      <h1 class="app-title">حساباتي</h1>
-      <p class="app-subtitle">إدارة محطات الكهرباء والحسابات الشخصية</p>
+      <h1 class="app-name">حساباتي</h1>
+      <p class="app-desc">نظام إدارة الحسابات المالية</p>
     </div>
 
-    <!-- Form Section -->
-    <form (submit)="$event.preventDefault(); onLogin()" class="login-form">
-      <!-- Error Message -->
+    <!-- Form -->
+    <form class="login-form" (submit)="$event.preventDefault(); onLogin()">
+
+      <!-- Error -->
       @if (error()) {
-        <div class="error-message">
+        <div class="alert-error">
           <span class="material-icons-round">error_outline</span>
           <span>{{ error() }}</span>
         </div>
       }
 
-      <!-- Username Field -->
-      <div class="field-group">
-        <label class="field-label">
-          <span class="material-icons-round">person</span>
-          اسم المستخدم
-        </label>
-        <div class="input-wrapper">
+      <!-- Username -->
+      <div class="form-field">
+        <label class="field-label">اسم المستخدم</label>
+        <div class="input-with-icon">
+          <span class="input-icon material-icons-round">person_outline</span>
           <input
             type="text"
-            class="input-3d"
+            class="valex-input"
             placeholder="أدخل اسم المستخدم"
-            [formField]="loginForm.username"
+            [value]="username()"
+            (input)="username.set($any($event.target).value)"
             autocomplete="username"
           />
-          <div class="input-highlight"></div>
         </div>
       </div>
 
-      <!-- Password Field -->
-      <div class="field-group">
-        <label class="field-label">
-          <span class="material-icons-round">lock</span>
-          كلمة المرور
-        </label>
-        <div class="input-wrapper">
-          <div class="password-wrapper">
-            <input
-              [type]="showPassword() ? 'text' : 'password'"
-              class="input-3d"
-              placeholder="أدخل كلمة المرور"
-              [formField]="loginForm.password"
-              autocomplete="current-password"
-            />
-            <button type="button" class="toggle-password" (click)="togglePassword()">
-              <span class="material-icons-round">
-                {{ showPassword() ? 'visibility_off' : 'visibility' }}
-              </span>
-            </button>
-          </div>
-          <div class="input-highlight"></div>
+      <!-- Password -->
+      <div class="form-field">
+        <label class="field-label">كلمة المرور</label>
+        <div class="input-with-icon">
+          <span class="input-icon material-icons-round">lock_outline</span>
+          <input
+            [type]="showPassword() ? 'text' : 'password'"
+            class="valex-input has-toggle"
+            placeholder="أدخل كلمة المرور"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+            autocomplete="current-password"
+          />
+          <button type="button" class="toggle-btn" (click)="togglePassword()">
+            <span class="material-icons-round">
+              {{ showPassword() ? 'visibility_off' : 'visibility' }}
+            </span>
+          </button>
         </div>
       </div>
 
-      <!-- Login Button -->
-      <button type="submit" class="login-btn" [disabled]="isLoading()">
+      <!-- Submit -->
+      <button type="submit" class="btn-submit" [disabled]="isLoading()">
         @if (isLoading()) {
-          <div class="spinner"></div>
+          <div class="btn-spinner"></div>
           <span>جاري تسجيل الدخول...</span>
         } @else {
           <span class="material-icons-round">login</span>
           <span>تسجيل الدخول</span>
         }
-        <div class="btn-shine"></div>
       </button>
+
     </form>
 
     <!-- Footer -->
     <div class="login-footer">
-      <div class="footer-line"></div>
-      <p>
-        لا تملك حساباً؟
-        <a routerLink="/register" class="register-link">إنشاء حساب جديد</a>
-      </p>
-      <p>نظام حساباتي &copy; 2026</p>
+      <span class="footer-text">لا تملك حساباً؟</span>
+      <a routerLink="/register" class="footer-link">إنشاء حساب جديد</a>
     </div>
+
   </div>
 </div>
