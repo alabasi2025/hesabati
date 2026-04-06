@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+// TODO: re-enable when drag-and-drop is implemented in the template
+// import { CdkDragDrop, CdkDrag, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { BasePageComponent } from '../../shared/base-page.component';
@@ -113,7 +114,7 @@ const SOURCE_TYPES = [
 @Component({
   selector: 'app-ui-builder',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, CdkDrag, CdkDropList, JsonPipe],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, JsonPipe],
   templateUrl: './ui-builder.html',
   styleUrl: './ui-builder.scss',
 })

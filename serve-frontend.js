@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const DIST_DIR = path.join(__dirname, 'frontend/dist/frontend/browser');
-const PORT = 4200;
+console.log('Serving from:', DIST_DIR);
+const PORT = process.env.PORT || 4200;
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -21,6 +22,17 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
   // Proxy API requests to backend
   if (req.url.startsWith('/api/') || req.url.startsWith('/health')) {
     const proxyReq = http.request({
@@ -28,14 +40,15 @@ const server = http.createServer((req, res) => {
       port: 3000,
       path: req.url,
       method: req.method,
-      headers: req.headers,
+      headers: { ...req.headers, host: 'localhost:3000' },
     }, (proxyRes) => {
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       proxyRes.pipe(res);
     });
-    proxyReq.on('error', () => {
+    proxyReq.on('error', (e) => {
+      console.error('Proxy error:', e.message);
       res.writeHead(502);
-      res.end('Backend unavailable');
+      res.end('Backend unavailable - make sure backend is running on port 3000');
     });
     req.pipe(proxyReq);
     return;

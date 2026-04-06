@@ -194,7 +194,118 @@
 // § 7. ANIMATION UTILITY CLASSES
 // ─────────────────────────────────────────────────────────────────────────────
 
-.animate-fade-in       { animation: hesabati-fade-in $duration-normal $ease-out both; }
+// ─────────────────────────────────────────────────────────────────────────────
+// § 8. VALEX-STYLE SMOOTH ENTRANCE ANIMATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Valex card entrance — subtle lift + fade
+@keyframes valex-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Valex page content entrance
+@keyframes valex-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Valex stat card entrance — staggered lift
+@keyframes valex-stat-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Valex sidebar item entrance
+@keyframes valex-nav-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Valex modal entrance — centered zoom
+@keyframes valex-modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Valex dropdown slide — from top
+@keyframes valex-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Valex indigo pulse glow — for primary elements
+@keyframes valex-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.20),
+                0 0 0 0 rgba(99, 102, 241, 0.10);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(99, 102, 241, 0.40),
+                0 0 0 4px rgba(99, 102, 241, 0.05);
+  }
+}
+
+// Valex badge count bounce
+@keyframes valex-badge-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 9. VALEX ANIMATION UTILITY CLASSES
+// ─────────────────────────────────────────────────────────────────────────────
+
+.valex-card-enter    { animation: valex-card-enter 350ms $ease-spring both; }
+.valex-page-enter    { animation: valex-page-enter 300ms $ease-spring both; }
+.valex-stat-enter    { animation: valex-stat-enter 400ms $ease-spring both; }
+.valex-nav-enter     { animation: valex-nav-enter 250ms $ease-spring both; }
+.valex-modal-enter   { animation: valex-modal-enter 280ms $ease-spring both; }
+.valex-dropdown-enter{ animation: valex-dropdown-enter 180ms $ease-spring both; }
+.valex-glow-pulse    { animation: valex-glow-pulse 2.5s ease-in-out infinite; }
+.valex-badge-pop     { animation: valex-badge-pop 300ms $ease-bounce both; }
+
 .animate-slide-up      { animation: hesabati-slide-up $duration-slow $ease-spring both; }
 .animate-slide-down    { animation: hesabati-slide-down $duration-slow $ease-spring both; }
 .animate-slide-right   { animation: hesabati-slide-right $duration-slow $ease-spring both; }

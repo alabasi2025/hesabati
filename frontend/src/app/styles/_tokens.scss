@@ -81,19 +81,19 @@ $radius-4xl:    2rem;       // 32px
 $radius-full:   9999px;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 4. COLOR PALETTE — DARK THEME (Default)
+// § 4. COLOR PALETTE — DARK THEME (Default) — Valex Indigo/Slate
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 4.1 Background Layers (depth system)
-$dark-bg-void:       #000810;
-$dark-bg-base:       #020617;
-$dark-bg-depth-1:    #0a1128;
-$dark-bg-depth-2:    #0f172a;
-$dark-bg-depth-3:    #1e293b;
-$dark-bg-depth-4:    #263348;
-$dark-bg-depth-5:    #334155;
-$dark-bg-elevated:   #1a2744;
-$dark-bg-overlay:    rgba(0, 8, 16, 0.85);
+// 4.1 Background Layers (depth system) — Valex slate-900 base
+$dark-bg-void:       #060b16;
+$dark-bg-base:       #0f172a;       // slate-900 — Valex primary bg
+$dark-bg-depth-1:    #111827;       // deep sidebar bg
+$dark-bg-depth-2:    #131b2e;       // surface
+$dark-bg-depth-3:    #1e293b;       // slate-800 — card bg
+$dark-bg-depth-4:    #243044;       // card hover
+$dark-bg-depth-5:    #2d3a52;       // elevated
+$dark-bg-elevated:   #1a2540;
+$dark-bg-overlay:    rgba(15, 23, 42, 0.88);
 
 // 4.2 Text Hierarchy
 $dark-text-primary:    #f1f5f9;
@@ -102,54 +102,56 @@ $dark-text-tertiary:   #94a3b8;
 $dark-text-muted:      #64748b;
 $dark-text-disabled:   #475569;
 
-// 4.3 Border System
-$dark-border-subtle:    rgba(148, 163, 184, 0.06);
+// 4.3 Border System — indigo-tinted borders
+$dark-border-subtle:    rgba(99, 102, 241, 0.06);
 $dark-border-default:   rgba(148, 163, 184, 0.10);
 $dark-border-strong:    rgba(148, 163, 184, 0.18);
-$dark-border-focus:     rgba(59, 130, 246, 0.50);
+$dark-border-focus:     rgba(99, 102, 241, 0.55);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 5. COLOR PALETTE — LIGHT THEME
+// § 5. COLOR PALETTE — LIGHT THEME — Valex slate-100 base
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 5.1 Background Layers
-$light-bg-void:      #e8ecf4;
-$light-bg-base:      #f0f2f5;
-$light-bg-depth-1:   #f5f7fa;
+// 5.1 Background Layers — Valex uses f1f5f9 as base
+$light-bg-void:      #e2e8f0;       // slate-200
+$light-bg-base:      #f1f5f9;       // slate-100 — Valex primary bg
+$light-bg-depth-1:   #f8fafc;       // slate-50
 $light-bg-depth-2:   #ffffff;
 $light-bg-depth-3:   #ffffff;
-$light-bg-depth-4:   #f5f7ff;
-$light-bg-depth-5:   #eef2ff;
+$light-bg-depth-4:   #f0f4ff;       // indigo tint
+$light-bg-depth-5:   #eef2ff;       // indigo-50
 $light-bg-elevated:  #ffffff;
 $light-bg-overlay:   rgba(255, 255, 255, 0.92);
 
 // 5.2 Text Hierarchy
-$light-text-primary:    #0c1222;
-$light-text-secondary:  #1a2744;
-$light-text-tertiary:   #2d3a56;
-$light-text-muted:      #4a5568;
-$light-text-disabled:   #9ca3af;
+$light-text-primary:    #0f172a;    // slate-900
+$light-text-secondary:  #1e293b;    // slate-800
+$light-text-tertiary:   #334155;    // slate-700
+$light-text-muted:      #64748b;    // slate-500
+$light-text-disabled:   #94a3b8;    // slate-400
 
-// 5.3 Border System
-$light-border-subtle:    rgba(60, 80, 150, 0.06);
-$light-border-default:   rgba(60, 80, 150, 0.12);
-$light-border-strong:    rgba(60, 80, 150, 0.25);
-$light-border-focus:     rgba(59, 130, 246, 0.50);
+// 5.3 Border System — subtle indigo tints
+$light-border-subtle:    rgba(99, 102, 241, 0.06);
+$light-border-default:   rgba(99, 102, 241, 0.12);
+$light-border-strong:    rgba(99, 102, 241, 0.22);
+$light-border-focus:     rgba(99, 102, 241, 0.55);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 6. ACCENT COLORS (Semantic)
+// § 6. ACCENT COLORS (Semantic) — Valex: Indigo-500 primary
 // ─────────────────────────────────────────────────────────────────────────────
 $color-blue:      #3b82f6;
 $color-blue-light:#60a5fa;
 $color-blue-dark: #2563eb;
 
-$color-indigo:      #6366f1;
+// Valex PRIMARY = indigo-500
+$color-indigo:      #6366f1;        // PRIMARY — Valex brand
 $color-indigo-light:#818cf8;
 $color-indigo-dark: #4f46e5;
 
-$color-purple:      #a855f7;
-$color-purple-light:#c084fc;
-$color-purple-dark: #9333ea;
+// Valex SECONDARY = purple-500
+$color-purple:      #8b5cf6;        // SECONDARY — Valex brand (violet-500)
+$color-purple-light:#a78bfa;
+$color-purple-dark: #7c3aed;
 
 $color-pink:      #ec4899;
 $color-pink-light:#f472b6;
@@ -252,13 +254,15 @@ $bevel-highlight-strong: inset 0 2px 0 rgba(255, 255, 255, 0.20),
 $bevel-shadow:        inset 0 -1px 0 rgba(0, 0, 0, 0.15),
                       inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 
-// 7.5 Color Glow (neon-style 3D glow)
+// 7.5 Color Glow (neon-style 3D glow) — Valex indigo primary
+$glow-indigo:  0 0 20px rgba(99, 102, 241, 0.35),
+               0 0 60px rgba(99, 102, 241, 0.12);
 $glow-blue:    0 0 20px rgba(59, 130, 246, 0.30),
                0 0 60px rgba(59, 130, 246, 0.10);
 $glow-green:   0 0 20px rgba(34, 197, 94, 0.30),
                0 0 60px rgba(34, 197, 94, 0.10);
-$glow-purple:  0 0 20px rgba(168, 85, 247, 0.30),
-               0 0 60px rgba(168, 85, 247, 0.10);
+$glow-purple:  0 0 20px rgba(139, 92, 246, 0.35),
+               0 0 60px rgba(139, 92, 246, 0.12);
 $glow-amber:   0 0 20px rgba(245, 158, 11, 0.30),
                0 0 60px rgba(245, 158, 11, 0.10);
 $glow-red:     0 0 20px rgba(239, 68, 68, 0.30),
@@ -272,36 +276,42 @@ $glow-cyan:    0 0 20px rgba(6, 182, 212, 0.30),
 // § 8. GRADIENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 8.1 Surface gradients (dark)
-$gradient-dark-surface:    linear-gradient(145deg, rgba(30, 41, 59, 0.70), rgba(15, 23, 42, 0.85));
-$gradient-dark-elevated:   linear-gradient(145deg, rgba(30, 41, 59, 0.45), rgba(15, 23, 42, 0.55));
-$gradient-dark-glass:      linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+// 8.1 Surface gradients (dark) — Valex slate-900/800
+$gradient-dark-surface:    linear-gradient(145deg, rgba(30, 41, 59, 0.80), rgba(15, 23, 42, 0.95));
+$gradient-dark-elevated:   linear-gradient(145deg, rgba(30, 41, 59, 0.55), rgba(15, 23, 42, 0.70));
+$gradient-dark-glass:      linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+
+// Valex sidebar gradient (deep indigo to slate)
+$gradient-sidebar-dark:    linear-gradient(180deg, #0f172a 0%, #131b2e 40%, #0f172a 100%);
+$gradient-sidebar-accent:  linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 
 // 8.2 Surface gradients (light)
 $gradient-light-surface:   linear-gradient(145deg, #ffffff, #f8fafc);
 $gradient-light-elevated:  linear-gradient(145deg, #ffffff, #f0f4ff);
-$gradient-light-glass:     linear-gradient(135deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.40));
+$gradient-light-glass:     linear-gradient(135deg, rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.50));
 
-// 8.3 Accent gradients (shared)
+// 8.3 Accent gradients (shared) — Valex indigo-first
+$gradient-primary:  linear-gradient(135deg, $color-indigo, $color-purple);   // Valex primary
 $gradient-blue:     linear-gradient(135deg, $color-blue, $color-indigo);
+$gradient-indigo:   linear-gradient(135deg, $color-indigo, $color-purple);   // = gradient-primary
 $gradient-green:    linear-gradient(135deg, $color-green, $color-teal);
 $gradient-amber:    linear-gradient(135deg, $color-amber, $color-orange);
 $gradient-purple:   linear-gradient(135deg, $color-purple, $color-pink);
 $gradient-red:      linear-gradient(135deg, $color-red, $color-orange);
 $gradient-teal:     linear-gradient(135deg, $color-teal, $color-cyan);
 $gradient-cyan:     linear-gradient(135deg, $color-cyan, $color-blue);
-$gradient-sunset:   linear-gradient(135deg, $color-orange, $color-pink, $color-purple);
-$gradient-aurora:   linear-gradient(135deg, $color-green, $color-cyan, $color-blue);
+$gradient-sunset:   linear-gradient(135deg, $color-indigo, $color-purple, $color-pink);
+$gradient-aurora:   linear-gradient(135deg, $color-green, $color-cyan, $color-indigo);
 $gradient-fire:     linear-gradient(135deg, $color-red, $color-orange, $color-amber);
 $gradient-ocean:    linear-gradient(135deg, $color-blue, $color-teal, $color-green);
 
-// 8.4 Mesh gradient (premium background)
-$gradient-mesh-dark:  radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                      radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
-                      radial-gradient(ellipse at 50% 80%, rgba(20, 184, 166, 0.05) 0%, transparent 50%);
-$gradient-mesh-light: radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-                      radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.04) 0%, transparent 50%),
-                      radial-gradient(ellipse at 50% 80%, rgba(20, 184, 166, 0.03) 0%, transparent 50%);
+// 8.4 Mesh gradient (premium background) — Valex indigo/purple orbs
+$gradient-mesh-dark:  radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.10) 0%, transparent 55%),
+                      radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 55%),
+                      radial-gradient(ellipse at 50% 90%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+$gradient-mesh-light: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
+                      radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 55%),
+                      radial-gradient(ellipse at 50% 90%, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 9. TRANSITIONS & EASING
@@ -451,7 +461,7 @@ $stat-palette: (
     --bg-surface:     #{$dark-bg-depth-2};
     --bg-card:        #{$dark-bg-depth-3};
     --border-color:   #{$dark-border-default};
-    --type-color:     #{$color-blue};
+    --type-color:     #{$color-indigo};      // Valex primary = indigo
   } @else {
     --text-primary:   #{$light-text-primary};
     --text-secondary: #{$light-text-secondary};
@@ -459,6 +469,6 @@ $stat-palette: (
     --bg-surface:     #{$light-bg-depth-1};
     --bg-card:        #{$light-bg-depth-2};
     --border-color:   #{$light-border-default};
-    --type-color:     #{$color-blue};
+    --type-color:     #{$color-indigo};      // Valex primary = indigo
   }
 }

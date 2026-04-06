@@ -2,19 +2,35 @@ import { describe, it, expect, beforeAll } from "vitest";
 
 const BASE_URL = "http://localhost:3000";
 let TOKEN = "";
+let COOKIES = "";
+
+/** استخراج التوكن من set-cookie header */
+function extractToken(res: Response): string {
+  const setCookie = res.headers.getSetCookie?.() || [];
+  for (const c of setCookie) {
+    const match = c.match(/hesabati_token=([^;]+)/);
+    if (match) return match[1];
+  }
+  return "";
+}
+
+function extractCookies(res: Response): string {
+  const setCookie = res.headers.getSetCookie?.() || [];
+  return setCookie.map((c) => c.split(";")[0]).join("; ");
+}
 
 // ===================== اختبارات تكاملية للـ API =====================
 describe("API Integration Tests", () => {
   beforeAll(async () => {
-    // تسجيل الدخول للحصول على token
+    // تسجيل الدخول للحصول على token (يُرسل عبر cookies)
     try {
       const res = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: "admin", password: "admin123" }),
       });
-      const data = (await res.json()) as any;
-      TOKEN = data.token || "";
+      TOKEN = extractToken(res);
+      COOKIES = extractCookies(res);
     } catch (e) {
       console.warn("⚠️ الباكند غير متاح - بعض الاختبارات ستُتخطى");
     }
@@ -23,6 +39,7 @@ describe("API Integration Tests", () => {
   const authHeaders = () => ({
     "Content-Type": "application/json",
     Authorization: `Bearer ${TOKEN}`,
+    Cookie: COOKIES,
   });
 
   describe("Health Endpoints", () => {
@@ -49,7 +66,7 @@ describe("API Integration Tests", () => {
   });
 
   describe("Authentication", () => {
-    it("POST /api/auth/login يجب أن يعيد token", async () => {
+    it("POST /api/auth/login يجب أن يعيد token (عبر cookie)", async () => {
       const res = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,8 +74,12 @@ describe("API Integration Tests", () => {
       });
       expect(res.status).toBe(200);
       const data = (await res.json()) as any;
-      expect(data.token).toBeDefined();
-      expect(data.token.length).toBeGreaterThan(10);
+      expect(data.user).toBeDefined();
+      expect(data.user.username).toBe("admin");
+      // التوكن يُرسل عبر set-cookie وليس في body
+      const token = extractToken(res);
+      expect(token).toBeDefined();
+      expect(token.length).toBeGreaterThan(10);
     });
 
     it("يجب أن يرفض كلمة مرور خاطئة", async () => {

@@ -1,72 +1,70 @@
 import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 /**
- * مكوّن الحالة الفارغة المشترك
- * الاستخدام: <app-empty-state icon="group" title="لا يوجد موظفين" (addClick)="openForm()" />
+ * مكوّن الحالة الفارغة — تصميم Valex
+ * الاستخدام: <app-empty-state icon="inbox" title="لا توجد بيانات" (addClick)="openForm()" />
  */
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
-    <div class="empty-state">
-      <span class="material-icons empty-icon">{{ icon() }}</span>
+    <div class="valex-empty-state">
+      <div class="empty-icon-wrap">
+        <span class="material-icons-round empty-icon">{{ icon() }}</span>
+      </div>
       <h3 class="empty-title">{{ title() }}</h3>
       @if (subtitle()) {
         <p class="empty-subtitle">{{ subtitle() }}</p>
       }
       @if (actionLabel()) {
-        <button class="btn-add" (click)="addClick.emit()">
-          <span class="material-icons">add</span>
+        <button class="valex-btn valex-btn-primary mt-3" (click)="addClick.emit()">
+          <span class="material-icons-round" style="font-size:1rem">add</span>
           {{ actionLabel() }}
         </button>
       }
     </div>
   `,
   styles: [`
-    .empty-state {
+    :host { display: contents; }
+    .valex-empty-state {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4rem 1rem;
+      padding: 4rem 1.5rem;
       text-align: center;
-      gap: 0.75rem;
-      color: var(--text-secondary, #888);
+      gap: 0.5rem;
+    }
+    .empty-icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: rgba(var(--color-primaryrgb), 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.75rem;
     }
     .empty-icon {
-      font-size: 4rem;
-      opacity: 0.35;
-      margin-bottom: 0.5rem;
+      font-size: 2.5rem;
+      color: var(--color-textmuted);
     }
     .empty-title {
-      font-size: 1.15rem;
+      font-size: 1rem;
       font-weight: 600;
+      color: var(--color-defaulttextcolor);
       margin: 0;
-      color: var(--text-primary, #333);
+      font-family: var(--font-primary);
     }
     .empty-subtitle {
-      font-size: 0.9rem;
-      margin: 0;
+      font-size: 0.875rem;
+      color: var(--color-textmuted);
+      margin: 0.25rem 0 0;
       max-width: 320px;
+      font-family: var(--font-primary);
     }
-    .btn-add {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      margin-top: 0.5rem;
-      padding: 0.55rem 1.25rem;
-      background: var(--primary, #1976d2);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-add:hover { background: var(--primary-dark, #1565c0); }
-    .btn-add .material-icons { font-size: 1.1rem; }
+    .mt-3 { margin-top: 1rem; }
   `],
 })
 export class EmptyStateComponent {

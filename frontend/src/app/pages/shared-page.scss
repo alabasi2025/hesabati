@@ -22,16 +22,16 @@
   .material-icons-round { font-size: 26px; color: var(--accent-amber); }
 }
 
-/* ===================== Add Button ===================== */
+/* ===================== Add Button — Valex Indigo ===================== */
 .add-btn {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 20px; border-radius: 12px; border: none;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white; font-weight: 700; font-size: 14px;
   font-family: 'Tajawal', sans-serif; cursor: pointer;
-  box-shadow: 0 4px 15px rgba(59,130,246,0.3);
-  transition: all 0.3s ease;
-  &:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(59,130,246,0.4); }
+  box-shadow: 0 4px 15px rgba(99,102,241,0.32);
+  transition: all 0.25s ease;
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.42); }
   .material-icons-round { font-size: 20px; }
 }
 
@@ -128,7 +128,7 @@
     color: var(--text-primary); font-family: 'Tajawal', sans-serif; font-size: 14px;
     font-weight: 600;
     transition: border-color 0.2s;
-    &:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+    &:focus { outline: none; border-color: var(--primary, #6366f1); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
     &::placeholder { color: var(--text-muted); }
   }
   select { cursor: pointer; }
@@ -137,11 +137,11 @@
 
 .btn-save {
   padding: 10px 24px; border-radius: 10px; border: none;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white; font-weight: 700; font-size: 14px;
   font-family: 'Tajawal', sans-serif; cursor: pointer;
   transition: all 0.2s;
-  &:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(59,130,246,0.3); }
+  &:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99,102,241,0.32); }
 }
 .btn-cancel {
   padding: 10px 24px; border-radius: 10px;
@@ -224,8 +224,9 @@
   }
   &:hover { background: var(--bg-card-hover); color: var(--text-primary); }
   &.active {
-    background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: white; border-color: transparent;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.25);
     .tab-count { background: rgba(255,255,255,0.2); color: white; }
   }
 }

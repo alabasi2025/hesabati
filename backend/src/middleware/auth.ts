@@ -5,6 +5,9 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 
 // إصلاح #14: إزالة مفتاح JWT الاحتياطي الثابت واستبداله بمفتاح عشوائي
+import { config } from "dotenv";
+config({ path: new URL("../../.env", import.meta.url) });
+
 const JWT_SECRET =
   process.env.JWT_SECRET ||
   (() => {
@@ -12,6 +15,7 @@ const JWT_SECRET =
       console.error(
         "❌ JWT_SECRET مطلوب في الإنتاج. أعد تشغيل الخادم بعد تعيين المتغير.",
       );
+      console.error("JWT_SECRET value:", process.env.JWT_SECRET);
       process.exit(1);
     }
     const devSecretPath = new URL("../../.jwt-dev-secret", import.meta.url);

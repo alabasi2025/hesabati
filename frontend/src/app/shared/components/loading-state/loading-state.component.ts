@@ -1,53 +1,38 @@
 import { Component, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 /**
- * مكوّن حالة التحميل المشترك
+ * مكوّن حالة التحميل — تصميم Valex
  * الاستخدام: <app-loading-state [loading]="loading()" />
  */
 @Component({
   selector: 'app-loading-state',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     @if (loading()) {
-      <div class="loading-state">
-        <div class="loading-spinner">
-          <span class="material-icons spinning">sync</span>
-        </div>
+      <div class="valex-loading-state">
+        <div class="valex-spinner spinner-lg"></div>
         @if (message()) {
-          <p class="loading-message">{{ message() }}</p>
+          <p class="loading-text">{{ message() }}</p>
         }
       </div>
     }
   `,
   styles: [`
-    .loading-state {
+    :host { display: contents; }
+    .valex-loading-state {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 3rem 1rem;
-      color: var(--text-secondary, #666);
-      gap: 0.75rem;
+      padding: 3.5rem 1rem;
+      gap: 1rem;
     }
-    .loading-spinner {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .spinning {
-      font-size: 2.5rem;
-      color: var(--primary, #1976d2);
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
-    }
-    .loading-message {
-      font-size: 0.95rem;
+    .loading-text {
+      font-size: 0.875rem;
+      color: var(--color-textmuted);
       margin: 0;
+      font-family: var(--font-primary);
     }
   `],
 })
