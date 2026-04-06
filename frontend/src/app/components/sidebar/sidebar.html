@@ -1,257 +1,240 @@
-<aside class="sidebar" [class.collapsed]="isCollapsed()">
-  <!-- Logo -->
-  <div class="sidebar-header">
-    <div
-      class="logo-wrapper"
-      (click)="toggleCollapse()"
-      [title]="isCollapsed() ? 'توسيع القائمة' : 'طي القائمة'"
-    >
+<aside
+  class="valex-sidebar"
+  [class.sidebar-collapsed]="isCollapsed()"
+  [class.sidebar-open]="isOpen()"
+>
+  <!-- ─── Logo / Header ─── -->
+  <div class="valex-sidebar-header">
+    <a class="sidebar-logo" [routerLink]="['/businesses']">
       <div
-        class="logo-box"
-        [style.background]="biz.currentBusinessColor() + '20'"
-        [style.color]="biz.currentBusinessColor()"
+        class="logo-icon"
+        [style.background]="biz.currentBusinessColor() ? biz.currentBusinessColor() + '22' : null"
+        [style.color]="biz.currentBusinessColor() || 'var(--color-primary)'"
       >
         <span class="material-icons-round">{{ biz.currentBusinessIcon() || 'bolt' }}</span>
       </div>
       @if (!isCollapsed()) {
-        <div class="logo-text">
-          <h2>{{ biz.currentBusinessName() || 'حساباتي' }}</h2>
-          <span>نظام الإدارة المالية</span>
-        </div>
-        <span class="collapse-chevron material-icons-round">chevron_right</span>
+        <span class="logo-text">{{ biz.currentBusinessName() || 'حساباتي' }}</span>
       }
-    </div>
+    </a>
+    @if (!isCollapsed()) {
+      <button
+        class="sidebar-close-btn"
+        type="button"
+        title="طي القائمة"
+        (click)="onToggleCollapse()"
+      >
+        <span class="material-icons-round">chevron_right</span>
+      </button>
+    }
   </div>
 
-  <!-- Navigation -->
-  <nav class="sidebar-nav">
-    @if (!isCollapsed()) {
-      <div class="sidebar-search">
-        <div class="search-input-wrap">
-          <span class="material-icons-round search-icon">search</span>
-          <input
-            id="sidebar-search-input"
-            class="sidebar-search-input"
-            type="text"
-            placeholder="ابحث في عناصر التبويب... (/)"
-            title="بحث عناصر التبويب الجانبي"
-            [value]="sidebarSearchQuery()"
-            (input)="setSidebarSearchQuery($any($event.target).value)"
-            (keydown)="onSidebarSearchKeydown($event)"
-          />
-          @if (sidebarSearchQuery().trim()) {
-            <button
-              class="search-clear-btn"
-              type="button"
-              title="مسح البحث"
-              (click)="clearSidebarSearch()"
-            >
-              <span class="material-icons-round">close</span>
-            </button>
-          }
-        </div>
-        <button
-          class="toggle-all-btn"
-          type="button"
-          [title]="areAllSectionsCollapsed() ? 'فتح جميع الأقسام' : 'طي جميع الأقسام'"
-          (click)="toggleAllSections()"
-        >
-          <span class="material-icons-round">{{
-            areAllSectionsCollapsed() ? 'unfold_more' : 'unfold_less'
-          }}</span>
-          <span class="toggle-all-label">{{
-            areAllSectionsCollapsed() ? 'فتح الكل' : 'طي الكل'
-          }}</span>
+  <!-- ─── Search ─── -->
+  @if (!isCollapsed()) {
+    <div class="valex-sidebar-search">
+      <span class="material-icons-round search-icon">search</span>
+      <input
+        id="sidebar-search-input"
+        type="text"
+        class="sidebar-search-input"
+        placeholder="بحث... (/)"
+        [value]="sidebarSearchQuery()"
+        (input)="setSidebarSearchQuery($any($event.target).value)"
+        (keydown)="onSidebarSearchKeydown($event)"
+      />
+      @if (sidebarSearchQuery().trim()) {
+        <button class="search-clear" type="button" title="مسح" (click)="clearSidebarSearch()">
+          <span class="material-icons-round">close</span>
         </button>
-      </div>
-    }
+      }
+    </div>
+  }
 
-    @for (section of filteredMenuSections(); track section.sectionId ?? section.title) {
-      <div
-        class="nav-section"
-        [class.section-collapsed]="
-          isSectionCollapsed(section.sectionId?.toString() ?? section.title)
-        "
-        [style.--section-color]="section.color || '#6366f1'"
-      >
+  <!-- ─── Navigation ─── -->
+  <div class="valex-sidebar-body">
+    @if (isLoading()) {
+      <div class="sidebar-loading">
+        <span class="material-icons-round spin">sync</span>
         @if (!isCollapsed()) {
-          <button
-            class="section-title"
-            type="button"
-            (click)="toggleSection(section.sectionId?.toString() ?? section.title)"
-            [title]="
-              isSectionCollapsed(section.sectionId?.toString() ?? section.title)
-                ? 'فتح القسم'
-                : 'طي القسم'
-            "
-            [style.--section-color]="section.color || ''"
-          >
-            @if (section.icon) {
-              <span class="material-icons-round section-icon" [style.color]="section.color">{{
-                section.icon
-              }}</span>
-            }
-            <span class="section-title-text" [style.color]="section.color">
-              @let parts = getSidebarHighlightParts(section.title);
-              {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
-              >{{ parts.after }}
-            </span>
-            <span class="material-icons-round section-toggle-icon">
-              {{
-                isSectionCollapsed(section.sectionId?.toString() ?? section.title)
-                  ? 'expand_more'
-                  : 'expand_less'
-              }}
-            </span>
-          </button>
+          <span>جاري التحميل...</span>
         }
-        @if (!isSectionCollapsed(section.sectionId?.toString() ?? section.title) || isCollapsed()) {
-          @for (item of section.items; track item.label) {
-            @if (item.children) {
-              <div class="nav-item-group" [class.expanded]="isExpanded(item.label)">
-                <button class="nav-item has-children" (click)="toggleItem(item.label)">
-                  <div
-                    class="nav-icon"
-                    [style.--icon-color]="getIconColor(item.icon)"
-                    [style.--icon-glow]="getIconGlow(item.icon)"
-                  >
-                    <span class="material-icons-round">{{ item.icon }}</span>
-                  </div>
-                  @if (!isCollapsed()) {
-                    <span class="nav-label">
-                      @let parts = getSidebarHighlightParts(item.label);
-                      {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
-                      >{{ parts.after }}
-                    </span>
-                    <span class="material-icons-round expand-arrow">{{
-                      isExpanded(item.label) ? 'expand_less' : 'expand_more'
-                    }}</span>
-                  }
-                </button>
-                @if (isExpanded(item.label) && !isCollapsed()) {
-                  <div class="nav-children">
-                    @for (child of item.children; track child.label) {
-                      <a
-                        class="nav-child-item"
-                        [routerLink]="child.route"
-                        routerLinkActive="active"
-                        [attr.data-icon]="child.icon"
-                      >
-                        <span
-                          class="material-icons-round child-icon"
-                          [style.color]="getIconColor(child.icon)"
-                          >{{ child.icon }}</span
-                        >
-                        <span class="child-label">
-                          @let parts = getSidebarHighlightParts(child.label);
-                          {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
-                          >{{ parts.after }}
-                        </span>
-                      </a>
-                    }
-                  </div>
+      </div>
+    } @else {
+      <ul class="valex-nav">
+        @for (section of filteredMenuSections(); track section.sectionId ?? section.title) {
+          <!-- Section Label -->
+          @if (!isCollapsed()) {
+            <li class="valex-nav-label-item">
+              <button
+                class="valex-nav-section-btn"
+                type="button"
+                [style.--section-color]="section.color || 'var(--color-primary)'"
+                (click)="toggleSection(section.sectionId?.toString() ?? section.title)"
+              >
+                @if (section.icon) {
+                  <span
+                    class="material-icons-round section-icon"
+                    [style.color]="section.color || 'var(--color-primary)'"
+                  >{{ section.icon }}</span>
                 }
-              </div>
-            } @else {
-              @if (hasQueryParams(item.route)) {
-                <a
-                  class="nav-item"
-                  [class.active]="isItemActive(item.route)"
-                  [routerLink]="getRoutePath(item.route)"
-                  [queryParams]="getQueryParams(item.route)"
-                  [title]="item.label"
-                  [attr.hint]="item.label"
-                  [attr.data-icon]="item.icon"
+                <span
+                  class="valex-nav-label"
+                  [style.color]="section.color"
                 >
-                  <div
-                    class="nav-icon"
-                    [style.--icon-color]="getIconColor(item.icon)"
-                    [style.--icon-glow]="getIconGlow(item.icon)"
+                  @let p = getSidebarHighlightParts(section.title);
+                  {{ p.before }}<mark class="sidebar-match">{{ p.match }}</mark>{{ p.after }}
+                </span>
+                <span class="material-icons-round section-chevron">
+                  {{ isSectionCollapsed(section.sectionId?.toString() ?? section.title) ? 'expand_more' : 'expand_less' }}
+                </span>
+              </button>
+            </li>
+          }
+
+          <!-- Section Items -->
+          @if (!isSectionCollapsed(section.sectionId?.toString() ?? section.title) || isCollapsed()) {
+            @for (item of section.items; track item.label) {
+              <li class="valex-nav-item">
+                @if (item.children) {
+                  <!-- ─── Submenu (accordion) ─── -->
+                  <button
+                    class="valex-nav-link"
+                    type="button"
+                    [attr.aria-expanded]="isExpanded(item.label)"
+                    (click)="toggleItem(item.label)"
+                    [title]="item.label"
                   >
-                    @if (item.icon && item.icon.startsWith('pi ')) {
-                      <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
-                    } @else {
-                      <span class="material-icons-round">{{ item.icon }}</span>
+                    <span
+                      class="nav-icon material-icons-round"
+                      [style.color]="getIconColor(item.icon)"
+                    >{{ item.icon }}</span>
+                    @if (!isCollapsed()) {
+                      <span class="nav-text">
+                        @let p = getSidebarHighlightParts(item.label);
+                        {{ p.before }}<mark class="sidebar-match">{{ p.match }}</mark>{{ p.after }}
+                      </span>
+                      <span class="nav-arrow material-icons-round">expand_more</span>
                     }
-                  </div>
-                  @if (!isCollapsed()) {
-                    <span class="nav-label">
-                      @let parts = getSidebarHighlightParts(item.label);
-                      {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
-                      >{{ parts.after }}
-                    </span>
-                    @if (item.badge) {
-                      <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{
-                        item.badge
-                      }}</span>
-                    }
-                  }
-                </a>
-              } @else {
-                <a
-                  class="nav-item"
-                  [routerLink]="item.route || '/'"
-                  routerLinkActive="active"
-                  [routerLinkActiveOptions]="{
-                    exact: (item.route || '') === '/biz/' + biz.currentBusinessId(),
-                  }"
-                  [title]="item.label"
-                  [attr.hint]="item.label"
-                  [attr.data-icon]="item.icon"
-                >
-                  <div
-                    class="nav-icon"
-                    [style.--icon-color]="getIconColor(item.icon)"
-                    [style.--icon-glow]="getIconGlow(item.icon)"
+                  </button>
+                  <ul
+                    class="valex-nav-submenu"
+                    [class.open]="isExpanded(item.label) && !isCollapsed()"
                   >
-                    @if (item.icon && item.icon.startsWith('pi ')) {
-                      <i [class]="item.icon" [style.color]="getIconColor(item.icon)"></i>
-                    } @else {
-                      <span class="material-icons-round">{{ item.icon }}</span>
+                    @for (child of item.children; track child.label) {
+                      <li class="valex-nav-item">
+                        @if (hasQueryParams(child.route)) {
+                          <a
+                            class="valex-nav-link"
+                            [class.active]="isItemActive(child.route)"
+                            [routerLink]="getRoutePath(child.route)"
+                            [queryParams]="getQueryParams(child.route)"
+                            [title]="child.label"
+                          >
+                            <span class="nav-icon material-icons-round" [style.color]="getIconColor(child.icon)">{{ child.icon }}</span>
+                            <span class="nav-text">{{ child.label }}</span>
+                          </a>
+                        } @else {
+                          <a
+                            class="valex-nav-link"
+                            [routerLink]="child.route || '/'"
+                            routerLinkActive="active"
+                            [title]="child.label"
+                          >
+                            <span class="nav-icon material-icons-round" [style.color]="getIconColor(child.icon)">{{ child.icon }}</span>
+                            <span class="nav-text">{{ child.label }}</span>
+                          </a>
+                        }
+                      </li>
                     }
-                  </div>
-                  @if (!isCollapsed()) {
-                    <span class="nav-label">
-                      @let parts = getSidebarHighlightParts(item.label);
-                      {{ parts.before }}<mark class="sidebar-match-mark">{{ parts.match }}</mark
-                      >{{ parts.after }}
-                    </span>
-                    @if (item.badge) {
-                      <span class="nav-badge" [style.background]="getIconColor(item.icon)">{{
-                        item.badge
-                      }}</span>
+                  </ul>
+                } @else if (hasQueryParams(item.route)) {
+                  <!-- ─── Link with Query Params ─── -->
+                  <a
+                    class="valex-nav-link"
+                    [class.active]="isItemActive(item.route)"
+                    [routerLink]="getRoutePath(item.route)"
+                    [queryParams]="getQueryParams(item.route)"
+                    [title]="item.label"
+                  >
+                    <span
+                      class="nav-icon material-icons-round"
+                      [style.color]="getIconColor(item.icon)"
+                    >{{ item.icon }}</span>
+                    @if (!isCollapsed()) {
+                      <span class="nav-text">
+                        @let p = getSidebarHighlightParts(item.label);
+                        {{ p.before }}<mark class="sidebar-match">{{ p.match }}</mark>{{ p.after }}
+                      </span>
+                      @if (item.badge) {
+                        <span class="nav-badge" [style.background]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                      }
                     }
-                  }
-                </a>
-              }
+                  </a>
+                } @else {
+                  <!-- ─── Regular RouterLink ─── -->
+                  <a
+                    class="valex-nav-link"
+                    [routerLink]="item.route || '/'"
+                    routerLinkActive="active"
+                    [routerLinkActiveOptions]="{ exact: (item.route || '') === '/biz/' + biz.currentBusinessId() }"
+                    [title]="item.label"
+                  >
+                    <span
+                      class="nav-icon material-icons-round"
+                      [style.color]="getIconColor(item.icon)"
+                    >{{ item.icon }}</span>
+                    @if (!isCollapsed()) {
+                      <span class="nav-text">
+                        @let p = getSidebarHighlightParts(item.label);
+                        {{ p.before }}<mark class="sidebar-match">{{ p.match }}</mark>{{ p.after }}
+                      </span>
+                      @if (item.badge) {
+                        <span class="nav-badge" [style.background]="item.badgeColor || '#ef4444'">{{ item.badge }}</span>
+                      }
+                    }
+                  </a>
+                }
+              </li>
             }
           }
         }
-      </div>
+        @if (!isCollapsed() && sidebarSearchQuery().trim() && !hasSidebarSearchResults()) {
+          <li class="sidebar-no-results">
+            <span class="material-icons-round">search_off</span>
+            <span>لا توجد نتائج</span>
+          </li>
+        }
+      </ul>
     }
-    @if (!isCollapsed() && sidebarSearchQuery().trim() && !hasSidebarSearchResults()) {
-      <div class="sidebar-empty-search">
-        <span class="material-icons-round">search_off</span>
-        <span>لا توجد عناصر مطابقة</span>
-      </div>
-    }
-  </nav>
+  </div>
 
-  <!-- User Section -->
-  <div class="sidebar-footer">
-    <div class="user-info" [class.collapsed]="isCollapsed()">
+  <!-- ─── Footer (User + Collapse Toggle) ─── -->
+  <div class="valex-sidebar-footer">
+    <!-- User Info -->
+    <div class="sidebar-user" [class.collapsed]="isCollapsed()">
       <div class="user-avatar">
         <span class="material-icons-round">person</span>
       </div>
       @if (!isCollapsed()) {
-        <div class="user-details">
+        <div class="user-info">
           <span class="user-name">{{ user()?.fullName || 'المالك' }}</span>
           <span class="user-role">{{ getRoleLabel() }}</span>
         </div>
-        <button class="logout-btn" (click)="logout()" title="تسجيل الخروج">
+        <button class="logout-btn" type="button" title="تسجيل الخروج" (click)="logout()">
           <span class="material-icons-round">logout</span>
         </button>
       }
     </div>
+    <!-- Collapse Toggle (expanded: show at bottom; collapsed: show as icon) -->
+    @if (isCollapsed()) {
+      <button
+        class="sidebar-expand-btn"
+        type="button"
+        title="توسيع القائمة"
+        (click)="onToggleCollapse()"
+      >
+        <span class="material-icons-round">chevron_left</span>
+      </button>
+    }
   </div>
 </aside>

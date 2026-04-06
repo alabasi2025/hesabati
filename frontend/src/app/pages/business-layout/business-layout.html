@@ -1,0 +1,40 @@
+<!-- App Wrapper -->
+<div
+  class="valex-app-wrapper"
+  [class.sidebar-collapsed]="isSidebarCollapsed()"
+  [class.sidebar-open]="isSidebarOpen()"
+>
+  <!-- Overlay (موبايل) -->
+  <div
+    class="valex-sidebar-overlay"
+    [class.visible]="isSidebarOpen() && isMobile()"
+    (click)="closeSidebarOnMobile()"
+  ></div>
+
+  <!-- Sidebar -->
+  <app-sidebar
+    [isCollapsed]="isSidebarCollapsed()"
+    [isMobile]="isMobile()"
+    [isOpen]="isSidebarOpen()"
+    (toggleCollapse)="toggleSidebar()"
+  ></app-sidebar>
+
+  <!-- Main Area -->
+  <div class="valex-main" [class.sidebar-collapsed]="isSidebarCollapsed()">
+    <!-- Header -->
+    <app-header
+      [isSidebarCollapsed]="isSidebarCollapsed()"
+      (toggleSidebar)="toggleSidebar()"
+    ></app-header>
+
+    <!-- Page Content -->
+    <main class="valex-content">
+      <router-outlet></router-outlet>
+    </main>
+
+    <!-- Footer -->
+    <footer class="valex-footer">
+      <span class="footer-text">حساباتي &copy; 2026 — نظام الإدارة المالية</span>
+    </footer>
+  </div>
+</div>

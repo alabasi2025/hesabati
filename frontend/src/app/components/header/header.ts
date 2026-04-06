@@ -1,4 +1,4 @@
-import { Component, inject, input, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, input, output, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
@@ -18,16 +18,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
   readonly themeService = inject(ThemeService);
   readonly biz = inject(BusinessService);
 
-  pageTitle = input<string>('لوحة التحكم');
-  user = this.auth.user;
+  // ─── Inputs ───
+  isSidebarCollapsed = input<boolean>(false);
 
-  // مؤشر حالة الاتصال بقاعدة البيانات
-  dbConnected = signal<boolean | null>(null); // null = جاري الفحص
-  private healthCheckInterval: any = null;
+  // ─── Outputs ───
+  toggleSidebar = output<void>();
+
+  // ─── State ───
+  user = this.auth.user;
+  dbConnected = signal<boolean | null>(null);
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   async ngOnInit() {
     await this.checkDbHealth();
-    // فحص كل 30 ثانية
     this.healthCheckInterval = setInterval(() => this.checkDbHealth(), 30000);
   }
 
@@ -44,6 +47,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     } catch {
       this.dbConnected.set(false);
     }
+  }
+
+  onToggleSidebar() {
+    this.toggleSidebar.emit();
   }
 
   getDbStatusIcon(): string {
@@ -71,5 +78,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
       month: 'long',
       day: 'numeric',
     });
+  }
+
+  getUserInitials(): string {
+    const name = this.user()?.fullName || 'م';
+    return name.charAt(0);
   }
 }

@@ -1,193 +1,177 @@
-// ============================================
-//  SIDEBAR — Modern 2026 Design
-//  Glassmorphism · Visual Hierarchy · 8px Grid
-//  Supabase / Linear / Vercel inspired
-// ============================================
+// =============================================================================
+// sidebar.scss — تصميم Valex للسايدبار (RTL)
+// =============================================================================
 
-$ease: cubic-bezier(0.4, 0, 0.2, 1);
-$spring: cubic-bezier(0.22, 1, 0.36, 1);
-
-// 8px grid base
-$unit: 8px;
-$sidebar-w: 264px;
-$sidebar-collapsed: 68px;
-$item-h: 40px;
-$icon-size: 20px;
-$radius-sm: 8px;
-$radius-md: 12px;
-$radius-lg: 16px;
-
-@keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes activeIndicator {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-:host {
-  display: contents;
-}
-
-// ============================================
-// SIDEBAR SHELL — Glassmorphism
-// ============================================
-.sidebar {
-  width: $sidebar-w;
-  min-width: $sidebar-w;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  right: 0;
-  z-index: 50;
+// ─── Sidebar Wrapper ───
+.valex-sidebar {
+  width: var(--sidebar-width);
+  min-height: 100vh;
+  background-color: var(--color-darkbg);
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  overflow: hidden;
+  position: fixed;
+  inset-inline-end: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
   transition:
-    width 0.28s $ease,
-    min-width 0.28s $ease;
+    width var(--transition-normal),
+    transform var(--transition-normal);
+  overflow: hidden;
 
-  // Glassmorphism background
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.88) 100%);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border-left: 1px solid rgba(148, 163, 184, 0.08);
-  box-shadow:
-    -1px 0 0 rgba(255, 255, 255, 0.03),
-    -8px 0 32px rgba(0, 0, 0, 0.12);
+  // مطوية → أيقونات فقط
+  &.sidebar-collapsed {
+    width: var(--sidebar-collapsed-width);
+  }
 
-  &.collapsed {
-    width: $sidebar-collapsed;
-    min-width: $sidebar-collapsed;
+  // موبايل: مخفية بالكامل، تظهر عند isOpen
+  @media (max-width: 1024px) {
+    transform: translateX(100%);
+    box-shadow: none;
 
-    .nav-item {
+    &.sidebar-open {
+      transform: translateX(0);
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+    }
+  }
+}
+
+// ─── Header (Logo) ───
+.valex-sidebar-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  gap: 0.5rem;
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    text-decoration: none;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-lg);
+      background: rgba(99, 102, 241, 0.15);
+      display: flex;
+      align-items: center;
       justify-content: center;
-      padding: $unit;
+      color: var(--color-primary);
+      flex-shrink: 0;
+      transition: background var(--transition-fast), color var(--transition-fast);
+
+      .material-icons-round {
+        font-size: 1.125rem;
+      }
     }
 
-    .section-title {
-      display: none;
+    .logo-text {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &:hover .logo-icon {
+      background: rgba(99, 102, 241, 0.25);
+    }
+  }
+
+  .sidebar-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-md);
+    border: none;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+
+    .material-icons-round {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
     }
   }
 }
 
-// ============================================
-// HEADER
-// ============================================
-.sidebar-header {
-  padding: ($unit * 2.5) ($unit * 2) ($unit * 2);
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 16%;
-    right: 16%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.12), transparent);
-  }
-}
-
-.logo-wrapper {
+// ─── Search ───
+.valex-sidebar-search {
   display: flex;
   align-items: center;
-  gap: $unit * 1.5;
-  cursor: pointer;
-  padding: $unit $unit;
-  border-radius: $radius-md;
-  transition: background 0.2s $ease;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
+  .search-icon {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+  }
 
-    .logo-box {
-      transform: scale(1.04);
-      box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.25),
-        0 0 0 1px rgba(255, 255, 255, 0.06);
+  .sidebar-search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.8125rem;
+    font-family: var(--font-primary);
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.25);
+    }
+  }
+
+  .search-clear {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .material-icons-round {
+      font-size: 0.875rem;
+    }
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.7);
     }
   }
 }
 
-.logo-box {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: $radius-md;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: all 0.28s $spring;
-  box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-
-  .material-icons-round {
-    font-size: 22px;
-    color: #fff;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-    position: relative;
-    z-index: 1;
-  }
-}
-
-.collapse-chevron {
-  font-size: 18px;
-  color: rgba(148, 163, 184, 0.3);
-  margin-right: auto;
-  margin-left: 0;
-  transition: all 0.2s $ease;
-
-  .logo-wrapper:hover & {
-    color: rgba(148, 163, 184, 0.6);
-  }
-}
-
-.logo-text {
-  h2 {
-    font-size: 17px;
-    font-weight: 800;
-    line-height: 1.3;
-    background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  span {
-    font-size: 10.5px;
-    font-weight: 500;
-    color: rgba(148, 163, 184, 0.5);
-    letter-spacing: 0.2px;
-  }
-}
-
-// ============================================
-// NAVIGATION
-// ============================================
-.sidebar-nav {
+// ─── Sidebar Body (scrollable) ───
+.valex-sidebar-body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: $unit $unit;
+  padding: 0.5rem 0;
 
-  // Thin minimal scrollbar
   &::-webkit-scrollbar {
     width: 3px;
   }
@@ -195,636 +179,380 @@ $radius-lg: 16px;
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.1);
-    border-radius: 4px;
-    &:hover {
-      background: rgba(148, 163, 184, 0.2);
-    }
-  }
-}
-
-// ============================================
-// SEARCH
-// ============================================
-.sidebar-search {
-  padding: ($unit * 0.5) $unit ($unit * 1.5);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 70%, transparent);
-}
-
-.search-input-wrap {
-  position: relative;
-}
-
-.search-icon {
-  position: absolute;
-  right: $unit * 1.5;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 18px;
-  color: rgba(148, 163, 184, 0.45);
-  pointer-events: none;
-  transition: color 0.2s $ease;
-}
-
-.sidebar-search-input {
-  width: 100%;
-  height: 36px;
-  padding: 0 38px 0 32px;
-  border-radius: $radius-sm;
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: #e2e8f0;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  outline: none;
-  transition: all 0.2s $ease;
-
-  &::placeholder {
-    color: rgba(148, 163, 184, 0.4);
-    font-weight: 500;
-  }
-
-  &:focus {
-    border-color: rgba(99, 102, 241, 0.5);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    background: rgba(255, 255, 255, 0.06);
-
-    ~ .search-icon {
-      color: rgba(99, 102, 241, 0.7);
-    }
-  }
-}
-
-.search-clear-btn {
-  position: absolute;
-  left: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: rgba(148, 163, 184, 0.5);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s $ease;
-
-  .material-icons-round {
-    font-size: 15px;
-  }
-
-  &:hover {
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
-// ============================================
-// TOGGLE ALL SECTIONS BUTTON
-// ============================================
-.toggle-all-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 100%;
-  margin-top: 6px;
-  padding: 5px $unit;
-  border-radius: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(148, 163, 184, 0.5);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s $ease;
-  letter-spacing: 0.3px;
-
-  .material-icons-round {
-    font-size: 16px;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(148, 163, 184, 0.14);
-    color: rgba(226, 232, 240, 0.75);
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(99, 102, 241, 0.5);
-    outline-offset: -2px;
-  }
-}
-
-.sidebar-empty-search {
-  margin: $unit ($unit * 1.5);
-  padding: $unit * 1.5;
-  border-radius: $radius-sm;
-  border: 1px dashed rgba(148, 163, 184, 0.15);
-  color: rgba(148, 163, 184, 0.6);
-  font-size: 12.5px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: $unit;
-
-  .material-icons-round {
-    font-size: 18px;
-    opacity: 0.7;
-  }
-}
-
-// ============================================
-// SECTION — Visual Hierarchy Level 3
-// ============================================
-.nav-section {
-  --section-color: #6366f1;
-  margin-bottom: $unit * 0.5;
-  position: relative;
-  border-radius: $radius-sm;
-  transition: background 0.2s $ease;
-
-  // شريط لون جانبي
-  &::before {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: $unit;
-    bottom: $unit;
-    width: 3px;
-    border-radius: 3px;
-    background: var(--section-color);
-    opacity: 0.35;
-    transition: opacity 0.2s $ease;
-  }
-
-  // خلفية ملونة خفيفة للقسم المفتوح
-  &:not(.section-collapsed) {
-    background: color-mix(in srgb, var(--section-color) 4%, transparent);
-    padding-bottom: $unit * 0.5;
-
-    &::before {
-      opacity: 0.5;
-    }
-  }
-
-  &:not(:first-child) {
-    margin-top: $unit * 2;
-  }
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 11px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--section-color) 70%, rgba(148, 163, 184, 0.6));
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: $unit ($unit * 1.5) ($unit * 0.5);
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  border-radius: 6px;
-  transition: all 0.15s $ease;
-  text-align: right;
-
-  &:hover {
-    color: color-mix(in srgb, var(--section-color) 85%, #e2e8f0);
-    background: color-mix(in srgb, var(--section-color) 6%, transparent);
-  }
-
-  &:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--section-color) 50%, transparent);
-    outline-offset: -2px;
-  }
-}
-
-.section-title-text {
-  flex: 1;
-}
-
-.section-icon {
-  font-size: 16px;
-  opacity: 0.85;
-  color: var(--section-color) !important;
-  transition: opacity 0.15s $ease;
-
-  .section-title:hover & {
-    opacity: 1;
-  }
-}
-
-.section-toggle-icon {
-  font-size: 16px;
-  color: rgba(148, 163, 184, 0.3);
-  transition:
-    transform 0.2s $ease,
-    color 0.15s $ease;
-
-  .section-title:hover & {
-    color: rgba(148, 163, 184, 0.55);
-  }
-}
-
-.nav-section.section-collapsed {
-  margin-bottom: $unit * 0.5;
-  background: transparent;
-  padding-bottom: 0;
-
-  &::before {
-    opacity: 0.2;
-  }
-
-  .section-title {
-    margin-bottom: 0;
-    font-size: 13px;
-    font-weight: 700;
-    color: color-mix(in srgb, var(--section-color) 60%, rgba(226, 232, 240, 0.7));
-    letter-spacing: 0.5px;
-    padding: ($unit * 1.25) ($unit * 1.5);
-    background: color-mix(in srgb, var(--section-color) 5%, transparent);
-    border: 1px solid color-mix(in srgb, var(--section-color) 12%, transparent);
-    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
 
     &:hover {
-      color: color-mix(in srgb, var(--section-color) 75%, #e2e8f0);
-      background: color-mix(in srgb, var(--section-color) 10%, transparent);
-      border-color: color-mix(in srgb, var(--section-color) 20%, transparent);
-    }
-
-    .section-toggle-icon {
-      font-size: 18px;
-      color: color-mix(in srgb, var(--section-color) 50%, rgba(148, 163, 184, 0.45));
+      background: rgba(255, 255, 255, 0.2);
     }
   }
 }
 
-.sidebar-match-mark {
-  background: rgba(99, 102, 241, 0.25);
-  color: inherit;
-  padding: 1px 3px;
-  border-radius: 3px;
-  font-weight: 700;
-}
-
-// ============================================
-// NAV ITEM — Level 1 Navigation
-// ============================================
-.nav-item {
+// ─── Loading State ───
+.sidebar-loading {
   display: flex;
   align-items: center;
-  gap: $unit * 1.25;
-  padding: 0 $unit * 1.25;
-  height: $item-h;
-  border-radius: $radius-sm;
-  color: rgba(226, 232, 240, 0.7);
-  text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
-  transition: all 0.2s $ease;
-  margin-bottom: 1px;
-  position: relative;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8125rem;
+
+  .material-icons-round {
+    font-size: 1.125rem;
+  }
+}
+
+// ─── Navigation List ───
+.valex-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.5rem;
+}
+
+// ─── Section Label ───
+.valex-nav-label-item {
+  margin-top: 0.25rem;
+}
+
+.valex-nav-section-btn {
   width: 100%;
-  border: 1px solid transparent;
-  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1.125rem 0.25rem;
+  background: none;
+  border: none;
   cursor: pointer;
-  text-align: right;
-  font-family: inherit;
+  text-align: start;
 
-  // ---- HOVER — subtle 6% bg ----
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #e2e8f0;
-
-    .nav-icon {
-      .material-icons-round,
-      i {
-        color: var(--icon-glow, #cbd5e1);
-      }
-    }
-  }
-
-  // ---- FOCUS — accessibility ring ----
-  &:focus-visible {
-    outline: 2px solid rgba(99, 102, 241, 0.6);
-    outline-offset: -2px;
-  }
-
-  // ---- ACTIVE — filled bg + right indicator ----
-  &.active {
-    background: color-mix(in srgb, var(--section-color, #6366f1) 10%, transparent);
-    border-color: color-mix(in srgb, var(--section-color, #6366f1) 8%, transparent);
-    color: #f1f5f9;
+  .valex-nav-label {
+    flex: 1;
+    font-size: 0.6875rem;
     font-weight: 600;
-
-    // Right indicator bar
-    &::before {
-      content: '';
-      position: absolute;
-      right: -$unit;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 3px;
-      height: 20px;
-      border-radius: 3px;
-      background: var(--section-color, #6366f1);
-      box-shadow: 0 0 10px color-mix(in srgb, var(--section-color, #6366f1) 40%, transparent);
-      animation: activeIndicator 3s ease-in-out infinite;
-    }
-
-    .nav-icon {
-      background: color-mix(in srgb, var(--section-color, #6366f1) 18%, transparent);
-      box-shadow: 0 0 12px color-mix(in srgb, var(--section-color, #6366f1) 15%, transparent);
-
-      .material-icons-round,
-      i {
-        color: var(--icon-glow, color-mix(in srgb, var(--section-color, #6366f1) 80%, #fff));
-        filter: drop-shadow(
-          0 0 4px color-mix(in srgb, var(--section-color, #6366f1) 40%, transparent)
-        );
-      }
-    }
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  &.has-children .expand-arrow {
-    margin-right: auto;
-    margin-left: 0;
-    font-size: 18px;
-    color: rgba(148, 163, 184, 0.3);
-    transition: all 0.2s $ease;
+  .section-icon {
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .section-chevron {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.2);
+    transition: transform var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    .valex-nav-label {
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .section-chevron {
+      color: rgba(255, 255, 255, 0.4);
+    }
   }
 }
 
-// ============================================
-// NAV ICON — Clean Rounded Square
-// ============================================
-.nav-icon {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+// ─── Nav Item ───
+.valex-nav-item {
+  margin: 0;
+}
+
+// ─── Nav Link ───
+.valex-nav-link {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: $radius-sm;
-  position: relative;
-  transition: all 0.2s $ease;
-  background: color-mix(in srgb, var(--icon-color, #94a3b8) 8%, transparent);
-
-  .material-icons-round,
-  i {
-    font-size: $icon-size;
-    color: var(--icon-color, #94a3b8);
-    position: relative;
-    z-index: 1;
-    transition: all 0.2s $ease;
-  }
-}
-
-// ============================================
-// LABEL & BADGE
-// ============================================
-.nav-label {
+  gap: 0.625rem;
+  padding: 0.5rem 1.125rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: start;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  line-height: 1.45;
+  position: relative;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+  font-family: var(--font-primary);
+
+  .nav-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+    transition: color var(--transition-fast);
+  }
+
+  .nav-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-arrow {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.25);
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    transition: transform var(--transition-fast);
+  }
+
+  .nav-badge {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.125rem 0.4rem;
+    border-radius: var(--radius-full);
+    color: #ffffff;
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    line-height: 1.4;
+  }
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active,
+  &.router-link-active {
+    color: #ffffff;
+    background-color: rgba(99, 102, 241, 0.15);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline-end: 0;
+      top: 4px;
+      bottom: 4px;
+      width: 3px;
+      background-color: var(--color-primary);
+      border-radius: 2px 0 0 2px;
+    }
+
+    .nav-icon {
+      filter: brightness(1.2);
+    }
+  }
+
+  &[aria-expanded='true'] {
+    .nav-arrow {
+      transform: rotate(-180deg);
+    }
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.04);
+  }
 }
 
-.nav-badge {
-  margin-right: auto;
-  margin-left: 0;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
-  line-height: 1.4;
-}
+// ─── Submenu ───
+.valex-nav-submenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height var(--transition-normal) ease-in-out;
 
-// ============================================
-// EXPANDABLE GROUP
-// ============================================
-.nav-item-group {
-  margin-bottom: 1px;
+  &.open {
+    max-height: 800px;
+  }
 
-  &.expanded > .nav-item.has-children {
-    background: rgba(255, 255, 255, 0.03);
-    color: #e2e8f0;
-    .expand-arrow {
-      color: rgba(148, 163, 184, 0.55);
-      transform: rotate(180deg);
+  .valex-nav-link {
+    padding-inline-start: 3.25rem;
+    font-size: 0.8125rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+
+    .nav-icon {
+      font-size: 0.5rem;
+      width: 14px;
     }
   }
 }
 
-// ============================================
-// CHILDREN — Level 2 Navigation
-// ============================================
-.nav-children {
-  padding: 2px 0 $unit * 0.5;
-  margin-right: $unit * 2.5;
-  border-right: 1.5px solid rgba(148, 163, 184, 0.07);
-  animation: fadeSlideIn 0.2s $ease;
-  position: relative;
+// ─── Collapsed Mode ───
+.valex-sidebar.sidebar-collapsed {
+  .valex-sidebar-header {
+    padding: 0;
+    justify-content: center;
 
-  // Gradient overlay on border
-  &::before {
-    content: '';
-    position: absolute;
-    right: -1.5px;
-    top: 0;
-    bottom: 0;
-    width: 1.5px;
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--icon-color, #6366f1) 30%, transparent),
-      transparent
-    );
-    border-radius: 2px;
+    .sidebar-logo {
+      flex: 0 0 auto;
+      justify-content: center;
+    }
+
+    .sidebar-close-btn {
+      display: none;
+    }
+  }
+
+  .valex-nav-link {
+    padding: 0.625rem;
+    justify-content: center;
+    gap: 0;
+
+    .nav-icon {
+      width: auto;
+    }
+  }
+
+  .valex-nav-section-btn {
+    padding: 0.5rem;
+    justify-content: center;
   }
 }
 
-.nav-child-item {
+// ─── No Results ───
+.sidebar-no-results {
   display: flex;
   align-items: center;
-  gap: $unit;
-  padding: 6px $unit * 1.5;
-  margin: 1px 0;
-  border-radius: 6px;
-  color: rgba(148, 163, 184, 0.7);
-  text-decoration: none;
-  font-size: 12.5px;
-  font-weight: 500;
-  transition: all 0.15s $ease;
-  cursor: pointer;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.8125rem;
 
-  .child-icon {
-    font-size: 17px;
-    transition: color 0.15s $ease;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-    color: #e2e8f0;
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(99, 102, 241, 0.5);
-    outline-offset: -2px;
-  }
-
-  &.active {
-    background: color-mix(in srgb, var(--section-color, #6366f1) 8%, transparent);
-    color: #f1f5f9;
-    font-weight: 600;
-    border-right: 2px solid var(--section-color, #6366f1);
+  .material-icons-round {
+    font-size: 1.125rem;
   }
 }
 
-// ============================================
-// FOOTER
-// ============================================
-.sidebar-footer {
-  padding: $unit ($unit * 1.25) ($unit * 1.5);
-  position: relative;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 16%;
-    right: 16%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.1), transparent);
-  }
+// ─── Search Highlight ───
+.sidebar-match {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border-radius: 2px;
+  padding: 0 1px;
+  font-style: normal;
 }
 
-.user-info {
+// ─── Footer ───
+.valex-sidebar-footer {
+  padding: 0.75rem 0.875rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// ─── User Info ───
+.sidebar-user {
   display: flex;
   align-items: center;
-  gap: $unit * 1.25;
-  padding: $unit $unit * 1.5;
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: all 0.2s $ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
+  gap: 0.625rem;
+  overflow: hidden;
 
   &.collapsed {
     justify-content: center;
-    padding: $unit;
-  }
-}
-
-.user-avatar {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
-
-  .material-icons-round {
-    font-size: 18px;
-    color: #fff;
-    position: relative;
-    z-index: 1;
-  }
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e2e8f0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
-}
-
-.user-role {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: rgba(148, 163, 184, 0.45);
-}
-
-.logout-btn {
-  background: none;
-  border: 1px solid transparent;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: $radius-sm;
-  color: rgba(148, 163, 184, 0.4);
-  transition: all 0.2s $ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.1);
-    color: #f87171;
   }
 
-  &:focus-visible {
-    outline: 2px solid rgba(239, 68, 68, 0.5);
-    outline-offset: -2px;
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    flex-shrink: 0;
+
+    .material-icons-round {
+      font-size: 1.125rem;
+    }
   }
 
-  .material-icons-round {
-    font-size: 18px;
-  }
-}
+  .user-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
 
-// ============================================
-// COLLAPSED TOOLTIPS
-// ============================================
-.sidebar.collapsed {
-  .nav-item,
-  .nav-child-item {
-    &[title] {
-      position: relative;
+    .user-name {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-role {
+      display: block;
+      font-size: 0.6875rem;
+      color: rgba(255, 255, 255, 0.4);
+    }
+  }
+
+  .logout-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    transition: color var(--transition-fast), background var(--transition-fast);
+    flex-shrink: 0;
+
+    .material-icons-round {
+      font-size: 1.125rem;
+    }
+
+    &:hover {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.1);
     }
   }
 }
 
-// ============================================
-// RESPONSIVE
-// ============================================
-@media (max-width: 768px) {
-  .sidebar {
-    width: $sidebar-collapsed;
-    min-width: $sidebar-collapsed;
+// ─── Expand Button (when collapsed) ───
+.sidebar-expand-btn {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+
+  .material-icons-round {
+    font-size: 1.125rem;
+  }
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--color-primary);
+  }
+}
+
+// ─── Spin animation ───
+.spin {
+  animation: spin-anim 1s linear infinite;
+}
+
+@keyframes spin-anim {
+  to {
+    transform: rotate(360deg);
   }
 }

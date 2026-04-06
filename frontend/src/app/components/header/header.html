@@ -1,26 +1,73 @@
-<header class="app-header">
-  <div class="header-right">
-    <h1 class="page-title">
+<header class="valex-header">
+  <!-- ─── Start: Toggle + Breadcrumb ─── -->
+  <div class="valex-header-start">
+    <!-- Sidebar Toggle -->
+    <button
+      class="valex-sidebar-toggle"
+      type="button"
+      [title]="isSidebarCollapsed() ? 'توسيع القائمة' : 'طي القائمة'"
+      (click)="onToggleSidebar()"
+    >
+      <span class="material-icons-round">menu</span>
+    </button>
+
+    <!-- Business Name + Date -->
+    <div class="header-context">
       @if (biz.currentBusinessName()) {
-        <span class="biz-name" [style.color]="biz.currentBusinessColor()">{{ biz.currentBusinessName() }}</span>
-        <span class="separator">|</span>
+        <span class="header-biz-name" [style.color]="biz.currentBusinessColor()">
+          {{ biz.currentBusinessName() }}
+        </span>
       }
-      {{ pageTitle() }}
-    </h1>
-    <span class="page-date">{{ getCurrentDate() }}</span>
+      <span class="header-date">{{ getCurrentDate() }}</span>
+    </div>
   </div>
-  <div class="header-left">
-    <!-- مؤشر حالة الاتصال بقاعدة البيانات -->
-    <button class="db-status-btn" [title]="getDbStatusTitle()" (click)="checkDbHealth()">
-      <span class="material-icons-round" [style.color]="getDbStatusColor()" [class.spin]="dbConnected() === null">
-        {{ getDbStatusIcon() }}
+
+  <!-- ─── End: Actions + User ─── -->
+  <div class="valex-header-end">
+    <!-- DB Status -->
+    <button
+      class="valex-header-btn"
+      type="button"
+      [title]="getDbStatusTitle()"
+      (click)="checkDbHealth()"
+    >
+      <span
+        class="material-icons-round"
+        [style.color]="getDbStatusColor()"
+        [class.spin]="dbConnected() === null"
+      >{{ getDbStatusIcon() }}</span>
+    </button>
+
+    <!-- Theme Toggle -->
+    <button
+      class="valex-header-btn theme-btn"
+      type="button"
+      [title]="themeService.isDark() ? 'الوضع النهاري' : 'الوضع الليلي'"
+      (click)="themeService.toggle()"
+    >
+      <span class="material-icons-round">
+        {{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}
       </span>
     </button>
-    <button class="theme-toggle-btn" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'الوضع النهاري' : 'الوضع الليلي'">
-      <span class="material-icons-round">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
-    </button>
-    <button class="header-btn" title="الإشعارات">
+
+    <!-- Notifications -->
+    <button class="valex-header-btn notif-btn" type="button" title="الإشعارات">
       <span class="material-icons-round">notifications</span>
+      <span class="notif-dot"></span>
     </button>
+
+    <!-- Divider -->
+    <span class="header-divider"></span>
+
+    <!-- User -->
+    <div class="header-user">
+      <div class="user-avatar">
+        <span class="avatar-initials">{{ getUserInitials() }}</span>
+      </div>
+      <div class="user-info">
+        <span class="user-name">{{ user()?.fullName || 'المالك' }}</span>
+        <span class="user-role">مدير النظام</span>
+      </div>
+    </div>
   </div>
 </header>

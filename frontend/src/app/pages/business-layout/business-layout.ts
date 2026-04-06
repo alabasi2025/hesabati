@@ -1,69 +1,47 @@
-import { Component, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  HostListener,
+} from '@angular/core';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { SidebarComponent } from '../../components/sidebar/sidebar';
 import { HeaderComponent } from '../../components/header/header';
-import { BreadcrumbsComponent } from '../../components/breadcrumbs/breadcrumbs';
 import { BusinessService, BusinessType } from '../../services/business.service';
 import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-business-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, HeaderComponent, BreadcrumbsComponent],
-  template: `
-    <div class="app-layout">
-      <app-sidebar></app-sidebar>
-      <div class="main-area">
-        <app-header></app-header>
-        <main class="content-area">
-          <app-breadcrumbs></app-breadcrumbs>
-          <router-outlet></router-outlet>
-        </main>
-      </div>
-    </div>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-        height: 100vh;
-        overflow: hidden;
-      }
-      .app-layout {
-        display: flex;
-        height: 100vh;
-        direction: rtl;
-        overflow: hidden;
-      }
-      .main-area {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        overflow: hidden;
-      }
-      .content-area {
-        flex: 1;
-        padding: 24px;
-        padding-top: 8px;
-        overflow-y: auto;
-        height: 100%;
-      }
-    `,
-  ],
+  imports: [RouterOutlet, SidebarComponent, HeaderComponent],
+  templateUrl: './business-layout.html',
+  styleUrl: './business-layout.scss',
 })
-export class BusinessLayoutComponent implements OnInit {
+export class BusinessLayoutComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly bizService = inject(BusinessService);
   private readonly api = inject(ApiService);
 
+  /** حالة السايدبار */
+  isSidebarCollapsed = signal<boolean>(false);
+  isSidebarOpen = signal<boolean>(false);
+  isMobile = signal<boolean>(false);
+
+  private readonly MOBILE_BREAKPOINT = 1024;
+  private resizeObserver: ResizeObserver | null = null;
+
   constructor() {
     const bizId = Number.parseInt(this.route.snapshot.params['bizId'] ?? '', 10);
     if (bizId > 0) this.bizService.setBusinessId(bizId);
+    this.checkMobile();
   }
 
   ngOnInit() {
+    this.setupResizeObserver();
+
     const setFromParams = (params: { bizId?: string }) => {
       const bizId = Number.parseInt(params['bizId'] ?? '', 10);
       if (!bizId) return;
@@ -78,5 +56,38 @@ export class BusinessLayoutComponent implements OnInit {
     };
     setFromParams(this.route.snapshot.params);
     this.route.params.subscribe(setFromParams);
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver?.disconnect();
+  }
+
+  private setupResizeObserver() {
+    this.resizeObserver = new ResizeObserver(() => this.checkMobile());
+    this.resizeObserver.observe(document.body);
+  }
+
+  @HostListener('window:resize')
+  checkMobile() {
+    const mobile = window.innerWidth < this.MOBILE_BREAKPOINT;
+    this.isMobile.set(mobile);
+    if (!mobile) {
+      // على الشاشات الكبيرة: أغلق overlay mode
+      this.isSidebarOpen.set(false);
+    }
+  }
+
+  toggleSidebar() {
+    if (this.isMobile()) {
+      this.isSidebarOpen.update((v) => !v);
+    } else {
+      this.isSidebarCollapsed.update((v) => !v);
+    }
+  }
+
+  closeSidebarOnMobile() {
+    if (this.isMobile()) {
+      this.isSidebarOpen.set(false);
+    }
   }
 }
