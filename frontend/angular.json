@@ -50,6 +50,16 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "css/**",
+                "input": "node_modules/@fortawesome/fontawesome-free",
+                "output": "assets/fontawesome"
+              },
+              {
+                "glob": "webfonts/**",
+                "input": "node_modules/@fortawesome/fontawesome-free",
+                "output": "assets/fontawesome"
               }
             ],
             "styles": [
@@ -100,7 +110,7 @@
           },
           "defaultConfiguration": "development",
           "options": {
-            "allowedHosts": [".manus.computer"],
+            "allowedHosts": ["pmsuqiyg.gensparkclaw.com", ".manus.computer"],
             "proxyConfig": "proxy.conf.json"
           }
         }
