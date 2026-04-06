@@ -20,7 +20,18 @@ export class ThemeService {
   }
 
   private applyTheme(theme: Theme) {
-    document.documentElement.setAttribute('data-theme', theme);
+    const html = document.documentElement;
+
+    // النمط القديم: data-theme (للتوافق مع الكود الحالي)
+    html.setAttribute('data-theme', theme);
+
+    // النمط الجديد: class dark (متوافق مع Valex Tailwind)
+    if (theme === 'dark') {
+      html.classList.add('dark');
+    } else {
+      html.classList.remove('dark');
+    }
+
     localStorage.setItem(this.STORAGE_KEY, theme);
   }
 

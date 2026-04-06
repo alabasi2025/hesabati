@@ -1,0 +1,170 @@
+// =============================================================================
+// valex-theme.scss — نظام ثيم Valex Tailwind الكامل
+// يتضمن متغيرات CSS للوضع الفاتح والداكن بتصميم Valex الأصلي
+// =============================================================================
+
+// ===================== Light Mode (الوضع الفاتح) =====================
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  // ── الألوان الأساسية ──
+  --color-bodybg:             #f0f0f5;
+  --color-primary:            #6366f1;
+  --color-primaryrgb:         99, 102, 241;
+  --color-secondary:          #8b5cf6;
+  --color-secondaryrgb:       139, 92, 246;
+
+  // ── ألوان الحالة ──
+  --color-success:            #22c55e;
+  --color-successrgb:         34, 197, 94;
+  --color-danger:             #ef4444;
+  --color-dangerrgb:          239, 68, 68;
+  --color-warning:            #f59e0b;
+  --color-warningrgb:         245, 158, 11;
+  --color-info:               #3b82f6;
+  --color-inforgb:            59, 130, 246;
+
+  // ── ألوان النص ──
+  --color-defaulttextcolor:   #1e293b;
+  --color-textmuted:          #64748b;
+  --color-textdisabled:       #94a3b8;
+
+  // ── الخلفيات والحدود ──
+  --color-defaultborder:      #e2e8f0;
+  --color-defaultbackground:  #ffffff;
+  --color-formcontrolbg:      #ffffff;
+  --color-inputborder:        #cbd5e1;
+  --color-darkbg:             #1e293b;
+
+  // ── قوائم التنقل ──
+  --color-menuprimecolor:     #6366f1;
+  --color-headerprimecolor:   #6366f1;
+
+  // ── ألوان خاصة ──
+  --color-customwhite:        #ffffff;
+  --color-customblack:        #000000;
+
+  // ── ألوان إضافية متوافقة مع Valex ──
+  --color-orange:             #f97316;
+  --color-teal:               #14b8a6;
+  --color-pink:               #ec4899;
+  --color-purple:             #8b5cf6;
+  --color-cyan:               #06b6d4;
+  --color-lime:               #84cc16;
+  --color-indigo:             #6366f1;
+  --color-rose:               #f43f5e;
+
+  // ── ظلال ──
+  --shadow-sm:                0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md:                0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg:                0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl:                0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+
+  // ── متغيرات الخطوط ──
+  --font-primary:             'Tajawal', 'Roboto', sans-serif;
+  --font-secondary:           'Inter', 'Roboto', sans-serif;
+  --font-mono:                'JetBrains Mono', 'Fira Code', monospace;
+
+  // ── الحواف ──
+  --radius-sm:                0.25rem;
+  --radius-md:                0.375rem;
+  --radius-lg:                0.5rem;
+  --radius-xl:                0.75rem;
+  --radius-2xl:               1rem;
+  --radius-full:              9999px;
+
+  // ── الانتقالات ──
+  --transition-fast:          150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal:        250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:          350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  // ── عرض السايدبار ──
+  --sidebar-width:            265px;
+  --sidebar-collapsed-width:  80px;
+  --header-height:            60px;
+  --footer-height:            60px;
+}
+
+// ===================== Dark Mode (الوضع الداكن) =====================
+[data-theme="dark"],
+html.dark {
+  color-scheme: dark;
+
+  // ── الألوان الأساسية ──
+  --color-bodybg:             #0f172a;
+  --color-primary:            #6366f1;
+  --color-primaryrgb:         99, 102, 241;
+  --color-secondary:          #8b5cf6;
+  --color-secondaryrgb:       139, 92, 246;
+
+  // ── ألوان الحالة (أكثر إضاءة في الداكن) ──
+  --color-success:            #4ade80;
+  --color-successrgb:         74, 222, 128;
+  --color-danger:             #f87171;
+  --color-dangerrgb:          248, 113, 113;
+  --color-warning:            #fbbf24;
+  --color-warningrgb:         251, 191, 36;
+  --color-info:               #60a5fa;
+  --color-inforgb:            96, 165, 250;
+
+  // ── ألوان النص ──
+  --color-defaulttextcolor:   #e2e8f0;
+  --color-textmuted:          #94a3b8;
+  --color-textdisabled:       #64748b;
+
+  // ── الخلفيات والحدود ──
+  --color-defaultborder:      #1e293b;
+  --color-defaultbackground:  #1e293b;
+  --color-formcontrolbg:      #1e293b;
+  --color-inputborder:        #334155;
+  --color-darkbg:             #0f172a;
+
+  // ── قوائم التنقل ──
+  --color-menuprimecolor:     #818cf8;
+  --color-headerprimecolor:   #818cf8;
+
+  // ── ألوان خاصة ──
+  --color-customwhite:        #1e293b;
+  --color-customblack:        #f1f5f9;
+
+  // ── ألوان إضافية متوافقة مع Valex Dark ──
+  --color-orange:             #fb923c;
+  --color-teal:               #2dd4bf;
+  --color-pink:               #f472b6;
+  --color-purple:             #a78bfa;
+  --color-cyan:               #22d3ee;
+  --color-lime:               #a3e635;
+  --color-indigo:             #818cf8;
+  --color-rose:               #fb7185;
+
+  // ── ظلال (أقوى في الداكن) ──
+  --shadow-sm:                0 1px 2px 0 rgb(0 0 0 / 0.25);
+  --shadow-md:                0 4px 6px -1px rgb(0 0 0 / 0.35), 0 2px 4px -2px rgb(0 0 0 / 0.25);
+  --shadow-lg:                0 10px 15px -3px rgb(0 0 0 / 0.40), 0 4px 6px -4px rgb(0 0 0 / 0.30);
+  --shadow-xl:                0 20px 25px -5px rgb(0 0 0 / 0.45), 0 8px 10px -6px rgb(0 0 0 / 0.35);
+
+  // ── الخطوط (ثابتة) ──
+  --font-primary:             'Tajawal', 'Roboto', sans-serif;
+  --font-secondary:           'Inter', 'Roboto', sans-serif;
+  --font-mono:                'JetBrains Mono', 'Fira Code', monospace;
+
+  // ── الحواف (ثابتة) ──
+  --radius-sm:                0.25rem;
+  --radius-md:                0.375rem;
+  --radius-lg:                0.5rem;
+  --radius-xl:                0.75rem;
+  --radius-2xl:               1rem;
+  --radius-full:              9999px;
+
+  // ── الانتقالات (ثابتة) ──
+  --transition-fast:          150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal:        250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:          350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  // ── عرض السايدبار (ثابت) ──
+  --sidebar-width:            265px;
+  --sidebar-collapsed-width:  80px;
+  --header-height:            60px;
+  --footer-height:            60px;
+}

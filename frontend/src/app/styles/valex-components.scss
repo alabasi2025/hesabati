@@ -1,0 +1,413 @@
+// =============================================================================
+// valex-components.scss — مكونات Cards, Badges, Buttons بتصميم Valex
+// =============================================================================
+
+// ===================== Cards =====================
+.valex-card {
+  background-color: var(--color-customwhite);
+  border: 1px solid var(--color-defaultborder);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-normal),
+              transform var(--transition-normal);
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.valex-card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-defaultborder);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  .card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-defaulttextcolor);
+    margin: 0;
+  }
+}
+
+.valex-card-body {
+  padding: 1.25rem;
+}
+
+.valex-card-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--color-defaultborder);
+  background-color: transparent;
+}
+
+// Card ملون بالإطار
+.valex-card-primary  { border-top: 3px solid var(--color-primary); }
+.valex-card-success  { border-top: 3px solid var(--color-success); }
+.valex-card-danger   { border-top: 3px solid var(--color-danger); }
+.valex-card-warning  { border-top: 3px solid var(--color-warning); }
+.valex-card-info     { border-top: 3px solid var(--color-info); }
+
+// ===================== Badges =====================
+.valex-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.valex-badge-primary {
+  background-color: rgba(var(--color-primaryrgb), 0.12);
+  color: var(--color-primary);
+}
+
+.valex-badge-success {
+  background-color: rgba(var(--color-successrgb), 0.12);
+  color: var(--color-success);
+}
+
+.valex-badge-danger {
+  background-color: rgba(var(--color-dangerrgb), 0.12);
+  color: var(--color-danger);
+}
+
+.valex-badge-warning {
+  background-color: rgba(var(--color-warningrgb), 0.12);
+  color: var(--color-warning);
+}
+
+.valex-badge-info {
+  background-color: rgba(var(--color-inforgb), 0.12);
+  color: var(--color-info);
+}
+
+.valex-badge-secondary {
+  background-color: rgba(var(--color-secondaryrgb), 0.12);
+  color: var(--color-secondary);
+}
+
+.valex-badge-muted {
+  background-color: rgba(100, 116, 139, 0.12);
+  color: var(--color-textmuted);
+}
+
+// Badge بشكل نقطة
+.valex-badge-dot {
+  padding: 0.2rem 0.55rem 0.2rem 0.35rem;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex-shrink: 0;
+  }
+}
+
+// ===================== Buttons =====================
+.valex-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  cursor: pointer;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+  font-family: var(--font-primary);
+  outline: none;
+  user-select: none;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled,
+  &.disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  // أيقونة فقط (مربع)
+  &.btn-icon {
+    padding: 0.5rem;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-lg);
+  }
+}
+
+// حجم صغير
+.valex-btn-sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8125rem;
+
+  &.btn-icon {
+    width: 30px;
+    height: 30px;
+    padding: 0.3rem;
+  }
+}
+
+// حجم كبير
+.valex-btn-lg {
+  padding: 0.65rem 1.35rem;
+  font-size: 0.9375rem;
+}
+
+// Variants
+.valex-btn-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-primary) 85%, black);
+    border-color: color-mix(in srgb, var(--color-primary) 85%, black);
+    box-shadow: 0 4px 12px rgba(var(--color-primaryrgb), 0.35);
+  }
+}
+
+.valex-btn-secondary {
+  background-color: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: #ffffff;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-secondary) 85%, black);
+    border-color: color-mix(in srgb, var(--color-secondary) 85%, black);
+    box-shadow: 0 4px 12px rgba(var(--color-secondaryrgb), 0.35);
+  }
+}
+
+.valex-btn-success {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-success) 85%, black);
+    border-color: color-mix(in srgb, var(--color-success) 85%, black);
+    box-shadow: 0 4px 12px rgba(var(--color-successrgb), 0.35);
+  }
+}
+
+.valex-btn-danger {
+  background-color: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #ffffff;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-danger) 85%, black);
+    border-color: color-mix(in srgb, var(--color-danger) 85%, black);
+    box-shadow: 0 4px 12px rgba(var(--color-dangerrgb), 0.35);
+  }
+}
+
+.valex-btn-warning {
+  background-color: var(--color-warning);
+  border-color: var(--color-warning);
+  color: #ffffff;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-warning) 85%, black);
+    border-color: color-mix(in srgb, var(--color-warning) 85%, black);
+    box-shadow: 0 4px 12px rgba(var(--color-warningrgb), 0.35);
+  }
+}
+
+.valex-btn-info {
+  background-color: var(--color-info);
+  border-color: var(--color-info);
+  color: #ffffff;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-info) 85%, black);
+    border-color: color-mix(in srgb, var(--color-info) 85%, black);
+    box-shadow: 0 4px 12px rgba(var(--color-inforgb), 0.35);
+  }
+}
+
+// Outline variants
+.valex-btn-outline-primary {
+  background-color: transparent;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+
+  &:hover {
+    background-color: var(--color-primary);
+    color: #ffffff;
+  }
+}
+
+.valex-btn-outline-secondary {
+  background-color: transparent;
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+
+  &:hover {
+    background-color: var(--color-secondary);
+    color: #ffffff;
+  }
+}
+
+.valex-btn-outline-success {
+  background-color: transparent;
+  border-color: var(--color-success);
+  color: var(--color-success);
+
+  &:hover {
+    background-color: var(--color-success);
+    color: #ffffff;
+  }
+}
+
+.valex-btn-outline-danger {
+  background-color: transparent;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+
+  &:hover {
+    background-color: var(--color-danger);
+    color: #ffffff;
+  }
+}
+
+// Ghost variant (خلفية شفافة مع hover)
+.valex-btn-ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-defaulttextcolor);
+
+  &:hover {
+    background-color: rgba(var(--color-primaryrgb), 0.08);
+    border-color: transparent;
+    color: var(--color-primary);
+  }
+}
+
+// Light variant (خلفية فاتحة)
+.valex-btn-light {
+  background-color: var(--color-defaultborder);
+  border-color: var(--color-defaultborder);
+  color: var(--color-defaulttextcolor);
+
+  &:hover {
+    background-color: var(--color-inputborder);
+    border-color: var(--color-inputborder);
+  }
+}
+
+// ===================== Alert / Toast Wrappers =====================
+.valex-alert {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  border-width: 1px;
+  border-style: solid;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+
+  .alert-icon {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+  }
+}
+
+.valex-alert-primary {
+  background-color: rgba(var(--color-primaryrgb), 0.10);
+  border-color: rgba(var(--color-primaryrgb), 0.25);
+  color: var(--color-primary);
+}
+
+.valex-alert-success {
+  background-color: rgba(var(--color-successrgb), 0.10);
+  border-color: rgba(var(--color-successrgb), 0.25);
+  color: var(--color-success);
+}
+
+.valex-alert-danger {
+  background-color: rgba(var(--color-dangerrgb), 0.10);
+  border-color: rgba(var(--color-dangerrgb), 0.25);
+  color: var(--color-danger);
+}
+
+.valex-alert-warning {
+  background-color: rgba(var(--color-warningrgb), 0.10);
+  border-color: rgba(var(--color-warningrgb), 0.25);
+  color: var(--color-warning);
+}
+
+.valex-alert-info {
+  background-color: rgba(var(--color-inforgb), 0.10);
+  border-color: rgba(var(--color-inforgb), 0.25);
+  color: var(--color-info);
+}
+
+// ===================== Avatar =====================
+.valex-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-weight: 600;
+
+  &.avatar-sm  { width: 28px; height: 28px; font-size: 0.7rem; }
+  &.avatar-md  { width: 36px; height: 36px; font-size: 0.8rem; }
+  &.avatar-lg  { width: 48px; height: 48px; font-size: 0.9rem; }
+  &.avatar-xl  { width: 64px; height: 64px; font-size: 1rem; }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// ===================== Divider =====================
+.valex-divider {
+  border: none;
+  border-top: 1px solid var(--color-defaultborder);
+  margin: 1rem 0;
+}
+
+// ===================== Spinner =====================
+.valex-spinner {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--color-defaultborder);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: valex-spin 0.7s linear infinite;
+
+  &.spinner-sm { width: 0.875rem; height: 0.875rem; border-width: 2px; }
+  &.spinner-lg { width: 2rem; height: 2rem; border-width: 3px; }
+}
+
+@keyframes valex-spin {
+  to { transform: rotate(360deg); }
+}

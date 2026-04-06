@@ -1,0 +1,360 @@
+// =============================================================================
+// valex-forms.scss — حقول الإدخال، القوائم، المناطق النصية بتصميم Valex
+// =============================================================================
+
+// ===================== Form Group =====================
+.valex-form-group {
+  margin-bottom: 1rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+// ===================== Label =====================
+.valex-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-defaulttextcolor);
+  margin-bottom: 0.375rem;
+
+  .required {
+    color: var(--color-danger);
+    margin-inline-start: 0.2rem;
+  }
+}
+
+.valex-label-sm {
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+// ===================== Input Base =====================
+%valex-input-base {
+  display: block;
+  width: 100%;
+  padding: 0.5625rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-defaulttextcolor);
+  background-color: var(--color-formcontrolbg);
+  border: 1px solid var(--color-inputborder);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+  font-family: var(--font-primary);
+  direction: rtl;
+  appearance: none;
+  -webkit-appearance: none;
+
+  &::placeholder {
+    color: var(--color-textdisabled);
+    font-weight: 400;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-primaryrgb), 0.12);
+    background-color: var(--color-formcontrolbg);
+  }
+
+  &:disabled,
+  &[readonly] {
+    background-color: var(--color-defaultborder);
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  &.is-invalid {
+    border-color: var(--color-danger);
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(var(--color-dangerrgb), 0.12);
+    }
+  }
+
+  &.is-valid {
+    border-color: var(--color-success);
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(var(--color-successrgb), 0.12);
+    }
+  }
+}
+
+// ===================== Text Input =====================
+.valex-input {
+  @extend %valex-input-base;
+}
+
+.valex-input-sm {
+  @extend %valex-input-base;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
+}
+
+.valex-input-lg {
+  @extend %valex-input-base;
+  padding: 0.6875rem 1rem;
+  font-size: 0.9375rem;
+  border-radius: var(--radius-xl);
+}
+
+// ===================== Textarea =====================
+.valex-textarea {
+  @extend %valex-input-base;
+  min-height: 6rem;
+  resize: vertical;
+}
+
+// ===================== Select =====================
+.valex-select {
+  @extend %valex-input-base;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.75rem center;
+  padding-inline-start: 2rem;
+
+  option {
+    background-color: var(--color-formcontrolbg);
+    color: var(--color-defaulttextcolor);
+  }
+}
+
+// ===================== Input Group (مع أيقونة) =====================
+.valex-input-group {
+  position: relative;
+
+  .valex-input,
+  .valex-select {
+    // الحشو للأيقونة من اليمين (RTL)
+    &.has-icon-start { padding-inline-end: 2.5rem; }
+    &.has-icon-end   { padding-inline-start: 2.5rem; }
+    &.has-icon-both  { padding-inline-start: 2.5rem; padding-inline-end: 2.5rem; }
+  }
+
+  .input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-textmuted);
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 1;
+
+    &.icon-start { inset-inline-end: 0.875rem; }
+    &.icon-end   { inset-inline-start: 0.875rem; }
+  }
+
+  .input-addon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0 0.75rem;
+    color: var(--color-textmuted);
+    font-size: 0.875rem;
+    background-color: var(--color-defaultborder);
+    border: 1px solid var(--color-inputborder);
+    height: calc(100% - 2px);
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-lg);
+
+    &.addon-start {
+      inset-inline-end: 1px;
+      border-inline-start: none;
+      border-start-start-radius: 0;
+      border-end-start-radius: 0;
+    }
+
+    &.addon-end {
+      inset-inline-start: 1px;
+      border-inline-end: none;
+      border-start-end-radius: 0;
+      border-end-end-radius: 0;
+    }
+  }
+}
+
+// ===================== Checkbox & Radio =====================
+.valex-check,
+.valex-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-defaulttextcolor);
+  user-select: none;
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-inputborder);
+    background-color: var(--color-formcontrolbg);
+    cursor: pointer;
+    flex-shrink: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+      border-color var(--transition-fast),
+      background-color var(--transition-fast);
+
+    &:checked {
+      background-color: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(var(--color-primaryrgb), 0.12);
+    }
+  }
+
+  input[type="checkbox"] {
+    border-radius: var(--radius-sm);
+
+    &:checked {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
+      background-size: 75%;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+  }
+
+  input[type="radio"] {
+    border-radius: 50%;
+
+    &:checked {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Ccircle cx='10' cy='10' r='4'/%3E%3C/svg%3E");
+      background-size: 75%;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+  }
+}
+
+// ===================== Toggle Switch =====================
+.valex-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+
+  input[type="checkbox"] {
+    display: none;
+
+    &:checked + .toggle-track {
+      background-color: var(--color-primary);
+
+      .toggle-thumb {
+        transform: translateX(-100%);
+      }
+    }
+  }
+
+  .toggle-track {
+    width: 40px;
+    height: 22px;
+    background-color: var(--color-inputborder);
+    border-radius: var(--radius-full);
+    position: relative;
+    transition: background-color var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  .toggle-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    inset-inline-start: 3px;
+    transition: transform var(--transition-fast);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .toggle-label {
+    font-size: 0.875rem;
+    color: var(--color-defaulttextcolor);
+  }
+}
+
+// ===================== Form Feedback =====================
+.valex-feedback-invalid {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--color-danger);
+}
+
+.valex-feedback-valid {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--color-success);
+}
+
+.valex-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--color-textmuted);
+}
+
+// ===================== Form Row (شبكة أفقية) =====================
+.valex-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  > .valex-form-group {
+    flex: 1;
+    min-width: 160px;
+    margin-bottom: 0;
+  }
+}
+
+// ===================== Search Input =====================
+.valex-search-input {
+  position: relative;
+
+  .valex-input {
+    padding-inline-end: 2.5rem;
+  }
+
+  .search-icon {
+    position: absolute;
+    inset-inline-end: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-textmuted);
+    font-size: 1rem;
+    pointer-events: none;
+  }
+
+  .search-clear {
+    position: absolute;
+    inset-inline-start: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-textmuted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color var(--transition-fast);
+
+    &:hover { color: var(--color-danger); }
+  }
+}
