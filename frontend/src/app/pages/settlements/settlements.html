@@ -1,126 +1,241 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">balance</span> التصفيات</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add_circle</span> تصفية جديدة</button>
-  </div>
+  <app-page-header title="التصفيات" icon="balance" [breadcrumb]="['الرئيسية', 'المحاسبة', 'التصفيات']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add_circle</span>
+      تصفية جديدة
+    </button>
+  </app-page-header>
 
-  <div class="summary-row">
-    <div class="summary-card amber"><span class="material-icons-round">balance</span><div><span class="num">{{ filteredSettlements().length }}</span><span class="lbl">تصفية</span></div></div>
-    <div class="summary-card blue"><span class="material-icons-round">arrow_upward</span><div><span class="num">{{ totalExpected() | number:'1.0-0' }}</span><span class="lbl">المتوقع (ر.ي)</span></div></div>
-    <div class="summary-card green"><span class="material-icons-round">arrow_downward</span><div><span class="num">{{ totalActual() | number:'1.0-0' }}</span><span class="lbl">الفعلي (ر.ي)</span></div></div>
-    <div class="summary-card" [class.red]="totalDifference() !== 0" [class.green]="totalDifference() === 0"><span class="material-icons-round">compare_arrows</span><div><span class="num">{{ totalDifference() | number:'1.0-0' }}</span><span class="lbl">الفرق</span></div></div>
-  </div>
-
-  <div class="filters-row">
-    <div class="filter-group">
-      <span class="filter-label">النوع:</span>
-      <div class="filter-tabs">
-        <button class="filter-tab" [class.active]="filterType() === 'all'" (click)="filterType.set('all')">الكل</button>
-        <button class="filter-tab" [class.active]="filterType() === 'manager'" (click)="filterType.set('manager')">مدير</button>
-        <button class="filter-tab" [class.active]="filterType() === 'exchange'" (click)="filterType.set('exchange')">صراف</button>
-        <button class="filter-tab" [class.active]="filterType() === 'accountant'" (click)="filterType.set('accountant')">محاسب</button>
-        <button class="filter-tab" [class.active]="filterType() === 'supplier'" (click)="filterType.set('supplier')">مورد</button>
-        <button class="filter-tab" [class.active]="filterType() === 'custody'" (click)="filterType.set('custody')">عهدة</button>
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+        <span class="material-icons-round">balance</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ filteredSettlements().length }}</div>
+        <div class="text-xs text-muted">تصفية</div>
       </div>
     </div>
-    <div class="filter-group">
-      <span class="filter-label">الحالة:</span>
-      <div class="filter-tabs">
-        <button class="filter-tab" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">الكل</button>
-        <button class="filter-tab" [class.active]="filterStatus() === 'open'" (click)="filterStatus.set('open')">مفتوحة</button>
-        <button class="filter-tab" [class.active]="filterStatus() === 'in_progress'" (click)="filterStatus.set('in_progress')">قيد التنفيذ</button>
-        <button class="filter-tab" [class.active]="filterStatus() === 'completed'" (click)="filterStatus.set('completed')">مكتملة</button>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-info/10 text-info">
+        <span class="material-icons-round">arrow_upward</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ totalExpected() | number:'1.0-0' }}</div>
+        <div class="text-xs text-muted">المتوقع (ر.ي)</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
+        <span class="material-icons-round">arrow_downward</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ totalActual() | number:'1.0-0' }}</div>
+        <div class="text-xs text-muted">الفعلي (ر.ي)</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-3"
+      [class.border-danger]="totalDifference() !== 0"
+      [class.valex-card-danger]="totalDifference() !== 0">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+        [class.bg-danger/10]="totalDifference() !== 0"
+        [class.text-danger]="totalDifference() !== 0"
+        [class.bg-success/10]="totalDifference() === 0"
+        [class.text-success]="totalDifference() === 0">
+        <span class="material-icons-round">compare_arrows</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ totalDifference() | number:'1.0-0' }}</div>
+        <div class="text-xs text-muted">الفرق</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div>
+          <div class="text-xs text-muted font-semibold mb-2">النوع:</div>
+          <div class="flex flex-wrap gap-2">
+            <button class="valex-tab-btn" [class.active]="filterType() === 'all'" (click)="filterType.set('all')">الكل</button>
+            <button class="valex-tab-btn" [class.active]="filterType() === 'manager'" (click)="filterType.set('manager')">مدير</button>
+            <button class="valex-tab-btn" [class.active]="filterType() === 'exchange'" (click)="filterType.set('exchange')">صراف</button>
+            <button class="valex-tab-btn" [class.active]="filterType() === 'accountant'" (click)="filterType.set('accountant')">محاسب</button>
+            <button class="valex-tab-btn" [class.active]="filterType() === 'supplier'" (click)="filterType.set('supplier')">مورد</button>
+            <button class="valex-tab-btn" [class.active]="filterType() === 'custody'" (click)="filterType.set('custody')">عهدة</button>
+          </div>
+        </div>
+        <div class="border-r border-[var(--color-defaultborder)] hidden sm:block"></div>
+        <div>
+          <div class="text-xs text-muted font-semibold mb-2">الحالة:</div>
+          <div class="flex flex-wrap gap-2">
+            <button class="valex-tab-btn" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">الكل</button>
+            <button class="valex-tab-btn" [class.active]="filterStatus() === 'open'" (click)="filterStatus.set('open')">مفتوحة</button>
+            <button class="valex-tab-btn" [class.active]="filterStatus() === 'in_progress'" (click)="filterStatus.set('in_progress')">قيد التنفيذ</button>
+            <button class="valex-tab-btn" [class.active]="filterStatus() === 'completed'" (click)="filterStatus.set('completed')">مكتملة</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon purple"><span class="material-icons-round">balance</span></div>
-          <h3>{{ editingId() ? 'تعديل تصفية' : 'تصفية جديدة' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
-        </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
-      </div>
-      <div class="form-meta">
-        <div class="form-group"><label>عنوان التصفية</label><input [(ngModel)]="form.title" placeholder="مثال: تصفية مدير محطة الدهمية" /></div>
-        <div class="form-group"><label>النوع</label>
-          <select [(ngModel)]="form.reconciliationType">
-            <option value="manager">مدير</option><option value="exchange">صراف</option>
-            <option value="accountant">محاسب</option><option value="supplier">مورد</option>
-            <option value="custody">عهدة</option>
-          </select>
-        </div>
-        <div class="form-group"><label>مع (الشخص)</label><input [(ngModel)]="form.withPerson" placeholder="اسم الشخص" /></div>
-        <div class="form-group"><label>الحالة</label>
-          <select [(ngModel)]="form.status">
-            <option value="open">مفتوحة</option><option value="in_progress">قيد التنفيذ</option>
-            <option value="completed">مكتملة</option><option value="disputed">متنازع عليها</option>
-          </select>
-        </div>
-        <div class="form-group"><label>المحطة (اختياري)</label>
-          <select [(ngModel)]="form.stationId"><option [ngValue]="null">بدون</option>
-            @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
-          </select>
-        </div>
-        <div class="form-group"><label>الحساب (اختياري)</label>
-          <select [(ngModel)]="form.accountId"><option [ngValue]="null">بدون</option>
-            @for (a of accounts(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
-          </select>
-        </div>
-        <div class="form-group"><label>من تاريخ</label><input type="date" [(ngModel)]="form.periodStart" /></div>
-        <div class="form-group"><label>إلى تاريخ</label><input type="date" [(ngModel)]="form.periodEnd" /></div>
-        <div class="form-group"><label>المبلغ المتوقع</label><input type="number" [(ngModel)]="form.expectedAmount" /></div>
-        <div class="form-group"><label>المبلغ الفعلي</label><input type="number" [(ngModel)]="form.actualAmount" /></div>
-        @if (form.expectedAmount && form.actualAmount) {
-          <div class="form-group full-width">
-            <div class="diff-display" [class.balanced]="form.expectedAmount === form.actualAmount" [class.unbalanced]="form.expectedAmount !== form.actualAmount">
-              <span class="material-icons-round">{{ form.expectedAmount === form.actualAmount ? 'check_circle' : 'warning' }}</span>
-              <span>الفرق: {{ (form.expectedAmount - form.actualAmount) | number:'1.0-0' }} ر.ي</span>
-            </div>
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-secondary/10 text-secondary">
+            <span class="material-icons-round">balance</span>
           </div>
-        }
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل تصفية' : 'تصفية جديدة' }}</h3>
+          @if (editingId()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
+        </div>
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء التصفية' }}</button>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label">عنوان التصفية</label>
+            <input class="valex-input" [(ngModel)]="form.title" placeholder="مثال: تصفية مدير محطة الدهمية" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">النوع</label>
+            <select class="valex-select" [(ngModel)]="form.reconciliationType">
+              <option value="manager">مدير</option>
+              <option value="exchange">صراف</option>
+              <option value="accountant">محاسب</option>
+              <option value="supplier">مورد</option>
+              <option value="custody">عهدة</option>
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">مع (الشخص)</label>
+            <input class="valex-input" [(ngModel)]="form.withPerson" placeholder="اسم الشخص" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الحالة</label>
+            <select class="valex-select" [(ngModel)]="form.status">
+              <option value="open">مفتوحة</option>
+              <option value="in_progress">قيد التنفيذ</option>
+              <option value="completed">مكتملة</option>
+              <option value="disputed">متنازع عليها</option>
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المحطة (اختياري)</label>
+            <select class="valex-select" [(ngModel)]="form.stationId">
+              <option [ngValue]="null">بدون</option>
+              @for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الحساب (اختياري)</label>
+            <select class="valex-select" [(ngModel)]="form.accountId">
+              <option [ngValue]="null">بدون</option>
+              @for (a of accounts(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">من تاريخ</label>
+            <input class="valex-input" type="date" [(ngModel)]="form.periodStart" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">إلى تاريخ</label>
+            <input class="valex-input" type="date" [(ngModel)]="form.periodEnd" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المبلغ المتوقع</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.expectedAmount" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المبلغ الفعلي</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.actualAmount" />
+          </div>
+          @if (form.expectedAmount && form.actualAmount) {
+            <div class="valex-form-group md:col-span-2">
+              <div class="valex-diff-display" [class.balanced]="form.expectedAmount === form.actualAmount" [class.unbalanced]="form.expectedAmount !== form.actualAmount">
+                <span class="material-icons-round">{{ form.expectedAmount === form.actualAmount ? 'check_circle' : 'warning' }}</span>
+                <span>الفرق: {{ (form.expectedAmount - form.actualAmount) | number:'1.0-0' }} ر.ي</span>
+              </div>
+            </div>
+          }
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">ملاحظات</label>
+            <textarea class="valex-input" [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
+          {{ editingId() ? 'حفظ التعديلات' : 'إنشاء التصفية' }}
+        </button>
       </div>
     </div>
   } @else if (!filteredSettlements().length) {
-    <div class="empty-state"><span class="material-icons-round">balance</span><p>لا يوجد تصفيات</p></div>
+    <app-empty-state icon="balance" title="لا يوجد تصفيات" subtitle="لا توجد تصفيات بالفلتر المحدد" actionLabel="تصفية جديدة" (addClick)="openAdd()" />
   } @else {
-    <table class="data-table">
-      <thead><tr><th>#</th><th>العنوان</th><th>النوع</th><th>مع</th><th>المتوقع</th><th>الفعلي</th><th>الفرق</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-      <tbody>
-        @for (r of filteredSettlements(); track r.id; let i = $index) {
-          <tr>
-            <td>{{ i + 1 }}</td>
-            <td>
-              <div class="title-cell">
-                <div class="type-icon"><span class="material-icons-round">{{ getTypeIcon(r.reconciliationType) }}</span></div>
-                <span class="title-text">{{ r.title }}</span>
-              </div>
-            </td>
-            <td><span class="type-badge">{{ getTypeLabel(r.reconciliationType) }}</span></td>
-            <td>{{ r.withPerson || '-' }}</td>
-            <td class="amount-cell positive">{{ r.expectedAmount ? (r.expectedAmount | number:'1.0-0') : '-' }}</td>
-            <td class="amount-cell">{{ r.actualAmount ? (r.actualAmount | number:'1.0-0') : '-' }}</td>
-            <td class="amount-cell" [class.negative]="(+r.expectedAmount - +r.actualAmount) !== 0">{{ r.expectedAmount && r.actualAmount ? ((+r.expectedAmount - +r.actualAmount) | number:'1.0-0') : '-' }}</td>
-            <td><span class="status-pill" [class]="getStatusClass(r.status)">{{ getStatusLabel(r.status) }}</span></td>
-            <td>
-              <button class="action-btn edit" (click)="openEdit(r)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(r)"><span class="material-icons-round">delete</span></button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <div class="valex-card">
+      <div class="valex-table-wrapper">
+        <table class="valex-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>العنوان</th>
+              <th>النوع</th>
+              <th>مع</th>
+              <th>المتوقع</th>
+              <th>الفعلي</th>
+              <th>الفرق</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of filteredSettlements(); track r.id; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
+                      <span class="material-icons-round text-sm">{{ getTypeIcon(r.reconciliationType) }}</span>
+                    </div>
+                    <span class="font-medium">{{ r.title }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="valex-badge valex-badge-info">{{ getTypeLabel(r.reconciliationType) }}</span>
+                </td>
+                <td class="text-muted">{{ r.withPerson || '-' }}</td>
+                <td class="td-amount text-success">{{ r.expectedAmount ? (r.expectedAmount | number:'1.0-0') : '-' }}</td>
+                <td class="td-amount">{{ r.actualAmount ? (r.actualAmount | number:'1.0-0') : '-' }}</td>
+                <td class="td-amount" [class.text-danger]="(+r.expectedAmount - +r.actualAmount) !== 0">
+                  {{ r.expectedAmount && r.actualAmount ? ((+r.expectedAmount - +r.actualAmount) | number:'1.0-0') : '-' }}
+                </td>
+                <td>
+                  <app-status-badge [status]="r.status" />
+                </td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="valex-icon-btn text-warning" (click)="openEdit(r)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="valex-icon-btn text-danger" (click)="remove(r)" title="حذف">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
   }
-
-
 </div>

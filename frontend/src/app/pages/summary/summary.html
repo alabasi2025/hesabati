@@ -1,181 +1,188 @@
-<div class="summary-page">
+<div class="page-content">
+  <app-page-header
+    title="ملخص كل الأعمال"
+    icon="summarize"
+    [breadcrumb]="['الرئيسية', 'ملخص الأعمال']"
+  />
 
-  <!-- رأس الصفحة -->
-  <div class="page-header">
-    <div class="header-content">
-      <span class="material-icons header-icon">summarize</span>
-      <div>
-        <h1>ملخص كل الأعمال</h1>
-        <p>نظرة شاملة على جميع أعمالك في مكان واحد</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- تحميل -->
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons spinning">refresh</span>
-      <p>جاري تحميل البيانات...</p>
-    </div>
+    <app-loading-state />
   }
 
-  <!-- خطأ -->
   @if (error()) {
-    <div class="error-state">
-      <span class="material-icons">error_outline</span>
-      <p>{{ error() }}</p>
+    <div class="valex-card mb-6 border border-danger/20 bg-danger/5">
+      <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+        <span class="material-icons-round">error_outline</span>
+        {{ error() }}
+      </div>
     </div>
   }
 
   @if (!loading() && !error()) {
 
-    <!-- بطاقات الإجماليات الكبيرة -->
-    <div class="totals-grid">
-      <div class="total-card total-stations">
-        <span class="material-icons">bolt</span>
-        <div class="total-info">
-          <span class="total-value">{{ totals().stations }}</span>
-          <span class="total-label">إجمالي المحطات</span>
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+          <span class="material-icons-round">bolt</span>
+        </div>
+        <div>
+          <div class="text-xl font-bold">{{ totals().stations }}</div>
+          <div class="text-xs text-muted">إجمالي المحطات</div>
         </div>
       </div>
-      <div class="total-card total-employees">
-        <span class="material-icons">groups</span>
-        <div class="total-info">
-          <span class="total-value">{{ totals().employees }}</span>
-          <span class="total-label">إجمالي الموظفين</span>
+
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-info/10 text-info flex-shrink-0">
+          <span class="material-icons-round">groups</span>
+        </div>
+        <div>
+          <div class="text-xl font-bold">{{ totals().employees }}</div>
+          <div class="text-xs text-muted">إجمالي الموظفين</div>
         </div>
       </div>
-      <div class="total-card total-accounts">
-        <span class="material-icons">account_balance_wallet</span>
-        <div class="total-info">
-          <span class="total-value">{{ totals().accounts }}</span>
-          <span class="total-label">إجمالي الحسابات</span>
+
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-secondary/10 text-secondary flex-shrink-0">
+          <span class="material-icons-round">account_balance_wallet</span>
+        </div>
+        <div>
+          <div class="text-xl font-bold">{{ totals().accounts }}</div>
+          <div class="text-xs text-muted">إجمالي الحسابات</div>
         </div>
       </div>
-      <div class="total-card total-funds">
-        <span class="material-icons">savings</span>
-        <div class="total-info">
-          <span class="total-value">{{ totals().funds }}</span>
-          <span class="total-label">إجمالي الصناديق</span>
+
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+          <span class="material-icons-round">savings</span>
+        </div>
+        <div>
+          <div class="text-xl font-bold">{{ totals().funds }}</div>
+          <div class="text-xs text-muted">إجمالي الصناديق</div>
         </div>
       </div>
-      <div class="total-card total-suppliers">
-        <span class="material-icons">local_shipping</span>
-        <div class="total-info">
-          <span class="total-value">{{ totals().suppliers }}</span>
-          <span class="total-label">إجمالي الموردين</span>
+
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+          <span class="material-icons-round">local_shipping</span>
+        </div>
+        <div>
+          <div class="text-xl font-bold">{{ totals().suppliers }}</div>
+          <div class="text-xs text-muted">إجمالي الموردين</div>
         </div>
       </div>
-      <div class="total-card total-pending" [class.has-pending]="totals().pendingAccounts > 0">
-        <span class="material-icons">warning</span>
-        <div class="total-info">
-          <span class="total-value">{{ totals().pendingAccounts }}</span>
-          <span class="total-label">حسابات معلقة</span>
+
+      <div class="valex-card p-4 flex items-center gap-3"
+           [class.border-danger/20]="totals().pendingAccounts > 0"
+           [class.bg-danger/5]="totals().pendingAccounts > 0">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+             [class.bg-danger/10]="totals().pendingAccounts > 0"
+             [class.text-danger]="totals().pendingAccounts > 0"
+             [class.bg-muted/10]="totals().pendingAccounts === 0"
+             [class.text-muted]="totals().pendingAccounts === 0">
+          <span class="material-icons-round">warning</span>
+        </div>
+        <div>
+          <div class="text-xl font-bold" [class.text-danger]="totals().pendingAccounts > 0">{{ totals().pendingAccounts }}</div>
+          <div class="text-xs text-muted">حسابات معلقة</div>
         </div>
       </div>
     </div>
 
-    <!-- تفاصيل كل عمل -->
-    <div class="section-title">
-      <span class="material-icons">business</span>
-      <h2>تفاصيل الأعمال</h2>
-    </div>
+    <h2 class="text-base font-bold flex items-center gap-2 mb-4">
+      <span class="material-icons-round text-primary">business</span>
+      تفاصيل الأعمال
+    </h2>
 
-    <div class="businesses-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       @for (biz of businesses(); track biz.id) {
-      <div
-        class="biz-card"
-        [style.--biz-color]="biz.color"
-      >
-        <!-- رأس البطاقة -->
-        <div class="biz-card-header">
-          <div class="biz-icon-wrap">
-            <span class="material-icons biz-icon">{{ biz.icon }}</span>
-          </div>
-          <div class="biz-info">
-            <h3>{{ biz.name }}</h3>
-            <span class="biz-type-badge">
-              <span class="material-icons">{{ getTypeIcon(biz.type) }}</span>
-              {{ getTypeLabel(biz.type) }}
-            </span>
-          </div>
-          <a [routerLink]="['/biz', biz.id]" class="enter-btn">
-            <span class="material-icons">open_in_new</span>
-          </a>
-        </div>
-
-        <!-- إحصائيات العمل -->
-        <div class="biz-stats">
-          @if (biz.stations > 0) {
-          <div class="stat-item">
-            <span class="material-icons">bolt</span>
-            <span class="stat-val">{{ biz.stations }}</span>
-            <span class="stat-lbl">محطة</span>
-          </div>
-          }
-          @if (biz.employees > 0) {
-          <div class="stat-item">
-            <span class="material-icons">groups</span>
-            <span class="stat-val">{{ biz.employees }}</span>
-            <span class="stat-lbl">موظف</span>
-          </div>
-          }
-          <div class="stat-item">
-            <span class="material-icons">account_balance_wallet</span>
-            <span class="stat-val">{{ biz.accounts }}</span>
-            <span class="stat-lbl">حساب</span>
-          </div>
-          @if (biz.funds > 0) {
-          <div class="stat-item">
-            <span class="material-icons">savings</span>
-            <span class="stat-val">{{ biz.funds }}</span>
-            <span class="stat-lbl">صندوق</span>
-          </div>
-          }
-          @if (biz.suppliers > 0) {
-          <div class="stat-item">
-            <span class="material-icons">local_shipping</span>
-            <span class="stat-val">{{ biz.suppliers }}</span>
-            <span class="stat-lbl">مورد</span>
-          </div>
-          }
-        </div>
-
-        <!-- الشركاء -->
-        @if (biz.partners && biz.partners.length > 0) {
-        <div class="biz-partners">
-          <div class="partners-title">
-            <span class="material-icons">handshake</span>
-            الشركاء
-          </div>
-          <div class="partners-list">
-            @for (p of biz.partners; track p.id) {
-            <div class="partner-chip">
-              <span class="material-icons">person</span>
-              <span>{{ p.fullName }}</span>
-              <span class="partner-share">{{ p.sharePercentage }}%</span>
+        <div class="valex-card summary-biz-card" [style.--biz-color]="biz.color">
+          <div class="valex-card-header">
+            <div class="flex items-center gap-3">
+              <div class="summary-biz-icon">
+                <span class="material-icons-round">{{ biz.icon }}</span>
+              </div>
+              <div>
+                <h3 class="valex-card-title">{{ biz.name }}</h3>
+                <div class="flex items-center gap-1 text-xs text-muted mt-1">
+                  <span class="material-icons-round text-sm">{{ getTypeIcon(biz.type) }}</span>
+                  {{ getTypeLabel(biz.type) }}
+                </div>
+              </div>
             </div>
+            <a [routerLink]="['/biz', biz.id]" class="valex-icon-btn">
+              <span class="material-icons-round">open_in_new</span>
+            </a>
+          </div>
+
+          <div class="valex-card-body">
+            <div class="flex flex-wrap gap-3 mb-4">
+              @if (biz.stations > 0) {
+                <div class="summary-stat-chip">
+                  <span class="material-icons-round">bolt</span>
+                  <span class="font-bold">{{ biz.stations }}</span>
+                  <span class="text-muted">محطة</span>
+                </div>
+              }
+              @if (biz.employees > 0) {
+                <div class="summary-stat-chip">
+                  <span class="material-icons-round">groups</span>
+                  <span class="font-bold">{{ biz.employees }}</span>
+                  <span class="text-muted">موظف</span>
+                </div>
+              }
+              <div class="summary-stat-chip">
+                <span class="material-icons-round">account_balance_wallet</span>
+                <span class="font-bold">{{ biz.accounts }}</span>
+                <span class="text-muted">حساب</span>
+              </div>
+              @if (biz.funds > 0) {
+                <div class="summary-stat-chip">
+                  <span class="material-icons-round">savings</span>
+                  <span class="font-bold">{{ biz.funds }}</span>
+                  <span class="text-muted">صندوق</span>
+                </div>
+              }
+              @if (biz.suppliers > 0) {
+                <div class="summary-stat-chip">
+                  <span class="material-icons-round">local_shipping</span>
+                  <span class="font-bold">{{ biz.suppliers }}</span>
+                  <span class="text-muted">مورد</span>
+                </div>
+              }
+            </div>
+
+            @if (biz.partners && biz.partners.length > 0) {
+              <div class="mb-4">
+                <div class="text-xs font-bold text-muted flex items-center gap-1 mb-2">
+                  <span class="material-icons-round text-sm">handshake</span>
+                  الشركاء
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  @for (p of biz.partners; track p.id) {
+                    <div class="valex-badge valex-badge-secondary flex items-center gap-1">
+                      <span class="material-icons-round text-sm">person</span>
+                      {{ p.fullName }}
+                      <span class="font-mono text-xs opacity-70">{{ p.sharePercentage }}%</span>
+                    </div>
+                  }
+                </div>
+              </div>
             }
+
+            @if (biz.pendingAccounts > 0) {
+              <div class="flex items-center gap-2 text-sm font-semibold text-warning mb-4 p-2 rounded-lg bg-warning/10">
+                <span class="material-icons-round text-base">warning</span>
+                {{ biz.pendingAccounts }} حساب معلق يحتاج تصفية
+              </div>
+            }
+
+            <a [routerLink]="['/biz', biz.id]" class="valex-btn valex-btn-primary w-full justify-center">
+              <span class="material-icons-round">login</span>
+              الدخول على {{ biz.name }}
+            </a>
           </div>
         </div>
-        }
-
-        <!-- تنبيه حسابات معلقة -->
-        @if (biz.pendingAccounts > 0) {
-        <div class="pending-alert">
-          <span class="material-icons">warning</span>
-          <span>{{ biz.pendingAccounts }} حساب معلق يحتاج تصفية</span>
-        </div>
-        }
-
-        <!-- زر الدخول -->
-        <a [routerLink]="['/biz', biz.id]" class="enter-biz-btn">
-          <span class="material-icons">login</span>
-          الدخول على {{ biz.name }}
-        </a>
-      </div>
       }
     </div>
-
   }
 </div>

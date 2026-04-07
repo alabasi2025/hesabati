@@ -1,92 +1,180 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">pending_actions</span> الحسابات المعلقة</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add_circle</span> إضافة حساب معلق</button>
+  <app-page-header title="الحسابات المعلقة" icon="pending_actions" [breadcrumb]="['الرئيسية', 'المحاسبة', 'الحسابات المعلقة']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add_circle</span>
+      إضافة حساب معلق
+    </button>
+  </app-page-header>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+        <span class="material-icons-round">pending_actions</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ items().length }}</div>
+        <div class="text-xs text-muted">إجمالي</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-danger/10 text-danger">
+        <span class="material-icons-round">hourglass_top</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ pendingCount() }}</div>
+        <div class="text-xs text-muted">معلق</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
+        <span class="material-icons-round">check_circle</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ resolvedCount() }}</div>
+        <div class="text-xs text-muted">تم الحل</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-info/10 text-info">
+        <span class="material-icons-round">payments</span>
+      </div>
+      <div>
+        <div class="text-xl font-bold">{{ totalAmount() | number:'1.0-0' }}</div>
+        <div class="text-xs text-muted">إجمالي المبالغ (ر.ي)</div>
+      </div>
+    </div>
   </div>
 
-  <div class="summary-row">
-    <div class="summary-card amber"><span class="material-icons-round">pending_actions</span><div><span class="num">{{ items().length }}</span><span class="lbl">إجمالي</span></div></div>
-    <div class="summary-card red"><span class="material-icons-round">hourglass_top</span><div><span class="num">{{ pendingCount() }}</span><span class="lbl">معلق</span></div></div>
-    <div class="summary-card green"><span class="material-icons-round">check_circle</span><div><span class="num">{{ resolvedCount() }}</span><span class="lbl">تم الحل</span></div></div>
-    <div class="summary-card blue"><span class="material-icons-round">payments</span><div><span class="num">{{ totalAmount() | number:'1.0-0' }}</span><span class="lbl">إجمالي المبالغ (ر.ي)</span></div></div>
-  </div>
-
-  <div class="filter-tabs">
-    <button class="filter-tab" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">الكل ({{ items().length }})</button>
-    <button class="filter-tab" [class.active]="filterStatus() === 'pending'" (click)="filterStatus.set('pending')">معلق ({{ pendingCount() }})</button>
-    <button class="filter-tab" [class.active]="filterStatus() === 'in_progress'" (click)="filterStatus.set('in_progress')">قيد المعالجة</button>
-    <button class="filter-tab" [class.active]="filterStatus() === 'resolved'" (click)="filterStatus.set('resolved')">تم الحل ({{ resolvedCount() }})</button>
-    <button class="filter-tab" [class.active]="filterStatus() === 'written_off'" (click)="filterStatus.set('written_off')">مشطوب</button>
+  <!-- Filter Tabs -->
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        <button class="valex-tab-btn" [class.active]="filterStatus() === 'all'" (click)="filterStatus.set('all')">الكل ({{ items().length }})</button>
+        <button class="valex-tab-btn" [class.active]="filterStatus() === 'pending'" (click)="filterStatus.set('pending')">معلق ({{ pendingCount() }})</button>
+        <button class="valex-tab-btn" [class.active]="filterStatus() === 'in_progress'" (click)="filterStatus.set('in_progress')">قيد المعالجة</button>
+        <button class="valex-tab-btn" [class.active]="filterStatus() === 'resolved'" (click)="filterStatus.set('resolved')">تم الحل ({{ resolvedCount() }})</button>
+        <button class="valex-tab-btn" [class.active]="filterStatus() === 'written_off'" (click)="filterStatus.set('written_off')">مشطوب</button>
+      </div>
+    </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon red"><span class="material-icons-round">pending_actions</span></div>
-          <h3>{{ editingId() ? 'تعديل حساب معلق' : 'إضافة حساب معلق' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-danger/10 text-danger">
+            <span class="material-icons-round">pending_actions</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل حساب معلق' : 'إضافة حساب معلق' }}</h3>
+          @if (editingId()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group"><label>الشخص / الجهة</label><input [(ngModel)]="form.personOrEntity" placeholder="اسم الشخص أو الجهة" /></div>
-        <div class="form-group"><label>المبلغ التقديري</label><input type="number" [(ngModel)]="form.estimatedAmount" /></div>
-        <div class="form-group full-width"><label>الوصف</label><textarea [(ngModel)]="form.description" rows="2" placeholder="وصف الحساب المعلق..."></textarea></div>
-        <div class="form-group">
-          <label>الحالة</label>
-          <select [(ngModel)]="form.status">
-            <option value="pending">معلق</option><option value="in_progress">قيد المعالجة</option>
-            <option value="resolved">تم الحل</option><option value="written_off">مشطوب</option>
-          </select>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label">الشخص / الجهة</label>
+            <input class="valex-input" [(ngModel)]="form.personOrEntity" placeholder="اسم الشخص أو الجهة" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المبلغ التقديري</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.estimatedAmount" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الوصف</label>
+            <textarea class="valex-input" [(ngModel)]="form.description" rows="2" placeholder="وصف الحساب المعلق..."></textarea>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الحالة</label>
+            <select class="valex-select" [(ngModel)]="form.status">
+              <option value="pending">معلق</option>
+              <option value="in_progress">قيد المعالجة</option>
+              <option value="resolved">تم الحل</option>
+              <option value="written_off">مشطوب</option>
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الحساب المرتبط</label>
+            <select class="valex-select" [(ngModel)]="form.accountId">
+              <option [ngValue]="null">-- اختر حساب معلق --</option>
+              @for (acc of pendingFilteredAccounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">ملاحظات</label>
+            <textarea class="valex-input" [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+          </div>
         </div>
-        <div class="form-group">
-          <label>الحساب المرتبط</label>
-          <select [(ngModel)]="form.accountId">
-            <option [ngValue]="null">-- اختر حساب معلق --</option>
-            @for (acc of pendingFilteredAccounts(); track acc.id) {
-              <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
-            }
-          </select>
-        </div>
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea></div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}</button>
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
+          {{ editingId() ? 'حفظ التعديلات' : 'إضافة' }}
+        </button>
       </div>
     </div>
   } @else if (!filteredItems().length) {
-    <div class="empty-state"><span class="material-icons-round">task_alt</span><p>لا يوجد حسابات معلقة</p></div>
+    <app-empty-state icon="task_alt" title="لا يوجد حسابات معلقة" subtitle="لا توجد حسابات بالفلتر المحدد" actionLabel="إضافة حساب" (addClick)="openAdd()" />
   } @else {
-    <table class="data-table">
-      <thead><tr><th>#</th><th>الكود</th><th>الشخص / الجهة</th><th>الوصف</th><th>المبلغ التقديري</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
-      <tbody>
-        @for (item of filteredItems(); track item.id; let i = $index) {
-          <tr>
-            <td>{{ i + 1 }}</td>
-            <td><span class="code-badge">{{ item.accountCode || '-' }}</span></td>
-            <td>
-              <div class="person-cell">
-                <div class="person-avatar"><span class="material-icons-round">person</span></div>
-                <span class="person-name">{{ item.personOrEntity }}</span>
-              </div>
-            </td>
-            <td class="desc-cell">{{ item.description || '-' }}</td>
-            <td class="amount-cell">{{ item.estimatedAmount ? (item.estimatedAmount | number:'1.0-0') + ' ر.ي' : '-' }}</td>
-            <td><span class="status-pill" [class]="getStatusClass(item.status)">{{ getStatusLabel(item.status) }}</span></td>
-            <td class="date-cell">{{ item.createdAt | date:'yyyy/MM/dd' }}</td>
-            <td>
-              <button class="action-btn edit" (click)="openEdit(item)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(item)"><span class="material-icons-round">delete</span></button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <div class="valex-card">
+      <div class="valex-table-wrapper">
+        <table class="valex-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الكود</th>
+              <th>الشخص / الجهة</th>
+              <th>الوصف</th>
+              <th>المبلغ التقديري</th>
+              <th>الحالة</th>
+              <th>التاريخ</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filteredItems(); track item.id; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <span class="valex-badge valex-badge-secondary font-mono text-xs">{{ item.accountCode || '-' }}</span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                      <span class="material-icons-round text-sm">person</span>
+                    </div>
+                    <span class="font-medium">{{ item.personOrEntity }}</span>
+                  </div>
+                </td>
+                <td class="text-muted">{{ item.description || '-' }}</td>
+                <td class="td-amount">{{ item.estimatedAmount ? (item.estimatedAmount | number:'1.0-0') + ' ر.ي' : '-' }}</td>
+                <td>
+                  <app-status-badge [status]="item.status" />
+                </td>
+                <td class="text-muted">{{ item.createdAt | date:'yyyy/MM/dd' }}</td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="valex-icon-btn text-warning" (click)="openEdit(item)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="valex-icon-btn text-danger" (click)="remove(item)" title="حذف">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
   }
-
-
 </div>

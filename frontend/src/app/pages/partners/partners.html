@@ -1,50 +1,58 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">handshake</span> الشركاء</h2>
-    <button class="add-btn" (click)="openAdd()">
-      <span class="material-icons-round">person_add</span> إضافة شريك
+  <app-page-header title="الشركاء" icon="handshake" [breadcrumb]="['الرئيسية', 'الشركاء']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">person_add</span>
+      إضافة شريك
     </button>
-  </div>
+  </app-page-header>
 
-  <!-- ملخص -->
-  <div class="summary-row">
-    <div class="summary-card amber">
-      <span class="material-icons-round">groups</span>
+  <!-- Summary -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+        <span class="material-icons-round text-2xl">groups</span>
+      </div>
       <div>
-        <span class="num">{{ partners().length }}</span
-        ><span class="lbl">شريك</span>
+        <div class="text-2xl font-bold">{{ partners().length }}</div>
+        <div class="text-sm text-muted">شريك</div>
       </div>
     </div>
-    <div class="summary-card blue">
-      <span class="material-icons-round">pie_chart</span>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
+        <span class="material-icons-round text-2xl">pie_chart</span>
+      </div>
       <div>
-        <span class="num">{{ totalShares() | number: '1.0-2' }}%</span
-        ><span class="lbl">إجمالي الحصص</span>
+        <div class="text-2xl font-bold">{{ totalShares() | number: '1.0-2' }}%</div>
+        <div class="text-sm text-muted">إجمالي الحصص</div>
       </div>
     </div>
-    <div class="summary-card green">
-      <span class="material-icons-round">business</span>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
+        <span class="material-icons-round text-2xl">business</span>
+      </div>
       <div>
-        <span class="num">{{ business()?.name || '-' }}</span
-        ><span class="lbl">العمل</span>
+        <div class="text-base font-bold">{{ business()?.name || '-' }}</div>
+        <div class="text-sm text-muted">العمل</div>
       </div>
     </div>
   </div>
 
   <!-- الحصص البصرية -->
   @if (partners().length) {
-    <div class="shares-visual">
-      <div class="shares-bar">
-        @for (p of partners(); track p.id) {
-          <div
-            class="share-segment"
-            [style.width.%]="p.sharePercentage"
-            [style.background]="getShareColor(+p.sharePercentage)"
-            [title]="p.fullName + ': ' + p.sharePercentage + '%'"
-          >
-            <span class="segment-label">{{ p.sharePercentage }}%</span>
-          </div>
-        }
+    <div class="valex-card mb-6">
+      <div class="valex-card-body py-3">
+        <div class="shares-bar-container">
+          @for (p of partners(); track p.id) {
+            <div
+              class="share-segment"
+              [style.width.%]="p.sharePercentage"
+              [style.background]="getShareColor(+p.sharePercentage)"
+              [title]="p.fullName + ': ' + p.sharePercentage + '%'"
+            >
+              <span class="segment-label">{{ p.sharePercentage }}%</span>
+            </div>
+          }
+        </div>
       </div>
     </div>
   }
@@ -52,178 +60,150 @@
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon amber"><span class="material-icons-round">handshake</span></div>
-          <h3>{{ editingId() ? 'تعديل شريك' : 'إضافة شريك جديد' }}</h3>
+    <!-- Form -->
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-warning/10 text-warning">
+            <span class="material-icons-round">handshake</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل شريك' : 'إضافة شريك جديد' }}</h3>
           @if (editingId()) {
-            <span class="edit-badge">تعديل</span>
+            <span class="valex-badge valex-badge-warning">تعديل</span>
           }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)">
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
           <span class="material-icons-round">close</span>
         </button>
       </div>
-      <div class="form-meta">
-        @if (!editingId()) {
-          <div class="form-group full-width">
-            <label>حساب التحكم <span class="required">*</span></label>
-            <select
-              [(ngModel)]="form.accountId"
-              [class.error]="!form.accountId"
-              (ngModelChange)="onAccountChange($event)"
-            >
-              <option [ngValue]="null">-- اختر حساب الشركاء --</option>
-              @for (a of partnerAccounts(); track a.id) {
-                <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
-              }
-            </select>
-          </div>
-        }
-        @if (accountCurrencies().length > 0) {
-          <div class="form-group full-width">
-            <label>العملات <span class="required">*</span></label>
-            <div class="currency-chips">
-              @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button
-                  type="button"
-                  class="currency-chip"
-                  [class.selected]="selectedCurrencyIds().includes(curr.currencyId)"
-                  (click)="toggleCurrency(curr.currencyId)"
-                >
-                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                  <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
-                </button>
-              }
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          @if (!editingId()) {
+            <div class="valex-form-group md:col-span-2">
+              <label class="valex-label">حساب التحكم <span class="text-danger">*</span></label>
+              <select class="valex-select"
+                [(ngModel)]="form.accountId"
+                [class.error]="!form.accountId"
+                (ngModelChange)="onAccountChange($event)">
+                <option [ngValue]="null">-- اختر حساب الشركاء --</option>
+                @for (a of partnerAccounts(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
+                }
+              </select>
             </div>
-          </div>
-          <div class="form-group full-width">
-            <label>العملة الافتراضية</label>
-            <div class="currency-chips">
-              @for (curr of accountCurrencies(); track curr.currencyId) {
-                @if (selectedCurrencyIds().includes(curr.currencyId)) {
-                  <button
-                    type="button"
-                    class="currency-chip"
-                    [class.default]="defaultCurrencyId() === curr.currencyId"
-                    (click)="setDefaultCurrency(curr.currencyId)"
-                  >
+          }
+          @if (accountCurrencies().length > 0) {
+            <div class="valex-form-group md:col-span-2">
+              <label class="valex-label">العملات <span class="text-danger">*</span></label>
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip"
+                    [class.selected]="selectedCurrencyIds().includes(curr.currencyId)"
+                    (click)="toggleCurrency(curr.currencyId)">
                     <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                    @if (defaultCurrencyId() === curr.currencyId) {
-                      <span class="chip-badge">افتراضي</span>
-                    }
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
                   </button>
                 }
-              }
+              </div>
             </div>
+            <div class="valex-form-group md:col-span-2">
+              <label class="valex-label">العملة الافتراضية</label>
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  @if (selectedCurrencyIds().includes(curr.currencyId)) {
+                    <button type="button" class="currency-chip"
+                      [class.default]="defaultCurrencyId() === curr.currencyId"
+                      (click)="setDefaultCurrency(curr.currencyId)">
+                      <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                      @if (defaultCurrencyId() === curr.currencyId) {
+                        <span class="chip-badge">افتراضي</span>
+                      }
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          }
+          <div class="valex-form-group">
+            <label class="valex-label">الاسم الكامل</label>
+            <input class="valex-input" [(ngModel)]="form.fullName" placeholder="اسم الشريك" />
           </div>
-        }
-        <div class="form-group">
-          <label>الاسم الكامل</label><input [(ngModel)]="form.fullName" placeholder="اسم الشريك" />
-        </div>
-        <div class="form-group">
-          <label>نسبة الحصة (%)</label
-          ><input
-            type="number"
-            [(ngModel)]="form.sharePercentage"
-            placeholder="نسبة الحصة"
-            min="0"
-            max="100"
-            step="0.01"
-          />
-        </div>
-        <div class="form-group">
-          <label>الدور / المنصب</label
-          ><input [(ngModel)]="form.role" placeholder="مثال: شريك مؤسس" />
-        </div>
-        <div class="form-group">
-          <label>الهاتف</label><input [(ngModel)]="form.phone" placeholder="رقم الهاتف" />
-        </div>
-        <div class="form-group full-width">
-          <label>ملاحظات</label
-          ><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+          <div class="valex-form-group">
+            <label class="valex-label">نسبة الحصة (%)</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.sharePercentage" placeholder="نسبة الحصة" min="0" max="100" step="0.01" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الدور / المنصب</label>
+            <input class="valex-input" [(ngModel)]="form.role" placeholder="مثال: شريك مؤسس" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الهاتف</label>
+            <input class="valex-input" [(ngModel)]="form.phone" placeholder="رقم الهاتف" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">ملاحظات</label>
+            <textarea class="valex-input" [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+          </div>
         </div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
           {{ editingId() ? 'حفظ التعديلات' : 'إضافة الشريك' }}
         </button>
       </div>
     </div>
   } @else if (!partners().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">group_off</span>
-      <p>لا يوجد شركاء مسجلين</p>
-      <button class="add-btn small" (click)="openAdd()">
-        <span class="material-icons-round">add</span> إضافة شريك
-      </button>
-    </div>
+    <app-empty-state icon="group_off" title="لا يوجد شركاء مسجلين" subtitle="أضف شريكاً جديداً" actionLabel="إضافة شريك" (addClick)="openAdd()" />
   } @else {
     <div class="partners-grid">
       @for (p of partners(); track p.id) {
-        <div class="partner-card">
-          <div class="card-header-row">
-            <div
-              class="partner-avatar"
-              [style.background]="
-                'linear-gradient(135deg, ' +
-                getShareColor(+p.sharePercentage) +
-                ', ' +
-                getShareColor(+p.sharePercentage) +
-                '99)'
-              "
-            >
-              <span class="material-icons-round">person</span>
+        <div class="valex-card partner-card">
+          <div class="valex-card-body">
+            <div class="flex items-start justify-between mb-3">
+              <div class="partner-avatar" [style.background]="'linear-gradient(135deg, ' + getShareColor(+p.sharePercentage) + ', ' + getShareColor(+p.sharePercentage) + '99)'">
+                <span class="material-icons-round">person</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="valex-icon-btn text-warning" (click)="openEdit(p)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="valex-icon-btn text-danger" (click)="confirmDelete(p)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
             </div>
-            <div class="card-actions">
-              <button class="action-btn edit" (click)="openEdit(p)">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="action-btn delete" (click)="confirmDelete(p)">
-                <span class="material-icons-round">delete</span>
-              </button>
+            <h3 class="font-bold text-base mb-1">{{ p.fullName }}</h3>
+            @if (p.role) {
+              <div class="valex-badge valex-badge-info text-xs mb-2">{{ p.role }}</div>
+            }
+            <div class="flex items-center gap-2 text-xs text-muted mb-1">
+              <span class="material-icons-round" style="font-size:13px">tag</span>
+              {{ p.accountLedgerCode ? p.accountLedgerCode + ' | ' : '' }}{{ p.accountCode || p.code || '-' }}
             </div>
+            <div class="flex items-center gap-2 text-xs text-muted mb-2">
+              <span class="material-icons-round" style="font-size:13px">format_list_numbered</span>
+              {{ p.accountSequence || p.sequenceNumber || '-' }}
+            </div>
+            <div class="share-display">
+              <div class="share-ring"
+                [style.background]="'conic-gradient(' + getShareColor(+p.sharePercentage) + ' ' + p.sharePercentage + '%, var(--color-bodybg) 0)'">
+                <div class="share-inner">{{ p.sharePercentage }}%</div>
+              </div>
+              <span class="text-xs text-muted mt-1">نسبة الحصة</span>
+            </div>
+            @if (p.phone) {
+              <div class="flex items-center gap-2 text-xs text-muted mt-2">
+                <span class="material-icons-round" style="font-size:13px">phone</span> {{ p.phone }}
+              </div>
+            }
+            @if (p.notes) {
+              <div class="flex items-center gap-2 text-xs text-muted mt-1">
+                <span class="material-icons-round" style="font-size:13px">notes</span> {{ p.notes }}
+              </div>
+            }
           </div>
-          <h3 class="partner-name">{{ p.fullName }}</h3>
-          @if (p.role) {
-            <span class="partner-role">{{ p.role }}</span>
-          }
-          <div class="partner-detail">
-            <span class="material-icons-round">tag</span> الكود:
-            {{ p.accountLedgerCode ? p.accountLedgerCode + ' | ' : ''
-            }}{{ p.accountCode || p.code || '-' }}
-          </div>
-          <div class="partner-detail">
-            <span class="material-icons-round">format_list_numbered</span> التسلسل:
-            {{ p.accountSequence || p.sequenceNumber || '-' }}
-          </div>
-          <div class="share-display">
-            <div
-              class="share-ring"
-              [style.background]="
-                'conic-gradient(' +
-                getShareColor(+p.sharePercentage) +
-                ' ' +
-                p.sharePercentage +
-                '%, var(--bg-surface) 0)'
-              "
-            >
-              <div class="share-inner">{{ p.sharePercentage }}%</div>
-            </div>
-            <span class="share-label">نسبة الحصة</span>
-          </div>
-          @if (p.phone) {
-            <div class="partner-detail">
-              <span class="material-icons-round">phone</span> {{ p.phone }}
-            </div>
-          }
-          @if (p.notes) {
-            <div class="partner-detail notes">
-              <span class="material-icons-round">notes</span> {{ p.notes }}
-            </div>
-          }
         </div>
       }
     </div>
@@ -231,28 +211,28 @@
 
   <!-- تأكيد الحذف -->
   @if (showDeleteConfirm()) {
-    <div class="modal-overlay" (click)="showDeleteConfirm.set(false)">
-      <div class="modal-card small" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon red"><span class="material-icons-round">warning</span></div>
-            <h2>تأكيد الحذف</h2>
+    <div class="valex-modal-overlay" (click)="showDeleteConfirm.set(false)">
+      <div class="valex-modal valex-modal-sm" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-danger/10 text-danger">
+              <span class="material-icons-round">warning</span>
+            </div>
+            <h3 class="valex-modal-title">تأكيد الحذف</h3>
           </div>
-          <button class="close-btn" (click)="showDeleteConfirm.set(false)">
+          <button class="valex-icon-btn" (click)="showDeleteConfirm.set(false)">
             <span class="material-icons-round">close</span>
           </button>
         </div>
-        <div class="modal-body">
-          <p class="delete-msg">
-            هل أنت متأكد من حذف <strong>{{ deleteTarget()?.fullName }}</strong
-            >؟
-          </p>
-          <p class="delete-warn">هذا الإجراء لا يمكن التراجع عنه</p>
+        <div class="valex-modal-body">
+          <p class="font-semibold mb-2">هل أنت متأكد من حذف <strong>{{ deleteTarget()?.fullName }}</strong>؟</p>
+          <p class="text-danger text-sm">هذا الإجراء لا يمكن التراجع عنه</p>
         </div>
-        <div class="modal-footer">
-          <button class="btn-delete" (click)="executeDelete()">
-            <span class="material-icons-round">delete</span> حذف</button
-          ><button class="btn-cancel" (click)="showDeleteConfirm.set(false)">إلغاء</button>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showDeleteConfirm.set(false)">إلغاء</button>
+          <button class="valex-btn valex-btn-danger" (click)="executeDelete()">
+            <span class="material-icons-round">delete</span> حذف
+          </button>
         </div>
       </div>
     </div>

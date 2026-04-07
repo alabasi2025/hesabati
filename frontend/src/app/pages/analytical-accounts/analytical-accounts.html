@@ -1,268 +1,224 @@
-<div class="analytical-page">
-  <!-- ===== Header ===== -->
-  <div class="page-header">
-    <div class="header-start">
-      <div class="page-icon">
-        <span class="material-icons-round">account_tree</span>
+<div class="page-content">
+  <app-page-header
+    title="الحسابات التحليلية"
+    icon="account_tree"
+    [breadcrumb]="['الرئيسية', 'الحسابات', 'الحسابات التحليلية']"
+  >
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-muted text-base">search</span>
+        <input type="text" class="valex-input pe-10 ps-4 min-w-[220px]" placeholder="بحث بالاسم أو الكود..."
+          [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" />
       </div>
-      <div>
-        <h1>الحسابات التحليلية</h1>
-        <span class="total-badge">{{ totalCount() }} حساب إجمالي</span>
-      </div>
-    </div>
-    <div class="header-end">
-      <div class="search-box">
-        <span class="material-icons-round">search</span>
-        <input
-          type="text"
-          placeholder="بحث بالاسم أو الكود..."
-          [value]="searchQuery()"
-          (input)="searchQuery.set($any($event.target).value)"
-        />
-      </div>
-      <button class="btn-add" (click)="openAdd()">
+      <button class="valex-btn valex-btn-primary" (click)="openAdd()">
         <span class="material-icons-round">add</span>
         حساب جديد
       </button>
     </div>
+  </app-page-header>
+
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        <button class="valex-tab-btn" [class.active]="filterType() === ''" (click)="filterType.set('')">
+          <span class="material-icons-round">grid_view</span>
+          الكل
+          <span class="valex-badge valex-badge-secondary analytical-count">{{ totalCount() }}</span>
+        </button>
+        @for (t of availableTypes(); track t.key) {
+          <button class="valex-tab-btn" [class.active]="filterType() === t.key" (click)="filterType.set(t.key)">
+            <span class="material-icons-round" [style.color]="t.color">{{ t.icon }}</span>
+            {{ t.label }}
+            <span class="valex-badge valex-badge-secondary analytical-count">{{ t.count }}</span>
+          </button>
+        }
+      </div>
+    </div>
   </div>
 
-  <!-- ===== Filter Tabs ===== -->
-  <div class="filter-tabs">
-    <button class="tab-btn" [class.active]="filterType() === ''" (click)="filterType.set('')">
-      <span class="material-icons-round">grid_view</span>
-      الكل
-      <span class="tab-count">{{ totalCount() }}</span>
-    </button>
-    @for (t of availableTypes(); track t.key) {
-      <button
-        class="tab-btn"
-        [class.active]="filterType() === t.key"
-        (click)="filterType.set(t.key)"
-        [style.--tab-color]="t.color"
-      >
-        <span class="material-icons-round">{{ t.icon }}</span>
-        {{ t.label }}
-        <span class="tab-count">{{ t.count }}</span>
-      </button>
-    }
-  </div>
-
-  <!-- ===== Cards Grid ===== -->
   @if (loading()) {
-    <div class="state-box">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state />
   } @else if (filteredAccounts().length === 0) {
-    <div class="state-box empty">
-      <span class="material-icons-round">account_tree</span>
-      <p>لا توجد حسابات</p>
-      <small>{{ searchQuery() ? 'جرّب بحثاً مختلفاً' : 'أضف حساباً تحليلياً جديداً' }}</small>
-    </div>
+    <app-empty-state icon="account_tree" title="لا توجد حسابات"
+      [subtitle]="searchQuery() ? 'جرّب بحثاً مختلفاً' : 'أضف حساباً تحليلياً جديداً'"
+      actionLabel="حساب جديد" (action)="openAdd()" />
   } @else {
-    <div class="cards-grid">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
       @for (acc of filteredAccounts(); track acc.id) {
-        <div class="account-card" [class.inactive]="!acc.isActive">
-          <div class="card-top" [style.background]="getColor(acc) + '12'">
-            <div
-              class="card-icon-wrap"
-              [style.background]="getColor(acc) + '20'"
-              [style.color]="getColor(acc)"
-            >
-              <span class="material-icons-round">{{ getIcon(acc) }}</span>
-            </div>
-            <div class="card-badges">
-              <span
-                class="badge-type"
-                [style.background]="getColor(acc) + '20'"
-                [style.color]="getColor(acc)"
-              >
-                {{ getTypeName(acc) }}
-              </span>
-              @if (!acc.isActive) {
-                <span class="badge-inactive">متوقف</span>
-              }
-            </div>
-            <div class="card-menu">
-              <button class="icon-btn edit-btn" (click)="openEdit(acc)" title="تعديل">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="icon-btn del-btn" (click)="openDelete(acc)" title="حذف">
-                <span class="material-icons-round">delete_outline</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="card-body">
-            <h3 class="acc-name">{{ acc.name }}</h3>
-            <div class="acc-codes">
-              <div class="code-row">
-                <span class="code-label">كود</span>
-                <span class="code-val op-code">{{ acc.code }}</span>
+        <div class="valex-card analytical-card" [class.opacity-60]="!acc.isActive"
+             [style.border-top-color]="getColor(acc)">
+          <div class="valex-card-body">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                   [style.background]="getColor(acc) + '20'"
+                   [style.color]="getColor(acc)">
+                <span class="material-icons-round text-2xl">{{ getIcon(acc) }}</span>
               </div>
-              <div class="code-row">
-                <span class="code-label">محاسبي</span>
-                <span class="code-val ledger-code">{{ acc.ledgerCode }}</span>
+              <div class="flex items-center gap-2">
+                @if (!acc.isActive) {
+                  <span class="valex-badge valex-badge-secondary">متوقف</span>
+                }
+                <button class="valex-icon-btn" (click)="openEdit(acc)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="valex-icon-btn danger" (click)="openDelete(acc)" title="حذف">
+                  <span class="material-icons-round">delete_outline</span>
+                </button>
               </div>
             </div>
-          </div>
 
-          @if (acc.currencies.length > 0) {
-            <div class="card-footer">
-              @for (cur of acc.currencies; track cur.currencyId) {
-                <span class="currency-chip">{{ cur.currencyCode }}</span>
-              }
+            <h3 class="font-bold text-base mb-2">{{ acc.name }}</h3>
+
+            <span class="valex-badge text-xs mb-3 inline-block"
+                  [style.background]="getColor(acc) + '18'"
+                  [style.color]="getColor(acc)">
+              {{ getTypeName(acc) }}
+            </span>
+
+            <div class="flex items-center gap-2 text-xs font-mono mb-3">
+              <span class="valex-badge valex-badge-primary">{{ acc.code }}</span>
+              <span class="valex-badge valex-badge-secondary">{{ acc.ledgerCode }}</span>
             </div>
-          }
+
+            @if (acc.currencies.length > 0) {
+              <div class="flex flex-wrap gap-1">
+                @for (cur of acc.currencies; track cur.currencyId) {
+                  <span class="valex-badge valex-badge-info text-xs">{{ cur.currencyCode }}</span>
+                }
+              </div>
+            }
+          </div>
         </div>
       }
     </div>
   }
-</div>
 
-<!-- ===== Modal: إضافة ===== -->
-@if (showAddModal()) {
-  <div class="modal-overlay" (click)="closeAdd()">
-    <div class="modal-box" (click)="$event.stopPropagation()">
-      <div class="modal-head">
-        <h3><span class="material-icons-round">add_circle</span> حساب تحليلي جديد</h3>
-        <button class="close-btn" (click)="closeAdd()">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="form-row">
-          <label>نوع الحساب</label>
-          <div class="nature-grid">
-            @for (entry of availableTypes(); track entry.key) {
-              <button
-                class="nature-option"
-                [class.selected]="addModel().natureKey === entry.key"
-                (click)="addModel.update(v => ({...v, natureKey: entry.key}))"
-                [style.--opt-color]="entry.color"
-              >
-                <span class="material-icons-round">{{ entry.icon }}</span>
-                <span>{{ entry.label }}</span>
-              </button>
-            }
+  @if (showAddModal()) {
+    <div class="valex-modal-overlay" (click)="closeAdd()">
+      <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">add_circle</span>
+            </div>
+            <h3>حساب تحليلي جديد</h3>
           </div>
+          <button class="valex-icon-btn" (click)="closeAdd()">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <div class="form-row">
-          <label>اسم الحساب</label>
-          <input
-            type="text"
-            class="form-input"
-            placeholder="مثال: خزنة المالك"
-            [formField]="addForm.name"
-            (keyup.enter)="submitAdd()"
-          />
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn-cancel" (click)="closeAdd()">إلغاء</button>
-        <button
-          class="btn-save"
-          (click)="submitAdd()"
-          [disabled]="!addModel().name.trim() || saving()"
-        >
-          @if (saving()) {
-            <span class="material-icons-round spin">sync</span>
-          } @else {
-            <span class="material-icons-round">save</span>
-          }
-          حفظ
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ===== Modal: تعديل ===== -->
-@if (showEditModal()) {
-  <div class="modal-overlay" (click)="closeEdit()">
-    <div class="modal-box small" (click)="$event.stopPropagation()">
-      <div class="modal-head">
-        <h3><span class="material-icons-round">edit</span> تعديل اسم الحساب</h3>
-        <button class="close-btn" (click)="closeEdit()">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="edit-info">
-          <span class="ledger-pill">{{ editingAccount()?.ledgerCode }}</span>
-          <span class="op-pill">{{ editingAccount()?.code }}</span>
-        </div>
-        <div class="form-row">
-          <label>الاسم الجديد</label>
-          <input
-            type="text"
-            class="form-input"
-            placeholder="اسم الحساب..."
-            [formField]="editForm.name"
-            (keyup.enter)="submitEdit()"
-          />
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button class="btn-cancel" (click)="closeEdit()">إلغاء</button>
-        <button
-          class="btn-save"
-          (click)="submitEdit()"
-          [disabled]="!editModel().name.trim() || saving()"
-        >
-          @if (saving()) {
-            <span class="material-icons-round spin">sync</span>
-          } @else {
-            <span class="material-icons-round">save</span>
-          }
-          حفظ
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ===== Modal: حذف ===== -->
-@if (showDeleteModal()) {
-  <div class="modal-overlay" (click)="closeDelete()">
-    <div class="modal-box small" (click)="$event.stopPropagation()">
-      <div class="modal-head danger">
-        <h3><span class="material-icons-round">warning</span> تأكيد الحذف</h3>
-        <button class="close-btn" (click)="closeDelete()">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p class="delete-msg">هل أنت متأكد من حذف الحساب التحليلي؟</p>
-        <div class="delete-target">
-          <span class="material-icons-round" [style.color]="getColor(deletingAccount()!)">{{
-            getIcon(deletingAccount()!)
-          }}</span>
-          <div>
-            <strong>{{ deletingAccount()?.name }}</strong>
-            <div class="delete-codes">
-              <span class="ledger-pill">{{ deletingAccount()?.ledgerCode }}</span>
-              <span class="op-pill">{{ deletingAccount()?.code }}</span>
+        <div class="valex-modal-body">
+          <div class="valex-form-group mb-4">
+            <label class="valex-label">نوع الحساب</label>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+              @for (entry of availableTypes(); track entry.key) {
+                <button class="analytical-type-btn"
+                  [class.selected]="addModel().natureKey === entry.key"
+                  (click)="addModel.update(v => ({...v, natureKey: entry.key}))"
+                  [style.--opt-color]="entry.color">
+                  <span class="material-icons-round" [style.color]="entry.color">{{ entry.icon }}</span>
+                  <span>{{ entry.label }}</span>
+                </button>
+              }
             </div>
           </div>
+          <div class="valex-form-group">
+            <label class="valex-label">اسم الحساب <span class="text-danger">*</span></label>
+            <input type="text" class="valex-input" placeholder="مثال: خزنة المالك"
+              [formField]="addForm.name" (keyup.enter)="submitAdd()" />
+          </div>
         </div>
-        <p class="delete-warn">
-          <span class="material-icons-round">info</span>
-          لا يمكن التراجع عن هذا الإجراء
-        </p>
-      </div>
-      <div class="modal-foot">
-        <button class="btn-cancel" (click)="closeDelete()">إلغاء</button>
-        <button class="btn-danger" (click)="submitDelete()" [disabled]="saving()">
-          @if (saving()) {
-            <span class="material-icons-round spin">sync</span>
-          } @else {
-            <span class="material-icons-round">delete</span>
-          }
-          حذف
-        </button>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="closeAdd()">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="submitAdd()"
+            [disabled]="!addModel().name.trim() || saving()">
+            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+            حفظ
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-}
+  }
+
+  @if (showEditModal()) {
+    <div class="valex-modal-overlay" (click)="closeEdit()">
+      <div class="valex-modal max-w-xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10 text-warning">
+              <span class="material-icons-round">edit</span>
+            </div>
+            <div>
+              <h3>تعديل اسم الحساب</h3>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="valex-badge valex-badge-primary font-mono">{{ editingAccount()?.code }}</span>
+                <span class="valex-badge valex-badge-secondary font-mono">{{ editingAccount()?.ledgerCode }}</span>
+              </div>
+            </div>
+          </div>
+          <button class="valex-icon-btn" (click)="closeEdit()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="valex-modal-body">
+          <div class="valex-form-group">
+            <label class="valex-label">الاسم الجديد <span class="text-danger">*</span></label>
+            <input type="text" class="valex-input" placeholder="اسم الحساب..."
+              [formField]="editForm.name" (keyup.enter)="submitEdit()" />
+          </div>
+        </div>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="closeEdit()">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="submitEdit()"
+            [disabled]="!editModel().name.trim() || saving()">
+            <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
+            حفظ
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showDeleteModal()) {
+    <div class="valex-modal-overlay" (click)="closeDelete()">
+      <div class="valex-modal max-w-xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-danger/10 text-danger">
+              <span class="material-icons-round">warning</span>
+            </div>
+            <h3>تأكيد الحذف</h3>
+          </div>
+          <button class="valex-icon-btn" (click)="closeDelete()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="valex-modal-body">
+          <p class="text-sm text-muted mb-4">هل أنت متأكد من حذف الحساب التحليلي؟</p>
+          <div class="flex items-center gap-3 p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] mb-4">
+            <span class="material-icons-round text-2xl" [style.color]="getColor(deletingAccount()!)">{{ getIcon(deletingAccount()!) }}</span>
+            <div>
+              <div class="font-bold">{{ deletingAccount()?.name }}</div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="valex-badge valex-badge-primary font-mono text-xs">{{ deletingAccount()?.code }}</span>
+                <span class="valex-badge valex-badge-secondary font-mono text-xs">{{ deletingAccount()?.ledgerCode }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-sm text-danger font-semibold">
+            <span class="material-icons-round text-base">info</span>
+            لا يمكن التراجع عن هذا الإجراء
+          </div>
+        </div>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="closeDelete()">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="submitDelete()" [disabled]="saving()"
+            style="background: #dc2626;">
+            <span class="material-icons-round">{{ saving() ? 'sync' : 'delete' }}</span>
+            حذف
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

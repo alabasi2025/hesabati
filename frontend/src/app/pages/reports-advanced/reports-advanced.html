@@ -1,487 +1,456 @@
-<!-- ===== Reports Advanced — Professional ===== -->
-<div class="page-container">
+<div class="page-content">
+  <app-page-header
+    title="التقارير المالية"
+    icon="analytics"
+    [breadcrumb]="['الرئيسية', 'التقارير', 'التقارير المتقدمة']"
+  >
+    <button class="valex-btn valex-btn-outline" (click)="exportExcel()" [disabled]="loading()">
+      <span class="material-icons-round text-success">table_chart</span>
+      Excel
+    </button>
+    <button class="valex-btn valex-btn-outline" (click)="printCurrent()" [disabled]="loading()">
+      <span class="material-icons-round">print</span>
+      طباعة
+    </button>
+  </app-page-header>
 
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
-        <span class="material-icons-round">analytics</span>
-      </div>
-      <div>
-        <h1 class="page-title">التقارير المالية</h1>
-        <p class="page-subtitle">نظرة عامة — أرباح وخسائر — ميزان مراجعة — كشف حساب — ملخص يومي — مقارنة شهرية</p>
-      </div>
-    </div>
-    <div class="header-actions" style="gap:8px;display:flex">
-      <button class="btn-3d" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0"
-              (click)="exportExcel()" [disabled]="loading()" title="تصدير Excel">
-        <span class="material-icons-round" style="color:#16a34a">table_chart</span>
-        Excel
-      </button>
-      <button class="btn-3d btn-print" (click)="printCurrent()" [disabled]="loading()">
-        <span class="material-icons-round">print</span>
-        طباعة
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== Tabs ===== -->
-  <div class="tabs-3d">
-    @for (t of tabs; track t.key) {
-      <button class="tab-btn" [class.active]="activeTab() === t.key" (click)="setTab(t.key)">
-        <span class="material-icons-round">{{ t.icon }}</span>
-        {{ t.label }}
-      </button>
-    }
-  </div>
-
-  <!-- ===== Filters ===== -->
-  @if (activeTab() !== 'daily' && activeTab() !== 'monthly') {
-    <div class="filter-card-3d">
-      <div class="filter-row">
-        <div class="filter-field">
-          <label class="form-label" for="adv-date-from">من تاريخ</label>
-          <input id="adv-date-from" title="من تاريخ" type="date" class="form-input" [(ngModel)]="dateFrom">
-        </div>
-        <div class="filter-field">
-          <label class="form-label" for="adv-date-to">إلى تاريخ</label>
-          <input id="adv-date-to" title="إلى تاريخ" type="date" class="form-input" [(ngModel)]="dateTo">
-        </div>
-        @if (activeTab() === 'statement') {
-          <div class="filter-field wide">
-            <label class="form-label" for="adv-statement-account">الحساب / الصندوق</label>
-            <select id="adv-statement-account" title="الحساب أو الصندوق" class="form-select" [(ngModel)]="selectedAccountId">
-              @for (a of allAccounts; track a.id) {
-                <option [value]="a.id">{{a._label || a.name}}</option>
-              }
-            </select>
-          </div>
-          <div class="filter-field">
-            <label class="form-label" for="adv-statement-source">نوع الحركة</label>
-            <select id="adv-statement-source" title="نوع الحركة" class="form-select" [(ngModel)]="statementSourceType">
-              <option value="all">الكل</option>
-              <option value="payment_voucher">سند صرف</option>
-              <option value="receipt_voucher">سند قبض</option>
-              <option value="journal_manual">قيد يومية</option>
-              <option value="inventory_txn">حركة مخزنية</option>
-            </select>
-          </div>
-        }
-        <div class="filter-action">
-          <button class="btn-3d btn-primary" (click)="loadTab()">
-            <span class="material-icons-round">search</span>
-            عرض
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        @for (t of tabs; track t.key) {
+          <button class="valex-tab-btn" [class.active]="activeTab() === t.key" (click)="setTab(t.key)">
+            <span class="material-icons-round">{{ t.icon }}</span>
+            {{ t.label }}
           </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (activeTab() !== 'daily' && activeTab() !== 'monthly') {
+    <div class="valex-card mb-6">
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label" for="adv-date-from">من تاريخ</label>
+            <input id="adv-date-from" class="valex-input" title="من تاريخ" type="date" [(ngModel)]="dateFrom" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label" for="adv-date-to">إلى تاريخ</label>
+            <input id="adv-date-to" class="valex-input" title="إلى تاريخ" type="date" [(ngModel)]="dateTo" />
+          </div>
+          @if (activeTab() === 'statement') {
+            <div class="valex-form-group">
+              <label class="valex-label" for="adv-statement-account">الحساب / الصندوق</label>
+              <select id="adv-statement-account" class="valex-select" title="الحساب أو الصندوق" [(ngModel)]="selectedAccountId">
+                @for (a of allAccounts; track a.id) {
+                  <option [value]="a.id">{{a._label || a.name}}</option>
+                }
+              </select>
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="adv-statement-source">نوع الحركة</label>
+              <select id="adv-statement-source" class="valex-select" title="نوع الحركة" [(ngModel)]="statementSourceType">
+                <option value="all">الكل</option>
+                <option value="payment_voucher">سند صرف</option>
+                <option value="receipt_voucher">سند قبض</option>
+                <option value="journal_manual">قيد يومية</option>
+                <option value="inventory_txn">حركة مخزنية</option>
+              </select>
+            </div>
+          }
+          <div class="flex items-end pb-1">
+            <button class="valex-btn valex-btn-primary w-full" (click)="loadTab()">
+              <span class="material-icons-round">search</span> عرض
+            </button>
+          </div>
         </div>
       </div>
     </div>
   } @else if (activeTab() === 'daily') {
-    <div class="filter-card-3d">
-      <div class="filter-row">
-        <div class="filter-field">
-          <label class="form-label" for="adv-daily-date">التاريخ</label>
-          <input id="adv-daily-date" title="التاريخ" type="date" class="form-input" [(ngModel)]="dailyDate">
-        </div>
-        <div class="filter-action">
-          <button class="btn-3d btn-primary" (click)="loadTab()">
-            <span class="material-icons-round">search</span>
-            عرض
-          </button>
+    <div class="valex-card mb-6">
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label" for="adv-daily-date">التاريخ</label>
+            <input id="adv-daily-date" class="valex-input" title="التاريخ" type="date" [(ngModel)]="dailyDate" />
+          </div>
+          <div class="flex items-end pb-1">
+            <button class="valex-btn valex-btn-primary w-full" (click)="loadTab()">
+              <span class="material-icons-round">search</span> عرض
+            </button>
+          </div>
         </div>
       </div>
     </div>
   } @else if (activeTab() === 'monthly') {
-    <div class="filter-card-3d">
-      <div class="filter-row">
-        <div class="filter-field">
-          <label class="form-label" for="adv-year">السنة</label>
-          <input id="adv-year" title="السنة" type="number" class="form-input" [(ngModel)]="monthlyYear" min="2000" max="2099">
-        </div>
-        <div class="filter-action">
-          <button class="btn-3d btn-primary" (click)="loadTab()">
-            <span class="material-icons-round">search</span>
-            عرض
-          </button>
+    <div class="valex-card mb-6">
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label" for="adv-year">السنة</label>
+            <input id="adv-year" class="valex-input" title="السنة" type="number" [(ngModel)]="monthlyYear" min="2000" max="2099" />
+          </div>
+          <div class="flex items-end pb-1">
+            <button class="valex-btn valex-btn-primary w-full" (click)="loadTab()">
+              <span class="material-icons-round">search</span> عرض
+            </button>
+          </div>
         </div>
       </div>
     </div>
   }
 
-  <!-- ===== Loading ===== -->
   @if (loading()) {
-    <div class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state />
   }
 
-  <!-- ===== Content Area ===== -->
-  <div class="print-area">
+  <div id="report-print-area">
 
-  <!-- ===== نظرة عامة ===== -->
-  @if (activeTab() === 'overview' && !loading()) {
-    @if (profitLoss) {
-      <div class="stats-row">
-        <div class="stat-card-3d green">
-          <div class="sc-icon"><span class="material-icons-round">trending_up</span></div>
-          <div class="sc-body">
-            <div class="sc-num">{{ fmt(profitLoss.summary?.total_income) }}</div>
-            <div class="sc-label">الإيرادات</div>
-          </div>
-        </div>
-        <div class="stat-card-3d red">
-          <div class="sc-icon"><span class="material-icons-round">trending_down</span></div>
-          <div class="sc-body">
-            <div class="sc-num">{{ fmt(profitLoss.summary?.total_expenses) }}</div>
-            <div class="sc-label">المصروفات</div>
-          </div>
-        </div>
-        <div class="stat-card-3d" [class.blue]="(profitLoss.summary?.net_profit || 0) >= 0" [class.amber]="(profitLoss.summary?.net_profit || 0) < 0">
-          <div class="sc-icon"><span class="material-icons-round">account_balance</span></div>
-          <div class="sc-body">
-            <div class="sc-num">{{ fmt(profitLoss.summary?.net_profit) }}</div>
-            <div class="sc-label">صافي الربح</div>
-          </div>
-        </div>
-        @if (trialBalance?.totals) {
-          <div class="stat-card-3d" [class.blue]="trialBalance.totals.isBalanced" [class.amber]="!trialBalance.totals.isBalanced">
-            <div class="sc-icon"><span class="material-icons-round">balance</span></div>
-            <div class="sc-body">
-              <div class="sc-num">{{ trialBalance.totals.isBalanced ? 'متوازن' : 'غير متوازن' }}</div>
-              <div class="sc-label">ميزان المراجعة</div>
+    @if (activeTab() === 'overview' && !loading()) {
+      @if (profitLoss) {
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          <div class="valex-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+              <span class="material-icons-round text-2xl">trending_up</span>
+            </div>
+            <div>
+              <div class="text-xl font-bold">{{ fmt(profitLoss.summary?.total_income) }}</div>
+              <div class="text-sm text-muted">الإيرادات</div>
             </div>
           </div>
-        }
-      </div>
-    }
-    @if (overviewDonut) {
-      <div class="chart-card-3d">
-        <apx-chart
-          [series]="overviewDonut.series"
-          [chart]="overviewDonut.chart"
-          [labels]="overviewDonut.labels"
-          [legend]="overviewDonut.legend"
-          [dataLabels]="overviewDonut.dataLabels"
-          [responsive]="overviewDonut.responsive"
-          [plotOptions]="overviewDonut.plotOptions"
-          [tooltip]="overviewDonut.tooltip"
-          [title]="overviewDonut.title">
-        </apx-chart>
-      </div>
-    }
-  }
-
-  <!-- ===== تقرير الأرباح والخسائر ===== -->
-  @if (activeTab() === 'profit-loss' && profitLoss && !loading()) {
-    <div class="stats-row">
-      <div class="stat-card-3d green">
-        <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(profitLoss.summary?.total_income ?? profitLoss.summary?.totalIncome) }}</div>
-          <div class="sc-label">الإيرادات</div>
-        </div>
-      </div>
-      <div class="stat-card-3d red">
-        <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(profitLoss.summary?.total_expenses ?? profitLoss.summary?.totalExpenses) }}</div>
-          <div class="sc-label">المصروفات</div>
-        </div>
-      </div>
-      <div class="stat-card-3d" [class.blue]="(profitLoss.summary?.net_profit ?? 0) >= 0" [class.amber]="(profitLoss.summary?.net_profit ?? 0) < 0">
-        <div class="sc-icon"><span class="material-icons-round">trending_up</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(profitLoss.summary?.net_profit ?? profitLoss.summary?.netProfit) }}</div>
-          <div class="sc-label">صافي الربح</div>
-        </div>
-      </div>
-      <div class="stat-card-3d gray">
-        <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ profitLoss.summary?.total_operations ?? profitLoss.summary?.totalOperations }}</div>
-          <div class="sc-label">عدد العمليات</div>
-        </div>
-      </div>
-    </div>
-
-    @if (profitLoss.byCategory?.length) {
-      <div class="table-card-3d">
-        <div class="table-header">
-          <div class="table-icon"><span class="material-icons-round">category</span></div>
-          <h3>تفصيل حسب التصنيف</h3>
-        </div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>التصنيف</th>
-                <th>النوع</th>
-                <th>المجموع</th>
-                <th>العدد</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (c of profitLoss.byCategory; track $index) {
-                <tr>
-                  <td class="cell-name">{{ c.category }}</td>
-                  <td><span class="type-badge" [class]="c.voucher_type === 'receipt' ? 'receipt' : 'payment'">{{ c.voucher_type === 'receipt' ? 'إيراد' : 'مصروف' }}</span></td>
-                  <td class="cell-amount">{{ fmt(c.total) }}</td>
-                  <td class="cell-count">{{ c.count }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    }
-  }
-
-  <!-- ===== كشف حساب ===== -->
-  @if (activeTab() === 'statement' && statement && !loading()) {
-    <div class="account-info-3d">
-      <div class="ai-icon"><span class="material-icons-round">account_balance</span></div>
-      <div class="ai-main">
-        <div class="ai-name">{{ statement.account?.name || getSelectedAccountLabel() }}</div>
-        <div class="ai-entries">عدد الحركات: {{ statement.totalEntries }}</div>
-      </div>
-      <div class="ai-balances">
-        @for (b of statement.balances; track $index) {
-          <div class="ai-balance" [class]="b.balance >= 0 ? 'positive' : 'negative'">
-            <span class="ai-currency">{{ b.currencyCode }}</span>
-            <span class="ai-amount">{{ fmt(b.balance) }}</span>
+          <div class="valex-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+              <span class="material-icons-round text-2xl">trending_down</span>
+            </div>
+            <div>
+              <div class="text-xl font-bold">{{ fmt(profitLoss.summary?.total_expenses) }}</div>
+              <div class="text-sm text-muted">المصروفات</div>
+            </div>
           </div>
-        }
-      </div>
-    </div>
+          <div class="valex-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                 [class.bg-primary/10]="(profitLoss.summary?.net_profit || 0) >= 0"
+                 [class.text-primary]="(profitLoss.summary?.net_profit || 0) >= 0"
+                 [class.bg-warning/10]="(profitLoss.summary?.net_profit || 0) < 0"
+                 [class.text-warning]="(profitLoss.summary?.net_profit || 0) < 0">
+              <span class="material-icons-round text-2xl">account_balance</span>
+            </div>
+            <div>
+              <div class="text-xl font-bold">{{ fmt(profitLoss.summary?.net_profit) }}</div>
+              <div class="text-sm text-muted">صافي الربح</div>
+            </div>
+          </div>
+          @if (trialBalance?.totals) {
+            <div class="valex-card p-4 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                   [class.bg-success/10]="trialBalance.totals.isBalanced"
+                   [class.text-success]="trialBalance.totals.isBalanced"
+                   [class.bg-warning/10]="!trialBalance.totals.isBalanced"
+                   [class.text-warning]="!trialBalance.totals.isBalanced">
+                <span class="material-icons-round text-2xl">balance</span>
+              </div>
+              <div>
+                <div class="text-xl font-bold">{{ trialBalance.totals.isBalanced ? 'متوازن' : 'غير متوازن' }}</div>
+                <div class="text-sm text-muted">ميزان المراجعة</div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+      @if (overviewDonut) {
+        <div class="valex-card mb-6">
+          <div class="valex-card-body">
+            <apx-chart [series]="overviewDonut.series" [chart]="overviewDonut.chart" [labels]="overviewDonut.labels"
+              [legend]="overviewDonut.legend" [dataLabels]="overviewDonut.dataLabels" [responsive]="overviewDonut.responsive"
+              [plotOptions]="overviewDonut.plotOptions" [tooltip]="overviewDonut.tooltip" [title]="overviewDonut.title" />
+          </div>
+        </div>
+      }
+    }
 
-    <div class="table-card-3d">
-      <div class="table-header">
-        <div class="table-icon"><span class="material-icons-round">receipt</span></div>
-        <h3>حركات الحساب</h3>
-        <div class="table-header-info">
-          <span class="entries-count">{{ statement.entries?.length || 0 }} حركة</span>
+    @if (activeTab() === 'profit-loss' && profitLoss && !loading()) {
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+            <span class="material-icons-round text-2xl">arrow_downward</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(profitLoss.summary?.total_income ?? profitLoss.summary?.totalIncome) }}</div>
+            <div class="text-sm text-muted">الإيرادات</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+            <span class="material-icons-round text-2xl">arrow_upward</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(profitLoss.summary?.total_expenses ?? profitLoss.summary?.totalExpenses) }}</div>
+            <div class="text-sm text-muted">المصروفات</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+               [class.bg-primary/10]="(profitLoss.summary?.net_profit ?? 0) >= 0"
+               [class.text-primary]="(profitLoss.summary?.net_profit ?? 0) >= 0"
+               [class.bg-warning/10]="(profitLoss.summary?.net_profit ?? 0) < 0"
+               [class.text-warning]="(profitLoss.summary?.net_profit ?? 0) < 0">
+            <span class="material-icons-round text-2xl">trending_up</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(profitLoss.summary?.net_profit ?? profitLoss.summary?.netProfit) }}</div>
+            <div class="text-sm text-muted">صافي الربح</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/10 text-secondary flex-shrink-0">
+            <span class="material-icons-round text-2xl">receipt_long</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ profitLoss.summary?.total_operations ?? profitLoss.summary?.totalOperations }}</div>
+            <div class="text-sm text-muted">عدد العمليات</div>
+          </div>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>التاريخ</th>
-              <th>المرجع</th>
-              <th>نوع الحركة</th>
-              <th>البيان</th>
-              <th>مدين</th>
-              <th>دائن</th>
-              <th>الرصيد</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (e of statement.entries; track $index) {
-              <tr>
-                <td class="cell-index">{{ $index + 1 }}</td>
-                <td class="cell-date">{{ e.entry_date }}</td>
-                <td class="cell-ref">{{ e.entry_number }}</td>
-                <td>{{ getSourceTypeLabel(e.source_type || e.sourceType) }}</td>
-                <td class="cell-desc">{{ e.entry_description || e.line_description }}</td>
-                        <td class="cell-debit">{{ e.line_type === 'debit' ? fmt(e.amount) : '-' }}</td>
-                <td class="cell-credit">{{ e.line_type === 'credit' ? fmt(e.amount) : '-' }}</td>
-                <td class="cell-balance" [class]="(e.runningBalance || 0) >= 0 ? 'positive' : 'negative'">{{ fmt(e.runningBalance || 0) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <!-- Statement Totals Footer -->
-    <div class="table-card-3d" style="margin-top:0;border-top:2px solid #f0fdf4">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 16px">
-        <div style="text-align:center">
-          <div style="font-size:11px;color:#64748b;font-weight:700">إجمالي المدين</div>
-          <div style="font-size:18px;font-weight:900;color:#16a34a">{{ fmt(stmtTotalDebit()) }}</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:11px;color:#64748b;font-weight:700">إجمالي الدائن</div>
-          <div style="font-size:18px;font-weight:900;color:#dc2626">{{ fmt(stmtTotalCredit()) }}</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:11px;color:#64748b;font-weight:700">الرصيد النهائي</div>
-          <div style="font-size:18px;font-weight:900" [style.color]="stmtFinalBalance() >= 0 ? '#2563eb' : '#ea580c'">{{ fmt(stmtFinalBalance()) }}</div>
-        </div>
-      </div>
-    </div>
-  }
 
-  <!-- ===== ملخص يومي ===== -->
-  @if (activeTab() === 'daily' && dailySummary && !loading()) {
-    <div class="stats-row">
-      <div class="stat-card-3d green">
-        <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(dailySummary.summary.receipts) }}</div>
-          <div class="sc-label">التحصيل</div>
+      @if (profitLoss.byCategory?.length) {
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-primary">category</span>
+              تفصيل حسب التصنيف
+            </h3>
+          </div>
+          <div class="valex-card-body p-0 overflow-x-auto">
+            <table class="valex-table">
+              <thead><tr><th>التصنيف</th><th>النوع</th><th>المجموع</th><th>العدد</th></tr></thead>
+              <tbody>
+                @for (c of profitLoss.byCategory; track $index) {
+                  <tr>
+                    <td class="font-semibold">{{ c.category }}</td>
+                    <td>
+                      <span class="valex-badge" [class.valex-badge-success]="c.voucher_type === 'receipt'" [class.valex-badge-danger]="c.voucher_type !== 'receipt'">
+                        {{ c.voucher_type === 'receipt' ? 'إيراد' : 'مصروف' }}
+                      </span>
+                    </td>
+                    <td class="font-mono font-bold">{{ fmt(c.total) }}</td>
+                    <td>{{ c.count }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-      <div class="stat-card-3d red">
-        <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(dailySummary.summary.payments) }}</div>
-          <div class="sc-label">الصرف</div>
-        </div>
-      </div>
-      <div class="stat-card-3d gray">
-        <div class="sc-icon"><span class="material-icons-round">receipt_long</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ dailySummary.summary.operations_count }}</div>
-          <div class="sc-label">عدد العمليات</div>
-        </div>
-      </div>
-    </div>
+      }
+    }
 
-    @if (dailySummary.byOperationType?.length) {
-      <div class="table-card-3d">
-        <div class="table-header">
-          <div class="table-icon"><span class="material-icons-round">list_alt</span></div>
-          <h3>تفصيل حسب نوع العملية</h3>
+    @if (activeTab() === 'statement' && statement && !loading()) {
+      <div class="valex-card mb-4">
+        <div class="valex-card-body flex flex-wrap items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+            <span class="material-icons-round text-2xl">account_balance</span>
+          </div>
+          <div class="flex-1">
+            <div class="font-bold text-base">{{ statement.account?.name || getSelectedAccountLabel() }}</div>
+            <div class="text-sm text-muted">عدد الحركات: {{ statement.totalEntries }}</div>
+          </div>
+          @for (b of statement.balances; track $index) {
+            <div class="text-center">
+              <div class="text-xs text-muted">{{ b.currencyCode }}</div>
+              <div class="font-bold text-lg font-mono" [class.text-success]="b.balance >= 0" [class.text-danger]="b.balance < 0">{{ fmt(b.balance) }}</div>
+            </div>
+          }
         </div>
-        <div class="table-wrap">
-          <table class="data-table">
+      </div>
+
+      <div class="valex-card mb-6">
+        <div class="valex-card-body p-0 overflow-x-auto">
+          <table class="valex-table">
             <thead>
-              <tr>
-                <th>نوع العملية</th>
-                <th>النوع</th>
-                <th>المجموع</th>
-                <th>العدد</th>
-              </tr>
+              <tr><th>#</th><th>التاريخ</th><th>المرجع</th><th>نوع الحركة</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>
             </thead>
             <tbody>
-              @for (o of dailySummary.byOperationType; track $index) {
+              @for (e of statement.entries; track $index) {
                 <tr>
-                  <td class="cell-name">
-                    @if (o.icon) {
-                      <span class="material-icons-round op-icon" [style.color]="o.color">{{ o.icon }}</span>
-                    }
-                    {{ o.name }}
+                  <td class="text-muted">{{ $index + 1 }}</td>
+                  <td class="font-mono">{{ e.entry_date }}</td>
+                  <td class="font-mono">{{ e.entry_number }}</td>
+                  <td>{{ getSourceTypeLabel(e.source_type || e.sourceType) }}</td>
+                  <td>{{ e.entry_description || e.line_description }}</td>
+                  <td class="font-mono text-success">{{ e.line_type === 'debit' ? fmt(e.amount) : '-' }}</td>
+                  <td class="font-mono text-danger">{{ e.line_type === 'credit' ? fmt(e.amount) : '-' }}</td>
+                  <td class="font-mono font-bold" [class.text-success]="(e.runningBalance || 0) >= 0" [class.text-danger]="(e.runningBalance || 0) < 0">
+                    {{ fmt(e.runningBalance || 0) }}
                   </td>
-                  <td><span class="type-badge" [class]="o.voucher_type === 'receipt' ? 'receipt' : 'payment'">{{ o.voucher_type === 'receipt' ? 'تحصيل' : 'صرف' }}</span></td>
-                  <td class="cell-amount">{{ fmt(o.total) }}</td>
-                  <td class="cell-count">{{ o.count }}</td>
                 </tr>
               }
             </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" class="font-bold">الإجمالي</td>
+                <td class="font-mono font-bold text-success">{{ fmt(stmtTotalDebit()) }}</td>
+                <td class="font-mono font-bold text-danger">{{ fmt(stmtTotalCredit()) }}</td>
+                <td class="font-mono font-bold" [class.text-success]="stmtFinalBalance() >= 0" [class.text-danger]="stmtFinalBalance() < 0">{{ fmt(stmtFinalBalance()) }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
     }
-  }
 
-  <!-- ===== ميزان المراجعة ===== -->
-  @if (activeTab() === 'trial-balance' && trialBalance && !loading()) {
-    <div class="stats-row">
-      <div class="stat-card-3d green">
-        <div class="sc-icon"><span class="material-icons-round">arrow_downward</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(trialBalance.totals.totalDebit) }}</div>
-          <div class="sc-label">إجمالي المدين</div>
+    @if (activeTab() === 'daily' && dailySummary && !loading()) {
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+            <span class="material-icons-round text-2xl">arrow_downward</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(dailySummary.summary.receipts) }}</div>
+            <div class="text-sm text-muted">التحصيل</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+            <span class="material-icons-round text-2xl">arrow_upward</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(dailySummary.summary.payments) }}</div>
+            <div class="text-sm text-muted">الصرف</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-secondary/10 text-secondary flex-shrink-0">
+            <span class="material-icons-round text-2xl">receipt_long</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ dailySummary.summary.operations_count }}</div>
+            <div class="text-sm text-muted">عدد العمليات</div>
+          </div>
         </div>
       </div>
-      <div class="stat-card-3d red">
-        <div class="sc-icon"><span class="material-icons-round">arrow_upward</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ fmt(trialBalance.totals.totalCredit) }}</div>
-          <div class="sc-label">إجمالي الدائن</div>
-        </div>
-      </div>
-      <div class="stat-card-3d" [class]="trialBalance.totals.isBalanced ? 'blue' : 'amber'">
-        <div class="sc-icon"><span class="material-icons-round">{{ trialBalance.totals.isBalanced ? 'check_circle' : 'warning' }}</span></div>
-        <div class="sc-body">
-          <div class="sc-num">{{ trialBalance.totals.isBalanced ? 'متوازن' : 'غير متوازن' }}</div>
-          <div class="sc-label">الحالة</div>
-        </div>
-      </div>
-    </div>
 
-    <div class="table-card-3d">
-      <div class="table-header">
-        <div class="table-icon"><span class="material-icons-round">balance</span></div>
-        <h3>ميزان المراجعة</h3>
-        <div class="table-header-info">
-          <span class="entries-count">{{ trialBalance.accounts?.length || 0 }} حساب</span>
+      @if (dailySummary.byOperationType?.length) {
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-primary">list_alt</span>
+              تفصيل حسب نوع العملية
+            </h3>
+          </div>
+          <div class="valex-card-body p-0 overflow-x-auto">
+            <table class="valex-table">
+              <thead><tr><th>نوع العملية</th><th>النوع</th><th>المجموع</th><th>العدد</th></tr></thead>
+              <tbody>
+                @for (o of dailySummary.byOperationType; track $index) {
+                  <tr>
+                    <td class="font-semibold">
+                      @if (o.icon) { <span class="material-icons-round text-base me-1" [style.color]="o.color">{{ o.icon }}</span> }
+                      {{ o.name }}
+                    </td>
+                    <td>
+                      <span class="valex-badge" [class.valex-badge-success]="o.voucher_type === 'receipt'" [class.valex-badge-danger]="o.voucher_type !== 'receipt'">
+                        {{ o.voucher_type === 'receipt' ? 'تحصيل' : 'صرف' }}
+                      </span>
+                    </td>
+                    <td class="font-mono font-bold">{{ fmt(o.total) }}</td>
+                    <td>{{ o.count }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+
+    @if (activeTab() === 'trial-balance' && trialBalance && !loading()) {
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+            <span class="material-icons-round text-2xl">arrow_downward</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(trialBalance.totals.totalDebit) }}</div>
+            <div class="text-sm text-muted">إجمالي المدين</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+            <span class="material-icons-round text-2xl">arrow_upward</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ fmt(trialBalance.totals.totalCredit) }}</div>
+            <div class="text-sm text-muted">إجمالي الدائن</div>
+          </div>
+        </div>
+        <div class="valex-card p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+               [class.bg-success/10]="trialBalance.totals.isBalanced"
+               [class.text-success]="trialBalance.totals.isBalanced"
+               [class.bg-warning/10]="!trialBalance.totals.isBalanced"
+               [class.text-warning]="!trialBalance.totals.isBalanced">
+            <span class="material-icons-round text-2xl">{{ trialBalance.totals.isBalanced ? 'check_circle' : 'warning' }}</span>
+          </div>
+          <div>
+            <div class="text-xl font-bold">{{ trialBalance.totals.isBalanced ? 'متوازن' : 'غير متوازن' }}</div>
+            <div class="text-sm text-muted">الحالة</div>
+          </div>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>الحساب</th>
-              <th>النوع</th>
-              <th>مدين</th>
-              <th>دائن</th>
-              <th>الرصيد</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (a of trialBalance.accounts; track $index) {
+
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="material-icons-round text-primary">balance</span>
+            ميزان المراجعة
+          </h3>
+          <span class="valex-badge valex-badge-secondary">{{ trialBalance.accounts?.length || 0 }} حساب</span>
+        </div>
+        <div class="valex-card-body p-0 overflow-x-auto">
+          <table class="valex-table">
+            <thead><tr><th>#</th><th>الحساب</th><th>النوع</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+            <tbody>
+              @for (a of trialBalance.accounts; track $index) {
+                <tr>
+                  <td class="text-muted">{{ $index + 1 }}</td>
+                  <td class="font-semibold">{{ a.account_name }}</td>
+                  <td>{{ getAccountTypeLabel(a.account_type) }}</td>
+                  <td class="font-mono text-success">{{ fmt(a.total_debit) }}</td>
+                  <td class="font-mono text-danger">{{ fmt(a.total_credit) }}</td>
+                  <td class="font-mono font-bold" [class.text-success]="(a.balance || 0) >= 0" [class.text-danger]="(a.balance || 0) < 0">{{ fmt(a.balance) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
               <tr>
-                <td class="cell-index">{{ $index + 1 }}</td>
-                <td class="cell-name">{{ a.account_name }}</td>
-                <td class="cell-type">{{ getAccountTypeLabel(a.account_type) }}</td>
-                <td class="cell-debit">{{ fmt(a.total_debit) }}</td>
-                <td class="cell-credit">{{ fmt(a.total_credit) }}</td>
-                <td class="cell-balance" [class]="(a.balance || 0) >= 0 ? 'positive' : 'negative'">{{ fmt(a.balance) }}</td>
+                <td colspan="3" class="font-bold">الإجمالي</td>
+                <td class="font-mono font-bold text-success">{{ fmt(trialBalance.totals.totalDebit) }}</td>
+                <td class="font-mono font-bold text-danger">{{ fmt(trialBalance.totals.totalCredit) }}</td>
+                <td class="font-mono font-bold">{{ fmt((trialBalance.totals.totalDebit || 0) - (trialBalance.totals.totalCredit || 0)) }}</td>
               </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="totals-row">
-              <td colspan="3" style="font-weight:900;">الإجمالي</td>
-              <td class="cell-debit" style="font-weight:900;">{{ fmt(trialBalance.totals.totalDebit) }}</td>
-              <td class="cell-credit" style="font-weight:900;">{{ fmt(trialBalance.totals.totalCredit) }}</td>
-              <td class="cell-balance" style="font-weight:900;">{{ fmt((trialBalance.totals.totalDebit || 0) - (trialBalance.totals.totalCredit || 0)) }}</td>
-            </tr>
-          </tfoot>
-        </table>
+            </tfoot>
+          </table>
+        </div>
       </div>
-    </div>
-  }
+    }
 
-  </div><!-- end print-area -->
+  </div>
 
-  <!-- ===== مقارنة شهرية ===== -->
   @if (activeTab() === 'monthly' && !loading()) {
     @if (monthlyChart) {
-      <div class="chart-card-3d" style="padding:16px">
-        <apx-chart
-          [series]="monthlyChart.series"
-          [chart]="monthlyChart.chart"
-          [xaxis]="monthlyChart.xaxis"
-          [stroke]="monthlyChart.stroke"
-          [dataLabels]="monthlyChart.dataLabels"
-          [yaxis]="monthlyChart.yaxis"
-          [legend]="monthlyChart.legend"
-          [tooltip]="monthlyChart.tooltip"
-          [fill]="monthlyChart.fill"
-          [grid]="monthlyChart.grid">
-        </apx-chart>
+      <div class="valex-card mb-6">
+        <div class="valex-card-body">
+          <apx-chart [series]="monthlyChart.series" [chart]="monthlyChart.chart" [xaxis]="monthlyChart.xaxis"
+            [stroke]="monthlyChart.stroke" [dataLabels]="monthlyChart.dataLabels" [yaxis]="monthlyChart.yaxis"
+            [legend]="monthlyChart.legend" [tooltip]="monthlyChart.tooltip" [fill]="monthlyChart.fill" [grid]="monthlyChart.grid" />
+        </div>
       </div>
     } @else {
-      <div class="empty-state">
-        <span class="material-icons-round" style="font-size:48px;color:#cbd5e1">bar_chart</span>
-        <h3>اضغط عرض لتحميل المقارنة الشهرية</h3>
-      </div>
+      <app-empty-state icon="bar_chart" title="اضغط عرض لتحميل المقارنة الشهرية" />
     }
   }
 
-  <!-- ===== Empty State ===== -->
   @if (!loading() && ((activeTab() === 'profit-loss' && !profitLoss) || (activeTab() === 'statement' && !statement) || (activeTab() === 'daily' && !dailySummary) || (activeTab() === 'trial-balance' && !trialBalance))) {
-    <div class="empty-state">
-      <div class="empty-icon-3d">
-        <span class="material-icons-round">analytics</span>
-      </div>
-      <h3>اضغط "عرض" لتحميل التقرير</h3>
-      <p>حدد الفترة الزمنية ثم اضغط على زر العرض</p>
-    </div>
+    <app-empty-state icon="analytics" title="اضغط عرض لتحميل التقرير" message="حدد الفترة الزمنية ثم اضغط على زر العرض" />
   }
-
 </div>

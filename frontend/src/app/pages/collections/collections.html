@@ -1,435 +1,361 @@
-<div class="page-container">
+<div class="page-content">
+  <app-page-header
+    title="التحصيل والتوريد اليومي"
+    icon="account_balance_wallet"
+    [breadcrumb]="['الرئيسية', 'التحصيل والفوترة', 'التحصيل والتوريد']"
+  >
+    <button class="valex-btn valex-btn-outline" (click)="showHowItWorks.set(true)">
+      <span class="material-icons-round">help_outline</span>
+      كيف يعمل؟
+    </button>
+  </app-page-header>
 
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d teal">
-        <span class="material-icons-round">account_balance_wallet</span>
-      </div>
-      <div>
-        <h1 class="page-title">التحصيل والتوريد اليومي</h1>
-        <p class="page-subtitle">تسجيل التحصيل اليومي وتوريد الأموال</p>
-      </div>
-    </div>
-    <div class="header-right">
-      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
-        <span class="material-icons-round">help_outline</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== Error ===== -->
   @if (error()) {
-    <div class="alert-error" (click)="error.set('')">
-      <span class="material-icons-round">error_outline</span>
-      {{ error() }}
-      <span class="close-x">✕</span>
+    <div class="valex-card mb-4 border border-danger/20 bg-danger/5 cursor-pointer" (click)="error.set('')">
+      <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+        <span class="material-icons-round">error_outline</span>
+        {{ error() }}
+        <span class="ms-auto material-icons-round">close</span>
+      </div>
     </div>
   }
 
-  <!-- ===== View Tabs ===== -->
-  <div class="view-tabs">
-    <button class="view-tab" [class.active]="activeView() === 'collection'"
-            (click)="activeView.set('collection')">
-      <div class="vt-icon collection-icon">
-        <span class="material-icons-round">call_received</span>
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <button class="collection-view-tab" [class.active]="activeView() === 'collection'" (click)="activeView.set('collection')">
+          <span class="material-icons-round">call_received</span>
+          <span>تسجيل التحصيل</span>
+        </button>
+        <button class="collection-view-tab" [class.active]="activeView() === 'delivery'" (click)="activeView.set('delivery')">
+          <span class="material-icons-round">call_made</span>
+          <span>توريد الأموال</span>
+        </button>
+        <button class="collection-view-tab" [class.active]="activeView() === 'history'" (click)="activeView.set('history')">
+          <span class="material-icons-round">history</span>
+          <span>السجل</span>
+        </button>
+        <button class="collection-view-tab" [class.active]="activeView() === 'funds'" (click)="activeView.set('funds')">
+          <span class="material-icons-round">savings</span>
+          <span>الصناديق</span>
+        </button>
       </div>
-      <span>تسجيل التحصيل</span>
-    </button>
-    <button class="view-tab" [class.active]="activeView() === 'delivery'"
-            (click)="activeView.set('delivery')">
-      <div class="vt-icon delivery-icon">
-        <span class="material-icons-round">call_made</span>
-      </div>
-      <span>توريد الأموال</span>
-    </button>
-    <button class="view-tab" [class.active]="activeView() === 'history'"
-            (click)="activeView.set('history')">
-      <div class="vt-icon history-icon">
-        <span class="material-icons-round">history</span>
-      </div>
-      <span>السجل</span>
-    </button>
-    <button class="view-tab" [class.active]="activeView() === 'funds'"
-            (click)="activeView.set('funds')">
-      <div class="vt-icon funds-icon">
-        <span class="material-icons-round">savings</span>
-      </div>
-      <span>الصناديق</span>
-    </button>
+    </div>
   </div>
 
-  <!-- ===== Loading ===== -->
   @if (loading()) {
-    <div class="loading-center">
-      <div class="loading-spinner"></div>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state />
   }
 
-  <!-- ============================= -->
-  <!-- ===== COLLECTION VIEW ======= -->
-  <!-- ============================= -->
   @if (!loading() && activeView() === 'collection') {
-    <div class="view-section">
-
-      @if (collectionOpTypes().length === 0) {
-        <div class="no-op-types-card">
-          <div class="noopt-icon">
-            <span class="material-icons-round">category</span>
-          </div>
-          <h3>لا توجد أنواع عمليات للتحصيل</h3>
-          <p>اذهب إلى "أنواع العمليات" وأنشئ نوعاً من فئة "تحصيل" لتظهر هنا</p>
+    @if (collectionOpTypes().length === 0) {
+      <div class="valex-card mb-6 text-center py-12">
+        <div class="valex-card-body">
+          <span class="material-icons-round text-5xl text-muted block mb-3">category</span>
+          <h3 class="font-bold text-lg mb-2">لا توجد أنواع عمليات للتحصيل</h3>
+          <p class="text-sm text-muted">اذهب إلى "أنواع العمليات" وأنشئ نوعاً من فئة "تحصيل" لتظهر هنا</p>
         </div>
-      }
+      </div>
+    }
 
-      @if (collectionOpTypes().length > 0 && !selectedCollectionOT()) {
-        <div class="select-ot-section">
-          <h2 class="section-title">
-            <span class="material-icons-round">category</span>
-            اختر نوع التحصيل
-          </h2>
-          <div class="ot-cards-grid">
-            @for (ot of collectionOpTypes(); track ot.id) {
-              <button class="ot-card-3d" (click)="selectCollectionOT(ot)">
-                <div class="ot-card-icon collection">
-                  <span class="material-icons-round">{{ ot.icon || 'call_received' }}</span>
-                </div>
-                <div class="ot-card-body">
-                  <div class="ot-card-name">{{ ot.name }}</div>
-                  @if (ot.description) {
-                    <div class="ot-card-desc">{{ ot.description }}</div>
-                  }
-                  <div class="ot-card-count">
-                    <span class="material-icons-round">group</span>
-                    {{ ot.linkedAccounts?.length || 0 }} حساب
-                  </div>
-                </div>
-                <span class="material-icons-round ot-arrow">arrow_back_ios</span>
-              </button>
-            }
-          </div>
-        </div>
-      }
+    @if (collectionOpTypes().length > 0 && !selectedCollectionOT()) {
+      <h2 class="text-base font-bold flex items-center gap-2 mb-4">
+        <span class="material-icons-round text-primary">category</span>
+        اختر نوع التحصيل
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        @for (ot of collectionOpTypes(); track ot.id) {
+          <button class="collection-ot-card receipt" (click)="selectCollectionOT(ot)">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+              <span class="material-icons-round text-2xl">{{ ot.icon || 'call_received' }}</span>
+            </div>
+            <div class="flex-1 text-right">
+              <div class="font-bold text-base">{{ ot.name }}</div>
+              @if (ot.description) { <div class="text-xs text-muted mt-1">{{ ot.description }}</div> }
+              <div class="text-xs text-muted mt-1 flex items-center gap-1">
+                <span class="material-icons-round text-sm">group</span>
+                {{ ot.linkedAccounts?.length || 0 }} حساب
+              </div>
+            </div>
+            <span class="material-icons-round text-muted">arrow_back_ios</span>
+          </button>
+        }
+      </div>
+    }
 
-      @if (selectedCollectionOT()) {
-        <div class="collection-form-section">
-          <div class="cf-header">
-            <button class="back-btn" (click)="selectedCollectionOT.set(null); collectionEntries.set([])">
+    @if (selectedCollectionOT()) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <div class="flex items-center gap-3">
+            <button class="valex-icon-btn" (click)="selectedCollectionOT.set(null); collectionEntries.set([])">
               <span class="material-icons-round">arrow_forward</span>
             </button>
-            <div class="cf-title-wrap">
-              <div class="cf-icon collection">
-                <span class="material-icons-round">{{ selectedCollectionOT().icon || 'call_received' }}</span>
-              </div>
-              <div>
-                <h2>{{ selectedCollectionOT().name }}</h2>
-                <p>{{ selectedCollectionOT().description || 'تسجيل التحصيل اليومي' }}</p>
-              </div>
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-success/10 text-success">
+              <span class="material-icons-round">{{ selectedCollectionOT().icon || 'call_received' }}</span>
+            </div>
+            <div>
+              <h3 class="valex-card-title">{{ selectedCollectionOT().name }}</h3>
+              <p class="text-xs text-muted">{{ selectedCollectionOT().description || 'تسجيل التحصيل اليومي' }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="valex-form-group">
+              <label class="valex-label">البيان العام (يطبق على الكل)</label>
+              <input class="valex-input" type="text" placeholder="مثال: تحصيل يوم 27 فبراير..."
+                [value]="collectionDescription()" (input)="collectionDescription.set($any($event.target).value)" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label">التاريخ</label>
+              <input class="valex-input" type="date" [value]="collectionDate()"
+                (change)="collectionDate.set($any($event.target).value)" />
             </div>
           </div>
 
-          <div class="global-fields">
-            <div class="form-group">
-              <label class="form-label">البيان العام (يطبق على الكل)</label>
-              <input class="form-input" type="text" placeholder="مثال: تحصيل يوم 27 فبراير..."
-                     [value]="collectionDescription()"
-                     (input)="collectionDescription.set($any($event.target).value)">
-            </div>
-            <div class="form-group">
-              <label class="form-label">التاريخ</label>
-              <input class="form-input" type="date" [value]="collectionDate()"
-                     (change)="collectionDate.set($any($event.target).value)">
-            </div>
-          </div>
-
-          <div class="entries-table-wrap">
-            <div class="entries-table-header">
+          <div class="flex flex-col gap-3 mb-6">
+            <div class="grid grid-cols-3 gap-4 text-xs font-bold text-muted px-2">
               <span>الحساب</span>
               <span>المبلغ المحصّل</span>
               <span>ملاحظات</span>
             </div>
             @for (entry of collectionEntries(); track trackByIndex($index); let i = $index) {
-              <div class="entry-row" [class.has-amount]="parseFloat(entry.amount) > 0">
-                <div class="entry-account">
-                  <div class="entry-account-icon">
-                    <span class="material-icons-round">account_circle</span>
-                  </div>
-                  <span>{{ entry.accountName }}</span>
+              <div class="collection-entry-row" [class.has-amount]="parseFloat(entry.amount) > 0">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="material-icons-round text-muted text-base">account_circle</span>
+                  <span class="font-semibold text-sm truncate">{{ entry.accountName }}</span>
                 </div>
-                <div class="entry-amount-wrap">
-                  <input class="entry-amount-input" type="number" placeholder="0"
-                         [value]="entry.amount"
-                         (input)="updateCollectionEntry(i, 'amount', $any($event.target).value)">
-                  <span class="entry-currency">ر.ي</span>
+                <div class="flex items-center gap-2 min-w-[140px]">
+                  <input class="valex-input text-left font-mono" type="number" placeholder="0"
+                    [value]="entry.amount" (input)="updateCollectionEntry(i, 'amount', $any($event.target).value)" />
+                  <span class="text-xs text-muted font-semibold">ر.ي</span>
                 </div>
-                <input class="entry-notes-input" type="text" placeholder="ملاحظة..."
-                       [value]="entry.notes"
-                       (input)="updateCollectionEntry(i, 'notes', $any($event.target).value)">
+                <input class="valex-input flex-1" type="text" placeholder="ملاحظة..."
+                  [value]="entry.notes" (input)="updateCollectionEntry(i, 'notes', $any($event.target).value)" />
               </div>
             }
           </div>
 
-          <div class="cf-footer">
-            <div class="total-display">
-              <span class="total-label">إجمالي التحصيل:</span>
-              <span class="total-amount collection-color">{{ formatAmount(collectionTotal()) }}</span>
-              <span class="total-currency">ر.ي</span>
+          <div class="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-[var(--border-color)]">
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-muted font-semibold">إجمالي التحصيل:</span>
+              <span class="text-2xl font-bold text-success font-mono">{{ formatAmount(collectionTotal()) }} ر.ي</span>
             </div>
-            <button class="btn-3d btn-collection" [disabled]="saving() || collectionTotal() === 0"
-                    (click)="saveCollection()">
+            <button class="valex-btn valex-btn-primary" [disabled]="saving() || collectionTotal() === 0" (click)="saveCollection()">
               <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
               {{ saving() ? 'جاري الحفظ...' : 'حفظ التحصيل' }}
             </button>
           </div>
         </div>
-      }
-
-    </div>
+      </div>
+    }
   }
 
-  <!-- ============================= -->
-  <!-- ===== DELIVERY VIEW ========= -->
-  <!-- ============================= -->
   @if (!loading() && activeView() === 'delivery') {
-    <div class="view-section">
-
-      @if (deliveryOpTypes().length === 0) {
-        <div class="no-op-types-card">
-          <div class="noopt-icon delivery">
-            <span class="material-icons-round">category</span>
-          </div>
-          <h3>لا توجد أنواع عمليات للتوريد</h3>
-          <p>اذهب إلى "أنواع العمليات" وأنشئ نوعاً من فئة "توريد" لتظهر هنا</p>
+    @if (deliveryOpTypes().length === 0) {
+      <div class="valex-card mb-6 text-center py-12">
+        <div class="valex-card-body">
+          <span class="material-icons-round text-5xl text-muted block mb-3">category</span>
+          <h3 class="font-bold text-lg mb-2">لا توجد أنواع عمليات للتوريد</h3>
+          <p class="text-sm text-muted">اذهب إلى "أنواع العمليات" وأنشئ نوعاً من فئة "توريد" لتظهر هنا</p>
         </div>
-      }
+      </div>
+    }
 
-      @if (deliveryOpTypes().length > 0 && !selectedDeliveryOT()) {
-        <div class="select-ot-section">
-          <h2 class="section-title">
-            <span class="material-icons-round">category</span>
-            اختر نوع التوريد
-          </h2>
-          <div class="ot-cards-grid">
-            @for (ot of deliveryOpTypes(); track ot.id) {
-              <button class="ot-card-3d" (click)="selectDeliveryOT(ot)">
-                <div class="ot-card-icon delivery">
-                  <span class="material-icons-round">{{ ot.icon || 'call_made' }}</span>
-                </div>
-                <div class="ot-card-body">
-                  <div class="ot-card-name">{{ ot.name }}</div>
-                  @if (ot.description) {
-                    <div class="ot-card-desc">{{ ot.description }}</div>
-                  }
-                  <div class="ot-card-count">
-                    <span class="material-icons-round">group</span>
-                    {{ ot.linkedAccounts?.length || 0 }} حساب
-                  </div>
-                </div>
-                <span class="material-icons-round ot-arrow">arrow_back_ios</span>
-              </button>
-            }
-          </div>
-        </div>
-      }
+    @if (deliveryOpTypes().length > 0 && !selectedDeliveryOT()) {
+      <h2 class="text-base font-bold flex items-center gap-2 mb-4">
+        <span class="material-icons-round text-primary">category</span>
+        اختر نوع التوريد
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        @for (ot of deliveryOpTypes(); track ot.id) {
+          <button class="collection-ot-card payment" (click)="selectDeliveryOT(ot)">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+              <span class="material-icons-round text-2xl">{{ ot.icon || 'call_made' }}</span>
+            </div>
+            <div class="flex-1 text-right">
+              <div class="font-bold text-base">{{ ot.name }}</div>
+              @if (ot.description) { <div class="text-xs text-muted mt-1">{{ ot.description }}</div> }
+              <div class="text-xs text-muted mt-1 flex items-center gap-1">
+                <span class="material-icons-round text-sm">group</span>
+                {{ ot.linkedAccounts?.length || 0 }} حساب
+              </div>
+            </div>
+            <span class="material-icons-round text-muted">arrow_back_ios</span>
+          </button>
+        }
+      </div>
+    }
 
-      @if (selectedDeliveryOT()) {
-        <div class="collection-form-section">
-          <div class="cf-header">
-            <button class="back-btn" (click)="selectedDeliveryOT.set(null); deliveryEntries.set([])">
+    @if (selectedDeliveryOT()) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <div class="flex items-center gap-3">
+            <button class="valex-icon-btn" (click)="selectedDeliveryOT.set(null); deliveryEntries.set([])">
               <span class="material-icons-round">arrow_forward</span>
             </button>
-            <div class="cf-title-wrap">
-              <div class="cf-icon delivery">
-                <span class="material-icons-round">{{ selectedDeliveryOT().icon || 'call_made' }}</span>
-              </div>
-              <div>
-                <h2>{{ selectedDeliveryOT().name }}</h2>
-                <p>{{ selectedDeliveryOT().description || 'توريد الأموال' }}</p>
-              </div>
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-danger/10 text-danger">
+              <span class="material-icons-round">{{ selectedDeliveryOT().icon || 'call_made' }}</span>
+            </div>
+            <div>
+              <h3 class="valex-card-title">{{ selectedDeliveryOT().name }}</h3>
+              <p class="text-xs text-muted">{{ selectedDeliveryOT().description || 'توريد الأموال' }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="valex-form-group">
+              <label class="valex-label">البيان العام</label>
+              <input class="valex-input" type="text" placeholder="مثال: توريد يوم 27 فبراير..."
+                [value]="deliveryDescription()" (input)="deliveryDescription.set($any($event.target).value)" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label">التاريخ</label>
+              <input class="valex-input" type="date" [value]="deliveryDate()"
+                (change)="deliveryDate.set($any($event.target).value)" />
             </div>
           </div>
 
-          <div class="global-fields">
-            <div class="form-group">
-              <label class="form-label">البيان العام</label>
-              <input class="form-input" type="text" placeholder="مثال: توريد يوم 27 فبراير..."
-                     [value]="deliveryDescription()"
-                     (input)="deliveryDescription.set($any($event.target).value)">
-            </div>
-            <div class="form-group">
-              <label class="form-label">التاريخ</label>
-              <input class="form-input" type="date" [value]="deliveryDate()"
-                     (change)="deliveryDate.set($any($event.target).value)">
-            </div>
-          </div>
-
-          <div class="entries-table-wrap">
-            <div class="entries-table-header delivery-header">
+          <div class="flex flex-col gap-3 mb-6">
+            <div class="grid grid-cols-4 gap-3 text-xs font-bold text-muted px-2">
               <span>الحساب</span>
               <span>المبلغ</span>
               <span>رقم الإشعار</span>
               <span>ملاحظات</span>
             </div>
             @for (entry of deliveryEntries(); track trackByIndex($index); let i = $index) {
-              <div class="entry-row delivery-row" [class.has-amount]="parseFloat(entry.amount) > 0">
-                <div class="entry-account">
-                  <div class="entry-account-icon delivery">
-                    <span class="material-icons-round">account_balance</span>
-                  </div>
-                  <span>{{ entry.accountName }}</span>
+              <div class="grid grid-cols-4 gap-3 items-center collection-entry-row" [class.has-amount]="parseFloat(entry.amount) > 0">
+                <div class="flex items-center gap-2">
+                  <span class="material-icons-round text-muted text-base">account_balance</span>
+                  <span class="font-semibold text-sm truncate">{{ entry.accountName }}</span>
                 </div>
-                <div class="entry-amount-wrap">
-                  <input class="entry-amount-input" type="number" placeholder="0"
-                         [value]="entry.amount"
-                         (input)="updateDeliveryEntry(i, 'amount', $any($event.target).value)">
-                  <span class="entry-currency">ر.ي</span>
+                <div class="flex items-center gap-2">
+                  <input class="valex-input text-left font-mono" type="number" placeholder="0"
+                    [value]="entry.amount" (input)="updateDeliveryEntry(i, 'amount', $any($event.target).value)" />
+                  <span class="text-xs text-muted">ر.ي</span>
                 </div>
-                <input class="entry-ref-input" type="text" placeholder="رقم الإشعار..."
-                       [value]="entry.reference"
-                       (input)="updateDeliveryEntry(i, 'reference', $any($event.target).value)">
-                <input class="entry-notes-input" type="text" placeholder="ملاحظة..."
-                       [value]="entry.notes"
-                       (input)="updateDeliveryEntry(i, 'notes', $any($event.target).value)">
+                <input class="valex-input" type="text" placeholder="رقم الإشعار..."
+                  [value]="entry.reference" (input)="updateDeliveryEntry(i, 'reference', $any($event.target).value)" />
+                <input class="valex-input" type="text" placeholder="ملاحظة..."
+                  [value]="entry.notes" (input)="updateDeliveryEntry(i, 'notes', $any($event.target).value)" />
               </div>
             }
           </div>
 
-          <div class="cf-footer">
-            <div class="total-display">
-              <span class="total-label">إجمالي التوريد:</span>
-              <span class="total-amount delivery-color">{{ formatAmount(deliveryTotal()) }}</span>
-              <span class="total-currency">ر.ي</span>
+          <div class="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-[var(--border-color)]">
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-muted font-semibold">إجمالي التوريد:</span>
+              <span class="text-2xl font-bold text-danger font-mono">{{ formatAmount(deliveryTotal()) }} ر.ي</span>
             </div>
-            <button class="btn-3d btn-delivery" [disabled]="saving() || deliveryTotal() === 0"
-                    (click)="saveDelivery()">
+            <button class="valex-btn valex-btn-primary" [disabled]="saving() || deliveryTotal() === 0" (click)="saveDelivery()">
               <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
               {{ saving() ? 'جاري الحفظ...' : 'حفظ التوريد' }}
             </button>
           </div>
         </div>
-      }
-
-    </div>
+      </div>
+    }
   }
 
-  <!-- ============================= -->
-  <!-- ===== HISTORY VIEW ========== -->
-  <!-- ============================= -->
   @if (!loading() && activeView() === 'history') {
-    <div class="view-section">
-
-      <div class="history-stats">
-        <div class="hs-card collection">
-          <div class="hs-icon"><span class="material-icons-round">call_received</span></div>
-          <div class="hs-body">
-            <div class="hs-num">{{ historyStats().receiptCount }}</div>
-            <div class="hs-label">عمليات تحصيل</div>
-            <div class="hs-amount">{{ formatAmount(historyStats().totalReceipts) }} ر.ي</div>
-          </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div class="valex-card p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+          <span class="material-icons-round text-2xl">call_received</span>
         </div>
-        <div class="hs-card delivery">
-          <div class="hs-icon"><span class="material-icons-round">call_made</span></div>
-          <div class="hs-body">
-            <div class="hs-num">{{ historyStats().paymentCount }}</div>
-            <div class="hs-label">عمليات توريد</div>
-            <div class="hs-amount">{{ formatAmount(historyStats().totalPayments) }} ر.ي</div>
-          </div>
+        <div>
+          <div class="text-2xl font-bold">{{ historyStats().receiptCount }}</div>
+          <div class="text-sm text-muted">عمليات تحصيل</div>
+          <div class="text-xs font-mono text-success">{{ formatAmount(historyStats().totalReceipts) }} ر.ي</div>
         </div>
       </div>
-
-      @if (vouchers().length === 0) {
-        <div class="empty-history">
-          <span class="material-icons-round">history</span>
-          <p>لا توجد عمليات مسجلة بعد</p>
+      <div class="valex-card p-4 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+          <span class="material-icons-round text-2xl">call_made</span>
         </div>
-      } @else {
-        <div class="history-list">
+        <div>
+          <div class="text-2xl font-bold">{{ historyStats().paymentCount }}</div>
+          <div class="text-sm text-muted">عمليات توريد</div>
+          <div class="text-xs font-mono text-danger">{{ formatAmount(historyStats().totalPayments) }} ر.ي</div>
+        </div>
+      </div>
+    </div>
+
+    @if (vouchers().length === 0) {
+      <app-empty-state icon="history" title="لا توجد عمليات مسجلة بعد" />
+    } @else {
+      <div class="valex-card mb-6">
+        <div class="valex-card-body p-0">
           @for (v of vouchers(); track v.id) {
-            <div class="history-row" [class.receipt-row]="v.voucherType === 'receipt'"
-                 [class.payment-row]="v.voucherType === 'payment'">
-              <div class="hr-icon" [class.receipt-icon]="v.voucherType === 'receipt'"
-                   [class.payment-icon]="v.voucherType === 'payment'">
-                <span class="material-icons-round">
-                  {{ v.voucherType === 'receipt' ? 'call_received' : 'call_made' }}
-                </span>
+            <div class="flex items-center gap-4 p-4 border-b border-[var(--border-color)] last:border-0">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                   [class.bg-success/10]="v.voucherType === 'receipt'"
+                   [class.text-success]="v.voucherType === 'receipt'"
+                   [class.bg-danger/10]="v.voucherType === 'payment'"
+                   [class.text-danger]="v.voucherType === 'payment'">
+                <span class="material-icons-round">{{ v.voucherType === 'receipt' ? 'call_received' : 'call_made' }}</span>
               </div>
-              <div class="hr-main">
-                <div class="hr-desc">{{ v.description || 'بدون بيان' }}</div>
-                <div class="hr-date">{{ formatDate(v.voucherDate || v.createdAt) }}</div>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold truncate">{{ v.description || 'بدون بيان' }}</div>
+                <div class="text-xs text-muted">{{ formatDate(v.voucherDate || v.createdAt) }}</div>
               </div>
-              <div class="hr-amount" [class.receipt-amount]="v.voucherType === 'receipt'"
-                   [class.payment-amount]="v.voucherType === 'payment'">
+              <div class="font-mono font-bold"
+                   [class.text-success]="v.voucherType === 'receipt'"
+                   [class.text-danger]="v.voucherType === 'payment'">
                 {{ formatAmount(v.amount) }}
               </div>
             </div>
           }
         </div>
-      }
-
-    </div>
+      </div>
+    }
   }
 
-  <!-- ============================= -->
-  <!-- ===== FUNDS VIEW ============ -->
-  <!-- ============================= -->
   @if (!loading() && activeView() === 'funds') {
-    <div class="view-section">
-
-      @if (funds().length === 0) {
-        <div class="no-op-types-card">
-          <div class="noopt-icon">
-            <span class="material-icons-round">savings</span>
-          </div>
-          <h3>لا توجد صناديق</h3>
-          <p>اذهب إلى قسم <strong>الصناديق</strong> من القائمة الجانبية لإضافة صناديق</p>
-        </div>
-      } @else {
-
-        <!-- Fund Summary Cards -->
-        <div class="funds-summary">
-          @for (fund of funds(); track fund.id) {
-            <div class="fund-summary-card" [class.selected]="selectedFund()?.id === fund.id"
-              (click)="selectFund(fund)">
-              <div class="fsc-header">
-                <div class="fsc-icon" [style.background]="getFundTypeColor(fund.fundType) + '20'"
-                  [style.color]="getFundTypeColor(fund.fundType)">
-                  <span class="material-icons-round">{{ getFundTypeIcon(fund.fundType) }}</span>
+    @if (funds().length === 0) {
+      <app-empty-state icon="savings" title="لا توجد صناديق" message="اذهب إلى قسم الصناديق من القائمة الجانبية لإضافة صناديق" />
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        @for (fund of funds(); track fund.id) {
+          <div class="valex-card cursor-pointer collection-fund-card" [class.selected]="selectedFund()?.id === fund.id"
+               (click)="selectFund(fund)">
+            <div class="valex-card-body">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                     [style.background]="getFundTypeColor(fund.fundType) + '20'"
+                     [style.color]="getFundTypeColor(fund.fundType)">
+                  <span class="material-icons-round text-2xl">{{ getFundTypeIcon(fund.fundType) }}</span>
                 </div>
-                <div class="fsc-info">
-                  <strong>{{ fund.name }}</strong>
-                  <span class="fsc-type">{{ getFundTypeLabel(fund.fundType) }}</span>
+                <div class="flex-1 min-w-0">
+                  <div class="font-bold">{{ fund.name }}</div>
+                  <div class="text-xs text-muted">{{ getFundTypeLabel(fund.fundType) }}</div>
                 </div>
-                <span class="material-icons-round fsc-expand">
-                  {{ selectedFund()?.id === fund.id ? 'expand_less' : 'expand_more' }}
-                </span>
+                <span class="material-icons-round text-muted">{{ selectedFund()?.id === fund.id ? 'expand_less' : 'expand_more' }}</span>
               </div>
-              <div class="fsc-balance" [class.positive]="getFundBalance(fund) >= 0"
-                [class.negative]="getFundBalance(fund) < 0">
-                <span class="fsc-balance-label">الرصيد الحالي</span>
-                <span class="fsc-balance-value">{{ formatAmount(getFundBalance(fund)) }} ر.ي</span>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-muted">الرصيد الحالي</span>
+                <span class="font-mono font-bold text-lg" [class.text-success]="getFundBalance(fund) >= 0" [class.text-danger]="getFundBalance(fund) < 0">
+                  {{ formatAmount(getFundBalance(fund)) }} ر.ي
+                </span>
               </div>
 
               @if (selectedFund()?.id === fund.id) {
-                <div class="fund-transactions" (click)="$event.stopPropagation()">
-                  <div class="ft-header">
-                    <span class="material-icons-round">history</span>
+                <div class="mt-4 pt-4 border-t border-[var(--border-color)]" (click)="$event.stopPropagation()">
+                  <div class="text-xs font-bold text-muted flex items-center gap-1 mb-3">
+                    <span class="material-icons-round text-sm">history</span>
                     الحركات التفصيلية
                   </div>
                   @if (getFundVouchers(fund).length === 0) {
-                    <div class="ft-empty">لا توجد حركات مسجلة لهذا الصندوق بعد</div>
+                    <p class="text-xs text-muted">لا توجد حركات مسجلة لهذا الصندوق بعد</p>
                   } @else {
-                    <div class="ft-list">
+                    <div class="flex flex-col gap-2">
                       @for (v of getFundVouchers(fund); track v.id) {
-                        <div class="ft-row">
-                          <span class="ft-type" [style.color]="getVoucherTypeColor(v.voucherType)">
-                            {{ getVoucherTypeLabel(v.voucherType) }}
-                          </span>
-                          <span class="ft-desc">{{ (v.description || 'بدون بيان') + (v.voucherNumber ? ' • ' + v.voucherNumber : '') }}</span>
-                          <span class="ft-date">{{ formatDate(v.voucherDate || v.createdAt) }}</span>
-                          <span class="ft-amount" [style.color]="getVoucherTypeColor(v.voucherType)">
-                            {{ formatAmount(v.amount) }} ر.ي
-                          </span>
+                        <div class="flex items-center gap-2 text-sm">
+                          <span class="valex-badge valex-badge-secondary text-xs">{{ getVoucherTypeLabel(v.voucherType) }}</span>
+                          <span class="flex-1 truncate text-muted">{{ (v.description || 'بدون بيان') + (v.voucherNumber ? ' • ' + v.voucherNumber : '') }}</span>
+                          <span class="text-xs text-muted">{{ formatDate(v.voucherDate || v.createdAt) }}</span>
+                          <span class="font-mono text-sm font-bold" [style.color]="getVoucherTypeColor(v.voucherType)">{{ formatAmount(v.amount) }}</span>
                         </div>
                       }
                     </div>
@@ -437,51 +363,61 @@
                 </div>
               }
             </div>
-          }
-        </div>
-
-      }
-    </div>
+          </div>
+        }
+      </div>
+    }
   }
 
-  <!-- ===== How It Works Modal ===== -->
   @if (showHowItWorks()) {
-    <div class="modal-overlay" (click)="showHowItWorks.set(false)">
-      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon amber">
-            <span class="material-icons-round">help_outline</span>
+    <div class="valex-modal-overlay" (click)="showHowItWorks.set(false)">
+      <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10 text-warning">
+              <span class="material-icons-round">help_outline</span>
+            </div>
+            <h3>مبدأ العمل - التحصيل والتوريد</h3>
           </div>
-          <h2>مبدأ العمل - التحصيل والتوريد</h2>
-          <button class="modal-close" (click)="showHowItWorks.set(false)">
+          <button class="valex-icon-btn" (click)="showHowItWorks.set(false)">
             <span class="material-icons-round">close</span>
           </button>
         </div>
-        <div class="modal-body">
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">category</span> أنواع العمليات</h3>
-            <p>
-              قبل تسجيل التحصيل، لازم تنشئ "نوع عملية" من فئة "تحصيل" في صفحة أنواع العمليات.
-              كل نوع عملية فيه قائمة الحسابات (الموظفين والأنظمة) اللي تتحصل منها.
-            </p>
+        <div class="valex-modal-body">
+          <div class="flex flex-col gap-6">
+            <div class="valex-card">
+              <div class="valex-card-body">
+                <h4 class="font-bold flex items-center gap-2 mb-2">
+                  <span class="material-icons-round text-primary">category</span>
+                  أنواع العمليات
+                </h4>
+                <p class="text-sm text-muted">قبل تسجيل التحصيل، لازم تنشئ "نوع عملية" من فئة "تحصيل" في صفحة أنواع العمليات. كل نوع عملية فيه قائمة الحسابات (الموظفين والأنظمة) اللي تتحصل منها.</p>
+              </div>
+            </div>
+            <div class="valex-card">
+              <div class="valex-card-body">
+                <h4 class="font-bold flex items-center gap-2 mb-2">
+                  <span class="material-icons-round text-success">call_received</span>
+                  التحصيل اليومي
+                </h4>
+                <p class="text-sm text-muted">تختار نوع العملية → تظهر لك كل الحسابات جاهزة في جدول → تكتب البيان مرة واحدة للكل → تعبي المبالغ لكل حساب → الخانة الفاضية تعني ما تحصّل شي.</p>
+              </div>
+            </div>
+            <div class="valex-card">
+              <div class="valex-card-body">
+                <h4 class="font-bold flex items-center gap-2 mb-2">
+                  <span class="material-icons-round text-danger">call_made</span>
+                  التوريد
+                </h4>
+                <p class="text-sm text-muted">بعد التحصيل، تختار نوع عملية "توريد" → تحدد وين وردت الفلوس (صراف، محفظة، بنك) → تضيف رقم الإشعار لكل توريد.</p>
+              </div>
+            </div>
           </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">call_received</span> التحصيل اليومي</h3>
-            <p>
-              تختار نوع العملية → تظهر لك كل الحسابات جاهزة في جدول → تكتب البيان مرة واحدة للكل →
-              تعبي المبالغ لكل حساب → الخانة الفاضية تعني ما تحصّل شي.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">call_made</span> التوريد</h3>
-            <p>
-              بعد التحصيل، تختار نوع عملية "توريد" → تحدد وين وردت الفلوس (صراف، محفظة، بنك) →
-              تضيف رقم الإشعار لكل توريد.
-            </p>
-          </div>
+        </div>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showHowItWorks.set(false)">إغلاق</button>
         </div>
       </div>
     </div>
   }
-
 </div>

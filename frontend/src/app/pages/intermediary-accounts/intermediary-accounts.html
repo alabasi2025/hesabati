@@ -1,73 +1,84 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">sync_alt</span> الحسابات الوسيطة</h2>
-    <p class="page-desc">حسابات للعمليات التشغيلية قيد الانتظار (فواتير مشتريات، تحويلات مخزنية، طلبات توريد)</p>
-  </div>
+  <app-page-header title="الحسابات الوسيطة" icon="sync_alt" [breadcrumb]="['الرئيسية', 'المحاسبة', 'الحسابات الوسيطة']">
+  </app-page-header>
 
-  <div class="info-card">
-    <span class="material-icons-round">info</span>
-    <div>
-      <strong>ما هي الحسابات الوسيطة؟</strong>
-      <p>حسابات مؤقتة تستخدم لتتبع العمليات التشغيلية قيد الانتظار:</p>
-      <ul>
-        <li><strong>INT-01:</strong> فواتير مشتريات قيد الاستلام (تم التأكيد، بانتظار إدخال المخزن)</li>
-        <li><strong>INT-02:</strong> تحويلات مخزنية قيد الاستلام (تم الإرسال، بانتظار الاستلام)</li>
-        <li><strong>INT-03:</strong> طلبات توريد قيد المعالجة (تم الطلب، بانتظار وصول البضاعة)</li>
-      </ul>
+  <!-- Info Card -->
+  <div class="valex-card mb-6 border-r-4 border-info">
+    <div class="valex-card-body">
+      <div class="flex items-start gap-3">
+        <span class="material-icons-round text-info mt-0.5">info</span>
+        <div>
+          <div class="font-bold text-sm mb-2">ما هي الحسابات الوسيطة؟</div>
+          <p class="text-sm text-muted mb-3">حسابات مؤقتة تستخدم لتتبع العمليات التشغيلية قيد الانتظار:</p>
+          <div class="space-y-2">
+            <div class="flex items-start gap-2 text-sm">
+              <span class="valex-badge valex-badge-primary font-mono mt-0.5">INT-01</span>
+              <span class="text-muted">فواتير مشتريات قيد الاستلام (تم التأكيد، بانتظار إدخال المخزن)</span>
+            </div>
+            <div class="flex items-start gap-2 text-sm">
+              <span class="valex-badge valex-badge-secondary font-mono mt-0.5">INT-02</span>
+              <span class="text-muted">تحويلات مخزنية قيد الاستلام (تم الإرسال، بانتظار الاستلام)</span>
+            </div>
+            <div class="flex items-start gap-2 text-sm">
+              <span class="valex-badge valex-badge-warning font-mono mt-0.5">INT-03</span>
+              <span class="text-muted">طلبات توريد قيد المعالجة (تم الطلب، بانتظار وصول البضاعة)</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else if (!accounts().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">account_balance</span>
-      <p>لا توجد حسابات وسيطة</p>
-      <small>لم يتم إنشاء حسابات وسيطة بعد</small>
-    </div>
+    <app-empty-state icon="account_balance" title="لا توجد حسابات وسيطة" subtitle="لم يتم إنشاء حسابات وسيطة بعد" />
   } @else {
-    <div class="accounts-grid">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       @for (acc of accounts(); track acc.id) {
-        <div class="account-card">
-          <div class="card-header">
-            <div class="card-icon">
-              <span class="material-icons-round">sync_alt</span>
+        <div class="valex-card">
+          <div class="valex-card-body">
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                <span class="material-icons-round">sync_alt</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-base truncate">{{ acc.name }}</h3>
+                <span class="valex-badge valex-badge-secondary font-mono text-xs">{{ acc.code }}</span>
+              </div>
             </div>
-            <div class="card-title">
-              <h3>{{ acc.name }}</h3>
-              <span class="code-badge intermediary">{{ acc.code }}</span>
-            </div>
-          </div>
 
-          <div class="card-body">
+            <!-- Balance -->
             @if (acc.balances && acc.balances.length > 1) {
-              <div class="card-currencies">
+              <div class="flex flex-wrap gap-2 mb-3">
                 @for (b of acc.balances; track b.currencyId) {
-                  <span class="currency-mini-badge">{{ b.currencySymbol || b.currencyCode }} {{ getBalanceDisplay({balances: [b]}) }}</span>
+                  <span class="valex-badge valex-badge-info font-mono">{{ b.currencySymbol || b.currencyCode }} {{ getBalanceDisplay({balances: [b]}) }}</span>
                 }
               </div>
             } @else {
-              <div class="balance-display">
-                <span class="material-icons-round">account_balance_wallet</span>
-                <div class="balance-info">
-                  <span class="balance-label">الرصيد الحالي:</span>
-                  <span class="balance-value">{{ getBalanceDisplay(acc) }}</span>
+              <div class="flex items-center gap-2 mb-3">
+                <span class="material-icons-round text-info text-sm">account_balance_wallet</span>
+                <div class="text-sm">
+                  <span class="text-muted">الرصيد الحالي: </span>
+                  <span class="font-bold">{{ getBalanceDisplay(acc) }}</span>
                 </div>
               </div>
             }
 
             @if (acc.description) {
-              <div class="notes">
-                <span class="material-icons-round">notes</span>
+              <div class="flex items-start gap-2 text-sm text-muted mb-3">
+                <span class="material-icons-round text-xs mt-0.5">notes</span>
                 <span>{{ acc.description }}</span>
               </div>
             }
-          </div>
 
-          <div class="card-footer">
-            <span class="status-badge" [class.active]="acc.isActive">
-              {{ acc.isActive ? 'نشط' : 'متوقف' }}
-            </span>
+            <!-- Footer -->
+            <div class="pt-3 border-t border-[var(--color-defaultborder)]">
+              <span class="valex-badge" [class.valex-badge-success]="acc.isActive" [class.valex-badge-secondary]="!acc.isActive">
+                {{ acc.isActive ? 'نشط' : 'متوقف' }}
+              </span>
+            </div>
           </div>
         </div>
       }

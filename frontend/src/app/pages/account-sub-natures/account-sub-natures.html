@@ -1,32 +1,43 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">label</span> أنواع الحسابات الفرعية</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة نوع</button>
-  </div>
+  <app-page-header title="أنواع الحسابات الفرعية" icon="label" [breadcrumb]="['الرئيسية', 'المحاسبة', 'أنواع الحسابات الفرعية']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span>
+      إضافة نوع
+    </button>
+  </app-page-header>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else if (!items().length) {
-    <div class="empty-state"><span class="material-icons-round">label</span><p>لا توجد أنواع حسابات فرعية</p></div>
+    <app-empty-state icon="label" title="لا توجد أنواع حسابات فرعية" />
   } @else {
-    <div class="grid">
+    <div class="valex-categories-grid">
       @for (item of items(); track item.id) {
-        <div class="card">
-          <div class="head">
-            <div class="title">
-              <span class="material-icons-round">{{ item.icon || 'label' }}</span>
-              <div><h3>{{ item.name }}</h3><p>{{ item.natureKey }}</p></div>
+        <div class="valex-category-card">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round text-xl">{{ item.icon || 'label' }}</span>
             </div>
-            <div class="actions">
-              <button class="action-btn edit" (click)="openEdit(item)"><span class="material-icons-round">edit</span></button>
+            <div class="flex items-center gap-1">
+              <button class="valex-icon-btn text-warning" (click)="openEdit(item)" title="تعديل">
+                <span class="material-icons-round">edit</span>
+              </button>
               @if (!item.isSystem) {
-                <button class="action-btn delete" (click)="remove(item)"><span class="material-icons-round">delete</span></button>
+                <button class="valex-icon-btn text-danger" (click)="remove(item)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
               }
             </div>
           </div>
-          <div class="flags">
-            <span class="status-badge" [class.active]="item.isActive">{{ item.isActive ? 'نشط' : 'متوقف' }}</span>
-            <span class="status-badge partner">{{ item.isSystem ? 'نظامي' : 'خاص' }}</span>
+          <h3 class="font-bold text-base mb-1">{{ item.name }}</h3>
+          <div class="valex-badge valex-badge-muted font-mono text-xs mb-3">{{ item.natureKey }}</div>
+          <div class="pt-3 border-t border-[var(--color-defaultborder)] flex items-center gap-2">
+            <span class="valex-badge" [class.valex-badge-success]="item.isActive" [class.valex-badge-secondary]="!item.isActive">
+              {{ item.isActive ? 'نشط' : 'متوقف' }}
+            </span>
+            <span class="valex-badge" [class.valex-badge-primary]="item.isSystem" [class.valex-badge-muted]="!item.isSystem">
+              {{ item.isSystem ? 'نظامي' : 'خاص' }}
+            </span>
           </div>
         </div>
       }
@@ -34,19 +45,35 @@
   }
 
   @if (showForm()) {
-    <div class="modal-overlay" (click)="showForm.set(false)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row"><div class="modal-icon blue"><span class="material-icons-round">label</span></div><div><h2>{{ editingId() ? 'تعديل نوع فرعي' : 'إضافة نوع فرعي' }}</h2></div></div>
-          <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+    <div class="valex-modal-overlay" (click)="showForm.set(false)">
+      <div class="valex-modal valex-modal-sm" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-info/10 text-info">
+              <span class="material-icons-round">label</span>
+            </div>
+            <h2 class="valex-modal-title">{{ editingId() ? 'تعديل نوع فرعي' : 'إضافة نوع فرعي' }}</h2>
+          </div>
+          <button class="valex-icon-btn" (click)="showForm.set(false)">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <div class="modal-body">
-          <div class="form-group"><label>الاسم</label><input [(ngModel)]="form.name" /></div>
-          <div class="form-group"><label>المفتاح</label><input [(ngModel)]="form.natureKey" dir="ltr" /></div>
+        <div class="valex-modal-body">
+          <div class="valex-form-group">
+            <label class="valex-label">الاسم</label>
+            <input class="valex-input" [(ngModel)]="form.name" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المفتاح</label>
+            <input class="valex-input" [(ngModel)]="form.natureKey" dir="ltr" />
+          </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn-save" (click)="save()">حفظ</button>
-          <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="save()">
+            <span class="material-icons-round">save</span>
+            حفظ
+          </button>
         </div>
       </div>
     </div>

@@ -6,11 +6,13 @@ const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:7744
 
 // إعدادات Connection Pool للإنتاج
 const client = postgres(connectionString, {
-  max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),           // أقصى عدد اتصالات متزامنة
-  idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '20'),     // إغلاق الاتصال الخامل بعد 20 ثانية
-  connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '10'), // مهلة الاتصال 10 ثوانٍ
-  max_lifetime: 60 * 30,                                            // أقصى عمر للاتصال: 30 دقيقة
-  prepare: true,                                                    // تفعيل prepared statements للأداء
+  max: parseInt(process.env.DB_MAX_CONNECTIONS || '10'),
+  idle_timeout: 0,                    // لا تُغلق الاتصالات الخاملة أبداً
+  connect_timeout: 30,                // مهلة أطول للاتصال
+  max_lifetime: 0,                    // اتصالات دائمة بدون انتهاء صلاحية
+  keep_alive: true,                   // إبقاء الاتصال حياً
+  prepare: false,                     // إيقاف prepared statements لتجنب أخطاء reconnect
+  onnotice: () => {},
 });
 
 export const db = drizzle(client, { schema });

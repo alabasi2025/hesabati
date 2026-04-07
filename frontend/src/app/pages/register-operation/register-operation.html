@@ -1,188 +1,232 @@
-<div class="page-container register-op-page">
+<div class="page-content">
+  <app-page-header
+    title="تسجيل عملية"
+    icon="play_circle"
+    [breadcrumb]="['الرئيسية', 'العمليات المالية', 'تسجيل عملية']"
+  >
+    <button class="valex-btn valex-btn-outline" (click)="goBack()">
+      <span class="material-icons-round">arrow_forward</span>
+      رجوع
+    </button>
+  </app-page-header>
 
-  <div class="page-header">
-    <div class="header-left">
-      <button class="back-btn" (click)="goBack()">
-        <span class="material-icons-round">arrow_forward</span>
-      </button>
-      <div class="page-icon-3d primary">
-        <span class="material-icons-round">play_circle</span>
-      </div>
-      <div>
-        <h1 class="page-title">تسجيل عملية</h1>
-        <p class="page-subtitle">اختر الجهة ثم نوع السند ثم القالب لتنفيذ العملية</p>
-      </div>
-    </div>
-  </div>
+  <p class="text-sm text-muted mb-6">اختر الجهة ثم نوع السند ثم القالب لتنفيذ العملية</p>
 
   @if (error()) {
-    <div class="alert-error" (click)="error.set('')">
-      <span class="material-icons-round">error_outline</span>
-      {{ error() }}
-      <span class="close-x">✕</span>
+    <div class="valex-card mb-4 border border-danger/20 bg-danger/5 cursor-pointer" (click)="error.set('')">
+      <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+        <span class="material-icons-round">error_outline</span>
+        {{ error() }}
+        <span class="ms-auto material-icons-round text-base">close</span>
+      </div>
     </div>
   }
 
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state />
   } @else {
 
-    <!-- الخطوة ١: نوع الجهة -->
     @if (!treasuryKind()) {
-      <div class="step-card">
-        <h2 class="step-title"><span class="step-num">١</span> اختر نوع الجهة</h2>
-        <div class="kind-grid">
-          @for (opt of treasuryKindOptions; track opt.value) {
-            <button class="kind-btn" (click)="setTreasuryKind(opt.value)">
-              <span class="material-icons-round">{{ opt.icon }}</span>
-              {{ opt.label }}
-            </button>
-          }
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="register-step-num">١</span>
+            اختر نوع الجهة
+          </h3>
+        </div>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            @for (opt of treasuryKindOptions; track opt.value) {
+              <button class="register-kind-btn" (click)="setTreasuryKind(opt.value)">
+                <span class="material-icons-round text-3xl text-primary">{{ opt.icon }}</span>
+                <span class="font-bold text-base">{{ opt.label }}</span>
+              </button>
+            }
+          </div>
         </div>
       </div>
     }
 
-    <!-- الخطوة ٢: اختيار الخزينة/المخزن -->
     @if (treasuryKind() && !selectedTreasury()) {
-      <div class="step-card">
-        <h2 class="step-title"><span class="step-num">٢</span> اختر {{ treasuryKind() === 'fund' ? 'الصندوق' : treasuryKind() === 'warehouse' ? 'المخزن' : 'الحساب' }}</h2>
-        @if (treasuryKind() === 'warehouse') {
-          <p class="step-hint">عمليات المخازن (توريد، صرف، تحويل) تُنفَّذ من صفحة عمليات المخازن أو من الشاشات المخصصة.</p>
-          <button class="btn-3d btn-ghost" (click)="setTreasuryKind('')">رجوع</button>
-        } @else if (treasuryList().length === 0) {
-          <p class="step-hint">لا توجد {{ treasuryKind() === 'fund' ? 'صناديق' : 'حسابات' }} مسجّلة. أضفها من صفحة {{ treasuryKind() === 'fund' ? 'الصناديق' : 'الحسابات' }} أولاً.</p>
-          <button class="btn-3d btn-ghost" (click)="setTreasuryKind('')">رجوع</button>
-        } @else {
-          <div class="treasury-list">
-            @for (item of treasuryList(); track item.id) {
-              <button class="treasury-btn" (click)="setTreasury(item)">
-                <span class="material-icons-round">{{ treasuryKind() === 'fund' ? 'savings' : 'account_balance' }}</span>
-                {{ item.name }}
-              </button>
-            }
-          </div>
-          <button class="btn-3d btn-ghost" (click)="setTreasuryKind('')">تغيير نوع الجهة</button>
-        }
-      </div>
-    }
-
-    <!-- الخطوة ٣: نوع السند (للخزائن فقط، غير المخزن) -->
-    @if (selectedTreasury() && selectedTreasury()!.type !== 'warehouse' && !voucherType()) {
-      <div class="step-card">
-        <h2 class="step-title"><span class="step-num">٣</span> نوع السند</h2>
-        <div class="vtype-grid">
-          @for (opt of voucherTypeOptions; track opt.value) {
-            <button class="vtype-btn" [class.receipt]="opt.value === 'receipt'" [class.payment]="opt.value === 'payment'" (click)="setVoucherType(opt.value)">
-              <span class="material-icons-round">{{ opt.icon }}</span>
-              {{ opt.label }}
-            </button>
-          }
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="register-step-num">٢</span>
+            اختر {{ treasuryKind() === 'fund' ? 'الصندوق' : treasuryKind() === 'warehouse' ? 'المخزن' : 'الحساب' }}
+          </h3>
         </div>
-        <button class="btn-3d btn-ghost" (click)="selectedTreasury.set(null)">تغيير الخزينة</button>
-      </div>
-    }
-
-    <!-- الخطوة ٤: اختيار القالب -->
-    @if (voucherType() && !selectedTemplate()) {
-      <div class="step-card">
-        <h2 class="step-title"><span class="step-num">٤</span> اختر قالب العملية</h2>
-        @if (filteredTemplates().length === 0) {
-          <p class="step-hint">لا توجد قوالب مُنشأة لهذه الخزينة ونوع السند ({{ voucherType() === 'receipt' ? 'قبض' : 'صرف' }}). أنشئ قالباً من صفحة أنواع العمليات.</p>
-          <button class="btn-3d btn-ghost" (click)="voucherType.set('')">رجوع</button>
-        } @else {
-          <div class="template-grid">
-            @for (ot of filteredTemplates(); track ot.id) {
-              <button class="template-btn" (click)="setTemplate(ot)" [style.--t-color]="ot.color || '#3b82f6'">
-                <span class="material-icons-round">{{ ot.icon || 'receipt_long' }}</span>
-                <span>{{ ot.name }}</span>
-                @if (ot.code) { <small>{{ ot.code }}</small> }
-              </button>
-            }
-          </div>
-          <button class="btn-3d btn-ghost" (click)="voucherType.set('')">تغيير نوع السند</button>
-        }
-      </div>
-    }
-
-    <!-- الخطوة ٥: نموذج التنفيذ -->
-    @if (selectedTemplate()) {
-      <div class="step-card form-step">
-        <h2 class="step-title"><span class="step-num">٥</span> تنفيذ العملية — {{ selectedTemplate().name }}</h2>
-
-        <p class="voucher-number-hint">
-          <span class="material-icons-round">tag</span>
-          رقم السند سيُولّد تلقائياً حسب تسلسل الخزينة ونوع السند والسنة.
-        </p>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>التاريخ <span class="required">*</span></label>
-            <input type="date" class="form-input" [ngModel]="execDate()" (ngModelChange)="execDate.set($event)">
-          </div>
-          <div class="form-group">
-            <label>العملة</label>
-            <select class="form-select" [ngModel]="execCurrencyId()" (ngModelChange)="execCurrencyId.set(+$event)">
-              @for (c of currencies(); track c.id) {
-                <option [value]="c.id">{{ c.code }} — {{ c.name }}</option>
-              }
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>البيان العام (اختياري)</label>
-          <input type="text" class="form-input" [ngModel]="execDescription()" (ngModelChange)="execDescription.set($event)" placeholder="وصف العملية">
-        </div>
-        <div class="form-group">
-          <label>الرقم المرجعي (اختياري)</label>
-          <input type="text" class="form-input" [ngModel]="execReference()" (ngModelChange)="execReference.set($event)" placeholder="رقم الإشعار أو المرجع">
-        </div>
-
-        @if (isMultiLine()) {
-          <div class="entries-section">
-            <h3>المبالغ والبيان لكل حساب</h3>
-            <p class="hint">سند واحد متعدد الأسطر — إجمالي المبالغ سيُسجّل في الخزينة المختارة.</p>
-            <div class="entries-table">
-              @for (entry of formEntriesForMulti(); track entry.accountId; let i = $index) {
-                <div class="entry-row">
-                  <div class="entry-account">{{ entry.accountName }}</div>
-                  <input type="number" class="form-input amount-input" placeholder="المبلغ" min="0" step="0.01"
-                         [ngModel]="entry.amount" (ngModelChange)="updateEntryAmount(i, $event)">
-                  <input type="text" class="form-input" placeholder="بيان السطر (اختياري)"
-                         [ngModel]="entry.description" (ngModelChange)="updateEntryDescription(i, $event)">
-                </div>
+        <div class="valex-card-body">
+          @if (treasuryKind() === 'warehouse') {
+            <p class="text-sm text-muted mb-4">عمليات المخازن (توريد، صرف، تحويل) تُنفَّذ من صفحة عمليات المخازن أو من الشاشات المخصصة.</p>
+            <button class="valex-btn valex-btn-outline" (click)="setTreasuryKind('')">رجوع</button>
+          } @else if (treasuryList().length === 0) {
+            <p class="text-sm text-muted mb-4">
+              لا توجد {{ treasuryKind() === 'fund' ? 'صناديق' : 'حسابات' }} مسجّلة.
+              أضفها من صفحة {{ treasuryKind() === 'fund' ? 'الصناديق' : 'الحسابات' }} أولاً.
+            </p>
+            <button class="valex-btn valex-btn-outline" (click)="setTreasuryKind('')">رجوع</button>
+          } @else {
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
+              @for (item of treasuryList(); track item.id) {
+                <button class="register-treasury-btn" (click)="setTreasury(item)">
+                  <span class="material-icons-round">{{ treasuryKind() === 'fund' ? 'savings' : 'account_balance' }}</span>
+                  {{ item.name }}
+                </button>
               }
             </div>
-            <div class="form-total">الإجمالي: <strong>{{ formatAmount(getFormTotal()) }} {{ getCurrencyCode() }}</strong></div>
+            <button class="valex-btn valex-btn-outline" (click)="setTreasuryKind('')">تغيير نوع الجهة</button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (selectedTreasury() && selectedTreasury()!.type !== 'warehouse' && !voucherType()) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="register-step-num">٣</span>
+            نوع السند
+          </h3>
+        </div>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            @for (opt of voucherTypeOptions; track opt.value) {
+              <button
+                class="register-vtype-btn"
+                [class.receipt]="opt.value === 'receipt'"
+                [class.payment]="opt.value === 'payment'"
+                (click)="setVoucherType(opt.value)"
+              >
+                <span class="material-icons-round text-3xl">{{ opt.icon }}</span>
+                <span class="font-bold text-lg">{{ opt.label }}</span>
+              </button>
+            }
           </div>
-        } @else {
-          <div class="single-entry">
-            <div class="form-group">
-              <label>المبلغ <span class="required">*</span></label>
-              <div class="amount-wrap">
-                <input type="number" class="form-input amount-input" placeholder="0" min="0" step="0.01"
-                       [ngModel]="execSingleAmount()" (ngModelChange)="execSingleAmount.set($event)">
-                <span class="currency-suffix">{{ getCurrencyCode() }}</span>
+          <button class="valex-btn valex-btn-outline" (click)="selectedTreasury.set(null)">تغيير الخزينة</button>
+        </div>
+      </div>
+    }
+
+    @if (voucherType() && !selectedTemplate()) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="register-step-num">٤</span>
+            اختر قالب العملية
+          </h3>
+        </div>
+        <div class="valex-card-body">
+          @if (filteredTemplates().length === 0) {
+            <p class="text-sm text-muted mb-4">
+              لا توجد قوالب مُنشأة لهذه الخزينة ونوع السند ({{ voucherType() === 'receipt' ? 'قبض' : 'صرف' }}).
+              أنشئ قالباً من صفحة أنواع العمليات.
+            </p>
+            <button class="valex-btn valex-btn-outline" (click)="voucherType.set('')">رجوع</button>
+          } @else {
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
+              @for (ot of filteredTemplates(); track ot.id) {
+                <button class="register-template-btn" (click)="setTemplate(ot)" [style.--t-color]="ot.color || '#3b82f6'">
+                  <span class="material-icons-round">{{ ot.icon || 'receipt_long' }}</span>
+                  <div>
+                    <div class="font-bold">{{ ot.name }}</div>
+                    @if (ot.code) { <small class="text-muted font-mono">{{ ot.code }}</small> }
+                  </div>
+                </button>
+              }
+            </div>
+            <button class="valex-btn valex-btn-outline" (click)="voucherType.set('')">تغيير نوع السند</button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (selectedTemplate()) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="register-step-num">٥</span>
+            تنفيذ العملية — {{ selectedTemplate().name }}
+          </h3>
+        </div>
+        <div class="valex-card-body">
+          <div class="flex items-center gap-2 text-sm text-muted mb-4">
+            <span class="material-icons-round text-base">tag</span>
+            رقم السند سيُولّد تلقائياً حسب تسلسل الخزينة ونوع السند والسنة.
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="valex-form-group">
+              <label class="valex-label">التاريخ <span class="text-danger">*</span></label>
+              <input class="valex-input" type="date" [ngModel]="execDate()" (ngModelChange)="execDate.set($event)" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label">العملة</label>
+              <select class="valex-select" [ngModel]="execCurrencyId()" (ngModelChange)="execCurrencyId.set(+$event)">
+                @for (c of currencies(); track c.id) {
+                  <option [value]="c.id">{{ c.code }} — {{ c.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label">البيان العام (اختياري)</label>
+              <input class="valex-input" type="text" [ngModel]="execDescription()" (ngModelChange)="execDescription.set($event)" placeholder="وصف العملية" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label">الرقم المرجعي (اختياري)</label>
+              <input class="valex-input" type="text" [ngModel]="execReference()" (ngModelChange)="execReference.set($event)" placeholder="رقم الإشعار أو المرجع" />
+            </div>
+          </div>
+
+          @if (isMultiLine()) {
+            <div class="valex-card mb-4">
+              <div class="valex-card-header">
+                <h4 class="valex-card-title">المبالغ والبيان لكل حساب</h4>
+              </div>
+              <div class="valex-card-body">
+                <p class="text-sm text-muted mb-4">سند واحد متعدد الأسطر — إجمالي المبالغ سيُسجّل في الخزينة المختارة.</p>
+                <div class="flex flex-col gap-3 mb-4">
+                  @for (entry of formEntriesForMulti(); track entry.accountId; let i = $index) {
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                      <div class="valex-badge valex-badge-secondary text-sm px-3 py-2">{{ entry.accountName }}</div>
+                      <input class="valex-input" type="number" placeholder="المبلغ" min="0" step="0.01"
+                             [ngModel]="entry.amount" (ngModelChange)="updateEntryAmount(i, $event)" />
+                      <input class="valex-input" type="text" placeholder="بيان السطر (اختياري)"
+                             [ngModel]="entry.description" (ngModelChange)="updateEntryDescription(i, $event)" />
+                    </div>
+                  }
+                </div>
+                <div class="text-base font-bold text-primary">
+                  الإجمالي: {{ formatAmount(getFormTotal()) }} {{ getCurrencyCode() }}
+                </div>
               </div>
             </div>
-            <div class="form-group">
-              <label>البيان</label>
-              <input type="text" class="form-input" [ngModel]="execSingleDescription()" (ngModelChange)="execSingleDescription.set($event)" placeholder="بيان السند">
+          } @else {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="valex-form-group">
+                <label class="valex-label">المبلغ <span class="text-danger">*</span></label>
+                <div class="flex items-center gap-2">
+                  <input class="valex-input flex-1" type="number" placeholder="0" min="0" step="0.01"
+                         [ngModel]="execSingleAmount()" (ngModelChange)="execSingleAmount.set($event)" />
+                  <span class="valex-badge valex-badge-primary font-mono">{{ getCurrencyCode() }}</span>
+                </div>
+              </div>
+              <div class="valex-form-group">
+                <label class="valex-label">البيان</label>
+                <input class="valex-input" type="text" [ngModel]="execSingleDescription()" (ngModelChange)="execSingleDescription.set($event)" placeholder="بيان السند" />
+              </div>
             </div>
-          </div>
-        }
+          }
 
-        <div class="form-actions">
-          <button class="btn-3d btn-ghost" (click)="selectedTemplate.set(null); execEntries.set([])">تغيير القالب</button>
-          <button class="btn-3d btn-primary" [disabled]="saving()" (click)="save()">
-            <span class="material-icons-round">{{ saving() ? 'sync' : 'check_circle' }}</span>
-            {{ saving() ? 'جاري الحفظ...' : 'حفظ العملية' }}
-          </button>
+          <div class="flex flex-wrap items-center gap-3">
+            <button class="valex-btn valex-btn-outline" (click)="selectedTemplate.set(null); execEntries.set([])">تغيير القالب</button>
+            <button class="valex-btn valex-btn-primary" [disabled]="saving()" (click)="save()">
+              <span class="material-icons-round">{{ saving() ? 'sync' : 'check_circle' }}</span>
+              {{ saving() ? 'جاري الحفظ...' : 'حفظ العملية' }}
+            </button>
+          </div>
         </div>
       </div>
     }
+
   }
 </div>

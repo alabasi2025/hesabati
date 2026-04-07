@@ -110,7 +110,13 @@
           },
           "defaultConfiguration": "development",
           "options": {
-            "allowedHosts": ["pmsuqiyg.gensparkclaw.com", ".manus.computer"],
+            "allowedHosts": [
+              "52.141.82.10.sslip.io",
+              "pmsuqiyg.gensparkclaw.com",
+              "localhost",
+              ".sslip.io",
+              ".gensparkclaw.com"
+            ],
             "proxyConfig": "proxy.conf.json"
           }
         }

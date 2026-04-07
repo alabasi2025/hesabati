@@ -1,128 +1,140 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">bolt</span> المحطات</h2>
-    <div class="header-actions">
-      <span class="badge">{{ stations().length }}</span>
-      <button class="add-btn" (click)="openCreate()"><span class="material-icons-round">add</span> إضافة محطة</button>
-    </div>
-  </div>
+  <app-page-header title="المحطات" icon="bolt" [breadcrumb]="['الرئيسية', 'الإعدادات', 'المحطات']">
+    <span class="valex-badge valex-badge-secondary">{{ stations().length }}</span>
+    <button class="valex-btn valex-btn-primary" (click)="openCreate()">
+      <span class="material-icons-round">add</span>
+      إضافة محطة
+    </button>
+  </app-page-header>
 
   @if (loading()) {
-    <div class="loading-state"><span class="material-icons-round spin">sync</span><p>جاري التحميل...</p></div>
+    <app-loading-state [loading]="loading()" />
   } @else {
-    <div class="cards-grid">
-      @for (s of stations(); track s.id; let i = $index) {
-        <div class="station-card" [class]="'accent-' + (i % 5)">
-          <div class="station-header">
-            <div class="station-icon">
-              <span class="material-icons-round">bolt</span>
-            </div>
-            <div class="station-info">
-              <h3>{{ s.name }}</h3>
-              <span class="station-code">{{ s.code }}</span>
-              @if (s.sequenceNumber) {
-                <span class="station-code">#{{ s.sequenceNumber }}</span>
-              }
-            </div>
-            <span class="status-badge" [class.active]="s.isActive" [class.inactive]="!s.isActive">
-              {{ s.isActive ? 'نشطة' : 'متوقفة' }}
-            </span>
-          </div>
-
-          <div class="station-details">
-            @if (s.location) {
-              <div class="detail-row">
-                <span class="material-icons-round">location_on</span>
-                <span>{{ s.location }}</span>
+    @if (stations().length === 0) {
+      <app-empty-state icon="bolt" title="لا توجد محطات في هذا العمل" subtitle="أضف محطة لتنظيم عمليات العمل" actionLabel="إضافة محطة" (addClick)="openCreate()" />
+    } @else {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        @for (s of stations(); track s.id; let i = $index) {
+          <div class="valex-card">
+            <div class="valex-card-body">
+              <!-- Header -->
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white"
+                    [style.background]="'linear-gradient(135deg, ' + ['#6366f1','#f59e0b','#22c55e','#3b82f6','#ef4444'][i % 5] + ', ' + ['#4f46e5','#d97706','#14b8a6','#6366f1','#f97316'][i % 5] + ')'">
+                    <span class="material-icons-round">bolt</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-base leading-tight">{{ s.name }}</h3>
+                    <span class="text-xs text-muted font-mono">{{ s.code }}</span>
+                    @if (s.sequenceNumber) {
+                      <span class="text-xs text-muted ms-2">#{{ s.sequenceNumber }}</span>
+                    }
+                  </div>
+                </div>
+                @if (s.isActive) {
+                  <span class="valex-badge valex-badge-success">نشطة</span>
+                } @else {
+                  <span class="valex-badge valex-badge-secondary">متوقفة</span>
+                }
               </div>
-            }
-            @if (s.billingSystems && s.billingSystems.length > 0) {
-              <div class="detail-row">
-                <span class="material-icons-round">dns</span>
-                <div class="billing-tags">
-                  @for (b of s.billingSystems; track b) {
-                    <span class="billing-tag">{{ getBillingLabel(b) }}</span>
-                  }
+
+              <!-- Details -->
+              <div class="space-y-2 mb-4">
+                @if (s.location) {
+                  <div class="flex items-center gap-2 text-sm text-muted">
+                    <span class="material-icons-round text-sm">location_on</span>
+                    <span>{{ s.location }}</span>
+                  </div>
+                }
+                @if (s.billingSystems && s.billingSystems.length > 0) {
+                  <div class="flex items-start gap-2 text-sm">
+                    <span class="material-icons-round text-sm text-muted mt-0.5">dns</span>
+                    <div class="flex flex-wrap gap-1">
+                      @for (b of s.billingSystems; track b) {
+                        <span class="valex-badge valex-badge-info text-xs">{{ getBillingLabel(b) }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Footer -->
+              <div class="flex items-center justify-between pt-3 border-t border-[var(--color-defaultborder)]">
+                <div class="flex items-center gap-1 text-xs text-muted">
+                  <span class="material-icons-round text-sm">groups</span>
+                  <span>{{ s.hasEmployees ? 'يوجد موظفون' : 'بدون موظفين' }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button class="valex-icon-btn text-warning" (click)="openEdit(s)" title="تعديل">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="valex-icon-btn text-danger" (click)="deleteStation(s)" title="حذف">
+                    <span class="material-icons-round">delete</span>
+                  </button>
                 </div>
               </div>
-            }
-          </div>
-
-          <div class="station-footer">
-            <div class="footer-stat">
-              <span class="material-icons-round">groups</span>
-              <span>{{ s.hasEmployees ? 'يوجد موظفين' : 'بدون موظفين' }}</span>
-            </div>
-            <div class="card-actions">
-              <button type="button" class="action-btn edit" (click)="openEdit(s)" title="تعديل">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button type="button" class="action-btn delete" (click)="deleteStation(s)" title="حذف">
-                <span class="material-icons-round">delete</span>
-              </button>
             </div>
           </div>
-        </div>
-      }
-    </div>
-
-    @if (stations().length === 0) {
-      <div class="empty-state">
-        <span class="material-icons-round">bolt</span>
-        <p>لا توجد محطات في هذا العمل</p>
-        <button class="add-btn" (click)="openCreate()"><span class="material-icons-round">add</span> إضافة محطة</button>
+        }
       </div>
     }
   }
 
+  <!-- Modal Form -->
   @if (showForm()) {
-    <div class="modal-overlay" (click)="closeForm()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green"><span class="material-icons-round">bolt</span></div>
-            <h2>{{ editingStation() ? 'تعديل محطة' : 'إضافة محطة جديدة' }}</h2>
-          </div>
-          <button type="button" class="close-btn" (click)="closeForm()"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group">
-              <label>اسم المحطة <span class="required">*</span></label>
-              <input [ngModel]="form().name" (ngModelChange)="setFormField('name', $event)" placeholder="مثال: المحطة الرئيسية" />
+    <div class="valex-modal-overlay" (click)="closeForm()">
+      <div class="valex-modal" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-success/10 text-success">
+              <span class="material-icons-round">bolt</span>
             </div>
-            <div class="form-group">
-              <label>الرمز <span class="required">*</span></label>
-              <input [ngModel]="form().code" (ngModelChange)="setFormField('code', $event)" placeholder="مثال: ST-01" [readonly]="!!editingStation()" />
+            <h2 class="valex-modal-title">{{ editingStation() ? 'تعديل محطة' : 'إضافة محطة جديدة' }}</h2>
+          </div>
+          <button class="valex-icon-btn" (click)="closeForm()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="valex-form-group">
+              <label class="valex-label">اسم المحطة <span class="text-danger">*</span></label>
+              <input class="valex-input" [ngModel]="form().name" (ngModelChange)="setFormField('name', $event)" placeholder="مثال: المحطة الرئيسية" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label">الرمز <span class="text-danger">*</span></label>
+              <input class="valex-input" [ngModel]="form().code" (ngModelChange)="setFormField('code', $event)" placeholder="مثال: ST-01" [readonly]="!!editingStation()" />
               @if (editingStation()) {
-                <small class="form-hint">لا يمكن تغيير الرمز بعد الإنشاء</small>
+                <span class="valex-hint">لا يمكن تغيير الرمز بعد الإنشاء</span>
               }
             </div>
-          </div>
-          <div class="form-group">
-            <label>الموقع</label>
-            <input [ngModel]="form().location" (ngModelChange)="setFormField('location', $event)" placeholder="العنوان أو الموقع" />
-          </div>
-          <div class="form-group">
-            <label>أنظمة الفوترة</label>
-            <input [ngModel]="form().billingSystemsStr" (ngModelChange)="setFormField('billingSystemsStr', $event)" placeholder="مفصولة بفاصلة، مثال: moghrabi_v1, prepaid" />
-          </div>
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" [ngModel]="form().isActive" (ngModelChange)="setFormField('isActive', $event)" />
-              المحطة نشطة
-            </label>
-          </div>
-          <div class="form-group">
-            <label>ملاحظات</label>
-            <textarea [ngModel]="form().notes" (ngModelChange)="setFormField('notes', $event)" rows="2" placeholder="ملاحظات اختيارية"></textarea>
+            <div class="valex-form-group sm:col-span-2">
+              <label class="valex-label">الموقع</label>
+              <input class="valex-input" [ngModel]="form().location" (ngModelChange)="setFormField('location', $event)" placeholder="العنوان أو الموقع" />
+            </div>
+            <div class="valex-form-group sm:col-span-2">
+              <label class="valex-label">أنظمة الفوترة</label>
+              <input class="valex-input" [ngModel]="form().billingSystemsStr" (ngModelChange)="setFormField('billingSystemsStr', $event)" placeholder="مفصولة بفاصلة، مثال: moghrabi_v1, prepaid" />
+            </div>
+            <div class="valex-form-group sm:col-span-2">
+              <label class="valex-check">
+                <input type="checkbox" [ngModel]="form().isActive" (ngModelChange)="setFormField('isActive', $event)" />
+                <span>المحطة نشطة</span>
+              </label>
+            </div>
+            <div class="valex-form-group sm:col-span-2">
+              <label class="valex-label">ملاحظات</label>
+              <textarea class="valex-input" [ngModel]="form().notes" (ngModelChange)="setFormField('notes', $event)" rows="2" placeholder="ملاحظات اختيارية"></textarea>
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-save" (click)="save()" [disabled]="saving()">
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="closeForm()">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="save()" [disabled]="saving()">
+            <span class="material-icons-round">save</span>
             {{ saving() ? 'جاري الحفظ...' : (editingStation() ? 'حفظ التعديلات' : 'إضافة') }}
           </button>
-          <button type="button" class="btn-cancel" (click)="closeForm()">إلغاء</button>
         </div>
       </div>
     </div>

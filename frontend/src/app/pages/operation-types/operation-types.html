@@ -1,1363 +1,563 @@
-<div class="page-container">
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d">
-        <span class="material-icons-round">auto_awesome</span>
-      </div>
-      <div>
-        <h1 class="page-title">أنواع العمليات (القوالب)</h1>
-        <p class="page-subtitle">قوالب جاهزة مقيدة بالكامل - اختر القالب وعبّي المبلغ واحفظ</p>
-      </div>
-    </div>
-    <div class="header-right">
-      <button class="help-btn" (click)="showHowItWorks.set(true)" title="كيف يعمل؟">
-        <span class="material-icons-round">help_outline</span>
+<div class="page-content">
+  <app-page-header
+    title="أنواع العمليات (القوالب)"
+    icon="auto_awesome"
+    [breadcrumb]="['الرئيسية', 'الإعدادات', 'أنواع العمليات']"
+  >
+    @if (activeTab() === 'categories') {
+      <button class="valex-btn valex-btn-primary" (click)="openCategoryForm()">
+        <span class="material-icons-round">add</span> تصنيف جديد
       </button>
-      @if (activeTab() === 'templates') {
-        <button class="btn-3d btn-secondary" (click)="loadStats()" title="إحصائيات الاستخدام">
-          <span class="material-icons-round">analytics</span>
-          إحصائيات
-        </button>
-        <button class="btn-3d btn-primary" (click)="openWizard()">
-          <span class="material-icons-round">add</span>
-          قالب جديد
-        </button>
-      }
-      @if (activeTab() === 'categories') {
-        <button class="btn-3d btn-primary" (click)="openCategoryForm()">
-          <span class="material-icons-round">add</span>
-          تصنيف جديد
-        </button>
-      }
-    </div>
-  </div>
-
-  <!-- ===== Alerts ===== -->
-  @if (error()) {
-    <div class="alert-error" (click)="error.set('')">
-      <span class="material-icons-round">error_outline</span>
-      {{ error() }}
-      <span class="close-x">✕</span>
-    </div>
-  }
-  @if (success()) {
-    <div class="alert-success" (click)="success.set('')">
-      <span class="material-icons-round">check_circle</span>
-      {{ success() }}
-    </div>
-  }
-
-  <!-- ===== التبويبات الرئيسية: القوالب | التصنيفات ===== -->
-  <div class="main-tabs-bar">
-    <button
-      class="main-tab"
-      [class.active]="activeTab() === 'templates'"
-      (click)="switchTab('templates')"
-    >
-      <span class="material-icons-round">receipt_long</span>
-      القوالب
-      <span class="cat-count">{{ operationTypes().length }}</span>
-    </button>
-    <button
-      class="main-tab"
-      [class.active]="activeTab() === 'categories'"
-      (click)="switchTab('categories')"
-    >
-      <span class="material-icons-round">folder</span>
-      التصنيفات
-      <span class="cat-count">{{ dynamicCategories().length }}</span>
-    </button>
-  </div>
-
-  <!-- ===== Loading ===== -->
-  @if (loading()) {
-    <div class="loading-grid">
-      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-        <div class="skeleton-card"></div>
-      }
-    </div>
-  }
-
-  <!-- ============================================================ -->
-  <!-- =================== تبويب التصنيفات ======================== -->
-  <!-- ============================================================ -->
-  @if (!loading() && activeTab() === 'categories') {
-    @if (categoryDetails().length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d">
-          <span class="material-icons-round">folder_open</span>
-        </div>
-        <h3>لا توجد تصنيفات</h3>
-        <p>أنشئ تصنيفات لتنظيم قوالب العمليات المالية (مثل: تحصيل، توريد، سندات، قيود)</p>
-        <button class="btn-3d btn-primary" (click)="openCategoryForm()">
-          <span class="material-icons-round">add</span>
-          أنشئ أول تصنيف
-        </button>
-      </div>
     } @else {
-      <div class="categories-grid">
-        @for (cat of categoryDetails(); track cat.name) {
-          <div class="ot-card-3d category-card-item" [style.--card-color]="cat.color">
-            <div class="card-glow"></div>
-            <div class="ot-card-header">
-              <div class="ot-icon-3d" [style.background]="cat.color">
-                <span class="material-icons-round">{{ cat.icon }}</span>
-              </div>
-              <div class="ot-meta"></div>
-              <div class="ot-actions-top">
-                <button class="icon-btn edit-btn" (click)="editCategory(cat.name)" title="تعديل">
-                  <span class="material-icons-round">edit</span>
-                </button>
-                <button class="icon-btn delete-btn" (click)="deleteCategory(cat.name)" title="حذف">
-                  <span class="material-icons-round">delete</span>
-                </button>
-              </div>
-            </div>
-            <div class="ot-card-body">
-              <h3 class="ot-name">{{ cat.name }}</h3>
-              <div class="ot-info-row">
-                @if (cat.code) {
-                  <div class="ot-info-chip">
-                    <span class="material-icons-round">tag</span>
-                    {{ cat.code }}
-                  </div>
-                }
-                @if (cat.sequenceNumber) {
-                  <div class="ot-info-chip">
-                    <span class="material-icons-round">format_list_numbered</span>
-                    #{{ cat.sequenceNumber }}
-                  </div>
-                }
-              </div>
-              <p class="ot-desc">{{ cat.count }} قالب مرتبط</p>
-            </div>
-          </div>
-        }
-      </div>
+      <button class="valex-btn valex-btn-primary" [disabled]="dynamicCategories().length === 0" (click)="openWizard()">
+        <span class="material-icons-round">add</span> قالب جديد
+      </button>
     }
-  }
+  </app-page-header>
 
-  <!-- ============================================================ -->
-  <!-- =================== تبويب القوالب ========================== -->
-  <!-- ============================================================ -->
-  @if (!loading() && activeTab() === 'templates') {
-    <!-- شريط البحث -->
-    <div class="search-bar-row">
-      <div class="search-input-wrapper">
-        <span class="material-icons-round">search</span>
-        <input
-          type="text"
-          placeholder="بحث في القوالب..."
-          [value]="searchQuery()"
-          (input)="searchQuery.set($any($event.target).value)"
-        />
-        @if (searchQuery()) {
-          <button class="clear-search" (click)="searchQuery.set('')">
-            <span class="material-icons-round">close</span>
-          </button>
-        }
-      </div>
-      <span class="results-count">{{ filteredTypes().length }} قالب</span>
-    </div>
-
-    <!-- فلاتر الفئات -->
-    @if (categoryFilters().length > 1) {
-      <div class="category-tabs">
-        @for (cat of categoryFilters(); track cat.value) {
-          <button
-            class="cat-tab"
-            [class.active]="activeCategory() === cat.value"
-            (click)="activeCategory.set(cat.value)"
-          >
-            <span class="material-icons-round">{{ cat.icon }}</span>
-            {{ cat.label }}
-            @if (cat.value !== 'all') {
-              <span class="cat-count">{{ countByCategory(cat.value) }}</span>
-            }
-          </button>
-        }
-      </div>
-    }
-
-    @if (filteredTypes().length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d">
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        <button class="valex-tab-btn" [class.active]="activeTab() === 'templates'" (click)="switchTab('templates')">
           <span class="material-icons-round">auto_awesome</span>
-        </div>
-        <h3>لا توجد قوالب بعد</h3>
-        @if (dynamicCategories().length === 0) {
-          <p>أنشئ تصنيفاً أولاً من تبويب "التصنيفات" ثم أضف قوالب</p>
-          <button class="btn-3d btn-primary" (click)="switchTab('categories')">
-            <span class="material-icons-round">folder</span>
-            انتقل للتصنيفات
-          </button>
-        } @else {
-          <p>أنشئ قالب جديد بخطوات بسيطة لتنظيم عملياتك المالية</p>
-          <button class="btn-3d btn-primary" (click)="openWizard()">
-            <span class="material-icons-round">add</span>
-            أنشئ أول قالب
-          </button>
-        }
+          القوالب
+          <span class="valex-badge valex-badge-secondary" style="font-size:10px;height:18px;padding:0 4px;">{{ operationTypes().length }}</span>
+        </button>
+        <button class="valex-tab-btn" [class.active]="activeTab() === 'categories'" (click)="switchTab('categories')">
+          <span class="material-icons-round">folder</span>
+          التصنيفات
+          <span class="valex-badge valex-badge-secondary" style="font-size:10px;height:18px;padding:0 4px;">{{ dynamicCategories().length }}</span>
+        </button>
       </div>
+    </div>
+  </div>
+
+  @if (loading()) { <app-loading-state /> }
+
+  @if (!loading() && activeTab() === 'categories') {
+    @if (dynamicCategories().length === 0) {
+      <app-empty-state icon="folder" title="لا توجد تصنيفات بعد"
+        subtitle="أنشئ تصنيفاً أولاً لتنظيم قوالب العمليات"
+        actionLabel="تصنيف جديد" (action)="openCategoryForm()" />
     } @else {
-      <!-- Group by category -->
-      @for (group of groupedByCategory(); track group.category) {
-        <div class="category-group">
-          <div class="category-group-header">
-            <span class="material-icons-round">{{ getCategoryIcon(group.category) }}</span>
-            <h2>{{ group.category }}</h2>
-            <span class="cat-count">{{ group.items.length }}</span>
-          </div>
-          <div class="ot-grid">
-            @for (ot of group.items; track ot.id) {
-              <div class="ot-card-3d" [style.--card-color]="ot.color">
-                <div class="card-glow"></div>
-
-                <!-- Card Header -->
-                <div class="ot-card-header">
-                  <div class="ot-icon-3d" [style.background]="ot.color">
-                    <span class="material-icons-round">{{ ot.icon }}</span>
-                  </div>
-                  <div class="ot-meta">
-                    @if (ot.voucherType) {
-                      <span class="ot-type-badge" [attr.data-vtype]="ot.voucherType">{{
-                        getVoucherTypeLabel(ot.voucherType)
-                      }}</span>
-                    }
-                  </div>
-                  <div class="ot-actions-top">
-                    <button class="icon-btn" (click)="cloneOT(ot)" title="نسخ القالب">
-                      <span class="material-icons-round">content_copy</span>
-                    </button>
-                    <button
-                      class="icon-btn"
-                      [class.active-toggle]="ot.isActive"
-                      (click)="toggleOT(ot)"
-                      [title]="ot.isActive ? 'تعطيل' : 'تفعيل'"
-                    >
-                      <span class="material-icons-round">{{
-                        ot.isActive ? 'toggle_on' : 'toggle_off'
-                      }}</span>
-                    </button>
-                    <button class="icon-btn edit-btn" (click)="openEditWizard(ot)" title="تعديل">
-                      <span class="material-icons-round">edit</span>
-                    </button>
-                    <button class="icon-btn delete-btn" (click)="deleteOT(ot.id)" title="حذف">
-                      <span class="material-icons-round">delete</span>
-                    </button>
-                  </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        @for (cat of dynamicCategories(); track cat.name) {
+          <div class="valex-card ot-cat-card" [style.--cat-color]="cat.color">
+            <div class="valex-card-body">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                     [style.background]="cat.color">
+                  <span class="material-icons-round text-2xl">{{ cat.icon }}</span>
                 </div>
-
-                <!-- Card Body -->
-                <div class="ot-card-body">
-                  <h3 class="ot-name">{{ ot.name }}</h3>
-                  @if (ot.description) {
-                    <p class="ot-desc">{{ ot.description }}</p>
-                  }
-
-                  <!-- Info Row -->
-                  <div class="ot-info-row">
-                    @if (ot.code) {
-                      <div class="ot-info-chip">
-                        <span class="material-icons-round">tag</span>
-                        {{ ot.code }}
-                      </div>
-                    } @else if (ot.sequenceNumber) {
-                      <div class="ot-info-chip">
-                        <span class="material-icons-round">tag</span>
-                        #{{ ot.sequenceNumber }}
-                      </div>
-                    }
-                    @if (ot.paymentMethod) {
-                      <div class="ot-info-chip">
-                        <span class="material-icons-round">payments</span>
-                        {{ getPaymentMethodLabel(ot.paymentMethod) }}
-                      </div>
-                    }
-                    @if (ot.sourceAccountId || ot.sourceFundId) {
-                      <div class="ot-info-chip source-chip">
-                        <span class="material-icons-round">account_balance_wallet</span>
-                        {{ getSourceLabel(ot) }}
-                      </div>
-                    }
-                  </div>
-
-                  <!-- Flags -->
-                  <div class="ot-flags">
-                    @if (ot.requiresAttachment) {
-                      <span class="flag-badge attachment">
-                        <span class="material-icons-round">attach_file</span>
-                        مرفق
-                      </span>
-                    }
-                    @if (!ot.isActive) {
-                      <span class="flag-badge inactive">
-                        <span class="material-icons-round">pause_circle</span>
-                        موقوف
-                      </span>
-                    }
-                  </div>
-                </div>
-
-                <!-- Linked Accounts -->
-                <div class="ot-accounts-section">
-                  <div class="ot-accounts-header" (click)="openAccountsView(ot)">
-                    <span class="material-icons-round">link</span>
-                    <span>الحسابات المرتبطة ({{ ot.linkedAccounts?.length || 0 }})</span>
-                    <span class="material-icons-round expand-icon">open_in_new</span>
-                  </div>
-                  @if (ot.linkedAccounts && ot.linkedAccounts.length > 0) {
-                    <div class="linked-accounts-list">
-                      @for (la of ot.linkedAccounts.slice(0, 4); track la.id) {
-                        <div class="linked-account-chip">
-                          <span class="material-icons-round">person</span>
-                          <span>{{ la.label || la.accountName }}</span>
-                        </div>
-                      }
-                      @if (ot.linkedAccounts.length > 4) {
-                        <div class="more-accounts" (click)="openAccountsView(ot)">
-                          +{{ ot.linkedAccounts.length - 4 }} أكثر
-                        </div>
-                      }
-                    </div>
-                  }
+                <div class="flex items-center gap-2">
+                  <button class="valex-icon-btn" (click)="editCategory(cat.name)"><span class="material-icons-round">edit</span></button>
+                  <button class="valex-icon-btn danger" (click)="deleteCategory(cat.name)"><span class="material-icons-round">delete</span></button>
                 </div>
               </div>
-            }
+              <h3 class="font-bold text-base mb-2">{{ cat.name }}</h3>
+
+              <div class="text-sm text-muted mt-2">{{ cat.count || 0 }} قالب مرتبط</div>
+            </div>
           </div>
-        </div>
-      }
+        }
+      </div>
     }
   }
 
-  <!-- ============================================================ -->
-  <!-- ========= نموذج إضافة/تعديل تصنيف (Modal) ================= -->
-  <!-- ============================================================ -->
-  @if (showCategoryForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue">
-            <span class="material-icons-round">{{
-              editingCategoryOld() ? 'edit' : 'create_new_folder'
-            }}</span>
+  @if (!loading() && activeTab() === 'templates') {
+    <div class="valex-card mb-4">
+      <div class="valex-card-body">
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="relative flex-1 min-w-[200px]">
+            <span class="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-muted text-base">search</span>
+            <input type="text" class="valex-input pe-10" placeholder="بحث في القوالب..."
+              [value]="searchQuery()" (input)="searchQuery.set($any($event.target).value)" />
           </div>
-          <h3>{{ editingCategoryOld() ? 'تعديل تصنيف' : 'تصنيف جديد' }}</h3>
-          @if (editingCategoryOld()) {
-            <span class="edit-badge">تعديل</span>
+          @if (searchQuery()) {
+            <span class="text-sm text-muted">{{ filteredTypes().length }} نتيجة</span>
           }
         </div>
-        <button class="close-btn" (click)="closeCategoryForm()">
-          <span class="material-icons-round">close</span>
-        </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label class="form-label">اسم التصنيف <span class="required">*</span></label>
-          <input
-            class="form-input"
-            type="text"
-            placeholder="مثال: تحصيل، توريد، سندات، قيود"
-            [value]="newCategoryName()"
-            (input)="newCategoryName.set($any($event.target).value)"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label">الأيقونة</label>
-          <div class="icon-picker">
-            @for (ic of categoryIcons; track ic) {
-              <button
-                class="icon-option"
-                [class.selected]="newCategoryIcon() === ic"
-                (click)="newCategoryIcon.set(ic)"
-              >
-                <span class="material-icons-round">{{ ic }}</span>
+    </div>
+
+    @if (categoryFilters().length > 1) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-body py-3">
+          <div class="flex flex-wrap gap-2">
+            @for (cat of categoryFilters(); track cat.value) {
+              <button class="valex-tab-btn" [class.active]="activeCategory() === cat.value" (click)="activeCategory.set(cat.value)">
+                <span class="material-icons-round">{{ cat.icon }}</span>
+                {{ cat.label }}
+                @if (cat.value !== 'all') {
+                  <span class="valex-badge valex-badge-secondary" style="font-size:10px;height:18px;padding:0 4px;">{{ countByCategory(cat.value) }}</span>
+                }
               </button>
             }
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">اللون</label>
-          <div class="color-picker">
-            @for (c of colors; track c) {
-              <button
-                class="color-dot"
-                [class.selected]="newCategoryColor() === c"
-                [style.background]="c"
-                (click)="newCategoryColor.set(c)"
-              ></button>
+      </div>
+    }
+
+    @if (filteredTypes().length === 0) {
+      @if (dynamicCategories().length === 0) {
+        <app-empty-state icon="folder" title="أنشئ تصنيفاً أولاً"
+          subtitle="انتقل لتبويب التصنيفات وأضف تصنيفاً واحداً على الأقل"
+          actionLabel="انتقل للتصنيفات" (action)="switchTab('categories')" />
+      } @else {
+        <app-empty-state icon="auto_awesome" title="لا توجد قوالب بعد"
+          subtitle="أنشئ قالباً جديداً بخطوات بسيطة"
+          actionLabel="قالب جديد" (action)="openWizard()" />
+      }
+    } @else {
+      @for (group of groupedByCategory(); track group.category) {
+        <div class="mb-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-icons-round text-primary">{{ getCategoryIcon(group.category) }}</span>
+            <h2 class="font-bold text-base">{{ group.category }}</h2>
+            <span class="valex-badge valex-badge-secondary">{{ group.items.length }}</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            @for (ot of group.items; track ot.id) {
+              <div class="valex-card ot-template-card" [style.--ot-color]="ot.color">
+                <div class="valex-card-body">
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                         [style.background]="ot.color">
+                      <span class="material-icons-round text-2xl">{{ ot.icon }}</span>
+                    </div>
+                    <div class="flex items-center gap-1 flex-wrap justify-end">
+                      @if (ot.voucherType) {
+                        <span class="valex-badge text-xs"
+                              [class.valex-badge-success]="ot.voucherType === 'receipt'"
+                              [class.valex-badge-danger]="ot.voucherType === 'payment'"
+                              [class.valex-badge-secondary]="ot.voucherType !== 'receipt' && ot.voucherType !== 'payment'">
+                          {{ getVoucherTypeLabel(ot.voucherType) }}
+                        </span>
+                      }
+                      @if (!ot.isActive) {
+                        <span class="valex-badge valex-badge-secondary"><span class="material-icons-round text-sm">pause_circle</span> موقوف</span>
+                      }
+                    </div>
+                  </div>
+
+                  <h3 class="font-bold text-base mb-1">{{ ot.name }}</h3>
+                  @if (ot.description) { <p class="text-xs text-muted mb-3">{{ ot.description }}</p> }
+
+                  <div class="flex flex-wrap gap-1 mb-3">
+                    @if (ot.code) { <span class="valex-badge valex-badge-primary font-mono text-xs">{{ ot.code }}</span> }
+                    @else if (ot.sequenceNumber) { <span class="valex-badge valex-badge-secondary font-mono text-xs">#{{ ot.sequenceNumber }}</span> }
+                    @if (ot.paymentMethod) {
+                      <span class="valex-badge valex-badge-secondary text-xs"><span class="material-icons-round text-sm">payments</span> {{ getPaymentMethodLabel(ot.paymentMethod) }}</span>
+                    }
+                    @if (ot.sourceAccountId || ot.sourceFundId) {
+                      <span class="valex-badge valex-badge-secondary text-xs"><span class="material-icons-round text-sm">account_balance_wallet</span> {{ getSourceLabel(ot) }}</span>
+                    }
+                    @if (ot.requiresAttachment) {
+                      <span class="valex-badge valex-badge-warning text-xs"><span class="material-icons-round text-sm">attach_file</span> مرفق</span>
+                    }
+                  </div>
+
+                  @if (ot.linkedAccounts?.length > 0) {
+                    <div class="border border-[var(--border-color)] rounded-xl p-2 mb-3 cursor-pointer hover:bg-[var(--bg-card-hover)]"
+                         (click)="openAccountsView(ot)">
+                      <div class="flex items-center gap-1 text-xs text-muted mb-2">
+                        <span class="material-icons-round text-sm">link</span>
+                        الحسابات المرتبطة ({{ ot.linkedAccounts.length }})
+                        <span class="material-icons-round text-sm ms-auto">open_in_new</span>
+                      </div>
+                      <div class="flex flex-wrap gap-1">
+                        @for (la of ot.linkedAccounts.slice(0, 3); track la.id) {
+                          <span class="valex-badge valex-badge-secondary text-xs">
+                            <span class="material-icons-round text-sm">person</span>
+                            {{ la.label || la.accountName }}
+                          </span>
+                        }
+                        @if (ot.linkedAccounts.length > 3) {
+                          <span class="valex-badge valex-badge-secondary text-xs">+{{ ot.linkedAccounts.length - 3 }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  <div class="flex items-center gap-2 justify-end">
+                    <button class="valex-icon-btn" (click)="cloneOT(ot)" title="نسخ"><span class="material-icons-round">content_copy</span></button>
+                    <button class="valex-icon-btn" (click)="toggleOT(ot)" [title]="ot.isActive ? 'تعطيل' : 'تفعيل'">
+                      <span class="material-icons-round" [class.text-success]="ot.isActive">{{ ot.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                    </button>
+                    <button class="valex-icon-btn" (click)="openEditWizard(ot)" title="تعديل"><span class="material-icons-round">edit</span></button>
+                    <button class="valex-icon-btn danger" (click)="deleteOT(ot.id)" title="حذف"><span class="material-icons-round">delete</span></button>
+                  </div>
+                </div>
+              </div>
             }
           </div>
         </div>
-      </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="closeCategoryForm()">إلغاء</button>
-        <button
-          class="btn-save"
-          (click)="saveCategory()"
-          [disabled]="saving() || !newCategoryName().trim()"
-        >
-          <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-          {{ saving() ? 'جاري الحفظ...' : editingCategoryOld() ? 'حفظ التعديل' : 'إنشاء التصنيف' }}
-        </button>
+      }
+    }
+  }
+
+  @if (showCategoryForm()) {
+    <div class="valex-modal-overlay" (click)="closeCategoryForm()">
+      <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">{{ editingCategoryOld() ? 'edit' : 'create_new_folder' }}</span>
+            </div>
+            <h3>{{ editingCategoryOld() ? 'تعديل تصنيف' : 'تصنيف جديد' }}</h3>
+            @if (editingCategoryOld()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
+          </div>
+          <button class="valex-icon-btn" (click)="closeCategoryForm()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="valex-form-group md:col-span-2">
+              <label class="valex-label">اسم التصنيف <span class="text-danger">*</span></label>
+              <input class="valex-input" type="text" placeholder="مثال: تحصيل، توريد، سندات، قيود"
+                [value]="newCategoryName()" (input)="newCategoryName.set($any($event.target).value)" />
+            </div>
+          </div>
+          <div class="valex-form-group mb-4">
+            <label class="valex-label">الأيقونة</label>
+            <div class="inventory-icon-picker">
+              @for (ic of categoryIcons; track ic) {
+                <button class="inventory-icon-btn" [class.selected]="newCategoryIcon() === ic" (click)="newCategoryIcon.set(ic)">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">اللون</label>
+            <div class="flex flex-wrap gap-2">
+              @for (c of colors; track c) {
+                <button class="sidebar-color-option" [style.background]="c" [class.selected]="newCategoryColor() === c"
+                  (click)="newCategoryColor.set(c)"></button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="closeCategoryForm()">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="saveCategory()" [disabled]="saving() || !newCategoryName().trim()">
+            <span class="material-icons-round">save</span>
+            {{ editingCategoryOld() ? 'تعديل' : 'إضافة' }}
+          </button>
+        </div>
       </div>
     </div>
   }
 
-  <!-- ============================================================ -->
-  <!-- ========= WIZARD إنشاء/تعديل قالب (6 خطوات) =============== -->
-  <!-- ============================================================ -->
   @if (showWizard()) {
-    <div class="page-form-container" (click)="showWizard.set(false)">
-      <div class="wizard-modal" (click)="$event.stopPropagation()">
-        <!-- Wizard Header -->
-        <div class="wizard-header">
-          <div class="wizard-header-top">
-            <h2>{{ editingId() ? 'تعديل القالب' : 'إنشاء قالب جديد' }}</h2>
-            <button class="modal-close" (click)="showWizard.set(false)">
-              <span class="material-icons-round">close</span>
-            </button>
+    <div class="valex-modal-overlay" (click)="showWizard.set(false)">
+      <div class="valex-modal max-w-3xl" (click)="$event.stopPropagation()" style="max-height:90vh;overflow-y:auto">
+        <div class="valex-modal-header sticky top-0 bg-[var(--bg-card)] z-10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                 [style.background]="wiz().color">
+              <span class="material-icons-round">{{ wiz().icon || 'auto_awesome' }}</span>
+            </div>
+            <div>
+              <h3>{{ editingId() ? 'تعديل القالب' : 'قالب جديد' }}</h3>
+              <p class="text-xs text-muted">الخطوة {{ wizardStep() }} من {{ totalSteps() }}</p>
+            </div>
           </div>
-
-          <!-- Step Indicators - Dynamic -->
-          <div class="wizard-steps-bar">
-            @for (step of getStepLabels(); track step.num; let last = $last) {
-              <div
-                class="wstep"
-                [class.active]="wizardStep() === step.num"
-                [class.done]="wizardStep() > step.num"
-                (click)="step.num < wizardStep() ? wizardStep.set(step.num) : null"
-              >
-                <div class="wstep-num">{{ step.num }}</div>
-                <span>{{ step.label }}</span>
+          <div class="flex items-center gap-1">
+            @for (s of getStepLabels(); track s.num) {
+              <div class="flex items-center gap-1">
+                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2"
+                     [class.border-primary]="wizardStep() >= s.num"
+                     [style.background]="wizardStep() >= s.num ? wiz().color : ''"
+                     [class.text-white]="wizardStep() >= s.num"
+                     [class.text-muted]="wizardStep() < s.num"
+                     [class.border-muted]="wizardStep() < s.num"
+                     [title]="s.label">{{ s.num }}</div>
+                @if (s.num < totalSteps()) {
+                  <div class="w-4 h-0.5" [class.bg-primary]="wizardStep() > s.num" [class.bg-muted]="wizardStep() <= s.num"></div>
+                }
               </div>
-              @if (!last) {
-                <div class="wstep-line" [class.done]="wizardStep() > step.num"></div>
-              }
             }
+            <button class="valex-icon-btn ms-2" (click)="showWizard.set(false)"><span class="material-icons-round">close</span></button>
           </div>
         </div>
-
-        <!-- Wizard Body -->
-        <div class="wizard-body">
-          @if (wizardSystemMessage()) {
-            <div class="wizard-system-alert" role="alert" aria-live="assertive">
-              <span class="material-icons-round">campaign</span>
-              <div class="wsa-text">
-                <strong>رسالة النظام</strong>
-                <p>{{ wizardSystemMessage() }}</p>
-              </div>
-            </div>
-          }
-
-          <!-- ===== محتوى: اختيار التصنيف ===== -->
+        <div class="valex-modal-body">
           @if (getContentType() === 'category') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">folder</span>
-                اختر التصنيف
-              </h3>
-              <p class="step-desc">اختر التصنيف الذي ينتمي إليه هذا القالب</p>
-
-              @if (dynamicCategories().length === 0) {
-                <div class="no-accounts-msg">
-                  <span class="material-icons-round">info</span>
-                  لا توجد تصنيفات. أنشئ تصنيفاً أولاً من تبويب "التصنيفات".
-                </div>
-              } @else {
-                <div class="type-cards">
-                  @for (cat of dynamicCategories(); track cat.id) {
-                    <div
-                      class="type-card"
-                      [class.selected]="wiz().categoryId === cat.id"
-                      (click)="selectCategory(cat)"
-                    >
-                      <div class="tc-icon" [style.background]="cat.color">
-                        <span class="material-icons-round">{{ cat.icon }}</span>
-                      </div>
-                      <div class="tc-body">
-                        <strong>{{ cat.name }}</strong>
-                        <p>{{ cat.count }} قالب</p>
-                      </div>
-                      @if (wiz().categoryId === cat.id) {
-                        <span class="material-icons-round tc-check">check_circle</span>
-                      }
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">folder</span> اختر التصنيف</h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              @for (cat of dynamicCategories(); track cat.id) {
+                <div class="valex-card cursor-pointer border-2"
+                     [class.border-primary]="wiz().categoryId === cat.id"
+                     [class.border-transparent]="wiz().categoryId !== cat.id"
+                     (click)="selectCategory(cat)">
+                  <div class="valex-card-body py-3 flex flex-col items-center gap-2 text-center">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white" [style.background]="cat.color">
+                      <span class="material-icons-round">{{ cat.icon }}</span>
                     </div>
-                  }
+                    <div class="font-bold text-sm">{{ cat.name }}</div>
+                    <span class="valex-badge valex-badge-secondary text-xs">{{ cat.count }} قالب</span>
+                  </div>
                 </div>
               }
             </div>
           }
 
-          <!-- ===== محتوى: نوع السند ===== -->
           @if (getContentType() === 'voucherType') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">description</span>
-                نوع السند
-              </h3>
-              <p class="step-desc">اختر طبيعة القالب - هل هو سند قبض، سند صرف، أو قيد محاسبي؟</p>
-
-              <div class="type-cards">
-                @for (opt of operationTypeOptions; track opt.value) {
-                  <div
-                    class="type-card"
-                    [class.selected]="wiz().voucherType === opt.value"
-                    [style.--type-color]="opt.color"
-                    (click)="selectVoucherType(opt.value)"
-                  >
-                    <div class="tc-icon" [style.background]="opt.color">
-                      <span class="material-icons-round">{{ opt.icon }}</span>
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">category</span> نوع العملية</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              @for (opt of operationTypeOptions; track opt.value) {
+                <div class="valex-card cursor-pointer border-2"
+                     [class.border-primary]="wiz().voucherType === opt.value"
+                     [class.border-transparent]="wiz().voucherType !== opt.value"
+                     (click)="selectVoucherType(opt.value)">
+                  <div class="valex-card-body py-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0" [style.background]="opt.color">
+                        <span class="material-icons-round">{{ opt.icon }}</span>
+                      </div>
+                      <div>
+                        <div class="font-bold text-sm">{{ opt.label }}</div>
+                        <div class="text-xs text-muted">{{ opt.desc }}</div>
+                      </div>
                     </div>
-                    <div class="tc-body">
-                      <strong>{{ opt.label }}</strong>
-                      <p>{{ opt.desc }}</p>
-                    </div>
-                    @if (wiz().voucherType === opt.value) {
-                      <span class="material-icons-round tc-check">check_circle</span>
-                    }
                   </div>
-                }
-              </div>
+                </div>
+              }
             </div>
           }
 
-          <!-- ===== محتوى: وسيلة الدفع (فقط للقبض والصرف) ===== -->
           @if (getContentType() === 'paymentMethod') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">payments</span>
-                وسيلة {{ wiz().voucherType === 'receipt' ? 'القبض' : 'الصرف' }}
-              </h3>
-              <p class="step-desc">
-                كيف يتم {{ wiz().voucherType === 'receipt' ? 'استلام' : 'صرف' }} الأموال؟
-              </p>
-
-              <div class="method-cards">
-                @for (pm of paymentMethods; track pm.value) {
-                  <div
-                    class="method-card"
-                    [class.selected]="wiz().paymentMethod === pm.value"
-                    (click)="selectPaymentMethod(pm.value)"
-                  >
-                    <div class="mc-icon">
-                      <span class="material-icons-round">{{ pm.icon }}</span>
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">payments</span> وسيلة الدفع</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              @for (pm of paymentMethods; track pm.value) {
+                <div class="valex-card cursor-pointer border-2"
+                     [class.border-primary]="wiz().paymentMethod === pm.value"
+                     [class.border-transparent]="wiz().paymentMethod !== pm.value"
+                     (click)="selectPaymentMethod(pm.value)">
+                  <div class="valex-card-body py-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                        <span class="material-icons-round">{{ pm.icon }}</span>
+                      </div>
+                      <div>
+                        <div class="font-bold text-sm">{{ pm.label }}</div>
+                        <div class="text-xs text-muted">{{ pm.desc }}</div>
+                      </div>
                     </div>
-                    <strong>{{ pm.label }}</strong>
-                    <p>{{ pm.desc }}</p>
-                    @if (wiz().paymentMethod === pm.value) {
-                      <span class="material-icons-round mc-check">check_circle</span>
-                    }
                   </div>
-                }
-              </div>
+                </div>
+              }
             </div>
           }
 
-          <!-- ===== محتوى: المصدر - الطرف الأول (فقط للقبض والصرف) ===== -->
           @if (getContentType() === 'source') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">{{ getPaymentMethodIcon() }}</span>
-                الطرف الأول (المصدر)
-              </h3>
-              <p class="step-desc">
-                اختر
-                {{
-                  wiz().paymentMethod === 'cash'
-                    ? 'الصندوق'
-                    : wiz().paymentMethod === 'bank'
-                      ? 'البنك'
-                      : wiz().paymentMethod === 'exchange'
-                        ? 'الصراف'
-                        : 'المحفظة'
-                }}
-                الذي {{ wiz().voucherType === 'receipt' ? 'يستقبل' : 'يصرف من' }}ه المبلغ
-              </p>
-
-              <!-- بطاقة توضيحية -->
-              <div class="source-info-banner">
-                <span class="material-icons-round">lightbulb</span>
-                <div>
-                  <strong>ما هو الطرف الأول؟</strong>
-                  <p>
-                    هو
-                    {{
-                      wiz().paymentMethod === 'cash'
-                        ? 'الصندوق'
-                        : wiz().paymentMethod === 'bank'
-                          ? 'الحساب البنكي'
-                          : wiz().paymentMethod === 'exchange'
-                            ? 'حساب الصراف'
-                            : 'المحفظة الإلكترونية'
-                    }}
-                    الذي ينفذ العملية. مثلاً: "صندوق محطة الدهمية" أو "بنك الأهلي".
-                  </p>
-                </div>
-              </div>
-
-              @if (sourceAccounts().length === 0) {
-                <div class="no-accounts-msg">
-                  <span class="material-icons-round">info</span>
-                  لا توجد {{ wiz().paymentMethod === 'cash' ? 'صناديق' : 'حسابات' }} متاحة. أضفها
-                  أولاً من الصفحة المناسبة.
-                </div>
-              } @else {
-                <div class="source-accounts-list">
-                  @for (src of sourceAccounts(); track src.id) {
-                    <div
-                      class="source-acc-item"
-                      [class.selected]="isSourceSelected(src)"
-                      (click)="selectSource(src)"
-                    >
-                      <div class="sai-icon">
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">account_balance_wallet</span> المصدر (الطرف الأول)</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              @for (src of sourceAccounts(); track src.id) {
+                <div class="valex-card cursor-pointer border-2"
+                     [class.border-primary]="isSourceSelected(src)"
+                     [class.border-transparent]="!isSourceSelected(src)"
+                     (click)="selectSource(src)">
+                  <div class="valex-card-body py-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
                         <span class="material-icons-round">{{ src.icon }}</span>
                       </div>
-                      <div class="sai-info">
-                        <strong>{{ src.name }}</strong>
-                        @if (src.subInfo) {
-                          <span class="sai-sub">{{ src.subInfo }}</span>
-                        }
-                        @if (src.stationName) {
-                          <span class="sai-station">{{ src.stationName }}</span>
-                        }
+                      <div>
+                        <div class="font-bold text-sm">{{ src.name }}</div>
+                        @if (src.subInfo) { <div class="text-xs text-muted">{{ src.subInfo }}</div> }
                       </div>
-                      @if (isSourceSelected(src)) {
-                        <span class="material-icons-round sai-check">check_circle</span>
-                      }
                     </div>
-                  }
+                  </div>
                 </div>
               }
             </div>
           }
 
-          <!-- ===== محتوى: اختيار المخزن (للعمليات المخزنية) ===== -->
           @if (getContentType() === 'warehouse') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">warehouse</span>
-                اختيار المخزن
-              </h3>
-              <p class="step-desc">
-                @if (
-                  wiz().voucherType === 'supply_invoice' || wiz().voucherType === 'supply_order'
-                ) {
-                  اختر المخزن الذي سيتم التوريد إليه
-                } @else if (wiz().voucherType === 'dispatch') {
-                  اختر المخزن الذي سيتم الصرف منه
-                } @else if (wiz().voucherType === 'transfer_out') {
-                  اختر المخزن المصدر للتحويل
-                } @else {
-                  اختر المخزن الافتراضي لهذا القالب
-                }
-              </p>
-
-              <!-- بطاقة توضيحية -->
-              <div class="source-info-banner">
-                <span class="material-icons-round">lightbulb</span>
-                <div>
-                  <strong>ما هو المخزن الافتراضي؟</strong>
-                  <p>
-                    هو المخزن الذي سيتم اختياره تلقائياً عند استخدام هذا القالب. يمكن للمستخدم
-                    تغييره عند إنشاء العملية.
-                  </p>
-                </div>
-              </div>
-
-              @if (sourceWarehouses().length === 0) {
-                <div class="no-accounts-msg">
-                  <span class="material-icons-round">info</span>
-                  لا توجد مخازن متاحة. أضف مخازن أولاً من صفحة المخازن.
-                </div>
-              } @else {
-                <div class="source-accounts-list">
-                  @for (wh of sourceWarehouses(); track wh.id) {
-                    <div
-                      class="source-acc-item"
-                      [class.selected]="wiz().sourceWarehouseId === wh.id"
-                      (click)="selectWarehouse(wh)"
-                    >
-                      <div class="sai-icon" style="background: #06b6d4">
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">warehouse</span> المخزن المصدر</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              @for (wh of warehouses(); track wh.id) {
+                <div class="valex-card cursor-pointer border-2"
+                     [class.border-primary]="wiz().sourceWarehouseId === wh.id"
+                     [class.border-transparent]="wiz().sourceWarehouseId !== wh.id"
+                     (click)="selectWarehouse(wh)">
+                  <div class="valex-card-body py-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
                         <span class="material-icons-round">warehouse</span>
                       </div>
-                      <div class="sai-info">
-                        <strong>{{ wh.name }}</strong>
-                        @if (wh.compositeCode) {
-                          <span class="sai-sub">{{ wh.compositeCode }}</span>
-                        }
-                        @if (wh.location) {
-                          <span class="sai-station">{{ wh.location }}</span>
-                        }
-                      </div>
-                      @if (wiz().sourceWarehouseId === wh.id) {
-                        <span class="material-icons-round sai-check">check_circle</span>
-                      }
+                      <div class="font-bold text-sm">{{ wh.name }}</div>
                     </div>
-                  }
+                  </div>
                 </div>
               }
             </div>
           }
 
-          <!-- ===== محتوى: الحسابات المرتبطة (الطرف الثاني) ===== -->
           @if (getContentType() === 'accounts') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">group</span>
-                {{
-                  wiz().voucherType === 'journal'
-                    ? 'حسابات القيد'
-                    : 'الطرف الثاني (الحسابات المرتبطة)'
-                }}
-              </h3>
-              <p class="step-desc">
-                @if (wiz().voucherType === 'journal') {
-                  اختر الحسابات المدينة والدائنة من دليل الحسابات
-                } @else {
-                  اختر الحسابات المقابلة التي
-                  {{ wiz().voucherType === 'receipt' ? 'يُقبض منها' : 'يُصرف لها' }}
-                }
-              </p>
-
-              <!-- ملخص المصدر المختار (فقط للقبض والصرف) -->
-              @if (wiz().voucherType !== 'journal' && selectedSourceName()) {
-                <div class="source-summary-chip">
-                  <span class="material-icons-round">{{ getPaymentMethodIcon() }}</span>
-                  <span
-                    >المصدر: <strong>{{ selectedSourceName() }}</strong></span
-                  >
-                </div>
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">link</span> الحسابات المرتبطة (الطرف الثاني)</h4>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button class="valex-btn valex-btn-sm valex-btn-outline"
+                [class.valex-btn-primary]="!selectedAccountType()"
+                (click)="selectedAccountType.set('')">الكل</button>
+              @for (t of availableAccountTypes(); track t) {
+                <button class="valex-btn valex-btn-sm valex-btn-outline"
+                  [class.valex-btn-primary]="selectedAccountType() === t"
+                  (click)="selectedAccountType.set(t)">{{ getAccountTypeLabel(t) }}</button>
               }
-
-              <!-- Account Type Filter -->
-              @if (availableAccountTypes().length > 0) {
-                <div class="acc-type-selector">
-                  <label class="form-label">فلتر حسب نوع الحساب:</label>
-                  <div class="acc-type-chips">
-                    <button
-                      class="acc-type-chip"
-                      [class.active]="selectedAccountType() === ''"
-                      (click)="selectedAccountType.set('')"
-                    >
-                      <span class="material-icons-round">apps</span>
-                      الكل
-                      <span class="atc-count">{{ availableAccounts().length }}</span>
-                    </button>
-                    @for (at of availableAccountTypes(); track at) {
-                      <button
-                        class="acc-type-chip"
-                        [class.active]="selectedAccountType() === at"
-                        (click)="selectedAccountType.set(at)"
-                      >
-                        <span class="material-icons-round">{{
-                          accountTypeIcons[at] || 'label'
-                        }}</span>
-                        {{ getAccountTypeLabel(at) }}
-                        <span class="atc-count">{{ countAccountsByType(at) }}</span>
-                      </button>
-                    }
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+              @for (acc of filteredAccountsByType(); track acc.id) {
+                <div class="flex items-center gap-3 p-2 rounded-xl border cursor-pointer"
+                     [class.border-primary]="linkedAccountIds().has(acc.id)"
+                     [class.bg-primary10]="linkedAccountIds().has(acc.id)"
+                     [class.border-border]="!linkedAccountIds().has(acc.id)"
+                     (click)="toggleLinkedAccount(acc)">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                    <span class="material-icons-round text-sm">{{ accountTypeIcons[acc.accountType] || 'person' }}</span>
                   </div>
-                </div>
-              }
-
-              <!-- Available Accounts -->
-              <div class="counter-accounts-section">
-                <div class="cas-header">
-                  <span>الحسابات المتاحة ({{ filteredAccountsByType().length }})</span>
-                  <button class="btn-select-all" (click)="selectAllAccounts()">
-                    <span class="material-icons-round">select_all</span>
-                    تحديد الكل
-                  </button>
-                </div>
-                <div class="counter-accounts-grid">
-                  @for (acc of filteredAccountsByType(); track acc.id) {
-                    <div
-                      class="counter-acc-item"
-                      [class.selected]="linkedAccountIds().has(acc.id)"
-                      (click)="toggleLinkedAccount(acc)"
-                    >
-                      <span class="material-icons-round cai-icon">
-                        {{
-                          linkedAccountIds().has(acc.id) ? 'check_box' : 'check_box_outline_blank'
-                        }}
-                      </span>
-                      <div class="cai-details">
-                        <span class="cai-name">{{ acc.name }}</span>
-                        @if (acc.provider || acc.accountNumber) {
-                          <span class="cai-sub-info">{{ acc.provider || acc.accountNumber }}</span>
-                        }
-                      </div>
-                      <span class="cai-type">
-                        <span class="material-icons-round">{{
-                          accountTypeIcons[acc.accountType] || 'label'
-                        }}</span>
-                        {{ getAccountTypeLabel(acc.accountType) }}
-                      </span>
-                    </div>
-                  }
-                  @if (filteredAccountsByType().length === 0) {
-                    <div class="no-accounts-msg" style="grid-column: 1 / -1">
-                      <span class="material-icons-round">info</span>
-                      لا توجد حسابات متاحة. أضف حسابات أولاً من صفحة الحسابات.
-                    </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-bold text-xs truncate">{{ acc.name }}</div>
+                    <div class="text-xs text-muted">{{ getAccountTypeLabel(acc.accountType) }}</div>
+                  </div>
+                  @if (linkedAccountIds().has(acc.id)) {
+                    <span class="material-icons-round text-primary text-sm">check_circle</span>
                   }
                 </div>
-              </div>
-
-              <!-- Selected Accounts Summary -->
-              @if (wiz().linkedAccounts.length > 0) {
-                <div class="selected-accounts-summary">
-                  <h4>
-                    <span class="material-icons-round">link</span>
-                    الحسابات المختارة ({{ wiz().linkedAccounts.length }})
-                  </h4>
-                  <div class="selected-accounts-list">
-                    @for (la of wiz().linkedAccounts; track la.accountId) {
-                      <div class="sel-acc-chip">
-                        <span class="sac-type">{{ getAccountTypeLabel(la.accountType) }}</span>
-                        <span class="sac-name">{{ la.accountName }}</span>
-                        <button class="sac-remove" (click)="removeLinkedAccount(la.accountId)">
-                          <span class="material-icons-round">close</span>
-                        </button>
-                      </div>
-                    }
-                  </div>
-                </div>
               }
             </div>
-          }
-
-          <!-- ===== محتوى: سير العمل ===== -->
-          @if (getContentType() === 'workflow') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">route</span>
-                سير العمل (اختياري)
-              </h3>
-              <p class="step-desc">
-                حدد حالات السند والانتقالات بينها. إذا لم تفعّل سير العمل، سيعمل السند بالطريقة
-                الافتراضية (مسودة → معتمد).
-              </p>
-
-              <!-- تفعيل سير العمل -->
-              <div class="form-group" style="margin-bottom: 20px">
-                <label class="toggle-label" style="font-size: 15px; font-weight: 600">
-                  <span>تفعيل سير العمل المخصص</span>
-                  <div
-                    class="toggle-switch"
-                    [class.on]="wiz().workflowEnabled"
-                    (click)="setWizField('workflowEnabled', !wiz().workflowEnabled)"
-                  >
-                    <div class="toggle-knob"></div>
-                  </div>
-                </label>
-              </div>
-
-              @if (wiz().workflowEnabled) {
-                <!-- الحالات -->
-                <div class="form-group">
-                  <label class="form-label">حالات السند</label>
-                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px">
-                    @for (state of wiz().workflowStates; track state) {
-                      <div
-                        style="
-                          display: flex;
-                          align-items: center;
-                          gap: 4px;
-                          padding: 4px 12px;
-                          border-radius: 20px;
-                          font-size: 13px;
-                          font-weight: 500;
-                        "
-                        [style.background]="getStateColor(state) + '18'"
-                        [style.color]="getStateColor(state)"
-                      >
-                        <span>{{ getStateLabel(state) }}</span>
-                        @if (state !== 'draft') {
-                          <button
-                            style="
-                              background: none;
-                              border: none;
-                              cursor: pointer;
-                              padding: 0;
-                              color: inherit;
-                              font-size: 16px;
-                              line-height: 1;
-                            "
-                            (click)="removeWorkflowState(state)"
-                          >
-                            <span class="material-icons-round" style="font-size: 16px">close</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  </div>
-                  <div style="display: flex; gap: 8px">
-                    <input
-                      class="form-input"
-                      type="text"
-                      placeholder="اسم الحالة الجديدة (مثل: pending_approval)"
-                      [value]="newWfState()"
-                      (input)="newWfState.set($any($event.target).value)"
-                      style="flex: 1"
-                    />
-                    <button
-                      class="btn-3d btn-primary"
-                      style="padding: 8px 16px"
-                      (click)="addWorkflowState()"
-                    >
-                      <span class="material-icons-round" style="font-size: 18px">add</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- الحالة الابتدائية -->
-                <div class="form-group">
-                  <label class="form-label">الحالة الابتدائية</label>
-                  <select
-                    class="form-input"
-                    [value]="wiz().workflowInitialState"
-                    (change)="setWizField('workflowInitialState', $any($event.target).value)"
-                  >
-                    @for (state of wiz().workflowStates; track state) {
-                      <option [value]="state">{{ getStateLabel(state) }}</option>
-                    }
-                  </select>
-                </div>
-
-                <!-- الانتقالات -->
-                <div class="form-group">
-                  <label class="form-label">الانتقالات (من حالة إلى حالة)</label>
-                  @if (wiz().workflowTransitions.length > 0) {
-                    <div style="margin-bottom: 12px">
-                      @for (tr of wiz().workflowTransitions; track $index) {
-                        <div
-                          style="
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            padding: 8px 12px;
-                            background: #f8fafc;
-                            border-radius: 8px;
-                            margin-bottom: 6px;
-                            font-size: 13px;
-                          "
-                        >
-                          <span
-                            style="padding: 2px 8px; border-radius: 12px; font-weight: 500"
-                            [style.background]="getStateColor(tr.fromState) + '18'"
-                            [style.color]="getStateColor(tr.fromState)"
-                          >
-                            {{ getStateLabel(tr.fromState) }}
-                          </span>
-                          <span class="material-icons-round" style="font-size: 16px; color: #94a3b8"
-                            >arrow_back</span
-                          >
-                          <span
-                            style="padding: 2px 8px; border-radius: 12px; font-weight: 500"
-                            [style.background]="getStateColor(tr.toState) + '18'"
-                            [style.color]="getStateColor(tr.toState)"
-                          >
-                            {{ getStateLabel(tr.toState) }}
-                          </span>
-                          <span style="color: #64748b; font-size: 12px">({{ tr.actionName }})</span>
-                          <button
-                            style="
-                              margin-right: auto;
-                              background: none;
-                              border: none;
-                              cursor: pointer;
-                              color: #ef4444;
-                            "
-                            (click)="removeWorkflowTransition($index)"
-                          >
-                            <span class="material-icons-round" style="font-size: 18px">delete</span>
-                          </button>
-                        </div>
-                      }
-                    </div>
-                  }
-                  <div
-                    style="
-                      display: grid;
-                      grid-template-columns: 1fr 1fr 1fr auto;
-                      gap: 8px;
-                      align-items: end;
-                    "
-                  >
-                    <div>
-                      <label
-                        style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block"
-                        >من حالة</label
-                      >
-                      <select
-                        class="form-input"
-                        [value]="newTrFrom()"
-                        (change)="newTrFrom.set($any($event.target).value)"
-                      >
-                        <option value="">اختر...</option>
-                        @for (state of wiz().workflowStates; track state) {
-                          <option [value]="state">{{ getStateLabel(state) }}</option>
-                        }
-                      </select>
-                    </div>
-                    <div>
-                      <label
-                        style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block"
-                        >إلى حالة</label
-                      >
-                      <select
-                        class="form-input"
-                        [value]="newTrTo()"
-                        (change)="newTrTo.set($any($event.target).value)"
-                      >
-                        <option value="">اختر...</option>
-                        @for (state of wiz().workflowStates; track state) {
-                          <option [value]="state">{{ getStateLabel(state) }}</option>
-                        }
-                      </select>
-                    </div>
-                    <div>
-                      <label
-                        style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block"
-                        >اسم الإجراء</label
-                      >
-                      <input
-                        class="form-input"
-                        type="text"
-                        placeholder="مثل: اعتماد"
-                        [value]="newTrAction()"
-                        (input)="newTrAction.set($any($event.target).value)"
-                      />
-                    </div>
-                    <button
-                      class="btn-3d btn-primary"
-                      style="padding: 8px 16px; height: 40px"
-                      (click)="addWorkflowTransition()"
-                    >
-                      <span class="material-icons-round" style="font-size: 18px">add</span>
-                    </button>
-                  </div>
-                </div>
-              } @else {
-                <div style="text-align: center; padding: 30px; color: #94a3b8">
-                  <span class="material-icons-round" style="font-size: 48px; margin-bottom: 12px"
-                    >route</span
-                  >
-                  <p>سير العمل الافتراضي: مسودة → معتمد</p>
-                  <p style="font-size: 12px">فعّل سير العمل المخصص لإضافة حالات وانتقالات مخصصة</p>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- ===== محتوى: الاسم والتفاصيل ===== -->
-          @if (getContentType() === 'details') {
-            <div class="wizard-step">
-              <h3 class="step-title">
-                <span class="material-icons-round">badge</span>
-                اسم القالب والتفاصيل
-              </h3>
-              <p class="step-desc">سمّي القالب واختر الأيقونة واللون</p>
-              <p class="step-hint">
-                <span class="material-icons-round">tag</span> الرمز والرقم التسلسلي يُولَّدان
-                تلقائياً حسب التصنيف
-              </p>
-
-              <!-- ملخص الاختيارات السابقة -->
-              <div class="wizard-summary">
-                <div class="ws-item">
-                  <span class="material-icons-round">folder</span>
-                  <span
-                    >التصنيف: <strong>{{ wiz().category }}</strong></span
-                  >
-                </div>
-                <div class="ws-item">
-                  <span class="material-icons-round">description</span>
-                  <span
-                    >النوع:
-                    <strong>{{
-                      getVoucherTypeOption(wiz().voucherType)?.label ||
-                        getVoucherTypeLabel(wiz().voucherType)
-                    }}</strong></span
-                  >
-                </div>
-                @if (wiz().paymentMethod) {
-                  <div class="ws-item">
-                    <span class="material-icons-round">payments</span>
-                    <span
-                      >الوسيلة:
-                      <strong>{{ getPaymentMethodLabel(wiz().paymentMethod) }}</strong></span
-                    >
-                  </div>
-                }
-                @if (selectedSourceName()) {
-                  <div class="ws-item">
-                    <span class="material-icons-round">account_balance_wallet</span>
-                    <span
-                      >المصدر: <strong>{{ selectedSourceName() }}</strong></span
-                    >
-                  </div>
-                }
-                @if (wiz().sourceWarehouseId) {
-                  <div class="ws-item">
-                    <span class="material-icons-round">warehouse</span>
-                    <span
-                      >المخزن:
-                      <strong>{{ getWarehouseName(wiz().sourceWarehouseId) }}</strong></span
-                    >
-                  </div>
-                }
-                <div class="ws-item">
-                  <span class="material-icons-round">group</span>
-                  <span
-                    >الحسابات: <strong>{{ wiz().linkedAccounts.length }} حساب</strong></span
-                  >
-                </div>
-              </div>
-
-              <!-- Name & Description -->
-              <div class="form-group">
-                <label class="form-label">اسم القالب <span class="required">*</span></label>
-                <input
-                  class="form-input"
-                  type="text"
-                  placeholder="مثال: تحصيل يومي - الدهمية"
-                  [value]="wiz().name"
-                  (input)="setWizField('name', $any($event.target).value)"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">وصف مختصر</label>
-                <textarea
-                  class="form-input"
-                  rows="2"
-                  placeholder="وصف اختياري للقالب..."
-                  [value]="wiz().description"
-                  (input)="setWizField('description', $any($event.target).value)"
-                ></textarea>
-              </div>
-
-              <!-- Icon & Color -->
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">الأيقونة</label>
-                  <div class="icon-picker">
-                    @for (ic of icons; track ic) {
-                      <button
-                        class="icon-option"
-                        [class.selected]="wiz().icon === ic"
-                        (click)="setWizField('icon', ic)"
-                      >
-                        <span class="material-icons-round">{{ ic }}</span>
-                      </button>
-                    }
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">اللون</label>
-                  <div class="color-picker">
-                    @for (c of colors; track c) {
-                      <button
-                        class="color-dot"
-                        [class.selected]="wiz().color === c"
-                        [style.background]="c"
-                        (click)="setWizField('color', c)"
-                      ></button>
-                    }
-                  </div>
-                </div>
-              </div>
-
-              <!-- Flags -->
-              <div class="form-row flags-row">
-                <label class="toggle-label">
-                  <span>يتطلب مرفق</span>
-                  <div
-                    class="toggle-switch"
-                    [class.on]="wiz().requiresAttachment"
-                    (click)="setWizField('requiresAttachment', !wiz().requiresAttachment)"
-                  >
-                    <div class="toggle-knob"></div>
-                  </div>
-                </label>
-                <label class="toggle-label">
-                  <span>مفعّل</span>
-                  <div
-                    class="toggle-switch"
-                    [class.on]="wiz().isActive"
-                    (click)="setWizField('isActive', !wiz().isActive)"
-                  >
-                    <div class="toggle-knob"></div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          }
-        </div>
-
-        <!-- Wizard Footer -->
-        <div class="wizard-footer">
-          @if (wizardStep() > 1) {
-            <button class="btn-3d btn-ghost" (click)="prevStep()">
-              <span class="material-icons-round">arrow_forward</span>
-              السابق
-            </button>
-          } @else {
-            <div></div>
-          }
-
-          @if (!isLastStep()) {
-            <button class="btn-3d btn-primary" [disabled]="!canGoNext()" (click)="nextStep()">
-              التالي
-              <span class="material-icons-round">arrow_back</span>
-            </button>
-          } @else {
-            <button
-              class="btn-3d btn-primary"
-              [disabled]="!canGoNext() || saving()"
-              (click)="saveWizard()"
-            >
-              <span class="material-icons-round">{{ saving() ? 'sync' : 'save' }}</span>
-              {{ saving() ? 'جاري الحفظ...' : editingId() ? 'حفظ التعديلات' : 'إنشاء القالب' }}
-            </button>
-          }
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ===== Accounts View Modal ===== -->
-  @if (showAccountsModal() && selectedOT()) {
-    <div class="page-form-container" (click)="showAccountsModal.set(false)">
-      <div class="modal-3d accounts-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon" [style.background]="selectedOT().color">
-            <span class="material-icons-round">{{ selectedOT().icon }}</span>
-          </div>
-          <div>
-            <h2>الحسابات المرتبطة</h2>
-            <p class="modal-subtitle">{{ selectedOT().name }}</p>
-          </div>
-          <button class="modal-close" (click)="showAccountsModal.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <!-- معلومات المصدر -->
-          @if (selectedOT().sourceAccountId || selectedOT().sourceFundId) {
-            <div class="source-summary-chip" style="margin-bottom: 16px">
-              <span class="material-icons-round">account_balance_wallet</span>
-              <span
-                >المصدر (الطرف الأول): <strong>{{ getSourceLabel(selectedOT()) }}</strong></span
-              >
-            </div>
-          }
-
-          @if (!selectedOT().linkedAccounts || selectedOT().linkedAccounts.length === 0) {
-            <div class="no-linked">
-              <span class="material-icons-round">link_off</span>
-              لا توجد حسابات مرتبطة
-            </div>
-          } @else {
-            <div class="linked-accounts-full">
-              @for (la of selectedOT().linkedAccounts; track la.id) {
-                <div class="la-row">
-                  <span class="material-icons-round la-icon">account_circle</span>
-                  <div class="la-info">
-                    <div class="la-name">{{ la.label || la.accountName }}</div>
-                    <div class="la-account-name">{{ la.accountName }}</div>
-                  </div>
-                  <span class="perm-badge" [attr.data-perm]="la.permission">
-                    {{ getPermissionLabel(la.permission) }}
+            @if (wiz().linkedAccounts.length > 0) {
+              <div class="mt-3 flex flex-wrap gap-2">
+                @for (la of wiz().linkedAccounts; track la.accountId) {
+                  <span class="valex-badge valex-badge-primary flex items-center gap-1">
+                    {{ la.accountName }}
+                    <button (click)="removeLinkedAccount(la.accountId)" class="ms-1"><span class="material-icons-round text-xs">close</span></button>
                   </span>
-                </div>
-              }
+                }
+              </div>
+            }
+          }
+
+          @if (getContentType() === 'workflow') {
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">account_tree</span> سير العمل (اختياري)</h4>
+            <div class="valex-form-group mb-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" [checked]="wiz().workflowEnabled" (change)="setWizField('workflowEnabled', $any($event.target).checked)" />
+                <span class="valex-label mb-0">تفعيل سير العمل</span>
+              </label>
             </div>
           }
+
+          @if (getContentType() === 'details') {
+            <h4 class="font-bold mb-4 flex items-center gap-2"><span class="material-icons-round text-primary">info</span> تفاصيل القالب</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="valex-form-group md:col-span-2">
+                <label class="valex-label">اسم القالب <span class="text-danger">*</span></label>
+                <input class="valex-input" type="text" placeholder="مثال: تحصيل المغربي"
+                  [value]="wiz().name" (input)="setWizField('name', $any($event.target).value)" />
+              </div>
+              <div class="valex-form-group md:col-span-2">
+                <label class="valex-label">الوصف</label>
+                <input class="valex-input" type="text" placeholder="شرح مختصر (اختياري)"
+                  [value]="wiz().description" (input)="setWizField('description', $any($event.target).value)" />
+              </div>
+            </div>
+            <div class="valex-form-group mb-4">
+              <label class="valex-label">الأيقونة</label>
+              <div class="inventory-icon-picker">
+                @for (ic of icons; track ic) {
+                  <button class="inventory-icon-btn" [class.selected]="wiz().icon === ic" (click)="setWizField('icon', ic)">
+                    <span class="material-icons-round" [style.color]="wiz().icon === ic ? wiz().color : ''">{{ ic }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="valex-form-group mb-4">
+              <label class="valex-label">اللون</label>
+              <div class="flex flex-wrap gap-2">
+                @for (c of colors; track c) {
+                  <button class="sidebar-color-option" [style.background]="c" [class.selected]="wiz().color === c" (click)="setWizField('color', c)"></button>
+                }
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" [checked]="wiz().requiresAttachment" (change)="setWizField('requiresAttachment', $any($event.target).checked)" />
+                <span class="text-sm">يستلزم مرفقاً</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" [checked]="wiz().hasMultiLines" (change)="setWizField('hasMultiLines', $any($event.target).checked)" />
+                <span class="text-sm">يدعم أسطر متعددة</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" [checked]="wiz().isActive" (change)="setWizField('isActive', $any($event.target).checked)" />
+                <span class="text-sm">نشط</span>
+              </label>
+            </div>
+          }
+
+
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="showAccountsModal.set(false)">إغلاق</button>
-          <button
-            class="btn-3d btn-primary"
-            (click)="showAccountsModal.set(false); openEditWizard(selectedOT())"
-          >
-            <span class="material-icons-round">edit</span>
-            تعديل القالب
-          </button>
+        <div class="valex-modal-footer sticky bottom-0 bg-[var(--bg-card)]">
+          @if (wizardStep() > 1) {
+            <button class="valex-btn valex-btn-outline" (click)="prevStep()">
+              <span class="material-icons-round">arrow_forward</span> السابق
+            </button>
+          } @else {
+            <button class="valex-btn valex-btn-outline" (click)="showWizard.set(false)">إلغاء</button>
+          }
+          @if (!isLastStep()) {
+            <button class="valex-btn valex-btn-primary" [disabled]="!canGoNext()" (click)="nextStep()">
+              التالي <span class="material-icons-round">arrow_back</span>
+            </button>
+          } @else {
+            <button class="valex-btn valex-btn-primary" (click)="saveWizard()" [disabled]="saving() || !canGoNext()">
+              <span class="material-icons-round">{{ saving() ? 'sync' : 'check_circle' }}</span>
+              {{ editingId() ? 'حفظ التعديلات' : 'إنشاء القالب' }}
+            </button>
+          }
         </div>
       </div>
     </div>
   }
 
-  <!-- ===== How It Works Modal ===== -->
-  @if (showHowItWorks()) {
-    <div class="page-form-container" (click)="showHowItWorks.set(false)">
-      <div class="modal-3d hiw-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-icon amber">
-            <span class="material-icons-round">help_outline</span>
-          </div>
-          <h2>كيف تعمل القوالب؟</h2>
-          <button class="modal-close" (click)="showHowItWorks.set(false)">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-        <div class="modal-body hiw-body">
-          <div class="hiw-section">
-            <h3>
-              <span class="material-icons-round">auto_awesome</span> القالب = عملية مقيدة بالكامل
-            </h3>
-            <p>
-              المستخدم بس يختار القالب ويعبي المبلغ ويحفظ. كل شي محدد مسبقاً: نوع العملية، طريقة
-              الدفع، المصدر، والحسابات المرتبطة.
-            </p>
-          </div>
-          <div class="hiw-section">
-            <h3>
-              <span class="material-icons-round">format_list_numbered</span> خطوات إنشاء القالب
-            </h3>
-            <div class="hiw-steps">
-              <div class="hiw-step">
-                <span class="hs-num">1</span> <strong>التصنيف:</strong> اختر التصنيف من القائمة
-                الموجودة
-              </div>
-              <div class="hiw-step">
-                <span class="hs-num">2</span> <strong>نوع السند:</strong> سند قبض / سند صرف / قيد
-                محاسبي
-              </div>
-              <div class="hiw-step">
-                <span class="hs-num">3</span> <strong>وسيلة الدفع:</strong> نقداً / بنك / صراف /
-                محفظة إلكترونية
-              </div>
-              <div class="hiw-step">
-                <span class="hs-num">4</span> <strong>المصدر (الطرف الأول):</strong> أي صندوق أو بنك
-                أو صراف أو محفظة بالتحديد
-              </div>
-              <div class="hiw-step">
-                <span class="hs-num">5</span> <strong>الحسابات (الطرف الثاني):</strong> الحسابات
-                المقابلة المرتبطة
-              </div>
-              <div class="hiw-step">
-                <span class="hs-num">6</span> <strong>الاسم والتفاصيل:</strong> سمّي القالب واختر
-                الأيقونة واللون
-              </div>
+  @if (showAccountsModal()) {
+    <div class="valex-modal-overlay" (click)="showAccountsModal.set(false)">
+      <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+                 [style.background]="selectedOT()?.color">
+              <span class="material-icons-round">{{ selectedOT()?.icon }}</span>
             </div>
+            <h3>{{ selectedOT()?.name }} — الحسابات المرتبطة</h3>
           </div>
-          <div class="hiw-section">
-            <h3><span class="material-icons-round">rule</span> قواعد مهمة</h3>
-            <p>
-              <strong>التصنيفات أولاً:</strong> أنشئ التصنيفات من تبويب "التصنيفات" قبل إنشاء
-              القوالب.<br />
-              <strong>سند قبض/صرف:</strong> اختر الوسيلة → المصدر (الطرف الأول) → الحسابات (الطرف
-              الثاني).<br />
-              <strong>قيد محاسبي:</strong> تظهر حسابات دليل الحسابات مباشرة (بدون صناديق أو
-              بنوك).<br />
-              <strong>عملية مخزنية:</strong> اختر المخزن الافتراضي → الحسابات المرتبطة (اختياري).
-            </p>
-          </div>
+          <button class="valex-icon-btn" (click)="showAccountsModal.set(false)"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="valex-modal-body">
+          @if (!selectedOT()?.linkedAccounts?.length) {
+            <div class="text-center py-6 text-muted text-sm">لا توجد حسابات مرتبطة بهذا القالب</div>
+          } @else {
+            <div class="flex flex-col gap-3">
+              @for (la of selectedOT()!.linkedAccounts; track la.accountId) {
+                <div class="flex items-center gap-3 p-3 rounded-xl border border-[var(--border-color)]">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                    <span class="material-icons-round text-base">{{ accountTypeIcons[la.accountType] || 'person' }}</span>
+                  </div>
+                  <div class="flex-1">
+                    <div class="font-bold text-sm">{{ la.accountName }}</div>
+                    <div class="text-xs text-muted">{{ getPermissionLabel(la.permission) }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showAccountsModal.set(false)">إغلاق</button>
+          <button class="valex-btn valex-btn-primary" (click)="showAccountsModal.set(false); openEditWizard(selectedOT()!)">
+            <span class="material-icons-round">edit</span> تعديل القالب
+          </button>
         </div>
       </div>
     </div>

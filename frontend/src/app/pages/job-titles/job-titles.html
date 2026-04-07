@@ -1,87 +1,105 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">badge</span> المسميات الوظيفية</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة مسمى وظيفي</button>
-  </div>
+  <app-page-header title="المسميات الوظيفية" icon="badge" [breadcrumb]="['الرئيسية', 'الهيكل التنظيمي', 'المسميات الوظيفية']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span>
+      إضافة مسمى وظيفي
+    </button>
+  </app-page-header>
 
-  <div class="summary-row">
-    <div class="summary-card amber">
-      <span class="material-icons-round">badge</span>
-      <div><span class="num">{{ jobTitles().length }}</span><span class="lbl">إجمالي المسميات</span></div>
+  <!-- Summary -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
+        <span class="material-icons-round text-2xl">badge</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ jobTitles().length }}</div>
+        <div class="text-sm text-muted">إجمالي المسميات</div>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon amber"><span class="material-icons-round">badge</span></div>
-          <h3>{{ editingId() ? 'تعديل مسمى وظيفي' : 'إضافة مسمى وظيفي جديد' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
+            <span class="material-icons-round">badge</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل مسمى وظيفي' : 'إضافة مسمى وظيفي جديد' }}</h3>
+          @if (editingId()) {
+            <span class="valex-badge valex-badge-warning">تعديل</span>
+          }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label>المسمى الوظيفي <span class="required">*</span></label>
-          <input [(ngModel)]="form.name" placeholder="مثال: مدير عام" />
-        </div>
-        <div class="form-group full-width">
-          <label>الوصف</label>
-          <textarea [(ngModel)]="form.description" rows="2" placeholder="وصف مختصر للمسمى الوظيفي..."></textarea>
-        </div>
-        <div class="form-group">
-          <label>اللون</label>
-          <div class="color-picker-row">
-            <input type="color" [(ngModel)]="form.color" />
-            <span class="color-preview" [style.background]="form.color"></span>
-            <span>{{ form.color }}</span>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label">المسمى الوظيفي <span class="text-danger">*</span></label>
+            <input class="valex-input" [(ngModel)]="form.name" placeholder="مثال: مدير عام" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الوصف</label>
+            <textarea class="valex-input" [(ngModel)]="form.description" rows="2" placeholder="وصف مختصر للمسمى الوظيفي..."></textarea>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">اللون</label>
+            <div class="valex-color-row">
+              <input type="color" [(ngModel)]="form.color" />
+              <span class="w-8 h-8 rounded-lg border border-[var(--color-defaultborder)]" [style.background]="form.color"></span>
+              <span class="text-sm text-muted font-mono">{{ form.color }}</span>
+            </div>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الأيقونة</label>
+            <div class="valex-icon-grid">
+              @for (ic of availableIcons; track ic) {
+                <button class="valex-icon-option" [class.selected]="form.icon === ic" (click)="form.icon = ic" [style.color]="form.icon === ic ? form.color : ''">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
           </div>
         </div>
-        <div class="form-group">
-          <label>الأيقونة</label>
-          <div class="icon-grid">
-            @for (ic of availableIcons; track ic) {
-              <button class="icon-btn" [class.selected]="form.icon === ic" (click)="form.icon = ic"
-                [style.color]="form.icon === ic ? form.color : ''">
-                <span class="material-icons-round">{{ ic }}</span>
-              </button>
-            }
-          </div>
-        </div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة المسمى' }}</button>
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
+          {{ editingId() ? 'حفظ التعديلات' : 'إضافة المسمى' }}
+        </button>
       </div>
     </div>
   } @else if (!jobTitles().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">badge</span>
-      <p>لا توجد مسميات وظيفية بعد</p>
-      <p class="empty-hint">أضف مسميات وظيفية لتنظيم أدوار الموظفين</p>
-    </div>
+    <app-empty-state icon="badge" title="لا توجد مسميات وظيفية بعد" subtitle="أضف مسميات وظيفية لتنظيم أدوار الموظفين" actionLabel="إضافة مسمى" (addClick)="openAdd()" />
   } @else {
-    <div class="categories-grid">
+    <div class="valex-categories-grid">
       @for (j of jobTitles(); track j.id) {
-        <div class="category-card">
-          <div class="cat-header">
-            <div class="cat-icon" [style.background]="j.color + '18'" [style.color]="j.color">
-              <span class="material-icons-round">{{ j.icon || 'badge' }}</span>
+        <div class="valex-category-card">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center" [style.background]="j.color + '18'" [style.color]="j.color">
+              <span class="material-icons-round text-xl">{{ j.icon || 'badge' }}</span>
             </div>
-            <div class="cat-actions">
-              <button class="action-btn edit" (click)="openEdit(j)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(j)"><span class="material-icons-round">delete</span></button>
+            <div class="flex items-center gap-1">
+              <button class="valex-icon-btn text-warning" (click)="openEdit(j)" title="تعديل">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="valex-icon-btn text-danger" (click)="remove(j)" title="حذف">
+                <span class="material-icons-round">delete</span>
+              </button>
             </div>
           </div>
-          <h3 class="cat-name">{{ j.name }}</h3>
+          <h3 class="font-bold text-base mb-1">{{ j.name }}</h3>
           @if (j.description) {
-            <p class="cat-desc">{{ j.description }}</p>
+            <p class="text-sm text-muted leading-relaxed mb-3">{{ j.description }}</p>
           }
-          <div class="cat-footer">
-            <span class="cat-badge" [style.background]="j.color + '15'" [style.color]="j.color">
+          <div class="pt-3 border-t border-[var(--color-defaultborder)]">
+            <span class="valex-badge" [style.background]="j.color + '15'" [style.color]="j.color">
               @if (j.isActive) { نشط } @else { غير نشط }
             </span>
           </div>

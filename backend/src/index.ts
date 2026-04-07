@@ -269,6 +269,16 @@ console.log(
 const server = serve({ fetch: app.fetch, port });
 wsService.init(server as any);
 
+// ===================== DB Keep-Alive =====================
+// نبض دوري كل 30 ثانية لإبقاء اتصال قاعدة البيانات حياً
+setInterval(async () => {
+  try {
+    await db.execute(sql`SELECT 1`);
+  } catch {
+    // تجاهل الخطأ — سيتصل تلقائياً عند الطلب التالي
+  }
+}, 30_000);
+
 // ===================== Graceful Shutdown =====================
 let isShuttingDown = false;
 

@@ -1,111 +1,203 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">payments</span> الرواتب</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة سجل راتب</button>
+  <app-page-header title="الرواتب" icon="payments" [breadcrumb]="['الرئيسية', 'الموارد البشرية', 'الرواتب']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span>
+      إضافة سجل راتب
+    </button>
+  </app-page-header>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-info/10 text-info">
+        <span class="material-icons-round text-2xl">people</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ items().length }}</div>
+        <div class="text-sm text-muted">عدد السجلات</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
+        <span class="material-icons-round text-2xl">payments</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ totalNet() | number:'1.0-0' }}</div>
+        <div class="text-sm text-muted">إجمالي صافي الرواتب</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+        <span class="material-icons-round text-2xl">check_circle</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ paidCount() }}</div>
+        <div class="text-sm text-muted">مدفوعة</div>
+      </div>
+    </div>
   </div>
 
-  <div class="summary-row">
-    <div class="summary-card blue">
-      <span class="material-icons-round">people</span>
-      <div><span class="num">{{ items().length }}</span><span class="lbl">عدد السجلات</span></div>
-    </div>
-    <div class="summary-card green">
-      <span class="material-icons-round">payments</span>
-      <div><span class="num">{{ totalNet() | number:'1.0-0' }}</span><span class="lbl">إجمالي صافي الرواتب</span></div>
-    </div>
-    <div class="summary-card amber">
-      <span class="material-icons-round">check_circle</span>
-      <div><span class="num">{{ paidCount() }}</span><span class="lbl">مدفوعة</span></div>
-    </div>
-  </div>
-
-  <div class="filter-row">
-    <div class="filter-group">
-      <label>الشهر</label>
-      <select [ngModel]="filterMonth()" (ngModelChange)="filterMonth.set($event); onFilterChange()">
-        <option [ngValue]="null">الكل</option>
-        @for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>السنة</label>
-      <select [ngModel]="filterYear()" (ngModelChange)="filterYear.set($event); onFilterChange()">
-        <option [ngValue]="null">الكل</option>
-        @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
-      </select>
+  <!-- Filters -->
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2">
+          <label class="valex-label mb-0">الشهر</label>
+          <select class="valex-select w-auto" [ngModel]="filterMonth()" (ngModelChange)="filterMonth.set($event); onFilterChange()">
+            <option [ngValue]="null">الكل</option>
+            @for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="valex-label mb-0">السنة</label>
+          <select class="valex-select w-auto" [ngModel]="filterYear()" (ngModelChange)="filterYear.set($event); onFilterChange()">
+            <option [ngValue]="null">الكل</option>
+            @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue"><span class="material-icons-round">payments</span></div>
-          <h3>{{ editingId() ? 'تعديل سجل راتب' : 'إضافة سجل راتب' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+    <!-- Form -->
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-info/10 text-info">
+            <span class="material-icons-round">payments</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل سجل راتب' : 'إضافة سجل راتب' }}</h3>
+          @if (editingId()) {
+            <span class="valex-badge valex-badge-warning">تعديل</span>
+          }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
-      <div class="form-meta cols-3">
-        <div class="form-group full-width">
-          <label>الموظف <span class="required">*</span></label>
-          <select [(ngModel)]="form.employeeId" required>
-            <option [ngValue]="null">-- اختر الموظف --</option>
-            @for (emp of employees(); track emp.id) { <option [ngValue]="emp.id">{{ emp.fullName }}</option> }
-          </select>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="valex-form-group md:col-span-3">
+            <label class="valex-label">الموظف <span class="text-danger">*</span></label>
+            <select class="valex-select" [(ngModel)]="form.employeeId" required>
+              <option [ngValue]="null">-- اختر الموظف --</option>
+              @for (emp of employees(); track emp.id) { <option [ngValue]="emp.id">{{ emp.fullName }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الشهر</label>
+            <select class="valex-select" [(ngModel)]="form.month">
+              @for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">السنة</label>
+            <select class="valex-select" [(ngModel)]="form.year">
+              @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">العملة</label>
+            <select class="valex-select" [(ngModel)]="form.currencyId">
+              @for (c of currencies(); track c.id) { <option [ngValue]="c.id">{{ c.code }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الراتب الأساسي</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.baseSalary" min="0" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">السلفة</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.advance" min="0" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الخصومات</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.deductions" min="0" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">صافي الراتب</label>
+            <div class="valex-input bg-[var(--color-bodybg)] font-bold text-success">{{ netSalary() | number:'1.0-0' }}</div>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">أيام الحضور</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.attendanceDays" min="0" placeholder="اختياري" />
+          </div>
+          <div class="valex-form-group flex items-center">
+            <label class="valex-check mt-6">
+              <input type="checkbox" [(ngModel)]="form.isPaid" />
+              <span>تم الدفع</span>
+            </label>
+          </div>
+          <div class="valex-form-group md:col-span-3">
+            <label class="valex-label">ملاحظات</label>
+            <textarea class="valex-input" [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea>
+          </div>
         </div>
-        <div class="form-group"><label>الشهر</label><select [(ngModel)]="form.month">@for (m of months; track m) { <option [ngValue]="m">{{ m }}</option> }</select></div>
-        <div class="form-group"><label>السنة</label><select [(ngModel)]="form.year">@for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }</select></div>
-        <div class="form-group"><label>العملة</label><select [(ngModel)]="form.currencyId">@for (c of currencies(); track c.id) { <option [ngValue]="c.id">{{ c.code }}</option> }</select></div>
-        <div class="form-group"><label>الراتب الأساسي</label><input type="number" [(ngModel)]="form.baseSalary" min="0" /></div>
-        <div class="form-group"><label>السلفة</label><input type="number" [(ngModel)]="form.advance" min="0" /></div>
-        <div class="form-group"><label>الخصومات</label><input type="number" [(ngModel)]="form.deductions" min="0" /></div>
-        <div class="form-group"><label>صافي الراتب</label><div class="net-row"><strong>{{ netSalary() | number:'1.0-0' }}</strong></div></div>
-        <div class="form-group"><label>أيام الحضور</label><input type="number" [(ngModel)]="form.attendanceDays" min="0" placeholder="اختياري" /></div>
-        <div class="form-group checkbox-group"><label><input type="checkbox" [(ngModel)]="form.isPaid" /> تم الدفع</label></div>
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة السجل' }}</button>
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
+          {{ editingId() ? 'حفظ التعديلات' : 'إضافة السجل' }}
+        </button>
       </div>
     </div>
   } @else if (!items().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">payments</span>
-      <p>لا توجد سجلات رواتب</p>
-      <p class="empty-hint">أضف سجلات رواتب للموظفين حسب الشهر والسنة</p>
-    </div>
+    <app-empty-state icon="payments" title="لا توجد سجلات رواتب" subtitle="أضف سجلات رواتب للموظفين حسب الشهر والسنة" actionLabel="إضافة سجل" (addClick)="openAdd()" />
   } @else {
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>#</th><th>الموظف</th><th>الشهر</th><th>السنة</th><th>الأساس</th><th>السلفة</th><th>الخصومات</th><th>الصافي</th><th>الحالة</th><th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id; let i = $index) {
-          <tr>
-            <td>{{ i + 1 }}</td>
-            <td class="name-cell">{{ item.employeeName || '-' }}</td>
-            <td>{{ item.month }}</td>
-            <td>{{ item.year }}</td>
-            <td class="amount-cell">{{ item.baseSalary | number:'1.0-0' }}</td>
-            <td>{{ item.advance | number:'1.0-0' }}</td>
-            <td>{{ item.deductions | number:'1.0-0' }}</td>
-            <td class="amount-cell net">{{ item.netSalary | number:'1.0-0' }} {{ getCurrencyCode(item.currencyId) }}</td>
-            <td><span class="status-pill" [class.paid]="item.isPaid" [class.unpaid]="!item.isPaid">{{ item.isPaid ? 'مدفوع' : 'غير مدفوع' }}</span></td>
-            <td>
-              <button class="action-btn edit" (click)="openEdit(item)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(item)"><span class="material-icons-round">delete</span></button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <div class="valex-card">
+      <div class="valex-table-wrapper">
+        <table class="valex-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الموظف</th>
+              <th>الشهر</th>
+              <th>السنة</th>
+              <th>الأساس</th>
+              <th>السلفة</th>
+              <th>الخصومات</th>
+              <th>الصافي</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items(); track item.id; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="font-medium">{{ item.employeeName || '-' }}</td>
+                <td>{{ item.month }}</td>
+                <td>{{ item.year }}</td>
+                <td class="td-amount">{{ item.baseSalary | number:'1.0-0' }}</td>
+                <td>{{ item.advance | number:'1.0-0' }}</td>
+                <td>{{ item.deductions | number:'1.0-0' }}</td>
+                <td class="td-amount font-bold text-success">{{ item.netSalary | number:'1.0-0' }} <span class="text-muted text-xs font-normal">{{ getCurrencyCode(item.currencyId) }}</span></td>
+                <td>
+                  @if (item.isPaid) {
+                    <span class="valex-badge valex-badge-success">مدفوع</span>
+                  } @else {
+                    <span class="valex-badge valex-badge-warning">غير مدفوع</span>
+                  }
+                </td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="valex-icon-btn text-warning" (click)="openEdit(item)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="valex-icon-btn text-danger" (click)="remove(item)" title="حذف">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
   }
-
-
 </div>

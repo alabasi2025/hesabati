@@ -1,92 +1,108 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">local_shipping</span> أنواع الموردين</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إضافة نوع</button>
-  </div>
+  <app-page-header title="أنواع الموردين" icon="local_shipping" [breadcrumb]="['الرئيسية', 'الموردين', 'أنواع الموردين']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span>
+      إضافة نوع
+    </button>
+  </app-page-header>
 
-  <div class="summary-row">
-    <div class="summary-card sky">
-      <span class="material-icons-round">local_shipping</span>
-      <div><span class="num">{{ types().length }}</span><span class="lbl">إجمالي الأنواع</span></div>
+  <!-- Summary -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(6,182,212,0.12); color: #06b6d4;">
+        <span class="material-icons-round text-2xl">local_shipping</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ types().length }}</div>
+        <div class="text-sm text-muted">إجمالي الأنواع</div>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue"><span class="material-icons-round">local_shipping</span></div>
-          <h3>{{ editingId() ? 'تعديل نوع مورد' : 'إضافة نوع مورد جديد' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-info/10 text-info">
+            <span class="material-icons-round">local_shipping</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل نوع مورد' : 'إضافة نوع مورد جديد' }}</h3>
+          @if (editingId()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label>اسم النوع <span class="required">*</span></label>
-          <input [(ngModel)]="form.name" (ngModelChange)="onNameChange()" placeholder="مثال: مورد مواد غذائية" />
-        </div>
-        <div class="form-group">
-          <label>المفتاح <span class="required">*</span></label>
-          <input [(ngModel)]="form.subTypeKey" placeholder="يتم توليده تلقائياً" dir="ltr" />
-        </div>
-        <div class="form-group full-width">
-          <label>الوصف</label>
-          <textarea [(ngModel)]="form.description" rows="2" placeholder="وصف مختصر للنوع..."></textarea>
-        </div>
-        <div class="form-group">
-          <label>اللون</label>
-          <div class="color-picker-row">
-            <input type="color" [(ngModel)]="form.color" />
-            <span class="color-preview" [style.background]="form.color"></span>
-            <span>{{ form.color }}</span>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label">اسم النوع <span class="text-danger">*</span></label>
+            <input class="valex-input" [(ngModel)]="form.name" (ngModelChange)="onNameChange()" placeholder="مثال: مورد مواد غذائية" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المفتاح <span class="text-danger">*</span></label>
+            <input class="valex-input" [(ngModel)]="form.subTypeKey" placeholder="يتم توليده تلقائياً" dir="ltr" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الوصف</label>
+            <textarea class="valex-input" [(ngModel)]="form.description" rows="2" placeholder="وصف مختصر للنوع..."></textarea>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">اللون</label>
+            <div class="valex-color-row">
+              <input type="color" [(ngModel)]="form.color" />
+              <span class="w-8 h-8 rounded-lg border border-[var(--color-defaultborder)]" [style.background]="form.color"></span>
+              <span class="text-sm text-muted font-mono">{{ form.color }}</span>
+            </div>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">الأيقونة</label>
+            <div class="valex-icon-grid">
+              @for (ic of availableIcons; track ic) {
+                <button class="valex-icon-option" [class.selected]="form.icon === ic" (click)="form.icon = ic" [style.color]="form.icon === ic ? form.color : ''">
+                  <span class="material-icons-round">{{ ic }}</span>
+                </button>
+              }
+            </div>
           </div>
         </div>
-        <div class="form-group">
-          <label>الأيقونة</label>
-          <div class="icon-grid">
-            @for (ic of availableIcons; track ic) {
-              <button class="icon-btn" [class.selected]="form.icon === ic" (click)="form.icon = ic"
-                [style.color]="form.icon === ic ? form.color : ''">
-                <span class="material-icons-round">{{ ic }}</span>
-              </button>
-            }
-          </div>
-        </div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة النوع' }}</button>
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
+          {{ editingId() ? 'حفظ التعديلات' : 'إضافة النوع' }}
+        </button>
       </div>
     </div>
   } @else if (!types().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">local_shipping</span>
-      <p>لا توجد أنواع موردين بعد</p>
-      <p class="empty-hint">أضف أنواعاً لتصنيف الموردين حسب نشاطهم</p>
-    </div>
+    <app-empty-state icon="local_shipping" title="لا توجد أنواع موردين بعد" subtitle="أضف أنواعاً لتصنيف الموردين حسب نشاطهم" actionLabel="إضافة نوع" (addClick)="openAdd()" />
   } @else {
-    <div class="categories-grid">
+    <div class="valex-categories-grid">
       @for (t of types(); track t.id) {
-        <div class="category-card">
-          <div class="cat-header">
-            <div class="cat-icon" [style.background]="t.color + '18'" [style.color]="t.color">
-              <span class="material-icons-round">{{ t.icon || 'local_shipping' }}</span>
+        <div class="valex-category-card">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center" [style.background]="t.color + '18'" [style.color]="t.color">
+              <span class="material-icons-round text-xl">{{ t.icon || 'local_shipping' }}</span>
             </div>
-            <div class="cat-actions">
-              <button class="action-btn edit" (click)="openEdit(t)"><span class="material-icons-round">edit</span></button>
-              <button class="action-btn delete" (click)="remove(t)"><span class="material-icons-round">delete</span></button>
+            <div class="flex items-center gap-1">
+              <button class="valex-icon-btn text-warning" (click)="openEdit(t)" title="تعديل">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="valex-icon-btn text-danger" (click)="remove(t)" title="حذف">
+                <span class="material-icons-round">delete</span>
+              </button>
             </div>
           </div>
-          <h3 class="cat-name">{{ t.name }}</h3>
-          <span class="cat-key">{{ t.subTypeKey }}</span>
+          <h3 class="font-bold text-base mb-1">{{ t.name }}</h3>
+          <div class="valex-badge valex-badge-muted font-mono text-xs mb-2">{{ t.subTypeKey }}</div>
           @if (t.description) {
-            <p class="cat-desc">{{ t.description }}</p>
+            <p class="text-sm text-muted leading-relaxed mb-3">{{ t.description }}</p>
           }
-          <div class="cat-footer">
-            <span class="cat-badge" [style.background]="t.color + '15'" [style.color]="t.color">
+          <div class="pt-3 border-t border-[var(--color-defaultborder)]">
+            <span class="valex-badge" [style.background]="t.color + '15'" [style.color]="t.color">
               @if (t.isActive) { نشط } @else { غير نشط }
             </span>
           </div>

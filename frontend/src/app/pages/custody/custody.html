@@ -1,350 +1,344 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">lock</span> العهد</h2>
-    <button class="add-btn" (click)="openAdd()">
-      <span class="material-icons-round">add</span> إنشاء عهدة
+  <app-page-header title="العهد" icon="lock" [breadcrumb]="['الرئيسية', 'العهد']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span>
+      إنشاء عهدة
     </button>
-  </div>
+  </app-page-header>
 
   <!-- حسابات العهدة -->
   @if (custodyAccounts().length > 0) {
-    <div class="custody-accounts-section">
-      <h3><span class="material-icons-round">account_balance_wallet</span> حسابات العهد</h3>
-      <div class="accounts-grid">
-        @for (acc of custodyAccounts(); track acc.id) {
-          <div class="account-card">
-            <div class="account-code">
-              {{ acc.accountLedgerCode ? acc.accountLedgerCode + ' | ' : '' }}{{ acc.code }}
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <h3 class="valex-card-title">
+          <span class="material-icons-round" style="font-size:18px;color:var(--color-primary)">account_balance_wallet</span>
+          حسابات العهد
+        </h3>
+      </div>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          @for (acc of custodyAccounts(); track acc.id) {
+            <div class="valex-card p-3" style="border-top:2px solid var(--color-primary)">
+              <div class="valex-badge valex-badge-primary font-mono text-xs mb-2">
+                {{ acc.accountLedgerCode ? acc.accountLedgerCode + ' | ' : '' }}{{ acc.code }}
+              </div>
+              <div class="font-semibold text-sm mb-1">{{ acc.name }}</div>
+              <div class="flex items-center gap-1 text-xs text-muted">
+                <span class="material-icons-round" style="font-size:13px">account_balance_wallet</span>
+                الرصيد: {{ acc.balances?.[0]?.balance || '0' }}
+              </div>
             </div>
-            <div class="account-name">{{ acc.name }}</div>
-            <div class="account-balance">
-              <span class="material-icons-round">account_balance_wallet</span>
-              <span>الرصيد: {{ acc.balances?.[0]?.balance || '0' }}</span>
-            </div>
-          </div>
-        }
+          }
+        </div>
       </div>
     </div>
   }
 
-  <div class="summary-row">
-    <div class="summary-card purple">
-      <span class="material-icons-round">account_balance_wallet</span>
+  <!-- Summary -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(168,85,247,0.1);color:#a855f7">
+        <span class="material-icons-round">account_balance_wallet</span>
+      </div>
       <div>
-        <span class="num">{{ custodyAccounts().length }}</span
-        ><span class="lbl">حسابات العهد</span>
+        <div class="text-xl font-bold">{{ custodyAccounts().length }}</div>
+        <div class="text-xs text-muted">حسابات العهد</div>
       </div>
     </div>
-    <div class="summary-card amber">
-      <span class="material-icons-round">receipt</span>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+        <span class="material-icons-round">receipt</span>
+      </div>
       <div>
-        <span class="num">{{ records().length }}</span
-        ><span class="lbl">سجلات العهد</span>
+        <div class="text-xl font-bold">{{ records().length }}</div>
+        <div class="text-xs text-muted">سجلات العهد</div>
       </div>
     </div>
-    <div class="summary-card green">
-      <span class="material-icons-round">check_circle</span>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
+        <span class="material-icons-round">check_circle</span>
+      </div>
       <div>
-        <span class="num">{{ records().filter(r => r.status === 'active').length }}</span
-        ><span class="lbl">نشطة</span>
+        <div class="text-xl font-bold">{{ records().filter(r => r.status === 'active').length }}</div>
+        <div class="text-xs text-muted">نشطة</div>
       </div>
     </div>
-    <div class="summary-card blue">
-      <span class="material-icons-round">done_all</span>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
+        <span class="material-icons-round">done_all</span>
+      </div>
       <div>
-        <span class="num">{{ records().filter(r => r.status === 'settled').length }}</span
-        ><span class="lbl">مسوّاة</span>
+        <div class="text-xl font-bold">{{ records().filter(r => r.status === 'settled').length }}</div>
+        <div class="text-xs text-muted">مسوّاة</div>
       </div>
     </div>
   </div>
 
-  <!-- تبويبات -->
-  <div class="tabs-bar">
-    <button
-      class="tab-btn"
-      [class.active]="activeTab() === 'permanent'"
-      (click)="switchTab('permanent')"
-    >
-      <span class="material-icons-round">lock</span> دائمة
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-4">
+    <button class="valex-tab-btn" [class.active]="activeTab() === 'permanent'" (click)="switchTab('permanent')">
+      <span class="material-icons-round" style="font-size:16px">lock</span> دائمة
     </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab() === 'temporary'"
-      (click)="switchTab('temporary')"
-    >
-      <span class="material-icons-round">schedule</span> مؤقتة
+    <button class="valex-tab-btn" [class.active]="activeTab() === 'temporary'" (click)="switchTab('temporary')">
+      <span class="material-icons-round" style="font-size:16px">schedule</span> مؤقتة
     </button>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon purple">
+    <!-- Form -->
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(168,85,247,0.1);color:#a855f7">
             <span class="material-icons-round">account_balance_wallet</span>
           </div>
-          <h3>{{ editingId() ? 'تعديل العهدة' : 'إنشاء عهدة جديدة' }}</h3>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل العهدة' : 'إنشاء عهدة جديدة' }}</h3>
           @if (editingId()) {
-            <span class="edit-badge">تعديل</span>
+            <span class="valex-badge valex-badge-warning">تعديل</span>
           }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)">
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
           <span class="material-icons-round">close</span>
         </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label>نوع العهدة</label>
-          <select [(ngModel)]="form.custodyType">
-            <option value="permanent">دائمة</option>
-            <option value="temporary">مؤقتة</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>نوع المحتوى</label>
-          <select [(ngModel)]="form.contentType">
-            @for (ct of contentTypes; track ct.key) {
-              <option [value]="ct.key">{{ ct.label }}</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <label>اسم الطرف <span class="required">*</span></label
-          ><input [(ngModel)]="form.partyName" placeholder="مثال: أحمد محمد" />
-        </div>
-        <div class="form-group">
-          <label>نوع الطرف</label>
-          <select [(ngModel)]="form.partyType">
-            @for (pt of partyTypes; track pt.key) {
-              <option [value]="pt.key">{{ pt.label }}</option>
-            }
-          </select>
-        </div>
-        <div class="form-group full-width">
-          <label>الحساب المرتبط <span class="required">*</span></label>
-          <select [(ngModel)]="form.accountId" required (ngModelChange)="onAccountChange($event)">
-            <option [ngValue]="null" disabled>-- اختر حساب العهدة --</option>
-            @for (acc of filteredAccounts(); track acc.id) {
-              <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
-            }
-          </select>
-        </div>
-        @if (accountCurrencies().length > 0) {
-          <div class="form-group full-width">
-            <label>العملة <span class="required">*</span></label>
-            <div class="currency-chips">
-              @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button
-                  type="button"
-                  class="currency-chip"
-                  [class.selected]="selectedCurrencyId() === curr.currencyId"
-                  (click)="selectCurrency(curr.currencyId)"
-                >
-                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span
-                  ><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
-                </button>
-              }
-            </div>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label">نوع العهدة</label>
+            <select class="valex-select" [(ngModel)]="form.custodyType">
+              <option value="permanent">دائمة</option>
+              <option value="temporary">مؤقتة</option>
+            </select>
           </div>
-        }
-        <div class="form-group">
-          <label>المبلغ</label><input type="number" [(ngModel)]="form.amount" placeholder="0" />
-        </div>
-        <div class="form-group full-width">
-          <label>الوصف</label
-          ><textarea [(ngModel)]="form.description" rows="3" placeholder="وصف العهدة..."></textarea>
+          <div class="valex-form-group">
+            <label class="valex-label">نوع المحتوى</label>
+            <select class="valex-select" [(ngModel)]="form.contentType">
+              @for (ct of contentTypes; track ct.key) {
+                <option [value]="ct.key">{{ ct.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">اسم الطرف <span class="text-danger">*</span></label>
+            <input class="valex-input" [(ngModel)]="form.partyName" placeholder="مثال: أحمد محمد" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">نوع الطرف</label>
+            <select class="valex-select" [(ngModel)]="form.partyType">
+              @for (pt of partyTypes; track pt.key) {
+                <option [value]="pt.key">{{ pt.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الحساب المرتبط <span class="text-danger">*</span></label>
+            <select class="valex-select" [(ngModel)]="form.accountId" required (ngModelChange)="onAccountChange($event)">
+              <option [ngValue]="null" disabled>-- اختر حساب العهدة --</option>
+              @for (acc of filteredAccounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+              }
+            </select>
+          </div>
+          @if (accountCurrencies().length > 0) {
+            <div class="valex-form-group md:col-span-2">
+              <label class="valex-label">العملة <span class="text-danger">*</span></label>
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip"
+                    [class.selected]="selectedCurrencyId() === curr.currencyId"
+                    (click)="selectCurrency(curr.currencyId)">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+          <div class="valex-form-group">
+            <label class="valex-label">المبلغ</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.amount" placeholder="0" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الوصف</label>
+            <textarea class="valex-input" [(ngModel)]="form.description" rows="3" placeholder="وصف العهدة..."></textarea>
+          </div>
         </div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
           {{ editingId() ? 'حفظ التعديلات' : 'إنشاء العهدة' }}
         </button>
       </div>
     </div>
   } @else if (!filteredRecords().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">account_balance_wallet</span>
-      <p>لا توجد عهد {{ activeTab() === 'permanent' ? 'دائمة' : 'مؤقتة' }} بعد</p>
-      <p class="empty-hint">أنشئ عهدة جديدة لتتبع الأمانات والمبالغ المعهودة</p>
-    </div>
+    <app-empty-state icon="account_balance_wallet" [title]="'لا توجد عهد ' + (activeTab() === 'permanent' ? 'دائمة' : 'مؤقتة') + ' بعد'" subtitle="أنشئ عهدة جديدة لتتبع الأمانات والمبالغ المعهودة" />
   } @else {
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>رقم العهدة</th>
-          <th>اسم الطرف</th>
-          <th>نوع الطرف</th>
-          <th>نوع المحتوى</th>
-          <th>المبلغ</th>
-          <th>الحالة</th>
-          <th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (c of filteredRecords(); track c.id) {
-          <tr>
-            <td class="custody-num">{{ c.custodyNumber || c.id }}</td>
-            <td class="party-name">{{ c.partyName }}</td>
-            <td>
-              <span class="type-badge">{{ getPartyTypeLabel(c.partyType) }}</span>
-            </td>
-            <td>
-              <span class="content-badge">{{ getContentTypeLabel(c.contentType) }}</span>
-            </td>
-            <td class="amount-cell">{{ c.amount || 0 | number }}</td>
-            <td>
-              <span class="status-badge" [class]="getStatusClass(c.status)">{{
-                getStatusLabel(c.status)
-              }}</span>
-            </td>
-            <td>
-              <button class="action-btn" (click)="viewDetails(c)" title="عرض">
-                <span class="material-icons-round">visibility</span>
-              </button>
-              <button class="action-btn edit" (click)="openEdit(c)" title="تعديل">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="action-btn delete" (click)="remove(c)" title="حذف">
-                <span class="material-icons-round">delete</span>
-              </button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <div class="valex-card">
+      <div class="valex-table-wrapper">
+        <table class="valex-table">
+          <thead>
+            <tr>
+              <th>رقم العهدة</th>
+              <th>اسم الطرف</th>
+              <th>نوع الطرف</th>
+              <th>نوع المحتوى</th>
+              <th>المبلغ</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of filteredRecords(); track c.id) {
+              <tr>
+                <td><span class="valex-badge valex-badge-secondary font-mono">{{ c.custodyNumber || c.id }}</span></td>
+                <td class="font-semibold">{{ c.partyName }}</td>
+                <td><span class="valex-badge valex-badge-info">{{ getPartyTypeLabel(c.partyType) }}</span></td>
+                <td><span class="valex-badge valex-badge-secondary">{{ getContentTypeLabel(c.contentType) }}</span></td>
+                <td class="font-mono font-bold">{{ c.amount || 0 | number }}</td>
+                <td>
+                  <span class="valex-badge" [ngClass]="getStatusClass(c.status)">{{ getStatusLabel(c.status) }}</span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="valex-icon-btn text-info" (click)="viewDetails(c)" title="عرض">
+                      <span class="material-icons-round">visibility</span>
+                    </button>
+                    <button class="valex-icon-btn text-warning" (click)="openEdit(c)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="valex-icon-btn text-danger" (click)="remove(c)" title="حذف">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
   }
 
   <!-- تفاصيل العهدة والتسويات -->
   @if (viewingRecord()) {
-    <div class="modal-overlay" (click)="viewingRecord.set(null)">
-      <div class="modal-card wide" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon purple">
+    <div class="valex-modal-overlay" (click)="viewingRecord.set(null)">
+      <div class="valex-modal valex-modal-lg" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(168,85,247,0.1);color:#a855f7">
               <span class="material-icons-round">account_balance_wallet</span>
             </div>
             <div>
-              <h2>تفاصيل العهدة</h2>
-              <p>
-                {{ viewingRecord().partyName }} —
-                {{ viewingRecord().custodyNumber || viewingRecord().id }}
-              </p>
+              <h3 class="valex-modal-title">تفاصيل العهدة</h3>
+              <p class="text-sm text-muted">{{ viewingRecord().partyName }} — {{ viewingRecord().custodyNumber || viewingRecord().id }}</p>
             </div>
           </div>
-          <button class="close-btn" (click)="viewingRecord.set(null)">
+          <button class="valex-icon-btn" (click)="viewingRecord.set(null)">
             <span class="material-icons-round">close</span>
           </button>
         </div>
-        <div class="modal-body">
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span class="detail-label">نوع العهدة</span
-              ><span class="detail-value">{{
-                viewingRecord().custodyType === 'permanent' ? 'دائمة' : 'مؤقتة'
-              }}</span>
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            <div class="valex-card p-3">
+              <div class="text-xs text-muted mb-1">نوع العهدة</div>
+              <div class="font-semibold">{{ viewingRecord().custodyType === 'permanent' ? 'دائمة' : 'مؤقتة' }}</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">نوع المحتوى</span
-              ><span class="detail-value">{{
-                getContentTypeLabel(viewingRecord().contentType)
-              }}</span>
+            <div class="valex-card p-3">
+              <div class="text-xs text-muted mb-1">نوع المحتوى</div>
+              <div class="font-semibold">{{ getContentTypeLabel(viewingRecord().contentType) }}</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">نوع الطرف</span
-              ><span class="detail-value">{{ getPartyTypeLabel(viewingRecord().partyType) }}</span>
+            <div class="valex-card p-3">
+              <div class="text-xs text-muted mb-1">نوع الطرف</div>
+              <div class="font-semibold">{{ getPartyTypeLabel(viewingRecord().partyType) }}</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">المبلغ</span
-              ><span class="detail-value amount">{{ viewingRecord().amount || 0 | number }}</span>
+            <div class="valex-card p-3">
+              <div class="text-xs text-muted mb-1">المبلغ</div>
+              <div class="font-bold text-lg">{{ viewingRecord().amount || 0 | number }}</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">الحالة</span
-              ><span class="status-badge" [class]="getStatusClass(viewingRecord().status)">{{
-                getStatusLabel(viewingRecord().status)
-              }}</span>
+            <div class="valex-card p-3">
+              <div class="text-xs text-muted mb-1">الحالة</div>
+              <span class="valex-badge" [ngClass]="getStatusClass(viewingRecord().status)">{{ getStatusLabel(viewingRecord().status) }}</span>
             </div>
           </div>
           @if (viewingRecord().description) {
-            <div class="notes-section">
-              <span class="detail-label">الوصف</span>
-              <p>{{ viewingRecord().description }}</p>
+            <div class="valex-alert valex-alert-secondary mb-4">
+              <span class="material-icons-round">notes</span>
+              {{ viewingRecord().description }}
             </div>
           }
 
           <!-- التسويات -->
-          <div class="settlements-section">
-            <div class="settlements-header">
-              <h3><span class="material-icons-round">receipt_long</span> التسويات</h3>
-              @if (
-                viewingRecord().status === 'active' ||
-                viewingRecord().status === 'partially_settled'
-              ) {
-                <button class="add-btn small" (click)="openSettle()">
-                  <span class="material-icons-round">add</span> إضافة تسوية
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-bold flex items-center gap-2">
+                <span class="material-icons-round text-primary" style="font-size:18px">receipt_long</span>
+                التسويات
+              </h4>
+              @if (viewingRecord().status === 'active' || viewingRecord().status === 'partially_settled') {
+                <button class="valex-btn valex-btn-outline" style="height:30px;padding:0 12px;font-size:12px" (click)="openSettle()">
+                  <span class="material-icons-round" style="font-size:14px">add</span> إضافة تسوية
                 </button>
               }
             </div>
             @if (!settlements().length) {
-              <p class="no-settlements">لا توجد تسويات بعد</p>
+              <p class="text-muted text-sm">لا توجد تسويات بعد</p>
             } @else {
-              <table class="data-table settlements-table">
-                <thead>
-                  <tr>
-                    <th>المبلغ</th>
-                    <th>التاريخ</th>
-                    <th>ملاحظات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (s of settlements(); track s.id) {
+              <div class="valex-table-wrapper">
+                <table class="valex-table">
+                  <thead>
                     <tr>
-                      <td class="amount-cell">{{ s.amount || 0 | number }}</td>
-                      <td>{{ (s.settledAt || s.createdAt || '').split('T')[0] }}</td>
-                      <td>{{ s.notes || '—' }}</td>
+                      <th>المبلغ</th>
+                      <th>التاريخ</th>
+                      <th>ملاحظات</th>
                     </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (s of settlements(); track s.id) {
+                      <tr>
+                        <td class="font-mono font-bold">{{ s.amount || 0 | number }}</td>
+                        <td>{{ (s.settledAt || s.createdAt || '').split('T')[0] }}</td>
+                        <td class="text-muted">{{ s.notes || '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             }
           </div>
 
           <!-- نموذج تسوية -->
           @if (showSettleForm()) {
-            <div class="settle-form">
-              <h4>إضافة تسوية جديدة</h4>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>مبلغ التسوية <span class="required">*</span></label>
-                  <input type="number" [(ngModel)]="settleForm.amount" placeholder="0" />
+            <div class="valex-card p-4" style="border-top:2px solid var(--color-primary)">
+              <h4 class="font-bold mb-3">إضافة تسوية جديدة</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="valex-form-group">
+                  <label class="valex-label">مبلغ التسوية <span class="text-danger">*</span></label>
+                  <input class="valex-input" type="number" [(ngModel)]="settleForm.amount" placeholder="0" />
                 </div>
-                <div class="form-group">
-                  <label>تاريخ التسوية</label>
-                  <input type="date" [(ngModel)]="settleForm.settledAt" />
+                <div class="valex-form-group">
+                  <label class="valex-label">تاريخ التسوية</label>
+                  <input class="valex-input" type="date" [(ngModel)]="settleForm.settledAt" />
+                </div>
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">ملاحظات</label>
+                  <textarea class="valex-input" [(ngModel)]="settleForm.notes" rows="2" placeholder="ملاحظات..."></textarea>
                 </div>
               </div>
-              <div class="form-group">
-                <label>ملاحظات</label>
-                <textarea
-                  [(ngModel)]="settleForm.notes"
-                  rows="2"
-                  placeholder="ملاحظات..."
-                ></textarea>
-              </div>
-              <div class="settle-actions">
-                <button class="btn-save" (click)="submitSettle()">تأكيد التسوية</button>
-                <button class="btn-cancel" (click)="showSettleForm.set(false)">إلغاء</button>
+              <div class="flex justify-end gap-2 mt-3">
+                <button class="valex-btn valex-btn-outline" (click)="showSettleForm.set(false)">إلغاء</button>
+                <button class="valex-btn valex-btn-primary" (click)="submitSettle()">
+                  <span class="material-icons-round">save</span> تأكيد التسوية
+                </button>
               </div>
             </div>
           }
         </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" (click)="viewingRecord.set(null)">إغلاق</button>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="viewingRecord.set(null)">إغلاق</button>
         </div>
       </div>
     </div>

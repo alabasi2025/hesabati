@@ -1,242 +1,254 @@
 <div class="page-content">
-  <div class="page-header">
-    <div class="page-title-area">
-      <div class="page-icon blue"><span class="material-icons-round">account_balance</span></div>
+  <app-page-header title="إدارة البنوك" icon="account_balance" [breadcrumb]="['الرئيسية', 'البنوك']">
+    <button class="valex-btn valex-btn-primary" (click)="openAddAccount()">
+      <span class="material-icons-round">add</span>
+      بنك جديد
+    </button>
+  </app-page-header>
+
+  <!-- Summary -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
+        <span class="material-icons-round text-2xl">account_balance</span>
+      </div>
       <div>
-        <h2>إدارة البنوك</h2>
-        <p class="page-subtitle">{{ accounts().length }} بنك</p>
+        <div class="text-2xl font-bold">{{ accounts().length }}</div>
+        <div class="text-sm text-muted">إجمالي البنوك</div>
       </div>
     </div>
-    <div class="header-actions">
-      <button class="add-btn" (click)="openAddAccount()">
-        <span class="material-icons-round">add</span> بنك جديد
-      </button>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-secondary/10 text-secondary">
+        <span class="material-icons-round text-2xl">filter_list</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ filteredData().length }}</div>
+        <div class="text-sm text-muted">نتائج</div>
+      </div>
     </div>
   </div>
 
-  <div class="filter-tabs">
-    @for (t of getFilterTabs(); track t.value) {
-      <button
-        class="filter-tab"
-        [class.active]="activeFilter() === t.value"
-        (click)="activeFilter.set(t.value)"
-      >
-        <span class="material-icons-round tab-icon">{{ t.icon }}</span>
-        <span class="tab-label">{{ t.label }}</span>
-        <span class="tab-count">{{ t.count }}</span>
-      </button>
-    }
-  </div>
-
-  <!-- فلترة حسب الحساب -->
-  <div class="account-filter-row">
-    <select
-      class="account-filter-select"
-      [ngModel]="accountFilter()"
-      (ngModelChange)="accountFilter.set($event ? +$event : null)"
-    >
-      <option [ngValue]="null">كل الحسابات</option>
-      @for (acc of uniqueAccounts(); track acc.id) {
-        <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
-      }
-    </select>
+  <!-- Filter Tabs -->
+  <div class="valex-card mb-4">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2 items-center justify-between">
+        <div class="flex flex-wrap gap-2">
+          @for (t of getFilterTabs(); track t.value) {
+            <button
+              class="valex-tab-btn"
+              [class.active]="activeFilter() === t.value"
+              (click)="activeFilter.set(t.value)"
+            >
+              <span class="material-icons-round" style="font-size:16px">{{ t.icon }}</span>
+              {{ t.label }}
+              <span class="valex-badge valex-badge-secondary" style="font-size:10px;min-width:18px;height:18px;padding:0 4px">{{ t.count }}</span>
+            </button>
+          }
+        </div>
+        <select
+          class="valex-select"
+          style="min-width:180px"
+          [ngModel]="accountFilter()"
+          (ngModelChange)="accountFilter.set($event ? +$event : null)"
+        >
+          <option [ngValue]="null">كل الحسابات</option>
+          @for (acc of uniqueAccounts(); track acc.id) {
+            <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
+          }
+        </select>
+      </div>
+    </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state [loading]="loading()" />
   } @else if (showBankForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue">
+    <!-- Form -->
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
             <span class="material-icons-round">account_balance</span>
           </div>
-          <h3>{{ editingBankId() ? 'تعديل بنك' : 'إضافة بنك جديد' }}</h3>
+          <h3 class="valex-card-title">{{ editingBankId() ? 'تعديل بنك' : 'إضافة بنك جديد' }}</h3>
           @if (editingBankId()) {
-            <span class="edit-badge">تعديل</span>
+            <span class="valex-badge valex-badge-warning">تعديل</span>
           }
         </div>
-        <button class="close-btn" (click)="showBankForm.set(false)">
+        <button class="valex-icon-btn" (click)="showBankForm.set(false)">
           <span class="material-icons-round">close</span>
         </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group full-width">
-          <label>اسم البنك</label
-          ><input [(ngModel)]="bankForm.name" placeholder="مثال: كريمي الحديدة - جاري" />
-        </div>
-        <div class="form-group full-width">
-          <label>الحساب المرتبط</label>
-          <select
-            [(ngModel)]="bankForm.accountId"
-            (ngModelChange)="onAccountChange($event)"
-            required
-          >
-            <option [ngValue]="null" disabled>-- اختر الحساب --</option>
-            @for (acc of bankAccounts(); track acc.id) {
-              <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
-            }
-          </select>
-        </div>
-        @if (accountCurrencies().length > 0) {
-          <div class="form-group full-width">
-            <label>العملات المسموحة</label>
-            <div class="currency-chips">
-              @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button
-                  type="button"
-                  class="currency-chip"
-                  [class.selected]="isCurrencySelected(curr.currencyId)"
-                  [class.is-default]="defaultCurrencyId() === curr.currencyId"
-                  (click)="toggleCurrency(curr.currencyId)"
-                >
-                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span
-                  ><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
-                </button>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">اسم البنك</label>
+            <input class="valex-input" [(ngModel)]="bankForm.name" placeholder="مثال: كريمي الحديدة - جاري" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الحساب المرتبط</label>
+            <select
+              class="valex-select"
+              [(ngModel)]="bankForm.accountId"
+              (ngModelChange)="onAccountChange($event)"
+              required
+            >
+              <option [ngValue]="null" disabled>-- اختر الحساب --</option>
+              @for (acc of bankAccounts(); track acc.id) {
+                <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code }})</option>
               }
-            </div>
-            @if (selectedCurrencyIds().length > 0) {
-              <div class="default-currency-row">
-                <label>الافتراضية:</label>
-                @for (cid of selectedCurrencyIds(); track cid) {
+            </select>
+          </div>
+          @if (accountCurrencies().length > 0) {
+            <div class="valex-form-group md:col-span-2">
+              <label class="valex-label">العملات المسموحة</label>
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
                   <button
                     type="button"
-                    class="default-chip"
-                    [class.active]="defaultCurrencyId() === cid"
-                    (click)="setDefaultCurrency(cid)"
+                    class="currency-chip"
+                    [class.selected]="isCurrencySelected(curr.currencyId)"
+                    [class.is-default]="defaultCurrencyId() === curr.currencyId"
+                    (click)="toggleCurrency(curr.currencyId)"
                   >
-                    {{ (accountCurrencies().find(c => c.currencyId === cid))?.code || (accountCurrencies().find(c => c.currencyId === cid))?.currencyCode }}
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                    <span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
                   </button>
                 }
               </div>
-            }
+              @if (selectedCurrencyIds().length > 0) {
+                <div class="flex items-center gap-2 flex-wrap mt-2">
+                  <span class="text-sm text-muted font-semibold">الافتراضية:</span>
+                  @for (cid of selectedCurrencyIds(); track cid) {
+                    <button
+                      type="button"
+                      class="default-chip"
+                      [class.active]="defaultCurrencyId() === cid"
+                      (click)="setDefaultCurrency(cid)"
+                    >
+                      {{ (accountCurrencies().find(c => c.currencyId === cid))?.code || (accountCurrencies().find(c => c.currencyId === cid))?.currencyCode }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+          <div class="valex-form-group">
+            <label class="valex-label">رقم الحساب البنكي</label>
+            <input class="valex-input" [(ngModel)]="bankForm.accountNumber" placeholder="رقم الحساب البنكي" dir="ltr" />
           </div>
-        }
-        <div class="form-group">
-          <label>رقم الحساب البنكي</label
-          ><input [(ngModel)]="bankForm.accountNumber" placeholder="رقم الحساب البنكي" dir="ltr" />
-        </div>
-        <div class="form-group">
-          <label>البنك / المزود</label
-          ><input [(ngModel)]="bankForm.provider" placeholder="اسم البنك" />
-        </div>
-        <div class="form-group">
-          <label>المسؤول</label
-          ><input [(ngModel)]="bankForm.responsiblePerson" placeholder="اسم المسؤول" />
-        </div>
-        <div class="form-group full-width">
-          <label>ملاحظات</label><textarea [(ngModel)]="bankForm.notes" rows="2"></textarea>
+          <div class="valex-form-group">
+            <label class="valex-label">البنك / المزود</label>
+            <input class="valex-input" [(ngModel)]="bankForm.provider" placeholder="اسم البنك" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المسؤول</label>
+            <input class="valex-input" [(ngModel)]="bankForm.responsiblePerson" placeholder="اسم المسؤول" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">ملاحظات</label>
+            <textarea class="valex-input" [(ngModel)]="bankForm.notes" rows="2"></textarea>
+          </div>
         </div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showBankForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="saveAccount()">
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showBankForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="saveAccount()">
+          <span class="material-icons-round">save</span>
           {{ editingBankId() ? 'حفظ التعديلات' : 'إضافة البنك' }}
         </button>
       </div>
     </div>
   } @else if (!filteredData().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">account_balance</span>
-      <p>لا توجد بنوك</p>
-      <button class="add-btn small" (click)="openAddAccount()">
-        <span class="material-icons-round">add</span> إضافة بنك
-      </button>
-    </div>
+    <app-empty-state icon="account_balance" title="لا توجد بنوك" subtitle="أضف بنكاً جديداً" actionLabel="إضافة بنك" (addClick)="openAddAccount()" />
   } @else {
     <div class="accounts-grid">
       @for (acc of filteredData(); track acc.id) {
-        <div class="account-card" style="border-right-color: #2196f3">
-          <div class="card-header">
-            <div class="card-icon" style="background: linear-gradient(135deg, #2196f3, #2196f399)">
-              <span class="material-icons-round">account_balance</span>
+        <div class="valex-card account-card">
+          <div class="valex-card-body">
+            <div class="flex items-start justify-between mb-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                <span class="material-icons-round">account_balance</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="valex-icon-btn text-warning" (click)="openEditAccount(acc)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="valex-icon-btn text-danger" (click)="confirmDelete('bank', acc.id, acc.name)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
             </div>
-            <div class="card-actions">
-              <button class="action-btn edit" (click)="openEditAccount(acc)" title="تعديل">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button
-                class="action-btn delete"
-                (click)="confirmDelete('bank', acc.id, acc.name)"
-                title="حذف"
-              >
-                <span class="material-icons-round">delete</span>
-              </button>
-            </div>
-          </div>
-          <h3 class="card-name">{{ acc.name }}</h3>
-          <div class="card-badges">
-            @if (acc.accountLedgerCode) {
-              <span class="card-code-badge">{{ acc.accountLedgerCode }}</span>
-            }
-            @if (acc.code) {
-              <span class="card-code-badge">{{ acc.code }}</span>
-            }
-          </div>
-          @if (acc.accountNumber) {
-            <div class="card-detail">
-              <span class="material-icons-round">tag</span> {{ acc.accountNumber }}
-            </div>
-          }
-          @if (acc.provider) {
-            <div class="card-detail">
-              <span class="material-icons-round">business</span> {{ acc.provider }}
-            </div>
-          }
-          @if (acc.responsiblePerson) {
-            <div class="card-detail">
-              <span class="material-icons-round">person</span> {{ acc.responsiblePerson }}
-            </div>
-          }
-          @if (acc.balances?.length > 0) {
-            <div class="card-currencies">
-              @for (b of acc.balances; track b.currencyId) {
-                <span class="currency-mini-badge"
-                  >{{ b.currencySymbol || b.currencyCode }} {{ b.balance | number: '1.0-2' }}</span
-                >
+            <h3 class="font-bold text-base mb-2">{{ acc.name }}</h3>
+            <div class="flex flex-wrap gap-1 mb-2">
+              @if (acc.accountLedgerCode) {
+                <span class="valex-badge valex-badge-primary font-mono text-xs">{{ acc.accountLedgerCode }}</span>
+              }
+              @if (acc.code) {
+                <span class="valex-badge valex-badge-secondary font-mono text-xs">{{ acc.code }}</span>
               }
             </div>
-          } @else {
-            <div class="card-balance">
-              <span class="material-icons-round">account_balance_wallet</span
-              ><span class="balance-text">{{ getBalanceDisplay(acc) }}</span>
+            @if (acc.accountNumber) {
+              <div class="flex items-center gap-2 text-sm text-muted mb-1">
+                <span class="material-icons-round" style="font-size:15px">tag</span> {{ acc.accountNumber }}
+              </div>
+            }
+            @if (acc.provider) {
+              <div class="flex items-center gap-2 text-sm text-muted mb-1">
+                <span class="material-icons-round" style="font-size:15px">business</span> {{ acc.provider }}
+              </div>
+            }
+            @if (acc.responsiblePerson) {
+              <div class="flex items-center gap-2 text-sm text-muted mb-1">
+                <span class="material-icons-round" style="font-size:15px">person</span> {{ acc.responsiblePerson }}
+              </div>
+            }
+            @if (acc.balances?.length > 0) {
+              <div class="flex flex-wrap gap-1 mt-2">
+                @for (b of acc.balances; track b.currencyId) {
+                  <span class="valex-badge valex-badge-info font-mono text-xs">{{ b.currencySymbol || b.currencyCode }} {{ b.balance | number: '1.0-2' }}</span>
+                }
+              </div>
+            } @else {
+              <div class="flex items-center gap-2 mt-2 text-sm">
+                <span class="material-icons-round text-muted" style="font-size:15px">account_balance_wallet</span>
+                <span class="font-bold">{{ getBalanceDisplay(acc) }}</span>
+              </div>
+            }
+            <div class="flex items-center gap-2 mt-3 pt-3 border-t" style="border-color:var(--color-defaultborder)">
+              <span class="status-dot" [class.active]="acc.isActive"></span>
+              <span class="text-sm">{{ acc.isActive ? 'نشط' : 'متوقف' }}</span>
             </div>
-          }
-          <div class="card-status">
-            <span class="status-dot" [class.active]="acc.isActive"></span>
-            {{ acc.isActive ? 'نشط' : 'متوقف' }}
           </div>
         </div>
       }
     </div>
   }
 
+  <!-- Delete Confirmation Modal -->
   @if (showDeleteConfirm()) {
-    <div class="modal-overlay" (click)="showDeleteConfirm.set(false)">
-      <div class="modal-card small" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon red"><span class="material-icons-round">warning</span></div>
-            <h2>تأكيد الحذف</h2>
+    <div class="valex-modal-overlay" (click)="showDeleteConfirm.set(false)">
+      <div class="valex-modal valex-modal-sm" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-danger/10 text-danger">
+              <span class="material-icons-round">warning</span>
+            </div>
+            <h3 class="valex-modal-title">تأكيد الحذف</h3>
           </div>
-          <button class="close-btn" (click)="showDeleteConfirm.set(false)">
+          <button class="valex-icon-btn" (click)="showDeleteConfirm.set(false)">
             <span class="material-icons-round">close</span>
           </button>
         </div>
-        <div class="modal-body">
-          <p class="delete-msg">
-            هل أنت متأكد من حذف <strong>{{ deleteTarget()?.name }}</strong
-            >؟
-          </p>
-          <p class="delete-warn">هذا الإجراء لا يمكن التراجع عنه</p>
+        <div class="valex-modal-body">
+          <p class="font-semibold mb-2">هل أنت متأكد من حذف <strong>{{ deleteTarget()?.name }}</strong>؟</p>
+          <p class="text-danger text-sm">هذا الإجراء لا يمكن التراجع عنه</p>
         </div>
-        <div class="modal-footer">
-          <button class="btn-delete" (click)="executeDelete()">
-            <span class="material-icons-round">delete</span> حذف</button
-          ><button class="btn-cancel" (click)="showDeleteConfirm.set(false)">إلغاء</button>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showDeleteConfirm.set(false)">إلغاء</button>
+          <button class="valex-btn valex-btn-danger" (click)="executeDelete()">
+            <span class="material-icons-round">delete</span> حذف
+          </button>
         </div>
       </div>
     </div>

@@ -1,140 +1,224 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">fact_check</span> المطابقات</h2>
-    <button class="add-btn" (click)="openAdd()"><span class="material-icons-round">add</span> إنشاء مطابقة</button>
-  </div>
+  <app-page-header title="المطابقات" icon="fact_check" [breadcrumb]="['الرئيسية', 'المحاسبة', 'المطابقات']">
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span>
+      إنشاء مطابقة
+    </button>
+  </app-page-header>
 
-  <div class="summary-row">
-    <div class="summary-card blue">
-      <span class="material-icons-round">fact_check</span>
-      <div><span class="num">{{ reconciliations().length }}</span><span class="lbl">إجمالي المطابقات</span></div>
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-info/10 text-info">
+        <span class="material-icons-round text-2xl">fact_check</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ reconciliations().length }}</div>
+        <div class="text-sm text-muted">إجمالي المطابقات</div>
+      </div>
     </div>
-    <div class="summary-card green">
-      <span class="material-icons-round">check_circle</span>
-      <div><span class="num">{{ reconciliations().filter(r => r.status === 'completed').length }}</span><span class="lbl">مكتملة</span></div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
+        <span class="material-icons-round text-2xl">check_circle</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ reconciliations().filter(r => r.status === 'completed').length }}</div>
+        <div class="text-sm text-muted">مكتملة</div>
+      </div>
     </div>
-    <div class="summary-card amber">
-      <span class="material-icons-round">pending</span>
-      <div><span class="num">{{ reconciliations().filter(r => r.status === 'open' || r.status === 'in_progress').length }}</span><span class="lbl">قيد التنفيذ</span></div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+        <span class="material-icons-round text-2xl">pending</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ reconciliations().filter(r => r.status === 'open' || r.status === 'in_progress').length }}</div>
+        <div class="text-sm text-muted">قيد التنفيذ</div>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue"><span class="material-icons-round">fact_check</span></div>
-          <h3>{{ editingId() ? 'تعديل المطابقة' : 'إنشاء مطابقة جديدة' }}</h3>
-          @if (editingId()) { <span class="edit-badge">تعديل</span> }
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-info/10 text-info">
+            <span class="material-icons-round">fact_check</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل المطابقة' : 'إنشاء مطابقة جديدة' }}</h3>
+          @if (editingId()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
         </div>
-        <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
-      <div class="form-meta">
-        <div class="form-group"><label>عنوان المطابقة <span class="required">*</span></label><input [(ngModel)]="form.title" placeholder="مثال: مطابقة صندوق المحطة" /></div>
-        <div class="form-group"><label>نوع المطابقة</label>
-          <select [(ngModel)]="form.reconciliationType">
-            @for (rt of reconciliationTypes; track rt.key) { <option [value]="rt.key">{{ rt.label }}</option> }
-          </select>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group">
+            <label class="valex-label">عنوان المطابقة <span class="text-danger">*</span></label>
+            <input class="valex-input" [(ngModel)]="form.title" placeholder="مثال: مطابقة صندوق المحطة" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">نوع المطابقة</label>
+            <select class="valex-select" [(ngModel)]="form.reconciliationType">
+              @for (rt of reconciliationTypes; track rt.key) { <option [value]="rt.key">{{ rt.label }}</option> }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">بداية الفترة</label>
+            <input class="valex-input" type="date" [(ngModel)]="form.periodStart" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">نهاية الفترة</label>
+            <input class="valex-input" type="date" [(ngModel)]="form.periodEnd" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المبلغ المتوقع</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.expectedAmount" placeholder="0" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المبلغ الفعلي</label>
+            <input class="valex-input" type="number" [(ngModel)]="form.actualAmount" placeholder="0" />
+          </div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">ملاحظات</label>
+            <textarea class="valex-input" [(ngModel)]="form.notes" rows="3" placeholder="ملاحظات إضافية..."></textarea>
+          </div>
         </div>
-        <div class="form-group"><label>بداية الفترة</label><input type="date" [(ngModel)]="form.periodStart" /></div>
-        <div class="form-group"><label>نهاية الفترة</label><input type="date" [(ngModel)]="form.periodEnd" /></div>
-        <div class="form-group"><label>المبلغ المتوقع</label><input type="number" [(ngModel)]="form.expectedAmount" placeholder="0" /></div>
-        <div class="form-group"><label>المبلغ الفعلي</label><input type="number" [(ngModel)]="form.actualAmount" placeholder="0" /></div>
-        <div class="form-group full-width"><label>ملاحظات</label><textarea [(ngModel)]="form.notes" rows="3" placeholder="ملاحظات إضافية..."></textarea></div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إنشاء المطابقة' }}</button>
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">
+          <span class="material-icons-round">save</span>
+          {{ editingId() ? 'حفظ التعديلات' : 'إنشاء المطابقة' }}
+        </button>
       </div>
     </div>
   } @else if (!reconciliations().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">fact_check</span>
-      <p>لا توجد مطابقات بعد</p>
-      <p class="empty-hint">أنشئ مطابقة جديدة لمراجعة الأرصدة والحسابات</p>
-    </div>
+    <app-empty-state icon="fact_check" title="لا توجد مطابقات بعد" subtitle="أنشئ مطابقة جديدة لمراجعة الأرصدة والحسابات" actionLabel="إنشاء مطابقة" (addClick)="openAdd()" />
   } @else {
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>العنوان</th>
-          <th>النوع</th>
-          <th>الحالة</th>
-          <th>الطرف</th>
-          <th>الفترة</th>
-          <th>المتوقع</th>
-          <th>الفعلي</th>
-          <th>الفرق</th>
-          <th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (r of reconciliations(); track r.id) {
-          <tr>
-            <td class="title-cell">{{ r.title }}</td>
-            <td><span class="type-badge">{{ getTypeLabel(r.reconciliationType) }}</span></td>
-            <td><span class="status-badge" [class]="getStatusClass(r.status)">{{ getStatusLabel(r.status) }}</span></td>
-            <td>{{ r.withPerson || '—' }}</td>
-            <td class="period-cell">
-              @if (r.periodStart || r.periodEnd) {
-                <span class="period-range">{{ (r.periodStart || '').split('T')[0] }} - {{ (r.periodEnd || '').split('T')[0] }}</span>
-              } @else { — }
-            </td>
-            <td class="amount-cell">{{ (r.expectedAmount || 0) | number }}</td>
-            <td class="amount-cell">{{ (r.actualAmount || 0) | number }}</td>
-            <td class="amount-cell" [class.positive]="getDifference(r) >= 0" [class.negative]="getDifference(r) < 0">
-              {{ getDifference(r) | number }}
-            </td>
-            <td>
-              <button class="action-btn" (click)="viewDetails(r)" title="عرض"><span class="material-icons-round">visibility</span></button>
-              <button class="action-btn edit" (click)="openEdit(r)" title="تعديل"><span class="material-icons-round">edit</span></button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  }
-
-  <!-- تفاصيل المطابقة -->
-  @if (viewingItem()) {
-    <div class="modal-overlay" (click)="viewingItem.set(null)">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <div class="modal-title-row">
-            <div class="modal-icon green"><span class="material-icons-round">fact_check</span></div>
-            <div>
-              <h2>تفاصيل المطابقة</h2>
-              <p>{{ viewingItem().title }}</p>
-            </div>
-          </div>
-          <button class="close-btn" (click)="viewingItem.set(null)"><span class="material-icons-round">close</span></button>
-        </div>
-        <div class="modal-body">
-          <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">النوع</span><span class="detail-value">{{ getTypeLabel(viewingItem().reconciliationType) }}</span></div>
-            <div class="detail-item"><span class="detail-label">الحالة</span><span class="status-badge" [class]="getStatusClass(viewingItem().status)">{{ getStatusLabel(viewingItem().status) }}</span></div>
-            <div class="detail-item"><span class="detail-label">الطرف</span><span class="detail-value">{{ viewingItem().withPerson || '—' }}</span></div>
-            <div class="detail-item"><span class="detail-label">بداية الفترة</span><span class="detail-value">{{ (viewingItem().periodStart || '').split('T')[0] || '—' }}</span></div>
-            <div class="detail-item"><span class="detail-label">نهاية الفترة</span><span class="detail-value">{{ (viewingItem().periodEnd || '').split('T')[0] || '—' }}</span></div>
-            <div class="detail-item"><span class="detail-label">المبلغ المتوقع</span><span class="detail-value amount">{{ (viewingItem().expectedAmount || 0) | number }}</span></div>
-            <div class="detail-item"><span class="detail-label">المبلغ الفعلي</span><span class="detail-value amount">{{ (viewingItem().actualAmount || 0) | number }}</span></div>
-            <div class="detail-item"><span class="detail-label">الفرق</span><span class="detail-value amount" [class.positive]="getDifference(viewingItem()) >= 0" [class.negative]="getDifference(viewingItem()) < 0">{{ getDifference(viewingItem()) | number }}</span></div>
-          </div>
-          @if (viewingItem().notes) {
-            <div class="notes-section">
-              <span class="detail-label">ملاحظات</span>
-              <p>{{ viewingItem().notes }}</p>
-            </div>
-          }
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" (click)="viewingItem.set(null)">إغلاق</button>
-        </div>
+    <div class="valex-card">
+      <div class="valex-table-wrapper">
+        <table class="valex-table">
+          <thead>
+            <tr>
+              <th>العنوان</th>
+              <th>النوع</th>
+              <th>الحالة</th>
+              <th>الطرف</th>
+              <th>الفترة</th>
+              <th>المتوقع</th>
+              <th>الفعلي</th>
+              <th>الفرق</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of reconciliations(); track r.id) {
+              <tr>
+                <td class="font-medium">{{ r.title }}</td>
+                <td>
+                  <span class="valex-badge valex-badge-info">{{ getTypeLabel(r.reconciliationType) }}</span>
+                </td>
+                <td>
+                  <app-status-badge [status]="r.status" />
+                </td>
+                <td class="text-muted">{{ r.withPerson || '—' }}</td>
+                <td class="text-muted text-sm">
+                  @if (r.periodStart || r.periodEnd) {
+                    {{ (r.periodStart || '').split('T')[0] }} — {{ (r.periodEnd || '').split('T')[0] }}
+                  } @else { — }
+                </td>
+                <td class="td-amount">{{ (r.expectedAmount || 0) | number }}</td>
+                <td class="td-amount">{{ (r.actualAmount || 0) | number }}</td>
+                <td class="td-amount" [class.text-success]="getDifference(r) >= 0" [class.text-danger]="getDifference(r) < 0">
+                  {{ getDifference(r) | number }}
+                </td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="valex-icon-btn text-info" (click)="viewDetails(r)" title="عرض">
+                      <span class="material-icons-round">visibility</span>
+                    </button>
+                    <button class="valex-icon-btn text-warning" (click)="openEdit(r)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
     </div>
   }
 
-
+  <!-- Details Modal -->
+  @if (viewingItem()) {
+    <div class="valex-modal-overlay" (click)="viewingItem.set(null)">
+      <div class="valex-modal valex-modal-sm" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-success/10 text-success">
+              <span class="material-icons-round">fact_check</span>
+            </div>
+            <div>
+              <h2 class="valex-modal-title">تفاصيل المطابقة</h2>
+              <p class="text-xs text-muted">{{ viewingItem().title }}</p>
+            </div>
+          </div>
+          <button class="valex-icon-btn" (click)="viewingItem.set(null)">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="valex-form-group">
+              <div class="valex-label">النوع</div>
+              <div class="font-medium">{{ getTypeLabel(viewingItem().reconciliationType) }}</div>
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">الحالة</div>
+              <app-status-badge [status]="viewingItem().status" />
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">الطرف</div>
+              <div class="font-medium">{{ viewingItem().withPerson || '—' }}</div>
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">بداية الفترة</div>
+              <div>{{ (viewingItem().periodStart || '').split('T')[0] || '—' }}</div>
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">نهاية الفترة</div>
+              <div>{{ (viewingItem().periodEnd || '').split('T')[0] || '—' }}</div>
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">المبلغ المتوقع</div>
+              <div class="font-bold">{{ (viewingItem().expectedAmount || 0) | number }}</div>
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">المبلغ الفعلي</div>
+              <div class="font-bold">{{ (viewingItem().actualAmount || 0) | number }}</div>
+            </div>
+            <div class="valex-form-group">
+              <div class="valex-label">الفرق</div>
+              <div class="font-bold" [class.text-success]="getDifference(viewingItem()) >= 0" [class.text-danger]="getDifference(viewingItem()) < 0">
+                {{ getDifference(viewingItem()) | number }}
+              </div>
+            </div>
+          </div>
+          @if (viewingItem().notes) {
+            <div class="mt-3 pt-3 border-t border-[var(--color-defaultborder)]">
+              <div class="valex-label mb-1">ملاحظات</div>
+              <p class="text-sm text-muted">{{ viewingItem().notes }}</p>
+            </div>
+          }
+        </div>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="viewingItem.set(null)">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

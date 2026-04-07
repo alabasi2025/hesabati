@@ -1,103 +1,89 @@
-<div class="page-container">
+<div class="page-content">
+  <app-page-header
+    title="الأدوار والصلاحيات"
+    icon="admin_panel_settings"
+    [breadcrumb]="['الرئيسية', 'المستخدمون والصلاحيات', 'الأدوار والصلاحيات']"
+  >
+    <button class="valex-btn valex-btn-primary" (click)="openForm()">
+      <span class="material-icons-round">add</span>
+      دور جديد
+    </button>
+  </app-page-header>
 
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d purple">
-        <span class="material-icons-round">admin_panel_settings</span>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+        <span class="material-icons-round text-2xl">shield</span>
       </div>
       <div>
-        <h1 class="page-title">الأدوار والصلاحيات</h1>
-        <p class="page-subtitle">إدارة أدوار المستخدمين وصلاحياتهم والسقوف المالية</p>
+        <div class="text-2xl font-bold">{{ roles().length }}</div>
+        <div class="text-sm text-muted">الأدوار</div>
       </div>
     </div>
-    <div class="header-right">
-      <button class="btn-3d btn-primary" (click)="openForm()">
-        <span class="material-icons-round">add</span>
-        دور جديد
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== Stats Cards ===== -->
-  <div class="stats-row">
-    <div class="stat-card-3d purple">
-      <div class="sc-icon"><span class="material-icons-round">shield</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ roles().length }}</div>
-        <div class="sc-label">الأدوار</div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-info/10 text-info flex-shrink-0">
+        <span class="material-icons-round text-2xl">people</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ users().length }}</div>
+        <div class="text-sm text-muted">المستخدمون</div>
       </div>
     </div>
-    <div class="stat-card-3d blue">
-      <div class="sc-icon"><span class="material-icons-round">people</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ users().length }}</div>
-        <div class="sc-label">المستخدمون</div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+        <span class="material-icons-round text-2xl">assignment_ind</span>
       </div>
-    </div>
-    <div class="stat-card-3d green">
-      <div class="sc-icon"><span class="material-icons-round">assignment_ind</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ userRoles().length }}</div>
-        <div class="sc-label">تعيينات نشطة</div>
+      <div>
+        <div class="text-2xl font-bold">{{ userRoles().length }}</div>
+        <div class="text-sm text-muted">تعيينات نشطة</div>
       </div>
     </div>
   </div>
 
-  <!-- ===== قائمة الأدوار ===== -->
   @if (!showForm) {
     @if (roles().length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d">
-          <span class="material-icons-round">admin_panel_settings</span>
-        </div>
-        <h3>لا توجد أدوار</h3>
-        <p>أنشئ دوراً جديداً لتحديد صلاحيات المستخدمين</p>
-        <button class="btn-3d btn-primary" (click)="openForm()">
-          <span class="material-icons-round">add</span>
-          دور جديد
-        </button>
-      </div>
+      <app-empty-state icon="admin_panel_settings" title="لا توجد أدوار" message="أنشئ دوراً جديداً لتحديد صلاحيات المستخدمين"
+        actionLabel="دور جديد" (action)="openForm()" />
     } @else {
-      <div class="roles-grid">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
         @for (role of roles(); track role.id) {
-          <div class="role-card-3d">
-            <div class="rc-header">
-              <div class="rc-color-dot" [style.background]="role.color"></div>
-              <h3 class="rc-name">{{ role.name }}</h3>
-              <div class="rc-actions">
-                <button class="icon-btn edit-btn" (click)="editRole(role)" title="تعديل">
+          <div class="valex-card roles-card" [style.border-top-color]="role.color">
+            <div class="valex-card-header">
+              <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full flex-shrink-0" [style.background]="role.color"></div>
+                <h3 class="valex-card-title">{{ role.name }}</h3>
+                @if (role.isSystem) {
+                  <span class="valex-badge valex-badge-secondary">نظام</span>
+                }
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="valex-icon-btn" (click)="editRole(role)" title="تعديل">
                   <span class="material-icons-round">edit</span>
                 </button>
                 @if (!role.isSystem) {
-                  <button class="icon-btn delete-btn" (click)="deleteRole(role.id)" title="حذف">
+                  <button class="valex-icon-btn danger" (click)="deleteRole(role.id)" title="حذف">
                     <span class="material-icons-round">delete</span>
                   </button>
                 }
               </div>
             </div>
-            <p class="rc-desc">{{ role.description || 'بدون وصف' }}</p>
-            <div class="rc-perms">
-              @for (p of role.permissions; track $index) {
-                <span class="perm-badge">
-                  {{ getResourceLabel(p.resource) }} - {{ getActionLabel(p.action) }}
-                </span>
-              }
-              @if (!role.permissions || role.permissions.length === 0) {
-                <span class="perm-badge empty">بدون صلاحيات</span>
-              }
-            </div>
-            <div class="rc-footer">
-              <span class="rc-users">
-                <span class="material-icons-round">people</span>
-                {{ role.userCount || 0 }} مستخدم
-              </span>
-              <div class="rc-limits">
-                @if (role.maxVoucherAmount) {
-                  <span class="rc-limit">سقف: {{ role.maxVoucherAmount }}</span>
+            <div class="valex-card-body">
+              <p class="text-sm text-muted mb-3">{{ role.description || 'بدون وصف' }}</p>
+              <div class="flex flex-wrap gap-1 mb-3">
+                @for (p of role.permissions; track $index) {
+                  <span class="valex-badge valex-badge-primary text-xs">{{ getResourceLabel(p.resource) }} - {{ getActionLabel(p.action) }}</span>
                 }
-                @if (role.isSystem) {
-                  <span class="rc-system-badge">نظام</span>
+                @if (!role.permissions || role.permissions.length === 0) {
+                  <span class="valex-badge valex-badge-secondary text-xs">بدون صلاحيات</span>
+                }
+              </div>
+              <div class="flex items-center justify-between text-sm text-muted">
+                <span class="flex items-center gap-1">
+                  <span class="material-icons-round text-base">people</span>
+                  {{ role.userCount || 0 }} مستخدم
+                </span>
+                @if (role.maxVoucherAmount) {
+                  <span class="valex-badge valex-badge-warning text-xs">سقف: {{ role.maxVoucherAmount }}</span>
                 }
               </div>
             </div>
@@ -106,32 +92,33 @@
       </div>
     }
 
-    <!-- ===== تعيين الأدوار للمستخدمين ===== -->
-    <div class="assign-card-3d">
-      <div class="assign-header">
-        <div class="assign-icon">
-          <span class="material-icons-round">person_add</span>
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
+            <span class="material-icons-round">person_add</span>
+          </div>
+          <h3 class="valex-card-title">تعيين الأدوار للمستخدمين</h3>
         </div>
-        <h3>تعيين الأدوار للمستخدمين</h3>
       </div>
-      <div class="assign-body">
-        <div class="assign-form">
-          <div class="assign-field">
-            <label class="form-label">المستخدم</label>
-            <select class="form-select" [(ngModel)]="assignUserId">
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="valex-form-group">
+            <label class="valex-label">المستخدم</label>
+            <select class="valex-select" [(ngModel)]="assignUserId">
               <option value="">اختر المستخدم...</option>
               <option *ngFor="let u of users()" [value]="u.id">{{u.username}}</option>
             </select>
           </div>
-          <div class="assign-field">
-            <label class="form-label">الدور</label>
-            <select class="form-select" [(ngModel)]="assignRoleId">
+          <div class="valex-form-group">
+            <label class="valex-label">الدور</label>
+            <select class="valex-select" [(ngModel)]="assignRoleId">
               <option value="">اختر الدور...</option>
               <option *ngFor="let r of roles()" [value]="r.id">{{r.name}}</option>
             </select>
           </div>
-          <div class="assign-action">
-            <button class="btn-3d btn-primary" (click)="assignRole()">
+          <div class="flex items-end pb-1">
+            <button class="valex-btn valex-btn-primary w-full" (click)="assignRole()">
               <span class="material-icons-round">person_add</span>
               تعيين
             </button>
@@ -139,17 +126,15 @@
         </div>
 
         @if (userRoles().length > 0) {
-          <div class="user-roles-list">
+          <div class="flex flex-col gap-3">
             @for (ur of userRoles(); track ur.userId) {
-              <div class="ur-row-3d">
-                <div class="ur-avatar">
+              <div class="flex items-center gap-3 p-3 rounded-xl border border-[var(--border-color)]">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
                   <span class="material-icons-round">person</span>
                 </div>
-                <div class="ur-info">
-                  <div class="ur-name">{{ ur.userName }}</div>
-                </div>
-                <span class="ur-role-badge" [style.background]="ur.roleColor">{{ ur.roleName }}</span>
-                <button class="icon-btn delete-btn" (click)="removeRole(ur.userId)" title="إزالة">
+                <span class="flex-1 font-semibold text-sm">{{ ur.userName }}</span>
+                <span class="valex-badge text-xs font-bold" [style.background]="ur.roleColor + '20'" [style.color]="ur.roleColor">{{ ur.roleName }}</span>
+                <button class="valex-icon-btn danger" (click)="removeRole(ur.userId)" title="إزالة">
                   <span class="material-icons-round">close</span>
                 </button>
               </div>
@@ -160,88 +145,91 @@
     </div>
   }
 
-  <!-- ===== نموذج إنشاء/تعديل دور (Modal) ===== -->
   @if (showForm) {
-    <div class="modal-overlay" (click)="cancelForm()">
-      <div class="modal-3d form-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header purple-header">
-          <div class="modal-icon purple">
-            <span class="material-icons-round">{{ editId ? 'edit' : 'shield' }}</span>
+    <div class="valex-modal-overlay" (click)="cancelForm()">
+      <div class="valex-modal roles-form-modal" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">{{ editId ? 'edit' : 'shield' }}</span>
+            </div>
+            <div>
+              <h3>{{ editId ? 'تعديل الدور' : 'دور جديد' }}</h3>
+              <p>تحديد الصلاحيات والسقوف المالية</p>
+            </div>
           </div>
-          <div>
-            <h2>{{ editId ? 'تعديل الدور' : 'دور جديد' }}</h2>
-            <p class="modal-subtitle">تحديد الصلاحيات والسقوف المالية</p>
-          </div>
-          <button class="modal-close" (click)="cancelForm()">
+          <button class="valex-icon-btn" (click)="cancelForm()">
             <span class="material-icons-round">close</span>
           </button>
         </div>
-        <div class="modal-body">
-          <!-- Step 1: معلومات الدور -->
-          <div class="form-step">
-            <div class="step-header">
-              <div class="step-num">١</div>
-              <span>معلومات الدور</span>
+        <div class="valex-modal-body">
+          <div class="valex-card mb-4">
+            <div class="valex-card-header">
+              <h4 class="valex-card-title flex items-center gap-2">
+                <span class="register-step-num">١</span>
+                معلومات الدور
+              </h4>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">اسم الدور <span class="required">*</span></label>
-                <input type="text" class="form-input" [(ngModel)]="form.name" placeholder="مثال: محاسب">
-              </div>
-              <div class="form-group">
-                <label class="form-label">الوصف</label>
-                <input type="text" class="form-input" [(ngModel)]="form.description" placeholder="وصف اختياري">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">اللون</label>
-                <input type="color" class="form-color" [(ngModel)]="form.color">
-              </div>
-              <div class="form-group">
-                <label class="form-label">سقف السند الواحد</label>
-                <input type="number" class="form-input" [(ngModel)]="form.maxVoucherAmount" placeholder="0 = بدون حد">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">سقف يومي</label>
-                <input type="number" class="form-input" [(ngModel)]="form.maxDailyAmount" placeholder="0 = بدون حد">
+            <div class="valex-card-body">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="valex-form-group">
+                  <label class="valex-label">اسم الدور <span class="text-danger">*</span></label>
+                  <input class="valex-input" type="text" [(ngModel)]="form.name" placeholder="مثال: محاسب" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">الوصف</label>
+                  <input class="valex-input" type="text" [(ngModel)]="form.description" placeholder="وصف اختياري" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">اللون</label>
+                  <input class="inventory-color-input" type="color" [(ngModel)]="form.color" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">سقف السند الواحد</label>
+                  <input class="valex-input" type="number" [(ngModel)]="form.maxVoucherAmount" placeholder="0 = بدون حد" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">سقف يومي</label>
+                  <input class="valex-input" type="number" [(ngModel)]="form.maxDailyAmount" placeholder="0 = بدون حد" />
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Step 2: الصلاحيات -->
-          <div class="form-step">
-            <div class="step-header">
-              <div class="step-num">٢</div>
-              <span>الصلاحيات</span>
+          <div class="valex-card">
+            <div class="valex-card-header">
+              <h4 class="valex-card-title flex items-center gap-2">
+                <span class="register-step-num">٢</span>
+                الصلاحيات
+              </h4>
             </div>
-            <div class="perms-table-wrap">
-              <table class="perms-table">
+            <div class="valex-card-body p-0 overflow-x-auto">
+              <table class="valex-table roles-perms-table">
                 <thead>
                   <tr>
-                    <th class="res-col">المورد</th>
+                    <th>المورد</th>
                     @for (a of allActions; track a) {
-                      <th class="action-col">{{ getActionLabel(a) }}</th>
+                      <th>{{ getActionLabel(a) }}</th>
                     }
-                    <th class="action-col">الكل</th>
+                    <th>الكل</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (res of allResources; track res.key) {
                     <tr>
-                      <td class="res-cell">
-                        <span class="material-icons-round res-icon">{{ res.icon }}</span>
-                        {{ res.label }}
+                      <td>
+                        <div class="flex items-center gap-2">
+                          <span class="material-icons-round text-muted text-base">{{ res.icon }}</span>
+                          <span class="font-semibold text-sm">{{ res.label }}</span>
+                        </div>
                       </td>
                       @for (a of allActions; track a) {
-                        <td class="action-cell">
-                          <input type="checkbox" class="perm-checkbox" [checked]="hasPerm(res.key, a)" (change)="togglePerm(res.key, a)">
+                        <td class="text-center">
+                          <input type="checkbox" class="w-4 h-4 cursor-pointer" [checked]="hasPerm(res.key, a)" (change)="togglePerm(res.key, a)" />
                         </td>
                       }
-                      <td class="action-cell">
-                        <input type="checkbox" class="perm-checkbox all" [checked]="hasAllPerms(res.key)" (change)="toggleAllPerms(res.key)">
+                      <td class="text-center">
+                        <input type="checkbox" class="w-4 h-4 cursor-pointer" [checked]="hasAllPerms(res.key)" (change)="toggleAllPerms(res.key)" />
                       </td>
                     </tr>
                   }
@@ -250,9 +238,9 @@
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn-3d btn-ghost" (click)="cancelForm()">إلغاء</button>
-          <button class="btn-3d btn-primary" (click)="save()">
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="cancelForm()">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="save()">
             <span class="material-icons-round">{{ editId ? 'save' : 'add' }}</span>
             {{ editId ? 'تحديث' : 'حفظ' }}
           </button>
@@ -260,5 +248,4 @@
       </div>
     </div>
   }
-
 </div>

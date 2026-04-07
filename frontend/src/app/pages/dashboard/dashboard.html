@@ -1,24 +1,25 @@
 <div class="dashboard-page" [class.presentation-mode]="presentationMode()">
   <!-- CSS Background -->
   <app-css-background variant="dashboard"></app-css-background>
+
   @if (loading()) {
-    <div class="loading-container">
-      <div class="spinner"></div>
-      <p>جاري تحميل البيانات...</p>
+    <div class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p class="text-muted">جاري تحميل البيانات...</p>
     </div>
   } @else {
     <!-- Error Banner -->
     @if (loadError()) {
-      <div class="error-banner">
-        <span class="material-icons-round">warning</span>
-        <span>{{ loadError() }}</span>
-        <button class="retry-btn" (click)="retry()">
-          <span class="material-icons-round">refresh</span> إعادة المحاولة
+      <div class="valex-card mb-4 border-r-4 border-danger flex items-center gap-3 p-4">
+        <span class="material-icons-round text-danger">warning</span>
+        <span class="flex-1 text-sm">{{ loadError() }}</span>
+        <button class="valex-btn valex-btn-outline text-sm py-1 px-3" (click)="retry()">
+          <span class="material-icons-round text-sm">refresh</span> إعادة المحاولة
         </button>
       </div>
     }
 
-    <!-- 3D Stats Row -->
+    <!-- Stats Row -->
     <div class="stats-row-3d">
       <app-stat-card
         [value]="stations().length"
@@ -26,148 +27,153 @@
         icon="bolt"
         color="#f59e0b"
         (click)="navigate('stations')"
-      >
-      </app-stat-card>
+      ></app-stat-card>
       <app-stat-card
         [value]="employees().length"
         label="موظف"
         icon="groups"
         color="#3b82f6"
         (click)="navigate('employees')"
-      >
-      </app-stat-card>
+      ></app-stat-card>
       <app-stat-card
         [value]="accounts().length"
         label="حساب ومحفظة"
         icon="account_balance_wallet"
         color="#8b5cf6"
         (click)="navigate('accounts')"
-      >
-      </app-stat-card>
+      ></app-stat-card>
       <app-stat-card
         [value]="funds().length"
         label="صندوق"
         icon="inventory_2"
         color="#06b6d4"
         (click)="navigate('funds')"
-      >
-      </app-stat-card>
+      ></app-stat-card>
       <app-stat-card
         [value]="totalSalaries()"
         label="إجمالي الرواتب (ر.ي)"
         icon="payments"
         color="#ef4444"
-      >
-      </app-stat-card>
+      ></app-stat-card>
       <app-stat-card
         [value]="suppliers().length"
         label="مورد"
         icon="local_shipping"
         color="#22c55e"
         (click)="navigate('suppliers')"
-      >
-      </app-stat-card>
+      ></app-stat-card>
       <app-stat-card
         [value]="warehouses().length"
         label="مخزن"
         icon="warehouse"
         color="#f59e0b"
         (click)="navigate('warehouse')"
-      >
-      </app-stat-card>
+      ></app-stat-card>
     </div>
 
-    <!-- ملخص مالي -->
-    <div class="financial-summary">
-      <div class="fin-card fin-receipts">
-        <div class="fin-icon"><span class="material-icons-round">arrow_downward</span></div>
-        <div class="fin-info">
-          <span class="fin-label">إجمالي القبض</span>
-          <span class="fin-value">{{ formatNumber(totalReceipts()) }} <small>ر.ي</small></span>
+    <!-- Financial Summary -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(34,197,94,0.12); color: #22c55e;">
+          <span class="material-icons-round text-xl">arrow_downward</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-muted mb-1">إجمالي القبض</div>
+          <div class="font-bold text-sm truncate">{{ formatNumber(totalReceipts()) }} <span class="text-muted font-normal text-xs">ر.ي</span></div>
         </div>
       </div>
-      <div class="fin-card fin-payments">
-        <div class="fin-icon"><span class="material-icons-round">arrow_upward</span></div>
-        <div class="fin-info">
-          <span class="fin-label">إجمالي الصرف</span>
-          <span class="fin-value">{{ formatNumber(totalPayments()) }} <small>ر.ي</small></span>
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(239,68,68,0.12); color: #ef4444;">
+          <span class="material-icons-round text-xl">arrow_upward</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-muted mb-1">إجمالي الصرف</div>
+          <div class="font-bold text-sm truncate">{{ formatNumber(totalPayments()) }} <span class="text-muted font-normal text-xs">ر.ي</span></div>
         </div>
       </div>
-      <div class="fin-card fin-net">
-        <div class="fin-icon"><span class="material-icons-round">account_balance</span></div>
-        <div class="fin-info">
-          <span class="fin-label">صافي الأرصدة</span>
-          <span class="fin-value">{{ formatNumber(netBalance()) }} <small>ر.ي</small></span>
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(99,102,241,0.12); color: #6366f1;">
+          <span class="material-icons-round text-xl">account_balance</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-muted mb-1">صافي الأرصدة</div>
+          <div class="font-bold text-sm truncate">{{ formatNumber(netBalance()) }} <span class="text-muted font-normal text-xs">ر.ي</span></div>
         </div>
       </div>
-      <div class="fin-card fin-ops">
-        <div class="fin-icon"><span class="material-icons-round">receipt_long</span></div>
-        <div class="fin-info">
-          <span class="fin-label">عدد العمليات</span>
-          <span class="fin-value">{{ operationsCount() }}</span>
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
+          <span class="material-icons-round text-xl">receipt_long</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-muted mb-1">عدد العمليات</div>
+          <div class="font-bold text-sm">{{ operationsCount() }}</div>
         </div>
       </div>
     </div>
 
     <!-- Quick Actions -->
-    <div class="section-card">
-      <h3 class="section-title">
-        <span class="material-icons-round">flash_on</span> إجراءات سريعة
-      </h3>
-      <div class="quick-actions">
-        <button class="action-btn action-green" (click)="navigate('vouchers/receipt')">
-          <span class="material-icons-round">arrow_downward</span> سند قبض
-        </button>
-        <button class="action-btn action-red" (click)="navigate('vouchers/payment')">
-          <span class="material-icons-round">arrow_upward</span> سند صرف
-        </button>
-        <button class="action-btn action-purple" (click)="navigate('vouchers/transfer')">
-          <span class="material-icons-round">swap_horiz</span> تحويل
-        </button>
-        <button class="action-btn action-blue" (click)="navigate('employees')">
-          <span class="material-icons-round">person_add</span> إضافة موظف
-        </button>
-        <button class="action-btn action-amber" (click)="navigate('warehouse')">
-          <span class="material-icons-round">warehouse</span> المخازن
-        </button>
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <h3 class="valex-card-title">
+          <span class="material-icons-round text-warning">flash_on</span>
+          إجراءات سريعة
+        </h3>
+      </div>
+      <div class="valex-card-body">
+        <div class="flex flex-wrap gap-3">
+          <button class="valex-btn valex-btn-success" (click)="navigate('vouchers/receipt')">
+            <span class="material-icons-round">arrow_downward</span> سند قبض
+          </button>
+          <button class="valex-btn valex-btn-danger" (click)="navigate('vouchers/payment')">
+            <span class="material-icons-round">arrow_upward</span> سند صرف
+          </button>
+          <button class="valex-btn valex-btn-secondary" (click)="navigate('vouchers/transfer')">
+            <span class="material-icons-round">swap_horiz</span> تحويل
+          </button>
+          <button class="valex-btn valex-btn-primary" (click)="navigate('employees')">
+            <span class="material-icons-round">person_add</span> إضافة موظف
+          </button>
+          <button class="valex-btn valex-btn-warning" (click)="navigate('warehouse')">
+            <span class="material-icons-round">warehouse</span> المخازن
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Charts Section -->
     @if (chartData().length > 0) {
-      <div class="section-card charts-section">
-        <h3 class="section-title">
-          <span class="material-icons-round">bar_chart</span>
-          نظرة عامة
-        </h3>
-        <div class="charts-grid">
-          <div class="chart-wrapper">
-            <apx-chart
-              [series]="[{ name: 'العدد', data: chartData().map(d => d.value) }]"
-              [chart]="{
-                type: 'bar',
-                height: 300,
-                fontFamily: 'Tajawal',
-                toolbar: { show: false },
-              }"
-              [xaxis]="{ categories: chartData().map(d => d.label) }"
-              [colors]="chartData().map(d => d.color || '#6366f1')"
-              [plotOptions]="{ bar: { borderRadius: 6, columnWidth: '55%', distributed: true } }"
-              [dataLabels]="{ enabled: false }"
-              [grid]="{ borderColor: 'var(--border-color)', strokeDashArray: 4 }"
-              [tooltip]="{ theme: 'dark' }"
-            ></apx-chart>
-          </div>
-          <div class="chart-wrapper">
-            <apx-chart
-              [series]="chartData().map(d => d.value)"
-              [chart]="{ type: 'donut', height: 300, fontFamily: 'Tajawal' }"
-              [labels]="chartData().map(d => d.label)"
-              [colors]="chartData().map(d => d.color || '#6366f1')"
-              [legend]="{ position: 'bottom', fontFamily: 'Tajawal', fontWeight: 700 }"
-              [dataLabels]="{ enabled: true, style: { fontFamily: 'Tajawal', fontWeight: 700 } }"
-              [tooltip]="{ theme: 'dark' }"
-            ></apx-chart>
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">
+            <span class="material-icons-round text-primary">bar_chart</span>
+            نظرة عامة
+          </h3>
+        </div>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <apx-chart
+                [series]="[{ name: 'العدد', data: chartData().map(d => d.value) }]"
+                [chart]="{ type: 'bar', height: 300, fontFamily: 'Tajawal', toolbar: { show: false } }"
+                [xaxis]="{ categories: chartData().map(d => d.label) }"
+                [colors]="chartData().map(d => d.color || '#6366f1')"
+                [plotOptions]="{ bar: { borderRadius: 6, columnWidth: '55%', distributed: true } }"
+                [dataLabels]="{ enabled: false }"
+                [grid]="{ borderColor: 'var(--border-color)', strokeDashArray: 4 }"
+                [tooltip]="{ theme: 'dark' }"
+              ></apx-chart>
+            </div>
+            <div>
+              <apx-chart
+                [series]="chartData().map(d => d.value)"
+                [chart]="{ type: 'donut', height: 300, fontFamily: 'Tajawal' }"
+                [labels]="chartData().map(d => d.label)"
+                [colors]="chartData().map(d => d.color || '#6366f1')"
+                [legend]="{ position: 'bottom', fontFamily: 'Tajawal', fontWeight: 700 }"
+                [dataLabels]="{ enabled: true, style: { fontFamily: 'Tajawal', fontWeight: 700 } }"
+                [tooltip]="{ theme: 'dark' }"
+              ></apx-chart>
+            </div>
           </div>
         </div>
       </div>
@@ -175,179 +181,174 @@
 
     <!-- Advanced Charts -->
     @if (chartData().length > 1) {
-      <div class="section-card charts-section">
-        <h3 class="section-title">
-          <span class="material-icons-round">insights</span>
-          تحليلات متقدمة
-        </h3>
-        <div class="charts-grid charts-grid-3">
-          <div class="chart-wrapper">
-            <apx-chart
-              [series]="[{ name: 'الموارد', data: waterfallData().map(d => d.value) }]"
-              [chart]="{
-                type: 'bar',
-                height: 280,
-                fontFamily: 'Tajawal',
-                toolbar: { show: false },
-              }"
-              [xaxis]="{ categories: waterfallData().map(d => d.label) }"
-              [colors]="waterfallData().map(d => d.color || '#10b981')"
-              [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', distributed: true } }"
-              [dataLabels]="{ enabled: false }"
-              [tooltip]="{ theme: 'dark' }"
-            ></apx-chart>
-          </div>
-          <div class="chart-wrapper">
-            <apx-chart
-              [series]="[gaugeValue()]"
-              [chart]="{ type: 'radialBar', height: 280, fontFamily: 'Tajawal' }"
-              [plotOptions]="{
-                radialBar: {
-                  hollow: { size: '60%' },
-                  dataLabels: {
-                    name: { show: true, fontSize: '14px', fontFamily: 'Tajawal', offsetY: -10 },
-                    value: { show: true, fontSize: '28px', fontFamily: 'Tajawal', fontWeight: 800 },
-                  },
-                },
-              }"
-              [labels]="['إجمالي الأصول']"
-              [colors]="['#6366f1']"
-            ></apx-chart>
-          </div>
-          @if (treemapData().length > 0) {
-            <div class="chart-wrapper">
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">
+            <span class="material-icons-round text-info">insights</span>
+            تحليلات متقدمة
+          </h3>
+        </div>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
               <apx-chart
-                [series]="[{ data: treemapData().map(d => ({ x: d.label, y: d.value })) }]"
-                [chart]="{
-                  type: 'treemap',
-                  height: 280,
-                  fontFamily: 'Tajawal',
-                  toolbar: { show: false },
-                }"
-                [colors]="['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']"
-                [dataLabels]="{
-                  enabled: true,
-                  style: { fontSize: '13px', fontFamily: 'Tajawal', fontWeight: 700 },
-                }"
+                [series]="[{ name: 'الموارد', data: waterfallData().map(d => d.value) }]"
+                [chart]="{ type: 'bar', height: 280, fontFamily: 'Tajawal', toolbar: { show: false } }"
+                [xaxis]="{ categories: waterfallData().map(d => d.label) }"
+                [colors]="waterfallData().map(d => d.color || '#10b981')"
+                [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', distributed: true } }"
+                [dataLabels]="{ enabled: false }"
                 [tooltip]="{ theme: 'dark' }"
               ></apx-chart>
             </div>
-          }
+            <div>
+              <apx-chart
+                [series]="[gaugeValue()]"
+                [chart]="{ type: 'radialBar', height: 280, fontFamily: 'Tajawal' }"
+                [plotOptions]="{ radialBar: { hollow: { size: '60%' }, dataLabels: { name: { show: true, fontSize: '14px', fontFamily: 'Tajawal', offsetY: -10 }, value: { show: true, fontSize: '28px', fontFamily: 'Tajawal', fontWeight: 800 } } } }"
+                [labels]="['إجمالي الأصول']"
+                [colors]="['#6366f1']"
+              ></apx-chart>
+            </div>
+            @if (treemapData().length > 0) {
+              <div>
+                <apx-chart
+                  [series]="[{ data: treemapData().map(d => ({ x: d.label, y: d.value })) }]"
+                  [chart]="{ type: 'treemap', height: 280, fontFamily: 'Tajawal', toolbar: { show: false } }"
+                  [colors]="['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']"
+                  [dataLabels]="{ enabled: true, style: { fontSize: '13px', fontFamily: 'Tajawal', fontWeight: 700 } }"
+                  [tooltip]="{ theme: 'dark' }"
+                ></apx-chart>
+              </div>
+            }
+          </div>
         </div>
       </div>
     }
 
     <!-- Two Column Layout -->
-    <div class="two-cols">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
       <!-- Stations -->
-      <div class="section-card">
-        <h3 class="section-title"><span class="material-icons-round">bolt</span> المحطات</h3>
-        <div class="items-list">
-          @for (s of stations(); track s.id) {
-            <div class="list-item" (click)="navigate('stations')">
-              <div
-                class="item-icon"
-                [style.background]="biz.currentBusinessColor() + '18'"
-                [style.color]="biz.currentBusinessColor()"
-              >
-                <span class="material-icons-round">location_on</span>
+      <div class="valex-card">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">
+            <span class="material-icons-round text-warning">bolt</span> المحطات
+          </h3>
+        </div>
+        <div class="valex-card-body p-0">
+          <div class="divide-y divide-[var(--border-color)]">
+            @for (s of stations(); track s.id) {
+              <div class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors" (click)="navigate('stations')">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  [style.background]="biz.currentBusinessColor() + '18'"
+                  [style.color]="biz.currentBusinessColor()">
+                  <span class="material-icons-round text-sm">location_on</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium truncate">{{ s.name }}</div>
+                  <div class="text-xs text-muted truncate">{{ s.location || '' }}</div>
+                </div>
+                @if (s.isActive) {
+                  <span class="valex-badge valex-badge-success">نشطة</span>
+                } @else {
+                  <span class="valex-badge valex-badge-secondary">غير نشطة</span>
+                }
               </div>
-              <div class="item-info">
-                <span class="item-name">{{ s.name }}</span>
-                <span class="item-detail">{{ s.location || '' }}</span>
-              </div>
-              @if (s.isActive) {
-                <span class="badge badge-active">نشطة</span>
-              } @else {
-                <span class="badge badge-inactive">غير نشطة</span>
-              }
-            </div>
-          }
-          @if (stations().length === 0) {
-            <div class="empty-state">لا توجد محطات</div>
-          }
+            }
+            @if (stations().length === 0) {
+              <div class="text-center py-8 text-muted text-sm">لا توجد محطات</div>
+            }
+          </div>
         </div>
       </div>
 
       <!-- Partners -->
-      <div class="section-card">
-        <h3 class="section-title"><span class="material-icons-round">handshake</span> الشركاء</h3>
-        <div class="items-list">
-          @for (p of partners(); track p.id) {
-            <div class="list-item">
-              <div class="item-icon partner-icon">
-                <span class="material-icons-round">person</span>
+      <div class="valex-card">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">
+            <span class="material-icons-round text-primary">handshake</span> الشركاء
+          </h3>
+        </div>
+        <div class="valex-card-body p-0">
+          <div class="divide-y divide-[var(--border-color)]">
+            @for (p of partners(); track p.id) {
+              <div class="flex items-center gap-3 px-4 py-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
+                  <span class="material-icons-round text-sm">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium truncate">{{ p.fullName }}</div>
+                  <div class="text-xs text-muted">{{ p.role || 'شريك' }}</div>
+                </div>
+                <div class="font-bold text-sm" [style.color]="biz.currentBusinessColor()">
+                  {{ p.sharePercentage }}%
+                </div>
               </div>
-              <div class="item-info">
-                <span class="item-name">{{ p.fullName }}</span>
-                <span class="item-detail">{{ p.role || 'شريك' }}</span>
-              </div>
-              <div class="share-badge" [style.color]="biz.currentBusinessColor()">
-                {{ p.sharePercentage }}%
-              </div>
-            </div>
-          }
-          @if (partners().length === 0) {
-            <div class="empty-state">لا يوجد شركاء</div>
-          }
+            }
+            @if (partners().length === 0) {
+              <div class="text-center py-8 text-muted text-sm">لا يوجد شركاء</div>
+            }
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Warehouses Section -->
     @if (warehouses().length > 0) {
-      <div class="section-card">
-        <h3 class="section-title">
-          <span class="material-icons-round">warehouse</span> المخازن ({{ warehouses().length }})
-        </h3>
-        <div class="items-list">
-          @for (w of warehouses(); track w.id) {
-            <div class="list-item" (click)="navigate('warehouse')">
-              <div class="item-icon" style="background: #f59e0b18; color: #f59e0b">
-                <span class="material-icons-round">{{
-                  w.warehouseType === 'main' ? 'store' : 'local_gas_station'
-                }}</span>
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">
+            <span class="material-icons-round text-warning">warehouse</span>
+            المخازن <span class="valex-badge valex-badge-secondary ms-2">{{ warehouses().length }}</span>
+          </h3>
+        </div>
+        <div class="valex-card-body p-0">
+          <div class="divide-y divide-[var(--border-color)]">
+            @for (w of warehouses(); track w.id) {
+              <div class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors" (click)="navigate('warehouse')">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: #f59e0b18; color: #f59e0b">
+                  <span class="material-icons-round text-sm">{{ w.warehouseType === 'main' ? 'store' : 'local_gas_station' }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium truncate">{{ w.name }}</div>
+                  <div class="text-xs text-muted">{{ getWarehouseTypeLabel(w.warehouseType) }}{{ w.code ? ' — ' + w.code : '' }}</div>
+                </div>
+                @if (w.isActive) {
+                  <span class="valex-badge valex-badge-success">نشط</span>
+                } @else {
+                  <span class="valex-badge valex-badge-secondary">غير نشط</span>
+                }
               </div>
-              <div class="item-info">
-                <span class="item-name">{{ w.name }}</span>
-                <span class="item-detail"
-                  >{{ getWarehouseTypeLabel(w.warehouseType)
-                  }}{{ w.code ? ' — ' + w.code : '' }}</span
-                >
-              </div>
-              @if (w.isActive) {
-                <span class="badge badge-active">نشط</span>
-              } @else {
-                <span class="badge badge-inactive">غير نشط</span>
-              }
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
     }
 
     <!-- Pending Accounts -->
     @if (pendingAccounts().length > 0) {
-      <div class="section-card pending-section">
-        <h3 class="section-title pending-title">
-          <span class="material-icons-round">warning</span>
-          حسابات معلقة ({{ pendingAccounts().length }})
-        </h3>
-        <div class="items-list">
-          @for (p of pendingAccounts(); track p.id) {
-            <div class="list-item pending-item">
-              <div class="item-icon pending-icon">
-                <span class="material-icons-round">error_outline</span>
+      <div class="valex-card mb-6 border-r-4 border-warning">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title text-warning">
+            <span class="material-icons-round">warning</span>
+            حسابات معلقة <span class="valex-badge valex-badge-warning ms-2">{{ pendingAccounts().length }}</span>
+          </h3>
+        </div>
+        <div class="valex-card-body p-0">
+          <div class="divide-y divide-[var(--border-color)]">
+            @for (p of pendingAccounts(); track p.id) {
+              <div class="flex items-center gap-3 px-4 py-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-warning/10 text-warning">
+                  <span class="material-icons-round text-sm">error_outline</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium truncate">{{ p.personOrEntity }}</div>
+                  <div class="text-xs text-muted truncate">{{ p.description }}</div>
+                </div>
+                <span class="valex-badge valex-badge-warning">{{ p.status === 'pending' ? 'معلق' : p.status }}</span>
               </div>
-              <div class="item-info">
-                <span class="item-name">{{ p.personOrEntity }}</span>
-                <span class="item-detail">{{ p.description }}</span>
-              </div>
-              <span class="badge badge-pending">{{
-                p.status === 'pending' ? 'معلق' : p.status
-              }}</span>
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
     }

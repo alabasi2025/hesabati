@@ -1,393 +1,211 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">warehouse</span> المخازن</h2>
-    <div class="header-actions">
-      <button class="add-btn secondary" (click)="openAddType()">
-        <span class="material-icons-round">category</span> إدارة التصنيفات
-      </button>
-      <button class="add-btn" (click)="openAdd()">
-        <span class="material-icons-round">add</span> إضافة مخزن
-      </button>
-    </div>
-  </div>
+  <app-page-header
+    title="المخازن"
+    icon="warehouse"
+    [breadcrumb]="['الرئيسية', 'المخزون والمخازن', 'المخزن']"
+  >
+    <button class="valex-btn valex-btn-outline" (click)="openAddType()">
+      <span class="material-icons-round">category</span> إدارة التصنيفات
+    </button>
+    <button class="valex-btn valex-btn-primary" (click)="openAdd()">
+      <span class="material-icons-round">add</span> إضافة مخزن
+    </button>
+  </app-page-header>
 
-  <!-- ملخص الإحصائيات -->
-  <div class="summary-row">
-    <div class="summary-card amber">
-      <span class="material-icons-round">warehouse</span>
-      <div>
-        <span class="num">{{ warehouses().length }}</span
-        ><span class="lbl">إجمالي المخازن</span>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+        <span class="material-icons-round">warehouse</span>
       </div>
+      <div><div class="text-xl font-bold">{{ warehouses().length }}</div><div class="text-xs text-muted">إجمالي المخازن</div></div>
     </div>
-    <div class="summary-card blue">
-      <span class="material-icons-round">store</span>
-      <div>
-        <span class="num">{{ mainCount() }}</span
-        ><span class="lbl">مخازن رئيسية</span>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+        <span class="material-icons-round">store</span>
       </div>
+      <div><div class="text-xl font-bold">{{ mainCount() }}</div><div class="text-xs text-muted">مخازن رئيسية</div></div>
     </div>
-    <div class="summary-card green">
-      <span class="material-icons-round">local_gas_station</span>
-      <div>
-        <span class="num">{{ stationCount() }}</span
-        ><span class="lbl">مخازن محطات</span>
+    <div class="valex-card p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+        <span class="material-icons-round">local_gas_station</span>
       </div>
+      <div><div class="text-xl font-bold">{{ stationCount() }}</div><div class="text-xs text-muted">مخازن محطات</div></div>
     </div>
-    @if (subCount() > 0) {
-      <div class="summary-card purple">
-        <span class="material-icons-round">inventory_2</span>
-        <div>
-          <span class="num">{{ subCount() }}</span
-          ><span class="lbl">مخازن فرعية</span>
-        </div>
-      </div>
-    }
     @if (warehouseTypes().length > 0) {
-      <div class="summary-card teal">
-        <span class="material-icons-round">category</span>
-        <div>
-          <span class="num">{{ warehouseTypes().length }}</span
-          ><span class="lbl">تصنيف</span>
+      <div class="valex-card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-info/10 text-info flex-shrink-0">
+          <span class="material-icons-round">category</span>
         </div>
+        <div><div class="text-xl font-bold">{{ warehouseTypes().length }}</div><div class="text-xs text-muted">تصنيف</div></div>
       </div>
     }
   </div>
 
-  <!-- فلاتر النوع -->
-  <div class="filter-tabs">
-    <button
-      class="filter-tab"
-      [class.active]="filterType() === 'all'"
-      (click)="filterType.set('all'); filterSubType.set('all')"
-    >
-      الكل ({{ warehouses().length }})
-    </button>
-    <button
-      class="filter-tab"
-      [class.active]="filterType() === 'main'"
-      (click)="filterType.set('main'); filterSubType.set('all')"
-    >
-      رئيسي ({{ mainCount() }})
-    </button>
-    <button
-      class="filter-tab"
-      [class.active]="filterType() === 'station'"
-      (click)="filterType.set('station'); filterSubType.set('all')"
-    >
-      محطة ({{ stationCount() }})
-    </button>
-    @if (subCount() > 0) {
-      <button
-        class="filter-tab"
-        [class.active]="filterType() === 'sub'"
-        (click)="filterType.set('sub'); filterSubType.set('all')"
-      >
-        فرعي ({{ subCount() }})
-      </button>
-    }
-  </div>
-
-  <!-- فلاتر التصنيف الفرعي -->
-  @if (subTypeFilters().length > 0) {
-    <div class="sub-filter-row">
-      <span class="sub-filter-label"
-        ><span class="material-icons-round">category</span> التصنيف:</span
-      >
-      <button
-        class="sub-filter-chip"
-        [class.active]="filterSubType() === 'all'"
-        (click)="filterSubType.set('all')"
-      >
-        الكل
-      </button>
-      @for (sf of subTypeFilters(); track sf.key) {
-        <button
-          class="sub-filter-chip"
-          [class.active]="filterSubType() === sf.key"
-          (click)="filterSubType.set(sf.key)"
-          [style.--chip-color]="sf.color"
-        >
-          <span class="material-icons-round" style="font-size: 14px">{{ sf.icon }}</span>
-          {{ sf.label }} ({{ sf.count }})
-        </button>
-      }
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        <button class="valex-tab-btn" [class.active]="filterType() === 'all'" (click)="filterType.set('all'); filterSubType.set('all')">الكل ({{ warehouses().length }})</button>
+        <button class="valex-tab-btn" [class.active]="filterType() === 'main'" (click)="filterType.set('main'); filterSubType.set('all')">رئيسي ({{ mainCount() }})</button>
+        <button class="valex-tab-btn" [class.active]="filterType() === 'station'" (click)="filterType.set('station'); filterSubType.set('all')">محطة ({{ stationCount() }})</button>
+        @if (subCount() > 0) {
+          <button class="valex-tab-btn" [class.active]="filterType() === 'sub'" (click)="filterType.set('sub'); filterSubType.set('all')">فرعي ({{ subCount() }})</button>
+        }
+        @if (subTypeFilters().length > 0) {
+          @for (sf of subTypeFilters(); track sf.key) {
+            <button class="valex-tab-btn" [class.active]="filterSubType() === sf.key" (click)="filterSubType.set(sf.key)">
+              <span class="material-icons-round text-base">{{ sf.icon }}</span>
+              {{ sf.label }} ({{ sf.count }})
+            </button>
+          }
+        }
+      </div>
     </div>
-  }
+  </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state />
   } @else if (showForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon amber"><span class="material-icons-round">warehouse</span></div>
-          <h3>{{ editingId() ? 'تعديل مخزن' : 'إضافة مخزن جديد' }}</h3>
-          @if (editingId()) {
-            <span class="edit-badge">تعديل</span>
-          }
-        </div>
-        <button class="close-btn" (click)="showForm.set(false)">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="form-meta">
-        @if (!editingId()) {
-          <div class="form-group full-width">
-            <label>حساب التحكم <span class="required">*</span></label>
-            <select
-              [(ngModel)]="form.accountId"
-              [class.error]="!form.accountId"
-              (ngModelChange)="onAccountChange($event)"
-            >
-              <option [ngValue]="null">-- اختر حساب المخازن --</option>
-              @for (a of warehouseAccounts(); track a.id) {
-                <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
-              }
-            </select>
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10 text-warning">
+            <span class="material-icons-round">warehouse</span>
           </div>
-        }
-        @if (accountCurrencies().length > 0) {
-          <div class="form-group full-width">
-            <label>العملات <span class="required">*</span></label>
-            <div class="currency-chips">
-              @for (curr of accountCurrencies(); track curr.currencyId) {
-                <button
-                  type="button"
-                  class="currency-chip"
-                  [class.selected]="selectedCurrencyIds().includes(curr.currencyId)"
-                  (click)="toggleCurrency(curr.currencyId)"
-                >
-                  <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span
-                  ><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل مخزن' : 'إضافة مخزن جديد' }}</h3>
+          @if (editingId()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
+        </div>
+        <button class="valex-icon-btn" (click)="showForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          @if (!editingId()) {
+            <div class="valex-form-group xl:col-span-3">
+              <label class="valex-label">حساب التحكم <span class="text-danger">*</span></label>
+              <select class="valex-select" [(ngModel)]="form.accountId" [class.border-danger]="!form.accountId" (ngModelChange)="onAccountChange($event)">
+                <option [ngValue]="null">-- اختر حساب المخازن --</option>
+                @for (a of warehouseAccounts(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.code }} - {{ a.name }}</option>
+                }
+              </select>
+            </div>
+          }
+          @if (accountCurrencies().length > 0) {
+            <div class="valex-form-group xl:col-span-3">
+              <label class="valex-label">العملات <span class="text-danger">*</span></label>
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  <button type="button" class="currency-chip" [class.selected]="selectedCurrencyIds().includes(curr.currencyId)" (click)="toggleCurrency(curr.currencyId)">
+                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span><span class="chip-code">{{ curr.code || curr.currencyCode }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="valex-form-group xl:col-span-3">
+              <label class="valex-label">العملة الافتراضية</label>
+              <div class="flex flex-wrap gap-2 mt-1">
+                @for (curr of accountCurrencies(); track curr.currencyId) {
+                  @if (selectedCurrencyIds().includes(curr.currencyId)) {
+                    <button type="button" class="currency-chip" [class.default]="defaultCurrencyId() === curr.currencyId" (click)="setDefaultCurrency(curr.currencyId)">
+                      <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
+                      @if (defaultCurrencyId() === curr.currencyId) { <span class="chip-badge">افتراضي</span> }
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          }
+          <div class="valex-form-group"><label class="valex-label">اسم المخزن <span class="text-danger">*</span></label><input class="valex-input" [(ngModel)]="form.name" placeholder="اسم المخزن" /></div>
+          <div class="valex-form-group"><label class="valex-label">النوع</label><select class="valex-select" [(ngModel)]="form.warehouseType"><option value="main">رئيسي</option><option value="station">محطة</option><option value="sub">فرعي</option></select></div>
+          <div class="valex-form-group"><label class="valex-label">التصنيف الفرعي</label><select class="valex-select" [(ngModel)]="form.subType"><option value="">بدون تصنيف</option>@for (t of warehouseTypes(); track t.id) { <option [value]="t.subTypeKey">{{ t.name }}</option> }</select></div>
+          <div class="valex-form-group"><label class="valex-label">المحطة (اختياري)</label><select class="valex-select" [(ngModel)]="form.stationId"><option [ngValue]="null">بدون محطة</option>@for (s of stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }</select></div>
+          <div class="valex-form-group"><label class="valex-label">المسؤول</label><input class="valex-input" [(ngModel)]="form.responsiblePerson" placeholder="اسم المسؤول" /></div>
+          <div class="valex-form-group"><label class="valex-label">الموقع</label><input class="valex-input" [(ngModel)]="form.location" placeholder="موقع المخزن" /></div>
+          <div class="valex-form-group xl:col-span-3"><label class="valex-label">ملاحظات</label><textarea class="valex-input" [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea></div>
+        </div>
+      </div>
+      <div class="valex-card-footer flex justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="save()">{{ editingId() ? 'حفظ التعديلات' : 'إضافة المخزن' }}</button>
+      </div>
+    </div>
+  } @else if (showTypeForm()) {
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+            <span class="material-icons-round">category</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h3>
+          @if (editingTypeId()) { <span class="valex-badge valex-badge-warning">تعديل</span> }
+        </div>
+        <button class="valex-icon-btn" (click)="showTypeForm.set(false)"><span class="material-icons-round">close</span></button>
+      </div>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="valex-form-group"><label class="valex-label">اسم التصنيف</label><input class="valex-input" [(ngModel)]="typeForm.name" placeholder="مثال: مخزن أدوات" /></div>
+          <div class="valex-form-group"><label class="valex-label">المفتاح</label><input class="valex-input font-mono" [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: tools" dir="ltr" /></div>
+          <div class="valex-form-group md:col-span-2"><label class="valex-label">الوصف</label><textarea class="valex-input" [(ngModel)]="typeForm.description" rows="2" placeholder="وصف التصنيف..."></textarea></div>
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">الأيقونة</label>
+            <div class="inventory-icon-picker">
+              @for (icon of availableIcons; track icon) {
+                <button class="inventory-icon-btn" [class.selected]="typeForm.icon === icon" (click)="typeForm.icon = icon">
+                  <span class="material-icons-round">{{ icon }}</span>
                 </button>
               }
             </div>
           </div>
-          <div class="form-group full-width">
-            <label>العملة الافتراضية</label>
-            <div class="currency-chips">
-              @for (curr of accountCurrencies(); track curr.currencyId) {
-                @if (selectedCurrencyIds().includes(curr.currencyId)) {
-                  <button
-                    type="button"
-                    class="currency-chip"
-                    [class.default]="defaultCurrencyId() === curr.currencyId"
-                    (click)="setDefaultCurrency(curr.currencyId)"
-                  >
-                    <span class="chip-symbol">{{ curr.symbol || curr.currencyCode }}</span>
-                    @if (defaultCurrencyId() === curr.currencyId) {
-                      <span class="chip-badge">افتراضي</span>
-                    }
-                  </button>
-                }
+          <div class="valex-form-group md:col-span-2">
+            <label class="valex-label">اللون</label>
+            <div class="flex flex-wrap gap-2">
+              @for (c of ['#4CAF50','#2196F3','#FF9800','#9C27B0','#607D8B','#E91E63','#00BCD4','#F44336','#795548','#3F51B5']; track c) {
+                <button class="sidebar-color-option" [style.background]="c" [class.selected]="typeForm.color === c" (click)="typeForm.color = c"></button>
               }
             </div>
           </div>
-        }
-        <div class="form-group">
-          <label>اسم المخزن <span class="required">*</span></label
-          ><input [(ngModel)]="form.name" placeholder="اسم المخزن" />
-        </div>
-        <div class="form-group">
-          <label>النوع</label>
-          <select [(ngModel)]="form.warehouseType">
-            <option value="main">رئيسي</option>
-            <option value="station">محطة</option>
-            <option value="sub">فرعي</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>التصنيف الفرعي</label>
-          <select [(ngModel)]="form.subType">
-            <option value="">بدون تصنيف</option>
-            @for (t of warehouseTypes(); track t.id) {
-              <option [value]="t.subTypeKey">{{ t.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <label>المحطة (اختياري)</label>
-          <select [(ngModel)]="form.stationId">
-            <option [ngValue]="null">بدون محطة</option>
-            @for (s of stations(); track s.id) {
-              <option [ngValue]="s.id">{{ s.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <label>المسؤول</label
-          ><input [(ngModel)]="form.responsiblePerson" placeholder="اسم المسؤول" />
-        </div>
-        <div class="form-group">
-          <label>الموقع</label><input [(ngModel)]="form.location" placeholder="موقع المخزن" />
-        </div>
-        <div class="form-group full-width">
-          <label>ملاحظات</label
-          ><textarea [(ngModel)]="form.notes" rows="2" placeholder="ملاحظات..."></textarea>
         </div>
       </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="save()">
-          {{ editingId() ? 'حفظ التعديلات' : 'إضافة المخزن' }}
-        </button>
-      </div>
-    </div>
-  } @else if (showTypeForm()) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon purple"><span class="material-icons-round">category</span></div>
-          <h3>{{ editingTypeId() ? 'تعديل تصنيف' : 'إضافة تصنيف جديد' }}</h3>
-          @if (editingTypeId()) {
-            <span class="edit-badge">تعديل</span>
-          }
-        </div>
-        <button class="close-btn" (click)="showTypeForm.set(false)">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label>اسم التصنيف</label
-          ><input [(ngModel)]="typeForm.name" placeholder="مثال: مخزن أدوات" />
-        </div>
-        <div class="form-group">
-          <label>المفتاح</label
-          ><input [(ngModel)]="typeForm.subTypeKey" placeholder="مثال: tools" dir="ltr" />
-        </div>
-        <div class="form-group full-width">
-          <label>الوصف</label
-          ><textarea
-            [(ngModel)]="typeForm.description"
-            rows="2"
-            placeholder="وصف التصنيف..."
-          ></textarea>
-        </div>
-        <div class="form-group">
-          <label>الأيقونة</label>
-          <div class="icon-picker">
-            @for (icon of availableIcons; track icon) {
-              <button
-                class="icon-option"
-                [class.selected]="typeForm.icon === icon"
-                (click)="typeForm.icon = icon"
-              >
-                <span class="material-icons-round">{{ icon }}</span>
-              </button>
-            }
-          </div>
-        </div>
-        <div class="form-group">
-          <label>اللون</label>
-          <div class="color-picker">
-            @for (
-              c of [
-                '#4CAF50',
-                '#2196F3',
-                '#FF9800',
-                '#9C27B0',
-                '#607D8B',
-                '#E91E63',
-                '#00BCD4',
-                '#F44336',
-                '#795548',
-                '#3F51B5',
-              ];
-              track c
-            ) {
-              <button
-                class="color-option"
-                [style.background]="c"
-                [class.selected]="typeForm.color === c"
-                (click)="typeForm.color = c"
-              ></button>
-            }
-          </div>
-        </div>
-      </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showTypeForm.set(false)">إلغاء</button>
-        <button class="btn-save" (click)="saveType()">
-          {{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}
-        </button>
+      <div class="valex-card-footer flex justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showTypeForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-primary" (click)="saveType()">{{ editingTypeId() ? 'حفظ التعديلات' : 'إضافة التصنيف' }}</button>
       </div>
     </div>
   } @else if (!filteredWarehouses().length) {
-    <div class="empty-state">
-      <span class="material-icons-round">inventory_2</span>
-      <p>لا يوجد مخازن</p>
-    </div>
+    <app-empty-state icon="inventory_2" title="لا يوجد مخازن" />
   } @else {
-    <div class="warehouse-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
       @for (w of filteredWarehouses(); track w.id) {
-        <div class="warehouse-card" [class]="w.warehouseType">
-          <div class="wh-header">
-            <div
-              class="wh-icon"
-              [style.background]="
-                'linear-gradient(135deg, ' +
-                getTypeColor(w.warehouseType) +
-                ', ' +
-                getTypeColor(w.warehouseType) +
-                'cc)'
-              "
-            >
-              <span class="material-icons-round">{{ getTypeIcon(w.warehouseType) }}</span>
+        <div class="valex-card warehouse-card" [class]="'warehouse-' + w.warehouseType">
+          <div class="valex-card-body">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                   [style.background]="getTypeColor(w.warehouseType) + '20'"
+                   [style.color]="getTypeColor(w.warehouseType)">
+                <span class="material-icons-round text-2xl">{{ getTypeIcon(w.warehouseType) }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="valex-icon-btn" (click)="openEdit(w)"><span class="material-icons-round">edit</span></button>
+                <button class="valex-icon-btn danger" (click)="remove(w)"><span class="material-icons-round">delete</span></button>
+              </div>
             </div>
-            <div class="wh-actions">
-              <button class="action-btn edit" (click)="openEdit(w)">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="action-btn delete" (click)="remove(w)">
-                <span class="material-icons-round">delete</span>
-              </button>
+            <h3 class="font-bold text-base mb-2">{{ w.name }}</h3>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <span class="valex-badge" [class.valex-badge-warning]="w.warehouseType === 'main'" [class.valex-badge-success]="w.warehouseType === 'station'" [class.valex-badge-secondary]="w.warehouseType === 'sub'">{{ getTypeLabel(w.warehouseType) }}</span>
+              @if (w.accountLedgerCode) { <span class="valex-badge valex-badge-primary font-mono">{{ w.accountLedgerCode }}</span> }
+              @if (w.code) { <span class="valex-badge valex-badge-secondary font-mono">{{ w.code }}</span> }
+              @if (w.subType) { <span class="valex-badge valex-badge-info">{{ getSubTypeName(w.subType) }}</span> }
             </div>
-          </div>
-          <h3 class="wh-name">{{ w.name }}</h3>
-          <div class="wh-badges">
-            <span class="status-badge" [class]="getTypeClass(w.warehouseType)">{{
-              getTypeLabel(w.warehouseType)
-            }}</span>
-            @if (w.accountLedgerCode) {
-              <span class="code-badge">{{ w.accountLedgerCode }}</span>
-            }
-            @if (w.code) {
-              <span class="code-badge">{{ w.code }}</span>
-            }
-            @if (w.sequenceNumber) {
-              <span class="seq-badge">#{{ w.sequenceNumber }}</span>
-            }
-            @if (w.subType) {
-              <span class="sub-type-badge">{{ getSubTypeName(w.subType) }}</span>
-            }
-          </div>
-          <div class="wh-details">
-            @if (w.stationId) {
-              <div class="wh-detail">
-                <span class="material-icons-round">local_gas_station</span>
-                {{ getStationName(w.stationId) }}
-              </div>
-            }
-            @if (w.responsiblePerson) {
-              <div class="wh-detail">
-                <span class="material-icons-round">person</span> {{ w.responsiblePerson }}
-              </div>
-            }
-            @if (w.location) {
-              <div class="wh-detail">
-                <span class="material-icons-round">location_on</span> {{ w.location }}
-              </div>
-            }
-            @if (w.notes) {
-              <div class="wh-detail notes">
-                <span class="material-icons-round">notes</span> {{ w.notes }}
-              </div>
-            }
+            <div class="flex flex-col gap-2 text-xs text-muted">
+              @if (w.stationId) {
+                <div class="flex items-center gap-1"><span class="material-icons-round text-sm">local_gas_station</span>{{ getStationName(w.stationId) }}</div>
+              }
+              @if (w.responsiblePerson) {
+                <div class="flex items-center gap-1"><span class="material-icons-round text-sm">person</span>{{ w.responsiblePerson }}</div>
+              }
+              @if (w.location) {
+                <div class="flex items-center gap-1"><span class="material-icons-round text-sm">location_on</span>{{ w.location }}</div>
+              }
+            </div>
           </div>
         </div>
       }

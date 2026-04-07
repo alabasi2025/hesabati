@@ -1,4 +1,6 @@
 import { Component, signal, inject } from '@angular/core';
+import { NgClass, NgFor } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
@@ -6,6 +8,7 @@ import { BasePageComponent } from '../../shared/base-page.component';
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header';
 
 interface SidebarSection {
   id: number;
@@ -51,6 +54,7 @@ interface AppUser {
 @Component({
   selector: 'app-sidebar-settings',
   standalone: true,
+  imports: [FormsModule, NgClass, NgFor, PageHeaderComponent, LoadingStateComponent, EmptyStateComponent],
   templateUrl: './sidebar-settings.html',
   styleUrl: './sidebar-settings.scss',
 })

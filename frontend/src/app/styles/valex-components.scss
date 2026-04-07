@@ -411,3 +411,299 @@
 @keyframes valex-spin {
   to { transform: rotate(360deg); }
 }
+
+// ===================== Color Utility Classes =====================
+// These supplement Tailwind for pages that use Angular class bindings
+
+.text-primary   { color: var(--color-primary)   !important; }
+.text-secondary { color: var(--color-secondary)  !important; }
+.text-success   { color: var(--color-success)    !important; }
+.text-danger    { color: var(--color-danger)     !important; }
+.text-warning   { color: var(--color-warning)    !important; }
+.text-info      { color: var(--color-info)       !important; }
+.text-muted     { color: var(--color-textmuted)  !important; }
+
+.bg-primary  { background-color: var(--color-primary);   }
+.bg-success  { background-color: var(--color-success);   }
+.bg-danger   { background-color: var(--color-danger);    }
+.bg-warning  { background-color: var(--color-warning);   }
+.bg-info     { background-color: var(--color-info);      }
+
+// Alpha background utilities
+.bg-primary\/10  { background-color: rgba(var(--color-primaryrgb), 0.10); }
+.bg-success\/10  { background-color: rgba(var(--color-successrgb), 0.10); }
+.bg-danger\/10   { background-color: rgba(var(--color-dangerrgb),  0.10); }
+.bg-warning\/10  { background-color: rgba(var(--color-warningrgb), 0.10); }
+.bg-info\/10     { background-color: rgba(var(--color-inforgb),    0.10); }
+.bg-secondary\/10 { background-color: rgba(var(--color-secondaryrgb), 0.10); }
+
+// Inline color classes for Angular's [class.text-X] bindings
+.text-danger   { color: var(--color-danger);  }
+.text-success  { color: var(--color-success); }
+.text-warning  { color: var(--color-warning); }
+.text-info     { color: var(--color-info);    }
+.text-primary  { color: var(--color-primary); }
+.text-muted    { color: var(--color-textmuted); }
+
+// Border right utilities
+.border-danger  { border-color: var(--color-danger)  !important; }
+.border-warning { border-color: var(--color-warning) !important; }
+.border-info    { border-color: var(--color-info)    !important; }
+.border-success { border-color: var(--color-success) !important; }
+
+// ===================== Card Title =====================
+.valex-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-defaulttextcolor);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// ===================== Tab Buttons =====================
+.valex-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-defaultborder);
+  background-color: transparent;
+  color: var(--color-textmuted);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+  white-space: nowrap;
+  font-family: var(--font-primary);
+
+  &:hover {
+    background-color: rgba(var(--color-primaryrgb), 0.06);
+    color: var(--color-primary);
+    border-color: rgba(var(--color-primaryrgb), 0.2);
+  }
+
+  &.active {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(var(--color-primaryrgb), 0.28);
+  }
+}
+
+// ===================== Icon Button =====================
+.valex-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background-color: transparent;
+  cursor: pointer;
+  color: var(--color-textmuted);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+
+  .material-icons-round { font-size: 1rem; }
+
+  &:hover {
+    background-color: rgba(var(--color-primaryrgb), 0.08);
+    border-color: rgba(var(--color-primaryrgb), 0.15);
+  }
+
+  &.text-primary { color: var(--color-primary); }
+  &.text-danger  { color: var(--color-danger);  &:hover { background-color: rgba(var(--color-dangerrgb), 0.08); border-color: rgba(var(--color-dangerrgb), 0.15); } }
+  &.text-warning { color: var(--color-warning); &:hover { background-color: rgba(var(--color-warningrgb), 0.08); border-color: rgba(var(--color-warningrgb), 0.15); } }
+  &.text-info    { color: var(--color-info);    &:hover { background-color: rgba(var(--color-inforgb), 0.08); border-color: rgba(var(--color-inforgb), 0.15); } }
+  &.text-success { color: var(--color-success); &:hover { background-color: rgba(var(--color-successrgb), 0.08); border-color: rgba(var(--color-successrgb), 0.15); } }
+}
+
+// ===================== Category / Info Cards Grid =====================
+.valex-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.valex-category-card {
+  background-color: var(--color-customwhite);
+  border: 1px solid var(--color-defaultborder);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+
+  &:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+}
+
+// ===================== Color Picker Row =====================
+.valex-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  input[type="color"] {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-defaultborder);
+    cursor: pointer;
+    padding: 2px;
+    background: transparent;
+  }
+}
+
+// ===================== Icon Picker Grid =====================
+.valex-icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  background-color: var(--color-bodybg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-defaultborder);
+}
+
+.valex-icon-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background-color: transparent;
+  cursor: pointer;
+  color: var(--color-textmuted);
+  transition: all var(--transition-fast);
+
+  .material-icons-round { font-size: 1.1rem; }
+
+  &:hover {
+    background-color: var(--color-customwhite);
+    border-color: var(--color-defaultborder);
+    color: var(--color-primary);
+  }
+
+  &.selected {
+    background-color: var(--color-customwhite);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(var(--color-primaryrgb), 0.15);
+  }
+}
+
+// ===================== Valex Btn Outline (Generic) =====================
+.valex-btn-outline {
+  background-color: transparent;
+  border-color: var(--color-defaultborder);
+  color: var(--color-defaulttextcolor);
+
+  &:hover {
+    background-color: var(--color-bodybg);
+    border-color: var(--color-inputborder);
+  }
+}
+
+// ===================== Modal Overlay =====================
+.valex-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+  animation: valex-fade-in 0.2s ease;
+}
+
+.valex-modal {
+  background-color: var(--color-customwhite);
+  border: 1px solid var(--color-defaultborder);
+  border-radius: var(--radius-2xl);
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  animation: valex-slide-up 0.3s ease;
+  direction: rtl;
+
+  &.valex-modal-sm { max-width: 440px; }
+  &.valex-modal-lg { max-width: 800px; }
+  &.valex-modal-xl { max-width: 1024px; }
+}
+
+.valex-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-defaultborder);
+}
+
+.valex-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-defaulttextcolor);
+  margin: 0;
+}
+
+.valex-modal-body {
+  padding: 1.5rem;
+}
+
+.valex-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-defaultborder);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@keyframes valex-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes valex-slide-up {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// ===================== Diff Display =====================
+.valex-diff-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.875rem;
+
+  &.balanced {
+    background-color: rgba(var(--color-successrgb), 0.1);
+    color: var(--color-success);
+    border: 1px solid rgba(var(--color-successrgb), 0.25);
+  }
+
+  &.unbalanced {
+    background-color: rgba(var(--color-dangerrgb), 0.1);
+    color: var(--color-danger);
+    border: 1px solid rgba(var(--color-dangerrgb), 0.25);
+  }
+}

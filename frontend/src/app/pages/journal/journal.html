@@ -1,170 +1,161 @@
-<div class="jrn-page" dir="rtl">
-  <!-- ===== Page Header ===== -->
-  <div class="jrn-header">
-    <div class="jrn-header-left">
-      <div class="jrn-icon"><span class="material-icons-round">menu_book</span></div>
+<div class="page-content">
+  <app-page-header
+    title="القيود المحاسبية"
+    icon="menu_book"
+    [breadcrumb]="['الرئيسية', 'العمليات المالية', 'القيود المحاسبية']"
+  >
+    <button class="valex-btn valex-btn-outline" (click)="openTypesPanel()">
+      <span class="material-icons-round">label</span>
+      أنواع القيود
+    </button>
+    <button class="valex-btn valex-btn-primary" (click)="openNew()">
+      <span class="material-icons-round">add</span>
+      قيد جديد
+    </button>
+  </app-page-header>
+
+  <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+        <span class="material-icons-round text-2xl">menu_book</span>
+      </div>
       <div>
-        <div class="jrn-title">القيود المحاسبية</div>
-        <div class="jrn-subtitle">إدخال حر متعدد السطور · حساب تحليلي · متعدد العملات</div>
+        <div class="text-2xl font-bold">{{ entries().length }}</div>
+        <div class="text-sm text-muted">إجمالي القيود</div>
       </div>
     </div>
-    <div class="jrn-header-actions">
-      <button class="jrn-btn ghost" (click)="openTypesPanel()">
-        <span class="material-icons-round">label</span> أنواع القيود
-      </button>
-      <button class="jrn-btn primary" (click)="openNew()">
-        <span class="material-icons-round">add</span> قيد جديد
-      </button>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+        <span class="material-icons-round text-2xl">balance</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ entries().filter(e => e.isBalanced).length }}</div>
+        <div class="text-sm text-muted">متوازن</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+        <span class="material-icons-round text-2xl">edit_note</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ entries().filter(e => e.status === 'draft' || !e.status).length }}</div>
+        <div class="text-sm text-muted">مسودة</div>
+      </div>
+    </div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-info/10 text-info flex-shrink-0">
+        <span class="material-icons-round text-2xl">check_circle</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ entries().filter(e => e.status === 'reviewed').length }}</div>
+        <div class="text-sm text-muted">مراجع</div>
+      </div>
     </div>
   </div>
 
-  <!-- ===== Stats ===== -->
-  <div class="jrn-stats">
-    <div class="jrn-stat purple">
-      <span class="material-icons-round">menu_book</span>
-      <div>
-        <div class="jrn-stat-num">{{ entries().length }}</div>
-        <div class="jrn-stat-lbl">إجمالي القيود</div>
-      </div>
-    </div>
-    <div class="jrn-stat green">
-      <span class="material-icons-round">balance</span>
-      <div>
-        <div class="jrn-stat-num">{{ entries().filter(e => e.isBalanced).length }}</div>
-        <div class="jrn-stat-lbl">متوازن</div>
-      </div>
-    </div>
-    <div class="jrn-stat amber">
-      <span class="material-icons-round">edit_note</span>
-      <div>
-        <div class="jrn-stat-num">
-          {{ entries().filter(e => e.status === 'draft' || !e.status).length }}
-        </div>
-        <div class="jrn-stat-lbl">مسودة</div>
-      </div>
-    </div>
-    <div class="jrn-stat teal">
-      <span class="material-icons-round">check_circle</span>
-      <div>
-        <div class="jrn-stat-num">{{ entries().filter(e => e.status === 'reviewed').length }}</div>
-        <div class="jrn-stat-lbl">مراجع</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== لوحة أنواع القيود ===== -->
   @if (showTypesPanel()) {
-    <div class="types-overlay" (click)="closeTypesPanel()"></div>
-    <div class="types-panel">
-      <div class="types-panel-head">
-        <div class="tp-title"><span class="material-icons-round">label</span> أنواع القيود</div>
-        <div style="display: flex; gap: 8px">
-          <button class="jrn-btn secondary" (click)="openAddCat()">
-            <span class="material-icons-round">add</span> إضافة
-          </button>
-          <button class="jrn-btn ghost" (click)="closeTypesPanel()">
-            <span class="material-icons-round">close</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- نموذج الإضافة/التعديل -->
-      @if (showCatForm()) {
-        <div class="cat-form">
-          <div class="cat-form-row">
-            <div class="cat-field flex2">
-              <label>اسم النوع <span class="req">*</span></label>
-              <input
-                type="text"
-                placeholder="مثال: قيد يومية"
-                [ngModel]="catForm().name"
-                (ngModelChange)="catForm.update(f => ({...f, name: $event}))"
-              />
+    <div class="valex-modal-overlay" (click)="closeTypesPanel()">
+      <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">label</span>
             </div>
-            <div class="cat-field">
-              <label>المفتاح <span class="req">*</span></label>
-              <input
-                type="text"
-                placeholder="daily_journal"
-                [ngModel]="catForm().categoryKey"
-                (ngModelChange)="catForm.update(f => ({...f, categoryKey: $event}))"
-              />
-            </div>
+            <h3>أنواع القيود</h3>
           </div>
-          <div class="cat-form-row">
-            <div class="cat-field flex2">
-              <label>الوصف</label>
-              <input
-                type="text"
-                placeholder="وصف اختياري"
-                [ngModel]="catForm().description"
-                (ngModelChange)="catForm.update(f => ({...f, description: $event}))"
-              />
-            </div>
-            <div class="cat-field">
-              <label>اللون</label>
-              <input
-                type="color"
-                [ngModel]="catForm().color"
-                (ngModelChange)="catForm.update(f => ({...f, color: $event}))"
-              />
-            </div>
-          </div>
-          <div class="cat-icons-row">
-            <label>الأيقونة</label>
-            <div class="cat-icons">
-              @for (ic of catIcons; track ic) {
-                <button
-                  class="cat-icon-btn"
-                  [class.selected]="catForm().icon === ic"
-                  (click)="catForm.update(f => ({...f, icon: ic}))"
-                  [title]="ic"
-                >
-                  <span class="material-icons-round">{{ ic }}</span>
-                </button>
-              }
-            </div>
-          </div>
-          <div class="cat-form-actions">
-            <button class="jrn-btn ghost" (click)="showCatForm.set(false)">إلغاء</button>
-            <button class="jrn-btn primary" [disabled]="savingCat()" (click)="saveCat()">
-              <span class="material-icons-round">save</span>
-              {{ editingCatId() ? 'تعديل' : 'إضافة' }}
+          <div class="flex items-center gap-2">
+            <button class="valex-btn valex-btn-primary" (click)="openAddCat()">
+              <span class="material-icons-round">add</span> إضافة
+            </button>
+            <button class="valex-icon-btn" (click)="closeTypesPanel()">
+              <span class="material-icons-round">close</span>
             </button>
           </div>
         </div>
-      }
-
-      <!-- قائمة الأنواع -->
-      <div class="cat-list">
-        @if (categories().length === 0) {
-          <div class="cat-empty">
-            <span class="material-icons-round">label_off</span>
-            <p>لا توجد أنواع بعد — اضغط إضافة</p>
-          </div>
-        }
-        @for (c of categories(); track c.id) {
-          <div class="cat-item">
-            <div class="cat-icon" [style.background]="c.color || '#6366f1'">
-              <span class="material-icons-round">{{ c.icon || 'menu_book' }}</span>
+        <div class="valex-modal-body">
+          @if (showCatForm()) {
+            <div class="valex-card mb-4">
+              <div class="valex-card-body">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                  <div class="valex-form-group md:col-span-2">
+                    <label class="valex-label">اسم النوع <span class="text-danger">*</span></label>
+                    <input class="valex-input" type="text" placeholder="مثال: قيد يومية"
+                      [ngModel]="catForm().name" (ngModelChange)="catForm.update(f => ({...f, name: $event}))" />
+                  </div>
+                  <div class="valex-form-group">
+                    <label class="valex-label">المفتاح <span class="text-danger">*</span></label>
+                    <input class="valex-input font-mono" type="text" placeholder="daily_journal"
+                      [ngModel]="catForm().categoryKey" (ngModelChange)="catForm.update(f => ({...f, categoryKey: $event}))" />
+                  </div>
+                  <div class="valex-form-group">
+                    <label class="valex-label">اللون</label>
+                    <input class="journal-color-input" type="color"
+                      [ngModel]="catForm().color" (ngModelChange)="catForm.update(f => ({...f, color: $event}))" />
+                  </div>
+                  <div class="valex-form-group md:col-span-2">
+                    <label class="valex-label">الوصف</label>
+                    <input class="valex-input" type="text" placeholder="وصف اختياري"
+                      [ngModel]="catForm().description" (ngModelChange)="catForm.update(f => ({...f, description: $event}))" />
+                  </div>
+                  <div class="valex-form-group md:col-span-2">
+                    <label class="valex-label">الأيقونة</label>
+                    <div class="journal-icon-picker">
+                      @for (ic of catIcons; track ic) {
+                        <button class="journal-icon-btn" [class.selected]="catForm().icon === ic"
+                          (click)="catForm.update(f => ({...f, icon: ic}))" [title]="ic">
+                          <span class="material-icons-round">{{ ic }}</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                  <button class="valex-btn valex-btn-outline" (click)="showCatForm.set(false)">إلغاء</button>
+                  <button class="valex-btn valex-btn-primary" [disabled]="savingCat()" (click)="saveCat()">
+                    <span class="material-icons-round">save</span>
+                    {{ editingCatId() ? 'تعديل' : 'إضافة' }}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="cat-info">
-              <div class="cat-name">{{ c.name }}</div>
-              <div class="cat-key">{{ c.categoryKey }}</div>
-              @if (c.description) {
-                <div class="cat-desc">{{ c.description }}</div>
+          }
+
+          @if (categories().length === 0) {
+            <div class="text-center text-muted py-8">
+              <span class="material-icons-round text-4xl block mb-2">label_off</span>
+              لا توجد أنواع بعد — اضغط إضافة
+            </div>
+          } @else {
+            <div class="flex flex-col gap-3">
+              @for (c of categories(); track c.id) {
+                <div class="valex-card">
+                  <div class="valex-card-body flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                         [style.background]="(c.color || '#6366f1') + '20'"
+                         [style.color]="c.color || '#6366f1'">
+                      <span class="material-icons-round">{{ c.icon || 'menu_book' }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-bold text-sm">{{ c.name }}</div>
+                      <div class="text-xs text-muted font-mono">{{ c.categoryKey }}</div>
+                      @if (c.description) {
+                        <div class="text-xs text-muted mt-1">{{ c.description }}</div>
+                      }
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button class="valex-icon-btn" (click)="openEditCat(c)">
+                        <span class="material-icons-round">edit</span>
+                      </button>
+                      <button class="valex-icon-btn danger" (click)="removeCat(c)">
+                        <span class="material-icons-round">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               }
             </div>
-            <div class="cat-actions">
-              <button class="icon-btn" (click)="openEditCat(c)" title="تعديل">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="icon-btn danger" (click)="removeCat(c)" title="حذف">
-                <span class="material-icons-round">delete</span>
-              </button>
-            </div>
-          </div>
-        }
+          }
+        </div>
       </div>
     </div>
   }
@@ -172,156 +163,132 @@
   @if (loading()) {
     <app-loading-state message="جاري التحميل..." />
   }
-  @if (!loading() && error() && !showForm()) {
-    <div class="jrn-error"><span class="material-icons-round">error</span> {{ error() }}</div>
-  }
 
-  <!-- ===== Tabs ===== -->
-  @if (!loading() && !showForm()) {
-    <div class="jrn-tabs">
-      <button class="jrn-tab" [class.active]="activeTab() === 'all'" (click)="activeTab.set('all')">
-        <span class="material-icons-round">menu_book</span>
-        الكل
-        <span class="tab-count">{{ entries().length }}</span>
-      </button>
-      @for (c of categories(); track c.id) {
-        <button
-          class="jrn-tab"
-          [class.active]="activeTab() === c.categoryKey"
-          (click)="activeTab.set(c.categoryKey)"
-          [style.--tab-color]="c.color || '#8b5cf6'"
-        >
-          <span class="material-icons-round">{{ c.icon || 'label' }}</span>
-          {{ c.name }}
-          <span
-            class="tab-count"
-            >{{ entries().filter(e => e.category === c.categoryKey).length }}</span
-          >
-        </button>
-      }
-      @if (entries().filter(e => !e.category).length > 0) {
-        <button
-          class="jrn-tab"
-          [class.active]="activeTab() === 'other'"
-          (click)="activeTab.set('other')"
-        >
-          <span class="material-icons-round">help_outline</span>
-          غير مصنف
-          <span class="tab-count">{{ entries().filter(e => !e.category).length }}</span>
-        </button>
-      }
+  @if (!loading() && error() && !showForm()) {
+    <div class="valex-card mb-4 border border-danger/20 bg-danger/5">
+      <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+        <span class="material-icons-round">error</span>
+        {{ error() }}
+      </div>
     </div>
   }
 
-  <!-- ===== Entries List ===== -->
+  @if (!loading() && !showForm()) {
+    <div class="valex-card mb-6">
+      <div class="valex-card-body py-3">
+        <div class="flex flex-wrap gap-2">
+          <button class="valex-tab-btn" [class.active]="activeTab() === 'all'" (click)="activeTab.set('all')">
+            <span class="material-icons-round">menu_book</span>
+            الكل
+            <span class="valex-badge valex-badge-secondary journal-tab-count">{{ entries().length }}</span>
+          </button>
+          @for (c of categories(); track c.id) {
+            <button class="valex-tab-btn" [class.active]="activeTab() === c.categoryKey" (click)="activeTab.set(c.categoryKey)">
+              <span class="material-icons-round">{{ c.icon || 'label' }}</span>
+              {{ c.name }}
+              <span class="valex-badge valex-badge-secondary journal-tab-count">{{ entries().filter(e => e.category === c.categoryKey).length }}</span>
+            </button>
+          }
+          @if (entries().filter(e => !e.category).length > 0) {
+            <button class="valex-tab-btn" [class.active]="activeTab() === 'other'" (click)="activeTab.set('other')">
+              <span class="material-icons-round">help_outline</span>
+              غير مصنف
+              <span class="valex-badge valex-badge-secondary journal-tab-count">{{ entries().filter(e => !e.category).length }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
   @if (!loading() && !showForm()) {
     @if (filteredEntries().length === 0) {
-      <app-empty-state
-        icon="menu_book"
-        message="لا توجد قيود في هذا التصنيف"
-        sub="اختر تبويباً آخر أو أضف قيداً جديداً"
-      />
+      <app-empty-state icon="menu_book" title="لا توجد قيود في هذا التصنيف" message="اختر تبويباً آخر أو أضف قيداً جديداً" />
     } @else {
-      <div class="jrn-list">
+      <div class="grid grid-cols-1 gap-4 mb-6">
         @for (e of filteredEntries(); track e.id) {
-          <div class="jrn-card" [class.expanded]="expandedId() === e.id">
-            <div class="jrn-card-head" (click)="toggleExpand(e.id)">
-              <div class="jrn-card-num">
-                <span class="material-icons-round">receipt_long</span>
-                <span class="jrn-entry-no">{{
-                  e.entryNumber || e.fullSequenceNumber || '#' + e.id
-                }}</span>
-              </div>
-              <div class="jrn-card-meta">
-                <span class="jrn-date">{{ formatDate(e.entryDate) }}</span>
-                <span class="jrn-desc">{{ e.description }}</span>
-              </div>
-              <div class="jrn-card-amounts">
-                <span class="amt-debit">↑ {{ fmt(e.totalDebit) }}</span>
-                <span class="amt-credit">↓ {{ fmt(e.totalCredit) }}</span>
-              </div>
-              <div class="jrn-card-badges">
-                @if (e.isBalanced) {
-                  <span class="badge balanced"
-                    ><span class="material-icons-round">check</span> متوازن</span
-                  >
-                } @else {
-                  <span class="badge unbalanced"
-                    ><span class="material-icons-round">warning</span> غير متوازن</span
-                  >
-                }
-                @if (e.status === 'reviewed') {
-                  <span class="badge status-reviewed"
-                    ><span class="material-icons-round">verified</span> مراجع</span
-                  >
-                } @else if (e.status === 'unreviewed') {
-                  <span class="badge status-unreviewed"
-                    ><span class="material-icons-round">pending</span> غير مراجع</span
-                  >
-                } @else {
-                  <span class="badge status-draft"
-                    ><span class="material-icons-round">edit_note</span> مسودة</span
-                  >
-                }
-              </div>
-              <div class="jrn-card-actions" (click)="$event.stopPropagation()">
-                <button class="icon-btn print-btn" (click)="printEntry(e)" title="طباعة">
-                  <span class="material-icons-round">print</span>
-                </button>
-                <button class="icon-btn edit-btn" (click)="openEdit(e)" title="تعديل">
-                  <span class="material-icons-round">edit</span>
-                </button>
-                <span class="material-icons-round expand-icon">{{
-                  expandedId() === e.id ? 'expand_less' : 'expand_more'
-                }}</span>
+          <div class="valex-card journal-entry-card" [class.expanded]="expandedId() === e.id">
+            <div class="valex-card-body cursor-pointer" (click)="toggleExpand(e.id)">
+              <div class="flex flex-col xl:flex-row xl:items-center gap-4">
+                <div class="min-w-[180px] flex items-center gap-2">
+                  <span class="material-icons-round text-primary">receipt_long</span>
+                  <span class="font-mono font-bold text-primary text-sm">{{ e.entryNumber || e.fullSequenceNumber || '#' + e.id }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs text-muted mb-1">{{ formatDate(e.entryDate) }}</div>
+                  <div class="font-semibold truncate">{{ e.description }}</div>
+                </div>
+                <div class="min-w-[180px] flex flex-col gap-1">
+                  <div class="text-sm font-mono font-bold text-success">↑ {{ fmt(e.totalDebit) }}</div>
+                  <div class="text-sm font-mono font-bold text-danger">↓ {{ fmt(e.totalCredit) }}</div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  @if (e.isBalanced) {
+                    <span class="valex-badge valex-badge-success"><span class="material-icons-round text-sm">check</span> متوازن</span>
+                  } @else {
+                    <span class="valex-badge valex-badge-danger"><span class="material-icons-round text-sm">warning</span> غير متوازن</span>
+                  }
+                  @if (e.status === 'reviewed') {
+                    <span class="valex-badge valex-badge-info"><span class="material-icons-round text-sm">verified</span> مراجع</span>
+                  } @else if (e.status === 'unreviewed') {
+                    <span class="valex-badge valex-badge-warning"><span class="material-icons-round text-sm">pending</span> غير مراجع</span>
+                  } @else {
+                    <span class="valex-badge valex-badge-secondary"><span class="material-icons-round text-sm">edit_note</span> مسودة</span>
+                  }
+                </div>
+                <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
+                  <button class="valex-icon-btn" (click)="printEntry(e)" title="طباعة">
+                    <span class="material-icons-round">print</span>
+                  </button>
+                  <button class="valex-icon-btn" (click)="openEdit(e)" title="تعديل">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <span class="material-icons-round text-muted">{{ expandedId() === e.id ? 'expand_less' : 'expand_more' }}</span>
+                </div>
               </div>
             </div>
+
             @if (expandedId() === e.id) {
-              <div class="jrn-lines-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>الحساب</th>
-                      <th>الحساب التحليلي</th>
-                      <th>البيان</th>
-                      <th class="amt-col">مدين</th>
-                      <th class="amt-col">دائن</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (l of e.lines || []; track $index) {
-                      <tr [class]="l.lineType === 'debit' ? 'row-debit' : 'row-credit'">
-                        <td class="ln-idx">{{ $index + 1 }}</td>
-                        <td class="ln-account">
-                          {{ l.ledgerCode ? l.ledgerCode + ' — ' : ''
-                          }}{{ l.accountName || getAccountName(l.accountId) }}
-                        </td>
-                        <td class="ln-entity">
-                          @if (l.entityType && l.entityId) {
-                            <span class="entity-pill">{{
-                              getEntityLabel(l.entityType, l.entityId)
-                            }}</span>
-                          } @else {
-                            <span class="text-muted">—</span>
-                          }
-                        </td>
-                        <td class="ln-desc">{{ l.description || '—' }}</td>
-                        <td class="ln-debit">{{ l.lineType === 'debit' ? fmt(l.amount) : '' }}</td>
-                        <td class="ln-credit">
-                          {{ l.lineType === 'credit' ? fmt(l.amount) : '' }}
-                        </td>
+              <div class="journal-lines-panel">
+                <div class="overflow-x-auto">
+                  <table class="valex-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>الحساب</th>
+                        <th>الحساب التحليلي</th>
+                        <th>البيان</th>
+                        <th>مدين</th>
+                        <th>دائن</th>
                       </tr>
-                    }
-                  </tbody>
-                  <tfoot>
-                    <tr class="totals-row">
-                      <td colspan="4" class="totals-label">الإجمالي</td>
-                      <td class="ln-debit total">{{ fmt(e.totalDebit) }}</td>
-                      <td class="ln-credit total">{{ fmt(e.totalCredit) }}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </thead>
+                    <tbody>
+                      @for (l of e.lines || []; track $index) {
+                        <tr [class.journal-row-debit]="l.lineType === 'debit'" [class.journal-row-credit]="l.lineType === 'credit'">
+                          <td class="text-muted">{{ $index + 1 }}</td>
+                          <td class="font-semibold">{{ l.ledgerCode ? l.ledgerCode + ' — ' : '' }}{{ l.accountName || getAccountName(l.accountId) }}</td>
+                          <td>
+                            @if (l.entityType && l.entityId) {
+                              <span class="valex-badge valex-badge-secondary">{{ getEntityLabel(l.entityType, l.entityId) }}</span>
+                            } @else {
+                              <span class="text-muted">—</span>
+                            }
+                          </td>
+                          <td class="text-muted">{{ l.description || '—' }}</td>
+                          <td class="font-mono text-success">{{ l.lineType === 'debit' ? fmt(l.amount) : '' }}</td>
+                          <td class="font-mono text-danger">{{ l.lineType === 'credit' ? fmt(l.amount) : '' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="4" class="font-bold">الإجمالي</td>
+                        <td class="font-mono font-bold text-success">{{ fmt(e.totalDebit) }}</td>
+                        <td class="font-mono font-bold text-danger">{{ fmt(e.totalCredit) }}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             }
           </div>
@@ -330,336 +297,243 @@
     }
   }
 
-  <!-- ===== نموذج القيد الاحترافي ===== -->
   @if (showForm()) {
-    <div class="jrn-form-container">
-      <div class="jrn-form-header">
-        <div class="jfh-title">
-          <span class="material-icons-round">edit_note</span>
-          {{ editingId() ? 'تعديل قيد' : 'قيد محاسبي جديد' }}
+    <div class="valex-card mb-6">
+      <div class="valex-card-header flex-col lg:flex-row lg:items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+            <span class="material-icons-round">edit_note</span>
+          </div>
+          <h3 class="valex-card-title">{{ editingId() ? 'تعديل قيد' : 'قيد محاسبي جديد' }}</h3>
         </div>
-        <div class="jfh-status">
+        <div class="flex flex-wrap gap-2 lg:ms-auto">
           @for (s of statusOptions; track s.key) {
-            <button
-              class="status-chip"
-              [class.active]="formHeader().status === s.key"
-              (click)="formHeader.update(h => ({...h, status: $any(s.key)}))"
-            >
+            <button class="journal-status-chip" [class.active]="formHeader().status === s.key"
+              (click)="formHeader.update(h => ({...h, status: $any(s.key)}))">
               <span class="material-icons-round" [style.color]="s.color">{{ s.icon }}</span>
               {{ s.label }}
             </button>
           }
         </div>
-        <button class="jrn-btn ghost" (click)="showForm.set(false)">
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
           <span class="material-icons-round">close</span>
         </button>
       </div>
 
-      <div class="jrn-form-meta">
-        <div class="jfm-group">
-          <label>التاريخ <span class="req">*</span></label>
-          <input type="date" [ngModel]="formHeader().date" (ngModelChange)="onDateChange($event)" />
-        </div>
-        <div class="jfm-group flex2">
-          <label>البيان العام <span class="req">*</span></label>
-          <input
-            type="text"
-            placeholder="وصف القيد..."
-            [ngModel]="formHeader().description"
-            (ngModelChange)="formHeader.update(h => ({...h, description: $event}))"
-          />
-        </div>
-        <div class="jfm-group">
-          <label>المرجع / رقم الوثيقة</label>
-          <input
-            type="text"
-            placeholder="اختياري"
-            [ngModel]="formHeader().reference"
-            (ngModelChange)="formHeader.update(h => ({...h, reference: $event}))"
-          />
-        </div>
-        <div class="jfm-group flex2">
-          <label>القالب / نوع العملية</label>
-          <select
-            [ngModel]="formHeader().operationTypeId"
-            (ngModelChange)="onOperationTypeChange(+$event || null)"
-          >
-            <option [ngValue]="null">— اختياري —</option>
-            @for (ot of journalOpTypes(); track ot.id) {
-              <option [ngValue]="ot.id">{{ ot.name }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- نوع القيد + الرقم التسلسلي -->
-        <div class="jfm-group flex2">
-          <label>نوع القيد</label>
-          <select [ngModel]="formHeader().categoryKey" (ngModelChange)="onCategoryChange($event)">
-            <option value="">— بدون تصنيف —</option>
-            @for (c of categories(); track c.id) {
-              <option [ngValue]="c.categoryKey">
-                {{ c.name }}
-              </option>
-            }
-          </select>
-        </div>
-        @if (formHeader().categoryKey) {
-          <div class="jfm-group seq-preview">
-            <label>الرقم التسلسلي المتوقع</label>
-            <div class="seq-badge">
-              @if (loadingPreview()) {
-                <span class="material-icons-round rotating" style="font-size: 16px; color: #8b5cf6"
-                  >sync</span
-                >
-              } @else {
-                <span class="material-icons-round" style="font-size: 15px; color: #8b5cf6"
-                  >tag</span
-                >
-                <span class="seq-num">{{ previewNumber() || '—' }}</span>
-              }
-            </div>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          <div class="valex-form-group">
+            <label class="valex-label">التاريخ <span class="text-danger">*</span></label>
+            <input class="valex-input" type="date" [ngModel]="formHeader().date" (ngModelChange)="onDateChange($event)" />
           </div>
-        }
-      </div>
+          <div class="valex-form-group xl:col-span-2">
+            <label class="valex-label">البيان العام <span class="text-danger">*</span></label>
+            <input class="valex-input" type="text" placeholder="وصف القيد..."
+              [ngModel]="formHeader().description" (ngModelChange)="formHeader.update(h => ({...h, description: $event}))" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المرجع / رقم الوثيقة</label>
+            <input class="valex-input" type="text" placeholder="اختياري"
+              [ngModel]="formHeader().reference" (ngModelChange)="formHeader.update(h => ({...h, reference: $event}))" />
+          </div>
+          <div class="valex-form-group xl:col-span-2">
+            <label class="valex-label">القالب / نوع العملية</label>
+            <select class="valex-select" [ngModel]="formHeader().operationTypeId" (ngModelChange)="onOperationTypeChange(+$event || null)">
+              <option [ngValue]="null">— اختياري —</option>
+              @for (ot of journalOpTypes(); track ot.id) {
+                <option [ngValue]="ot.id">{{ ot.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">نوع القيد</label>
+            <select class="valex-select" [ngModel]="formHeader().categoryKey" (ngModelChange)="onCategoryChange($event)">
+              <option value="">— بدون تصنيف —</option>
+              @for (c of categories(); track c.id) {
+                <option [ngValue]="c.categoryKey">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+          @if (formHeader().categoryKey) {
+            <div class="valex-form-group">
+              <label class="valex-label">الرقم التسلسلي المتوقع</label>
+              <div class="flex items-center gap-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                @if (loadingPreview()) {
+                  <span class="material-icons-round text-primary journal-spin">sync</span>
+                } @else {
+                  <span class="material-icons-round text-primary text-base">tag</span>
+                  <span class="font-mono font-bold text-primary">{{ previewNumber() || '—' }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
 
-      <!-- جدول السطور -->
-      <div class="jrn-lines-wrapper">
-        <div class="jrn-table-scroll">
-          <table class="jrn-edit-table">
+        <div class="overflow-x-auto mb-4">
+          <table class="valex-table journal-edit-table">
             <thead>
               <tr>
-                <th class="th-idx">#</th>
-                <th class="th-type">النوع</th>
-                <th class="th-etype">نوع الكيان</th>
-                <th class="th-account">الحساب الفرعي <span class="req">*</span></th>
-                <th class="th-entity">الحساب التحليلي</th>
-                <th class="th-desc">البيان</th>
-                <th class="th-cur">العملة</th>
-                <th class="th-debit">مدين</th>
-                <th class="th-credit">دائن</th>
+                <th>#</th>
+                <th>النوع</th>
+                <th>نوع الكيان</th>
+                <th>الحساب الفرعي <span class="text-danger">*</span></th>
+                <th>الحساب التحليلي</th>
+                <th>البيان</th>
+                <th>العملة</th>
+                <th>مدين</th>
+                <th>دائن</th>
                 @if (hasForeignCurrency()) {
-                  <th class="th-foreign">م. أجنبي</th>
-                  <th class="th-rate">سعر الصرف</th>
+                  <th>م. أجنبي</th>
+                  <th>سعر الصرف</th>
                 }
-                <th class="th-act"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               @for (line of formLines(); track $index; let i = $index) {
-                <tr [class]="line.lineType === 'debit' ? 'edit-row-debit' : 'edit-row-credit'">
-                  <td class="td-idx">{{ i + 1 }}</td>
-                  <td class="td-type">
-                    <div class="type-toggle">
-                      <button
-                        [class.active-debit]="line.lineType === 'debit'"
-                        (click)="updateLine(i, 'lineType', 'debit')"
-                        title="مدين"
-                      >
-                        م
-                      </button>
-                      <button
-                        [class.active-credit]="line.lineType === 'credit'"
-                        (click)="updateLine(i, 'lineType', 'credit')"
-                        title="دائن"
-                      >
-                        د
-                      </button>
+                <tr [class.journal-row-debit]="line.lineType === 'debit'" [class.journal-row-credit]="line.lineType === 'credit'">
+                  <td class="text-muted">{{ i + 1 }}</td>
+                  <td>
+                    <div class="journal-type-toggle">
+                      <button [class.active-debit]="line.lineType === 'debit'" (click)="updateLine(i, 'lineType', 'debit')" title="مدين">م</button>
+                      <button [class.active-credit]="line.lineType === 'credit'" (click)="updateLine(i, 'lineType', 'credit')" title="دائن">د</button>
                     </div>
                   </td>
-
-                  <!-- 1: نوع الكيان أولاً -->
-                  <td class="td-etype">
-                    <select
-                      [ngModel]="line.entityType"
-                      (ngModelChange)="updateLine(i, 'entityType', $event)"
-                    >
+                  <td>
+                    <select class="valex-select" [ngModel]="line.entityType" (ngModelChange)="updateLine(i, 'entityType', $event)">
                       @for (et of entityTypes; track et.key) {
                         <option [ngValue]="et.key">{{ et.label }}</option>
                       }
                     </select>
                   </td>
-
-                  <!-- 2: الحساب الفرعي مفلتر حسب نوع الكيان -->
-                  <td class="td-account">
-                    <select
-                      [ngModel]="line.accountId"
-                      (ngModelChange)="updateLine(i, 'accountId', +$event || null)"
-                    >
+                  <td>
+                    <select class="valex-select" [ngModel]="line.accountId" (ngModelChange)="updateLine(i, 'accountId', +$event || null)">
                       <option [ngValue]="null">— اختر الحساب —</option>
                       @for (a of getAccountsForEntityType(line.entityType); track a.id) {
-                        <option [ngValue]="a.id">
-                          {{ a.code ? a.code + ' - ' : '' }}{{ a.name }}
-                        </option>
+                        <option [ngValue]="a.id">{{ a.code ? a.code + ' - ' : '' }}{{ a.name }}</option>
                       }
                     </select>
                   </td>
-
-                  <!-- 3: الحساب التحليلي مفلتر حسب الحساب الفرعي -->
-                  <td class="td-entity">
+                  <td>
                     @if (line.entityType) {
-                      <select
-                        [ngModel]="line.entityId"
-                        (ngModelChange)="updateLine(i, 'entityId', +$event || null)"
-                      >
+                      <select class="valex-select" [ngModel]="line.entityId" (ngModelChange)="updateLine(i, 'entityId', +$event || null)">
                         <option [ngValue]="null">— اختر —</option>
                         @for (en of getEntityList(line.entityType, line.accountId); track en.id) {
-                          <option [ngValue]="en.id">
-                            {{ en.name || en.fullName || en.fundName }}
-                          </option>
+                          <option [ngValue]="en.id">{{ en.name || en.fullName || en.fundName }}</option>
                         }
                       </select>
                     } @else {
-                      <span class="td-dash">—</span>
+                      <span class="text-muted">—</span>
                     }
                   </td>
-                  <td class="td-desc">
-                    <input
-                      type="text"
-                      placeholder="بيان السطر..."
-                      [ngModel]="line.description"
-                      (ngModelChange)="updateLine(i, 'description', $event)"
-                    />
+                  <td>
+                    <input class="valex-input" type="text" placeholder="بيان السطر..."
+                      [ngModel]="line.description" (ngModelChange)="updateLine(i, 'description', $event)" />
                   </td>
-                  <td class="td-currency">
-                    <select
-                      [ngModel]="line.currencyId"
-                      (ngModelChange)="updateLine(i, 'currencyId', +$event || 1)"
-                    >
+                  <td>
+                    <select class="valex-select" [ngModel]="line.currencyId" (ngModelChange)="updateLine(i, 'currencyId', +$event || 1)">
                       @for (c of currencies(); track c.id) {
                         <option [ngValue]="c.id">{{ c.code }}</option>
                       }
                     </select>
                   </td>
-                  <td class="td-debit">
+                  <td>
                     @if (line.lineType === 'debit') {
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        [ngModel]="line.amount"
-                        (ngModelChange)="updateLine(i, 'amount', +$event || 0)"
-                        class="amt-input debit-input"
-                      />
+                      <input class="valex-input journal-amt-input" type="number" min="0" step="0.01" placeholder="0.00"
+                        [ngModel]="line.amount" (ngModelChange)="updateLine(i, 'amount', +$event || 0)" />
                     } @else {
-                      <span class="td-dash">—</span>
+                      <span class="text-muted">—</span>
                     }
                   </td>
-                  <td class="td-credit">
+                  <td>
                     @if (line.lineType === 'credit') {
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        [ngModel]="line.amount"
-                        (ngModelChange)="updateLine(i, 'amount', +$event || 0)"
-                        class="amt-input credit-input"
-                      />
+                      <input class="valex-input journal-amt-input" type="number" min="0" step="0.01" placeholder="0.00"
+                        [ngModel]="line.amount" (ngModelChange)="updateLine(i, 'amount', +$event || 0)" />
                     } @else {
-                      <span class="td-dash">—</span>
+                      <span class="text-muted">—</span>
                     }
                   </td>
                   @if (hasForeignCurrency()) {
-                    <td class="td-foreign">
+                    <td>
                       @if (line.currencyId !== 1) {
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          [ngModel]="line.foreignAmount"
-                          (ngModelChange)="updateLine(i, 'foreignAmount', +$event || null)"
-                          class="amt-input"
-                        />
+                        <input class="valex-input journal-amt-input" type="number" min="0" step="0.01" placeholder="0.00"
+                          [ngModel]="line.foreignAmount" (ngModelChange)="updateLine(i, 'foreignAmount', +$event || null)" />
                       } @else {
-                        <span class="td-dash">—</span>
+                        <span class="text-muted">—</span>
                       }
                     </td>
-                    <td class="td-rate">
+                    <td>
                       @if (line.currencyId !== 1) {
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.000001"
-                          placeholder="1.000000"
-                          [ngModel]="line.exchangeRate"
-                          (ngModelChange)="updateLine(i, 'exchangeRate', +$event || null)"
-                          class="amt-input small"
-                        />
+                        <input class="valex-input journal-amt-input" type="number" min="0" step="0.000001" placeholder="1.000000"
+                          [ngModel]="line.exchangeRate" (ngModelChange)="updateLine(i, 'exchangeRate', +$event || null)" />
                       } @else {
-                        <span class="td-dash">—</span>
+                        <span class="text-muted">—</span>
                       }
                     </td>
                   }
-                  <td class="td-act">
-                    <button class="line-btn dup" (click)="duplicateLine(i)" title="نسخ">
-                      <span class="material-icons-round">content_copy</span>
-                    </button>
-                    <button
-                      class="line-btn del"
-                      (click)="removeLine(i)"
-                      title="حذف"
-                      [disabled]="formLines().length <= 2"
-                    >
-                      <span class="material-icons-round">close</span>
-                    </button>
+                  <td>
+                    <div class="flex items-center gap-1">
+                      <button class="valex-icon-btn" (click)="duplicateLine(i)" title="نسخ">
+                        <span class="material-icons-round">content_copy</span>
+                      </button>
+                      <button class="valex-icon-btn danger" (click)="removeLine(i)" title="حذف" [disabled]="formLines().length <= 2">
+                        <span class="material-icons-round">close</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
-        <button class="add-line-btn" (click)="addLine()">
-          <span class="material-icons-round">add</span> إضافة سطر
+        <button class="valex-btn valex-btn-outline mb-6" (click)="addLine()">
+          <span class="material-icons-round">add</span>
+          إضافة سطر
         </button>
-      </div>
 
-      <!-- شريط التوازن -->
-      <div class="balance-bar" [class.balanced]="isBalanced()" [class.unbalanced]="!isBalanced()">
-        <div class="bal-col">
-          <div class="bal-label">إجمالي المدين</div>
-          <div class="bal-amt debit">{{ fmt(totalDebit()) }}</div>
-        </div>
-        <div class="bal-sep">
-          @if (isBalanced()) {
-            <span class="material-icons-round bal-ok">check_circle</span>
-          } @else {
-            <span class="material-icons-round bal-err">warning</span>
-          }
-        </div>
-        <div class="bal-col">
-          <div class="bal-label">إجمالي الدائن</div>
-          <div class="bal-amt credit">{{ fmt(totalCredit()) }}</div>
-        </div>
-        <div class="bal-col">
-          <div class="bal-label">الفرق</div>
-          <div class="bal-amt" [class.zero]="isBalanced()" [class.nonzero]="!isBalanced()">
-            {{ fmt(difference()) }}
+        <div class="journal-balance-bar mb-4" [class.balanced]="isBalanced()" [class.unbalanced]="!isBalanced()">
+          <div class="journal-bal-col">
+            <div class="text-xs text-muted font-semibold mb-1">إجمالي المدين</div>
+            <div class="font-mono font-bold text-success text-lg">{{ fmt(totalDebit()) }}</div>
+          </div>
+          <div class="journal-bal-sep">
+            @if (isBalanced()) {
+              <span class="material-icons-round text-success text-3xl">check_circle</span>
+            } @else {
+              <span class="material-icons-round text-danger text-3xl">warning</span>
+            }
+          </div>
+          <div class="journal-bal-col">
+            <div class="text-xs text-muted font-semibold mb-1">إجمالي الدائن</div>
+            <div class="font-mono font-bold text-danger text-lg">{{ fmt(totalCredit()) }}</div>
+          </div>
+          <div class="journal-bal-col">
+            <div class="text-xs text-muted font-semibold mb-1">الفرق</div>
+            <div class="font-mono font-bold text-lg" [class.text-success]="isBalanced()" [class.text-danger]="!isBalanced()">{{ fmt(difference()) }}</div>
           </div>
         </div>
+
+        @if (error()) {
+          <div class="valex-card mb-4 border border-danger/20 bg-danger/5">
+            <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+              <span class="material-icons-round">error</span>
+              {{ error() }}
+            </div>
+          </div>
+        }
       </div>
 
-      @if (error()) {
-        <div class="jrn-error"><span class="material-icons-round">error</span> {{ error() }}</div>
-      }
-
-      <div class="jrn-form-footer">
-        <button class="jrn-btn ghost" (click)="showForm.set(false)">إلغاء</button>
-        <button
-          class="jrn-btn secondary"
-          [disabled]="saving()"
-          (click)="formHeader.update(h => ({...h, status: 'draft'})); save()"
-        >
-          <span class="material-icons-round">save</span> حفظ كمسودة
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-outline" [disabled]="saving()"
+          (click)="formHeader.update(h => ({...h, status: 'draft'})); save()">
+          <span class="material-icons-round">save</span>
+          حفظ كمسودة
         </button>
-        <button
-          class="jrn-btn primary"
-          [disabled]="saving() || !isBalanced()"
-          (click)="formHeader.update(h => ({...h, status: 'unreviewed'})); save()"
-        >
+        <button class="valex-btn valex-btn-primary" [disabled]="saving() || !isBalanced()"
+          (click)="formHeader.update(h => ({...h, status: 'unreviewed'})); save()">
           @if (saving()) {
-            <span class="material-icons-round rotating">sync</span>
+            <span class="material-icons-round journal-spin">sync</span>
           } @else {
             <span class="material-icons-round">done_all</span>
           }

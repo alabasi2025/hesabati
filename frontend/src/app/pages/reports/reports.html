@@ -1,395 +1,293 @@
 <div class="page-content">
-  <div class="page-header">
-    <h2><span class="material-icons-round">assessment</span> التقارير</h2>
-    <button class="print-btn" (click)="printReport()">
-      <span class="material-icons-round">print</span> طباعة
+  <app-page-header
+    title="التقارير"
+    icon="assessment"
+    [breadcrumb]="['الرئيسية', 'التقارير']"
+  >
+    <button class="valex-btn valex-btn-outline" (click)="printReport()">
+      <span class="material-icons-round">print</span>
+      طباعة
     </button>
-  </div>
+  </app-page-header>
 
-  <!-- تبويبات التقارير -->
-  <div class="report-tabs">
-    @for (r of reportTypes; track r.id) {
-      <button class="report-tab" [class.active]="activeReport() === r.id" (click)="setReport(r.id)">
-        <span class="material-icons-round">{{ r.icon }}</span>
-        <span>{{ r.label }}</span>
-      </button>
-    }
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        @for (r of reportTypes; track r.id) {
+          <button class="valex-tab-btn" [class.active]="activeReport() === r.id" (click)="setReport(r.id)">
+            <span class="material-icons-round">{{ r.icon }}</span>
+            {{ r.label }}
+          </button>
+        }
+      </div>
+    </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري تحميل البيانات...</p>
-    </div>
+    <app-loading-state />
   } @else {
     <div id="report-print-area">
-      <!-- تقرير النظرة العامة -->
+
       @if (activeReport() === 'overview') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">dashboard</span> ملخص عام
-          </h3>
-          <div class="stats-grid">
-            <div class="stat-card amber">
-              <div class="stat-icon"><span class="material-icons-round">account_balance</span></div>
-              <div class="stat-info">
-                <span class="stat-num">{{ stats().totalAccounts }}</span
-                ><span class="stat-lbl">حساب</span>
-              </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+          <div class="valex-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+              <span class="material-icons-round">account_balance</span>
             </div>
-            <div class="stat-card blue">
-              <div class="stat-icon"><span class="material-icons-round">savings</span></div>
-              <div class="stat-info">
-                <span class="stat-num">{{ stats().totalFunds }}</span
-                ><span class="stat-lbl">صندوق</span>
-              </div>
+            <div><div class="text-xl font-bold">{{ stats().totalAccounts }}</div><div class="text-xs text-muted">حساب</div></div>
+          </div>
+          <div class="valex-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+              <span class="material-icons-round">savings</span>
             </div>
-            <div class="stat-card green">
-              <div class="stat-icon"><span class="material-icons-round">groups</span></div>
-              <div class="stat-info">
-                <span class="stat-num">{{ stats().totalEmployees }}</span
-                ><span class="stat-lbl">موظف</span>
-              </div>
+            <div><div class="text-xl font-bold">{{ stats().totalFunds }}</div><div class="text-xs text-muted">صندوق</div></div>
+          </div>
+          <div class="valex-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+              <span class="material-icons-round">groups</span>
             </div>
-            <div class="stat-card purple">
-              <div class="stat-icon"><span class="material-icons-round">receipt_long</span></div>
-              <div class="stat-info">
-                <span class="stat-num">{{ stats().totalVouchers }}</span
-                ><span class="stat-lbl">سند</span>
-              </div>
+            <div><div class="text-xl font-bold">{{ stats().totalEmployees }}</div><div class="text-xs text-muted">موظف</div></div>
+          </div>
+          <div class="valex-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-secondary/10 text-secondary flex-shrink-0">
+              <span class="material-icons-round">receipt_long</span>
             </div>
-            <div class="stat-card red">
-              <div class="stat-icon"><span class="material-icons-round">menu_book</span></div>
-              <div class="stat-info">
-                <span class="stat-num">{{ stats().totalJournal }}</span
-                ><span class="stat-lbl">قيد</span>
-              </div>
+            <div><div class="text-xl font-bold">{{ stats().totalVouchers }}</div><div class="text-xs text-muted">سند</div></div>
+          </div>
+          <div class="valex-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+              <span class="material-icons-round">menu_book</span>
             </div>
-            <div class="stat-card teal">
-              <div class="stat-icon"><span class="material-icons-round">payments</span></div>
-              <div class="stat-info">
-                <span class="stat-num">{{ stats().totalSalaries | number: '1.0-0' }}</span
-                ><span class="stat-lbl">إجمالي الرواتب</span>
-              </div>
+            <div><div class="text-xl font-bold">{{ stats().totalJournal }}</div><div class="text-xs text-muted">قيد</div></div>
+          </div>
+          <div class="valex-card p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-info/10 text-info flex-shrink-0">
+              <span class="material-icons-round">payments</span>
+            </div>
+            <div><div class="text-xl font-bold">{{ stats().totalSalaries | number: '1.0-0' }}</div><div class="text-xs text-muted">إجمالي الرواتب</div></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div class="valex-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+              <span class="material-icons-round text-2xl">arrow_downward</span>
+            </div>
+            <div>
+              <div class="text-2xl font-bold">{{ stats().receiptVouchers }}</div>
+              <div class="text-sm text-muted">سند قبض</div>
+              <div class="text-xs font-mono text-success">{{ stats().totalReceipts | number: '1.0-0' }} ر.ي</div>
             </div>
           </div>
-
-          <div class="voucher-summary">
-            <h3 class="section-title">
-              <span class="material-icons-round">receipt_long</span> ملخص السندات
-            </h3>
-            <div class="voucher-cards">
-              <div class="voucher-card receipt">
-                <span class="material-icons-round">arrow_downward</span>
-                <div>
-                  <span class="v-num">{{ stats().receiptVouchers }}</span
-                  ><span class="v-lbl">سند قبض</span>
-                </div>
-                <span class="v-amount">{{ stats().totalReceipts | number: '1.0-0' }} ر.ي</span>
-              </div>
-              <div class="voucher-card payment">
-                <span class="material-icons-round">arrow_upward</span>
-                <div>
-                  <span class="v-num">{{ stats().paymentVouchers }}</span
-                  ><span class="v-lbl">سند صرف</span>
-                </div>
-                <span class="v-amount">{{ stats().totalPayments | number: '1.0-0' }} ر.ي</span>
-              </div>
+          <div class="valex-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-danger/10 text-danger flex-shrink-0">
+              <span class="material-icons-round text-2xl">arrow_upward</span>
+            </div>
+            <div>
+              <div class="text-2xl font-bold">{{ stats().paymentVouchers }}</div>
+              <div class="text-sm text-muted">سند صرف</div>
+              <div class="text-xs font-mono text-danger">{{ stats().totalPayments | number: '1.0-0' }} ر.ي</div>
             </div>
           </div>
         </div>
       }
 
-      <!-- ميزان المراجعة -->
       @if (activeReport() === 'trial-balance') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">balance</span> ميزان المراجعة
-          </h3>
-
-          <div class="filter-bar">
-            <div class="filter-group">
-              <label for="trial-date-from">من تاريخ</label>
-              <input
-                id="trial-date-from"
-                title="من تاريخ"
-                type="date"
-                [ngModel]="trialDateFrom()"
-                (ngModelChange)="trialDateFrom.set($event)"
-              />
-            </div>
-            <div class="filter-group">
-              <label for="trial-date-to">إلى تاريخ</label>
-              <input
-                id="trial-date-to"
-                title="إلى تاريخ"
-                type="date"
-                [ngModel]="trialDateTo()"
-                (ngModelChange)="trialDateTo.set($event)"
-              />
-            </div>
-            <button class="filter-btn" (click)="loadTrialBalance()">
-              <span class="material-icons-round">search</span> عرض
-            </button>
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-primary">balance</span>
+              ميزان المراجعة
+            </h3>
           </div>
-
-          @if (trialLoading()) {
-            <div class="loading-state">
-              <span class="material-icons-round spin">sync</span>
-              <p>جاري تحميل ميزان المراجعة...</p>
-            </div>
-          } @else if (!trialBalance().length) {
-            <div class="empty-state">
-              <span class="material-icons-round">balance</span>
-              <p>لا توجد بيانات - قم بإنشاء سندات أولاً</p>
-            </div>
-          } @else {
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>الرقم المحاسبي</th>
-                  <th>اسم الحساب</th>
-                  <th>رمز الحساب</th>
-                  <th class="amount-col">إجمالي المدين</th>
-                  <th class="amount-col">إجمالي الدائن</th>
-                  <th class="amount-col">الرصيد</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of trialBalance(); track row.accountId || $index; let i = $index) {
-                  <tr>
-                    <td>{{ i + 1 }}</td>
-                    <td class="code-cell">{{ row.ledger_code || row.ledgerCode || '-' }}</td>
-                    <td class="name-cell">{{ row.accountName || row.name || '-' }}</td>
-                    <td>{{ row.accountCode || row.code || '-' }}</td>
-                    <td class="amount-cell text-green">
-                      {{ formatAmount(row.totalDebit || row.debit) }}
-                    </td>
-                    <td class="amount-cell text-red">
-                      {{ formatAmount(row.totalCredit || row.credit) }}
-                    </td>
-                    <td
-                      class="amount-cell"
-                      [class.text-green]="(row.balance || 0) > 0"
-                      [class.text-red]="(row.balance || 0) < 0"
-                    >
-                      {{ formatAmount(row.balance) }}
-                    </td>
-                  </tr>
-                }
-              </tbody>
-              <tfoot>
-                <tr class="total-row">
-                  <td colspan="4"><strong>الإجمالي</strong></td>
-                  <td class="amount-cell text-green">
-                    <strong>{{ formatAmount(getTrialTotalDebit()) }}</strong>
-                  </td>
-                  <td class="amount-cell text-red">
-                    <strong>{{ formatAmount(getTrialTotalCredit()) }}</strong>
-                  </td>
-                  <td class="amount-cell">
-                    <strong>{{ formatAmount(getTrialTotalBalance()) }}</strong>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-
-            <div
-              class="balance-indicator"
-              [class.balanced]="getTrialTotalDebit() === getTrialTotalCredit()"
-            >
-              <span class="material-icons-round">{{
-                getTrialTotalDebit() === getTrialTotalCredit() ? 'check_circle' : 'warning'
-              }}</span>
-              {{
-                getTrialTotalDebit() === getTrialTotalCredit()
-                  ? 'الميزان متوازن'
-                  : 'الميزان غير متوازن - يوجد فرق: ' +
-                    formatAmount(getTrialTotalDebit() - getTrialTotalCredit())
-              }}
-            </div>
-          }
-        </div>
-      }
-
-      <!-- كشف حساب -->
-      @if (activeReport() === 'statement') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">description</span> كشف حساب
-          </h3>
-
-          <div class="filter-bar">
-            <div class="filter-group">
-              <label for="statement-account">الحساب</label>
-              <select
-                id="statement-account"
-                title="الحساب"
-                [ngModel]="selectedAccountId()"
-                (ngModelChange)="selectedAccountId.set($event)"
-              >
-                <option [ngValue]="null">-- اختر حساباً --</option>
-                @for (acc of accounts(); track acc.id) {
-                  <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code || '-' }})</option>
-                }
-              </select>
-            </div>
-            <div class="filter-group">
-              <label for="statement-date-from">من تاريخ</label>
-              <input
-                id="statement-date-from"
-                title="من تاريخ"
-                type="date"
-                [ngModel]="statementDateFrom()"
-                (ngModelChange)="statementDateFrom.set($event)"
-              />
-            </div>
-            <div class="filter-group">
-              <label for="statement-date-to">إلى تاريخ</label>
-              <input
-                id="statement-date-to"
-                title="إلى تاريخ"
-                type="date"
-                [ngModel]="statementDateTo()"
-                (ngModelChange)="statementDateTo.set($event)"
-              />
-            </div>
-            <div class="filter-group">
-              <label for="statement-source-type">نوع الحركة</label>
-              <select
-                id="statement-source-type"
-                title="نوع الحركة"
-                [ngModel]="statementSourceType()"
-                (ngModelChange)="statementSourceType.set($event)"
-              >
-                <option value="all">الكل</option>
-                <option value="payment_voucher">سند صرف</option>
-                <option value="receipt_voucher">سند قبض</option>
-                <option value="journal_manual">قيد يومية</option>
-                <option value="inventory_txn">حركة مخزنية</option>
-              </select>
-            </div>
-            <button class="filter-btn" (click)="loadAccountStatement()">
-              <span class="material-icons-round">search</span> عرض
-            </button>
-          </div>
-
-          @if (statementLoading()) {
-            <div class="loading-state">
-              <span class="material-icons-round spin">sync</span>
-              <p>جاري تحميل كشف الحساب...</p>
-            </div>
-          } @else if (statementAccount()) {
-            <div class="statement-header">
-              <div class="stmt-info">
-                <strong>{{ statementAccount().name }}</strong>
-                @if (statementAccount().ledgerCode) {
-                  <span>رقم محاسبي: {{ statementAccount().ledgerCode }}</span>
-                }
-                <span>رمز: {{ statementAccount().code || '-' }}</span>
-                <span>نوع: {{ getAccountTypeLabel(statementAccount().accountType) }}</span>
+          <div class="valex-card-body">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="valex-form-group">
+                <label class="valex-label" for="trial-date-from">من تاريخ</label>
+                <input id="trial-date-from" class="valex-input" title="من تاريخ" type="date"
+                  [ngModel]="trialDateFrom()" (ngModelChange)="trialDateFrom.set($event)" />
+              </div>
+              <div class="valex-form-group">
+                <label class="valex-label" for="trial-date-to">إلى تاريخ</label>
+                <input id="trial-date-to" class="valex-input" title="إلى تاريخ" type="date"
+                  [ngModel]="trialDateTo()" (ngModelChange)="trialDateTo.set($event)" />
+              </div>
+              <div class="flex items-end pb-1">
+                <button class="valex-btn valex-btn-primary w-full" (click)="loadTrialBalance()">
+                  <span class="material-icons-round">search</span> عرض
+                </button>
               </div>
             </div>
 
-            @if (!statementData().length) {
-              <div class="empty-state">
-                <span class="material-icons-round">description</span>
-                <p>لا توجد حركات لهذا الحساب</p>
-              </div>
+            @if (trialLoading()) {
+              <app-loading-state />
+            } @else if (!trialBalance().length) {
+              <app-empty-state icon="balance" title="لا توجد بيانات" message="قم بإنشاء سندات أولاً" />
             } @else {
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>التاريخ</th>
-                    <th>نوع الحركة</th>
-                    <th>الوصف</th>
-                    <th class="amount-col">مدين</th>
-                    <th class="amount-col">دائن</th>
-                    <th class="amount-col">الرصيد</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (entry of statementData(); track $index; let i = $index) {
+              <div class="overflow-x-auto mb-4">
+                <table class="valex-table">
+                  <thead>
                     <tr>
-                      <td>{{ i + 1 }}</td>
-                      <td class="date-cell">{{ formatDate(entry.date || entry.entryDate) }}</td>
-                      <td>{{ getSourceTypeLabel(entry.source_type || entry.sourceType) }}</td>
-                      <td>
-                        {{
-                          entry.entry_description ||
-                            entry.line_description ||
-                            entry.description ||
-                            '-'
-                        }}
-                      </td>
-                      <td class="amount-cell text-green">
-                        {{ entry.debit ? formatAmount(entry.debit) : '-' }}
-                      </td>
-                      <td class="amount-cell text-red">
-                        {{ entry.credit ? formatAmount(entry.credit) : '-' }}
-                      </td>
-                      <td
-                        class="amount-cell"
-                        [class.text-green]="(entry.runningBalance || 0) > 0"
-                        [class.text-red]="(entry.runningBalance || 0) < 0"
-                      >
-                        {{ formatAmount(entry.runningBalance || entry.balance) }}
-                      </td>
+                      <th>#</th><th>الرقم المحاسبي</th><th>اسم الحساب</th><th>رمز الحساب</th>
+                      <th>إجمالي المدين</th><th>إجمالي الدائن</th><th>الرصيد</th>
                     </tr>
-                  }
-                </tbody>
-                <tfoot>
-                  <tr class="total-row">
-                    <td colspan="4"><strong>الإجمالي</strong></td>
-                    <td class="amount-cell text-green">
-                      <strong>{{ formatAmount(getStatementTotalDebit()) }}</strong>
-                    </td>
-                    <td class="amount-cell text-red">
-                      <strong>{{ formatAmount(getStatementTotalCredit()) }}</strong>
-                    </td>
-                    <td class="amount-cell">
-                      <strong>{{
-                        formatAmount(getStatementTotalDebit() - getStatementTotalCredit())
-                      }}</strong>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (row of trialBalance(); track row.accountId || $index; let i = $index) {
+                      <tr>
+                        <td class="text-muted">{{ i + 1 }}</td>
+                        <td class="font-mono">{{ row.ledger_code || row.ledgerCode || '-' }}</td>
+                        <td class="font-semibold">{{ row.accountName || row.name || '-' }}</td>
+                        <td>{{ row.accountCode || row.code || '-' }}</td>
+                        <td class="font-mono text-success">{{ formatAmount(row.totalDebit || row.debit) }}</td>
+                        <td class="font-mono text-danger">{{ formatAmount(row.totalCredit || row.credit) }}</td>
+                        <td class="font-mono font-bold"
+                            [class.text-success]="(row.balance || 0) > 0"
+                            [class.text-danger]="(row.balance || 0) < 0">
+                          {{ formatAmount(row.balance) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="4" class="font-bold">الإجمالي</td>
+                      <td class="font-mono font-bold text-success">{{ formatAmount(getTrialTotalDebit()) }}</td>
+                      <td class="font-mono font-bold text-danger">{{ formatAmount(getTrialTotalCredit()) }}</td>
+                      <td class="font-mono font-bold">{{ formatAmount(getTrialTotalBalance()) }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl font-semibold text-sm"
+                   [class.bg-success/8]="getTrialTotalDebit() === getTrialTotalCredit()"
+                   [class.text-success]="getTrialTotalDebit() === getTrialTotalCredit()"
+                   [class.bg-danger/8]="getTrialTotalDebit() !== getTrialTotalCredit()"
+                   [class.text-danger]="getTrialTotalDebit() !== getTrialTotalCredit()">
+                <span class="material-icons-round">{{ getTrialTotalDebit() === getTrialTotalCredit() ? 'check_circle' : 'warning' }}</span>
+                {{ getTrialTotalDebit() === getTrialTotalCredit() ? 'الميزان متوازن' : 'الميزان غير متوازن - يوجد فرق: ' + formatAmount(getTrialTotalDebit() - getTrialTotalCredit()) }}
+              </div>
             }
-          }
+          </div>
         </div>
       }
 
-      <!-- تقرير الحسابات -->
-      @if (activeReport() === 'accounts') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">account_balance</span> تقرير الحسابات ({{
-              accounts().length
-            }})
-          </h3>
-          @for (group of accountsByType(); track group.type) {
-            <div class="group-card">
-              <div class="group-header">
-                <h4>{{ getAccountTypeLabel(group.type) }}</h4>
-                <span class="group-count">{{ group.count }}</span>
+      @if (activeReport() === 'statement') {
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-primary">description</span>
+              كشف حساب
+            </h3>
+          </div>
+          <div class="valex-card-body">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+              <div class="valex-form-group xl:col-span-2">
+                <label class="valex-label" for="statement-account">الحساب</label>
+                <select id="statement-account" class="valex-select" title="الحساب"
+                  [ngModel]="selectedAccountId()" (ngModelChange)="selectedAccountId.set($event)">
+                  <option [ngValue]="null">-- اختر حساباً --</option>
+                  @for (acc of accounts(); track acc.id) {
+                    <option [ngValue]="acc.id">{{ acc.name }} ({{ acc.code || '-' }})</option>
+                  }
+                </select>
               </div>
-              <table class="data-table compact">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>الاسم</th>
-                    <th>الرمز</th>
-                    <th>العملة</th>
-                  </tr>
-                </thead>
+              <div class="valex-form-group">
+                <label class="valex-label" for="statement-date-from">من تاريخ</label>
+                <input id="statement-date-from" class="valex-input" title="من تاريخ" type="date"
+                  [ngModel]="statementDateFrom()" (ngModelChange)="statementDateFrom.set($event)" />
+              </div>
+              <div class="valex-form-group">
+                <label class="valex-label" for="statement-date-to">إلى تاريخ</label>
+                <input id="statement-date-to" class="valex-input" title="إلى تاريخ" type="date"
+                  [ngModel]="statementDateTo()" (ngModelChange)="statementDateTo.set($event)" />
+              </div>
+              <div class="valex-form-group">
+                <label class="valex-label" for="statement-source-type">نوع الحركة</label>
+                <select id="statement-source-type" class="valex-select" title="نوع الحركة"
+                  [ngModel]="statementSourceType()" (ngModelChange)="statementSourceType.set($event)">
+                  <option value="all">الكل</option>
+                  <option value="payment_voucher">سند صرف</option>
+                  <option value="receipt_voucher">سند قبض</option>
+                  <option value="journal_manual">قيد يومية</option>
+                  <option value="inventory_txn">حركة مخزنية</option>
+                </select>
+              </div>
+            </div>
+            <button class="valex-btn valex-btn-primary mb-6" (click)="loadAccountStatement()">
+              <span class="material-icons-round">search</span> عرض
+            </button>
+
+            @if (statementLoading()) {
+              <app-loading-state />
+            } @else if (statementAccount()) {
+              <div class="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-xl bg-primary/5 border border-primary/10 text-sm">
+                <strong>{{ statementAccount().name }}</strong>
+                @if (statementAccount().ledgerCode) { <span class="text-muted">رقم محاسبي: {{ statementAccount().ledgerCode }}</span> }
+                <span class="text-muted">رمز: {{ statementAccount().code || '-' }}</span>
+                <span class="text-muted">نوع: {{ getAccountTypeLabel(statementAccount().accountType) }}</span>
+              </div>
+
+              @if (!statementData().length) {
+                <app-empty-state icon="description" title="لا توجد حركات لهذا الحساب" />
+              } @else {
+                <div class="overflow-x-auto">
+                  <table class="valex-table">
+                    <thead>
+                      <tr><th>#</th><th>التاريخ</th><th>نوع الحركة</th><th>الوصف</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (entry of statementData(); track $index; let i = $index) {
+                        <tr>
+                          <td class="text-muted">{{ i + 1 }}</td>
+                          <td class="font-mono">{{ formatDate(entry.date || entry.entryDate) }}</td>
+                          <td>{{ getSourceTypeLabel(entry.source_type || entry.sourceType) }}</td>
+                          <td>{{ entry.entry_description || entry.line_description || entry.description || '-' }}</td>
+                          <td class="font-mono text-success">{{ entry.debit ? formatAmount(entry.debit) : '-' }}</td>
+                          <td class="font-mono text-danger">{{ entry.credit ? formatAmount(entry.credit) : '-' }}</td>
+                          <td class="font-mono font-bold"
+                              [class.text-success]="(entry.runningBalance || 0) > 0"
+                              [class.text-danger]="(entry.runningBalance || 0) < 0">
+                            {{ formatAmount(entry.runningBalance || entry.balance) }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="4" class="font-bold">الإجمالي</td>
+                        <td class="font-mono font-bold text-success">{{ formatAmount(getStatementTotalDebit()) }}</td>
+                        <td class="font-mono font-bold text-danger">{{ formatAmount(getStatementTotalCredit()) }}</td>
+                        <td class="font-mono font-bold">{{ formatAmount(getStatementTotalDebit() - getStatementTotalCredit()) }}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (activeReport() === 'accounts') {
+        <h3 class="text-base font-bold flex items-center gap-2 mb-4">
+          <span class="material-icons-round text-primary">account_balance</span>
+          تقرير الحسابات ({{ accounts().length }})
+        </h3>
+        @for (group of accountsByType(); track group.type) {
+          <div class="valex-card mb-4">
+            <div class="valex-card-header">
+              <h4 class="valex-card-title">{{ getAccountTypeLabel(group.type) }}</h4>
+              <span class="valex-badge valex-badge-primary">{{ group.count }}</span>
+            </div>
+            <div class="valex-card-body p-0 overflow-x-auto">
+              <table class="valex-table">
+                <thead><tr><th>#</th><th>الاسم</th><th>الرمز</th><th>العملة</th></tr></thead>
                 <tbody>
                   @for (a of group.items; track a.id; let i = $index) {
                     <tr>
-                      <td>{{ i + 1 }}</td>
-                      <td class="name-cell">{{ a.name }}</td>
+                      <td class="text-muted">{{ i + 1 }}</td>
+                      <td class="font-semibold">{{ a.name }}</td>
                       <td>{{ a.code || '-' }}</td>
                       <td>{{ a.currencyCode || 'YER' }}</td>
                     </tr>
@@ -397,183 +295,151 @@
                 </tbody>
               </table>
             </div>
-          }
-        </div>
+          </div>
+        }
       }
 
-      <!-- تقرير الصناديق -->
       @if (activeReport() === 'funds') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">savings</span> تقرير الصناديق ({{ funds().length }})
-          </h3>
-          @for (group of fundsByType(); track group.type) {
-            <div class="group-card">
-              <div class="group-header">
-                <h4>{{ getFundTypeLabel(group.type) }}</h4>
-                <span class="group-count">{{ group.count }}</span>
-              </div>
-              <table class="data-table compact">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>الاسم</th>
-                    <th>المحطة</th>
-                  </tr>
-                </thead>
+        <h3 class="text-base font-bold flex items-center gap-2 mb-4">
+          <span class="material-icons-round text-primary">savings</span>
+          تقرير الصناديق ({{ funds().length }})
+        </h3>
+        @for (group of fundsByType(); track group.type) {
+          <div class="valex-card mb-4">
+            <div class="valex-card-header">
+              <h4 class="valex-card-title">{{ getFundTypeLabel(group.type) }}</h4>
+              <span class="valex-badge valex-badge-primary">{{ group.count }}</span>
+            </div>
+            <div class="valex-card-body p-0 overflow-x-auto">
+              <table class="valex-table">
+                <thead><tr><th>#</th><th>الاسم</th><th>المحطة</th></tr></thead>
                 <tbody>
                   @for (f of group.items; track f.id; let i = $index) {
                     <tr>
-                      <td>{{ i + 1 }}</td>
-                      <td class="name-cell">{{ f.name }}</td>
+                      <td class="text-muted">{{ i + 1 }}</td>
+                      <td class="font-semibold">{{ f.name }}</td>
                       <td>{{ f.stationName || '-' }}</td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
-          }
-        </div>
+          </div>
+        }
       }
 
-      <!-- تقرير الرواتب -->
       @if (activeReport() === 'employees') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">groups</span> تقرير الرواتب
-          </h3>
-          @for (group of employeesByStation(); track group.station) {
-            <div class="group-card">
-              <div class="group-header">
-                <h4>{{ group.station }}</h4>
-                <span class="group-count">{{ group.count }} موظف</span
-                ><span class="group-total">{{ group.totalSalary | number: '1.0-0' }} ر.ي</span>
+        <h3 class="text-base font-bold flex items-center gap-2 mb-4">
+          <span class="material-icons-round text-primary">groups</span>
+          تقرير الرواتب
+        </h3>
+        @for (group of employeesByStation(); track group.station) {
+          <div class="valex-card mb-4">
+            <div class="valex-card-header">
+              <h4 class="valex-card-title">{{ group.station }}</h4>
+              <div class="flex items-center gap-2">
+                <span class="valex-badge valex-badge-secondary">{{ group.count }} موظف</span>
+                <span class="valex-badge valex-badge-success font-mono">{{ group.totalSalary | number: '1.0-0' }} ر.ي</span>
               </div>
-              <table class="data-table compact">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>الاسم</th>
-                    <th>المسمى</th>
-                    <th>الراتب</th>
-                    <th>الحالة</th>
-                  </tr>
-                </thead>
+            </div>
+            <div class="valex-card-body p-0 overflow-x-auto">
+              <table class="valex-table">
+                <thead><tr><th>#</th><th>الاسم</th><th>المسمى</th><th>الراتب</th><th>الحالة</th></tr></thead>
                 <tbody>
                   @for (e of group.items; track e.id; let i = $index) {
                     <tr>
-                      <td>{{ i + 1 }}</td>
-                      <td class="name-cell">{{ e.fullName }}</td>
+                      <td class="text-muted">{{ i + 1 }}</td>
+                      <td class="font-semibold">{{ e.fullName }}</td>
                       <td>{{ e.jobTitle || '-' }}</td>
-                      <td class="salary-cell">{{ e.salary | number: '1.0-0' }}</td>
+                      <td class="font-mono">{{ e.salary | number: '1.0-0' }}</td>
                       <td>
-                        <span
-                          class="status-badge"
-                          [class]="e.status === 'active' ? 'active' : 'inactive'"
-                          >{{ e.status === 'active' ? 'نشط' : 'غير نشط' }}</span
-                        >
+                        <span class="valex-badge" [class.valex-badge-success]="e.status === 'active'" [class.valex-badge-secondary]="e.status !== 'active'">
+                          {{ e.status === 'active' ? 'نشط' : 'غير نشط' }}
+                        </span>
                       </td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
-          }
-        </div>
+          </div>
+        }
       }
 
-      <!-- تقرير السندات -->
       @if (activeReport() === 'vouchers') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">receipt_long</span> تقرير السندات ({{
-              vouchers().length
-            }})
-          </h3>
-          @if (!vouchers().length) {
-            <div class="empty-state">
-              <span class="material-icons-round">receipt_long</span>
-              <p>لا يوجد سندات</p>
-            </div>
-          } @else {
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>الرقم</th>
-                  <th>النوع</th>
-                  <th>المبلغ</th>
-                  <th>الوصف</th>
-                  <th>الحالة</th>
-                  <th>التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (v of vouchers(); track v.id; let i = $index) {
-                  <tr>
-                    <td>{{ i + 1 }}</td>
-                    <td>{{ v.voucherNumber || '-' }}</td>
-                    <td>
-                      <span
-                        class="type-badge"
-                        [class]="v.voucherType === 'receipt' ? 'receipt' : 'payment'"
-                        >{{ v.voucherType === 'receipt' ? 'قبض' : 'صرف' }}</span
-                      >
-                    </td>
-                    <td class="amount-cell">{{ v.amount | number: '1.0-0' }} ر.ي</td>
-                    <td>{{ v.description || '-' }}</td>
-                    <td>
-                      <span class="status-badge" [class]="v.status || 'unreviewed'">{{
-                        v.status === 'reviewed' ? 'مراجع' : 'غير مراجع'
-                      }}</span>
-                    </td>
-                    <td class="date-cell">
-                      {{ v.voucherDate || v.createdAt | date: 'yyyy/MM/dd' }}
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-primary">receipt_long</span>
+              تقرير السندات ({{ vouchers().length }})
+            </h3>
+          </div>
+          <div class="valex-card-body p-0">
+            @if (!vouchers().length) {
+              <div class="p-6"><app-empty-state icon="receipt_long" title="لا يوجد سندات" /></div>
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="valex-table">
+                  <thead><tr><th>#</th><th>الرقم</th><th>النوع</th><th>المبلغ</th><th>الوصف</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+                  <tbody>
+                    @for (v of vouchers(); track v.id; let i = $index) {
+                      <tr>
+                        <td class="text-muted">{{ i + 1 }}</td>
+                        <td class="font-mono">{{ v.voucherNumber || '-' }}</td>
+                        <td>
+                          <span class="valex-badge" [class.valex-badge-success]="v.voucherType === 'receipt'" [class.valex-badge-danger]="v.voucherType === 'payment'">
+                            {{ v.voucherType === 'receipt' ? 'قبض' : 'صرف' }}
+                          </span>
+                        </td>
+                        <td class="font-mono">{{ v.amount | number: '1.0-0' }} ر.ي</td>
+                        <td>{{ v.description || '-' }}</td>
+                        <td>
+                          <span class="valex-badge" [class.valex-badge-info]="v.status === 'reviewed'" [class.valex-badge-warning]="v.status !== 'reviewed'">
+                            {{ v.status === 'reviewed' ? 'مراجع' : 'غير مراجع' }}
+                          </span>
+                        </td>
+                        <td class="font-mono">{{ v.voucherDate || v.createdAt | date: 'yyyy/MM/dd' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
         </div>
       }
 
-      <!-- تقرير القيود -->
       @if (activeReport() === 'journal') {
-        <div class="report-section">
-          <h3 class="section-title">
-            <span class="material-icons-round">menu_book</span> تقرير القيود المحاسبية ({{
-              journalEntries().length
-            }})
-          </h3>
-          @if (!journalEntries().length) {
-            <div class="empty-state">
-              <span class="material-icons-round">menu_book</span>
-              <p>لا يوجد قيود</p>
-            </div>
-          } @else {
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>الوصف</th>
-                  <th>التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (j of journalEntries(); track j.id; let i = $index) {
-                  <tr>
-                    <td>{{ i + 1 }}</td>
-                    <td>{{ j.description || '-' }}</td>
-                    <td class="date-cell">{{ j.entryDate || j.createdAt | date: 'yyyy/MM/dd' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-primary">menu_book</span>
+              تقرير القيود المحاسبية ({{ journalEntries().length }})
+            </h3>
+          </div>
+          <div class="valex-card-body p-0">
+            @if (!journalEntries().length) {
+              <div class="p-6"><app-empty-state icon="menu_book" title="لا يوجد قيود" /></div>
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="valex-table">
+                  <thead><tr><th>#</th><th>الوصف</th><th>التاريخ</th></tr></thead>
+                  <tbody>
+                    @for (j of journalEntries(); track j.id; let i = $index) {
+                      <tr>
+                        <td class="text-muted">{{ i + 1 }}</td>
+                        <td>{{ j.description || '-' }}</td>
+                        <td class="font-mono">{{ j.entryDate || j.createdAt | date: 'yyyy/MM/dd' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
         </div>
       }
+
     </div>
-    <!-- end report-print-area -->
   }
 </div>

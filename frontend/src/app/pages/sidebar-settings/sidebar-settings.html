@@ -1,468 +1,382 @@
-<div class="page-container">
-  <!-- Header -->
-  <div class="page-header">
-    <div class="header-right">
-      <div class="header-icon">
-        <span class="material-icons-round">tune</span>
-      </div>
-      <div>
-        <h1>إعدادات التبويب الجانبي</h1>
-        <p>إدارة الشاشات والأقسام وصلاحيات كل مستخدم</p>
-      </div>
-    </div>
-  </div>
+<div class="page-content">
+  <app-page-header
+    title="إعدادات التبويب الجانبي"
+    icon="tune"
+    [breadcrumb]="['الرئيسية', 'المستخدمون والصلاحيات', 'إعدادات التبويب']"
+  />
 
-  <!-- Toast Message -->
   @if (message()) {
-    <div
-      class="toast"
-      [class.success]="messageType() === 'success'"
-      [class.error]="messageType() === 'error'"
-    >
-      <span class="material-icons-round">{{
-        messageType() === 'success' ? 'check_circle' : 'error'
-      }}</span>
+    <div class="valex-card mb-4 border flex items-center gap-3 p-4 text-sm font-semibold"
+         [class.border-success/30]="messageType() === 'success'"
+         [class.bg-success/5]="messageType() === 'success'"
+         [class.text-success]="messageType() === 'success'"
+         [class.border-danger/30]="messageType() === 'error'"
+         [class.bg-danger/5]="messageType() === 'error'"
+         [class.text-danger]="messageType() === 'error'">
+      <span class="material-icons-round">{{ messageType() === 'success' ? 'check_circle' : 'error' }}</span>
       {{ message() }}
     </div>
   }
 
-  <!-- Tabs -->
-  <div class="tabs-bar">
-    <button
-      class="tab-btn"
-      [class.active]="activeTab() === 'users'"
-      (click)="activeTab.set('users')"
-    >
-      <span class="material-icons-round">people</span>
-      صلاحيات المستخدمين
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab() === 'sections'"
-      (click)="activeTab.set('sections')"
-    >
-      <span class="material-icons-round">folder</span>
-      الأقسام
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab() === 'items'"
-      (click)="activeTab.set('items')"
-    >
-      <span class="material-icons-round">list</span>
-      الشاشات
-    </button>
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        <button class="valex-tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
+          <span class="material-icons-round">people</span> صلاحيات المستخدمين
+        </button>
+        <button class="valex-tab-btn" [class.active]="activeTab() === 'sections'" (click)="activeTab.set('sections')">
+          <span class="material-icons-round">folder</span> الأقسام
+        </button>
+        <button class="valex-tab-btn" [class.active]="activeTab() === 'items'" (click)="activeTab.set('items')">
+          <span class="material-icons-round">list</span> الشاشات
+        </button>
+      </div>
+    </div>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <span class="material-icons-round spin">sync</span>
-      <p>جاري التحميل...</p>
-    </div>
+    <app-loading-state />
   } @else {
-    <!-- ==================== Users Tab ==================== -->
+
     @if (activeTab() === 'users') {
-      <div class="users-layout">
-        <!-- Users List -->
-        <div class="users-list-panel">
-          <div class="panel-header">
-            <h3>المستخدمون</h3>
-            <span class="count-badge">{{ users().length }}</span>
+      <div class="sidebar-users-layout">
+        <div class="sidebar-users-list valex-card">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title">المستخدمون</h3>
+            <span class="valex-badge valex-badge-secondary">{{ users().length }}</span>
           </div>
-          @for (user of users(); track user.id) {
-            <div
-              class="user-card"
-              [class.selected]="selectedUser()?.id === user.id"
-              (click)="selectUser(user)"
-            >
-              <div class="user-card-icon" [class]="'role-' + user.role">
-                <span class="material-icons-round">{{ getRoleIcon(user.role) }}</span>
-              </div>
-              <div class="user-card-info">
-                <span class="user-card-name">{{ user.fullName }}</span>
-                <span class="user-card-role">{{ getRoleLabel(user.role) }}</span>
-              </div>
-              @if (selectedUser()?.id === user.id) {
-                <span class="material-icons-round check-icon">check_circle</span>
-              }
-            </div>
-          }
+          <div class="valex-card-body p-2">
+            @for (user of users(); track user.id) {
+              <button class="sidebar-user-item w-full text-right" [class.active]="selectedUser()?.id === user.id" (click)="selectUser(user)">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                     [class.bg-primary/10]="user.role === 'admin'"
+                     [class.text-primary]="user.role === 'admin'"
+                     [class.bg-secondary/10]="user.role !== 'admin'"
+                     [class.text-secondary]="user.role !== 'admin'">
+                  <span class="material-icons-round text-base">{{ getRoleIcon(user.role) }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-sm truncate">{{ user.fullName }}</div>
+                  <div class="text-xs text-muted">{{ getRoleLabel(user.role) }}</div>
+                </div>
+                @if (selectedUser()?.id === user.id) {
+                  <span class="material-icons-round text-primary text-base">check_circle</span>
+                }
+              </button>
+            }
+          </div>
         </div>
 
-        <!-- User Config Panel -->
-        <div class="user-config-panel">
+        <div class="sidebar-config-panel">
           @if (!selectedUser()) {
-            <div class="empty-state">
-              <span class="material-icons-round">touch_app</span>
-              <p>اختر مستخدماً لتعديل صلاحيات التبويب الجانبي</p>
+            <div class="valex-card">
+              <div class="valex-card-body text-center py-12">
+                <span class="material-icons-round text-5xl text-muted block mb-3">touch_app</span>
+                <p class="text-sm text-muted">اختر مستخدماً لتعديل صلاحيات التبويب الجانبي</p>
+              </div>
             </div>
           } @else {
-            <div class="panel-header">
-              <h3>
-                <span class="material-icons-round">{{ getRoleIcon(selectedUser()!.role) }}</span>
-                تبويب {{ selectedUser()!.fullName }}
-              </h3>
-              <button class="save-btn" (click)="saveUserConfig()" [disabled]="savingUser()">
-                <span class="material-icons-round">{{ savingUser() ? 'sync' : 'save' }}</span>
-                {{ savingUser() ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
-              </button>
-            </div>
-
-            <div class="config-hint">
-              <span class="material-icons-round">info</span>
-              فعّل أو عطّل الشاشات لهذا المستخدم. اسحب العناصر لإعادة ترتيبها.
-            </div>
-
-            @for (sectionName of getSectionNames(); track sectionName) {
-              <div class="config-section">
-                <div class="config-section-header">
-                  <h4>{{ sectionName }}</h4>
-                  <div class="section-actions">
-                    @if (!isSectionAllVisible(sectionName)) {
-                      <button
-                        class="mini-btn"
-                        (click)="toggleAllInSection(getSectionId(sectionName), true)"
-                        title="تفعيل الكل"
-                      >
-                        <span class="material-icons-round">visibility</span>
-                      </button>
-                    }
-                    @if (!isSectionNoneVisible(sectionName)) {
-                      <button
-                        class="mini-btn"
-                        (click)="toggleAllInSection(getSectionId(sectionName), false)"
-                        title="تعطيل الكل"
-                      >
-                        <span class="material-icons-round">visibility_off</span>
-                      </button>
-                    }
-                  </div>
-                </div>
-
-                <div class="config-items-list">
-                  @for (
-                    item of getItemsForSection(sectionName);
-                    track item.itemId;
-                    let i = $index
-                  ) {
-                    <div
-                      class="config-item"
-                      [class.visible]="item.isVisible"
-                      [class.hidden-item]="!item.isVisible"
-                      [class.drag-over]="dragOverIndex() === i"
-                      draggable="true"
-                      (dragstart)="onDragStart($event, i, sectionName)"
-                      (dragover)="onDragOver($event, i)"
-                      (dragleave)="onDragLeave()"
-                      (drop)="onDrop($event, i, sectionName)"
-                      (dragend)="onDragEnd()"
-                    >
-                      <span class="drag-handle material-icons-round">drag_indicator</span>
-                      <div class="config-item-icon">
-                        <span class="material-icons-round">{{ item.icon }}</span>
-                      </div>
-                      <span class="config-item-label">{{ item.label }}</span>
-                      <button
-                        class="toggle-btn"
-                        [class.on]="item.isVisible"
-                        (click)="toggleItemVisibility(item.itemId)"
-                        [title]="item.isVisible ? 'إخفاء' : 'إظهار'"
-                      >
-                        <span class="material-icons-round">{{
-                          item.isVisible ? 'visibility' : 'visibility_off'
-                        }}</span>
-                      </button>
-                    </div>
-                  }
-                </div>
+            <div class="valex-card">
+              <div class="valex-card-header">
+                <h3 class="valex-card-title flex items-center gap-2">
+                  <span class="material-icons-round">{{ getRoleIcon(selectedUser()!.role) }}</span>
+                  تبويب {{ selectedUser()!.fullName }}
+                </h3>
+                <button class="valex-btn valex-btn-primary" (click)="saveUserConfig()" [disabled]="savingUser()">
+                  <span class="material-icons-round">{{ savingUser() ? 'sync' : 'save' }}</span>
+                  {{ savingUser() ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+                </button>
               </div>
-            }
+              <div class="valex-card-body">
+                <div class="flex items-center gap-2 text-sm text-muted bg-info/8 border border-info/20 rounded-xl p-3 mb-4">
+                  <span class="material-icons-round">info</span>
+                  فعّل أو عطّل الشاشات لهذا المستخدم. اسحب العناصر لإعادة ترتيبها.
+                </div>
+
+                @for (sectionName of getSectionNames(); track sectionName) {
+                  <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                      <h4 class="font-bold text-sm flex items-center gap-2">
+                        <span class="material-icons-round text-primary text-base">folder</span>
+                        {{ sectionName }}
+                      </h4>
+                      <div class="flex items-center gap-2">
+                        @if (!isSectionAllVisible(sectionName)) {
+                          <button class="valex-icon-btn" (click)="toggleAllInSection(getSectionId(sectionName), true)" title="تفعيل الكل">
+                            <span class="material-icons-round">visibility</span>
+                          </button>
+                        }
+                        @if (!isSectionNoneVisible(sectionName)) {
+                          <button class="valex-icon-btn" (click)="toggleAllInSection(getSectionId(sectionName), false)" title="تعطيل الكل">
+                            <span class="material-icons-round">visibility_off</span>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                      @for (item of getItemsForSection(sectionName); track item.itemId; let i = $index) {
+                        <div class="sidebar-config-item" [class.visible]="item.isVisible" [class.hidden-item]="!item.isVisible"
+                             [class.drag-over]="dragOverIndex() === i"
+                             draggable="true"
+                             (dragstart)="onDragStart($event, i, sectionName)"
+                             (dragover)="onDragOver($event, i)"
+                             (dragleave)="onDragLeave()"
+                             (drop)="onDrop($event, i, sectionName)"
+                             (dragend)="onDragEnd()">
+                          <span class="material-icons-round text-muted cursor-grab">drag_indicator</span>
+                          <div class="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                            <span class="material-icons-round text-sm">{{ item.icon }}</span>
+                          </div>
+                          <span class="flex-1 text-sm font-semibold">{{ item.label }}</span>
+                          <button class="valex-icon-btn" [class.text-success]="item.isVisible" [class.text-muted]="!item.isVisible"
+                                  (click)="toggleItemVisibility(item.itemId)"
+                                  [title]="item.isVisible ? 'إخفاء' : 'إظهار'">
+                            <span class="material-icons-round">{{ item.isVisible ? 'visibility' : 'visibility_off' }}</span>
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
           }
         </div>
       </div>
     }
 
-    <!-- ==================== Sections Tab ==================== -->
     @if (activeTab() === 'sections') {
-      <div class="management-panel">
-        <div class="panel-header">
-          <h3>أقسام التبويب الجانبي</h3>
-          <button class="add-btn" (click)="openSectionForm()">
-            <span class="material-icons-round">add</span>
-            قسم جديد
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">أقسام التبويب الجانبي</h3>
+          <button class="valex-btn valex-btn-primary" (click)="openSectionForm()">
+            <span class="material-icons-round">add</span> قسم جديد
           </button>
         </div>
-
-        <div class="items-grid">
-          @for (section of sections(); track section.id) {
-            <div class="management-card">
-              <div class="card-color-bar" [style.background]="section.color || '#6366f1'"></div>
-              <div class="card-icon" [style.background]="(section.color || '#6366f1') + '18'">
-                <span class="material-icons-round" [style.color]="section.color || '#6366f1'">{{
-                  section.icon
-                }}</span>
+        <div class="valex-card-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            @for (section of sections(); track section.id) {
+              <div class="valex-card sidebar-manage-card" [style.border-top-color]="section.color || '#6366f1'">
+                <div class="valex-card-body flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                       [style.background]="(section.color || '#6366f1') + '18'"
+                       [style.color]="section.color || '#6366f1'">
+                    <span class="material-icons-round">{{ section.icon }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-bold text-sm">{{ section.name }}</div>
+                    <div class="text-xs text-muted">ترتيب: {{ section.sortOrder }} | {{ getItemsBySection(section.id).length }} عنصر</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="valex-icon-btn" (click)="openSectionForm(section)">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button class="valex-icon-btn danger" (click)="deleteSection(section)">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div class="card-info">
-                <h4>{{ section.name }}</h4>
-                <span class="card-meta"
-                  >ترتيب: {{ section.sortOrder }} |
-                  {{ getItemsBySection(section.id).length }} عنصر</span
-                >
-              </div>
-              <div class="card-actions">
-                <button class="icon-btn" (click)="openSectionForm(section)" title="تعديل">
-                  <span class="material-icons-round">edit</span>
-                </button>
-                <button class="icon-btn danger" (click)="deleteSection(section)" title="حذف">
-                  <span class="material-icons-round">delete</span>
-                </button>
-              </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
 
-      <!-- Section Form (Inline) -->
       @if (showSectionForm()) {
-        <div class="page-form-container">
-          <div class="form-header">
-            <div class="form-header-title">
-              <div class="page-icon purple">
-                <span class="material-icons-round">dashboard_customize</span>
+        <div class="valex-modal-overlay" (click)="closeSectionForm()">
+          <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+            <div class="valex-modal-header">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+                  <span class="material-icons-round">dashboard_customize</span>
+                </div>
+                <h3>{{ editingSection() ? 'تعديل القسم' : 'قسم جديد' }}</h3>
               </div>
-              <h3>{{ editingSection() ? 'تعديل القسم' : 'قسم جديد' }}</h3>
-              @if (editingSection()) {
-                <span class="edit-badge">تعديل</span>
-              }
+              <button class="valex-icon-btn" (click)="closeSectionForm()">
+                <span class="material-icons-round">close</span>
+              </button>
             </div>
-            <button class="close-btn" (click)="closeSectionForm()">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-          <div class="form-meta">
-            <div class="form-group">
-              <label>اسم القسم</label>
-              <input
-                type="text"
-                [value]="sectionForm().name"
-                (input)="sectionForm.set({ ...sectionForm(), name: $any($event.target).value })"
-                placeholder="مثال: العمليات المالية"
-              />
-            </div>
-            <div class="form-group">
-              <label>الأيقونة</label>
-              <div class="icon-picker">
-                @for (icon of commonIcons; track icon) {
-                  <button
-                    class="icon-option"
-                    [class.selected]="sectionForm().icon === icon"
-                    (click)="sectionForm.set({ ...sectionForm(), icon: icon })"
-                  >
-                    <span class="material-icons-round">{{ icon }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-            <div class="form-group">
-              <label>اللون</label>
-              <div class="color-picker">
-                @for (c of commonColors; track c.value) {
-                  <button
-                    class="color-option"
-                    [class.selected]="sectionForm().color === c.value"
-                    [style.background]="c.value"
-                    [title]="c.label"
-                    (click)="sectionForm.set({ ...sectionForm(), color: c.value })"
-                  ></button>
-                }
-              </div>
-            </div>
-            <div class="form-group">
-              <label>الترتيب</label>
-              <input
-                type="number"
-                [value]="sectionForm().sortOrder"
-                (input)="
-                  sectionForm.set({ ...sectionForm(), sortOrder: +$any($event.target).value })
-                "
-              />
-            </div>
-            <div class="form-preview">
-              <label>معاينة</label>
-              <div class="preview-section-title" [style.color]="sectionForm().color">
-                <span class="material-icons-round" [style.color]="sectionForm().color">{{
-                  sectionForm().icon
-                }}</span>
-                {{ sectionForm().name || 'اسم القسم' }}
+            <div class="valex-modal-body">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">اسم القسم</label>
+                  <input class="valex-input" type="text"
+                    [value]="sectionForm().name" (input)="sectionForm.set({ ...sectionForm(), name: $any($event.target).value })"
+                    placeholder="مثال: العمليات المالية" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">الترتيب</label>
+                  <input class="valex-input" type="number"
+                    [value]="sectionForm().sortOrder" (input)="sectionForm.set({ ...sectionForm(), sortOrder: +$any($event.target).value })" />
+                </div>
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">الأيقونة</label>
+                  <div class="inventory-icon-picker">
+                    @for (icon of commonIcons; track icon) {
+                      <button class="inventory-icon-btn" [class.selected]="sectionForm().icon === icon"
+                        (click)="sectionForm.set({ ...sectionForm(), icon: icon })">
+                        <span class="material-icons-round">{{ icon }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">اللون</label>
+                  <div class="flex flex-wrap gap-2">
+                    @for (c of commonColors; track c.value) {
+                      <button class="sidebar-color-option" [class.selected]="sectionForm().color === c.value"
+                        [style.background]="c.value" [title]="c.label"
+                        (click)="sectionForm.set({ ...sectionForm(), color: c.value })"></button>
+                    }
+                  </div>
+                </div>
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">معاينة</label>
+                  <div class="flex items-center gap-2 p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-color)]"
+                       [style.color]="sectionForm().color">
+                    <span class="material-icons-round">{{ sectionForm().icon }}</span>
+                    <span class="font-semibold">{{ sectionForm().name || 'اسم القسم' }}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="form-footer">
-            <button class="btn-cancel" (click)="closeSectionForm()">إلغاء</button>
-            <button class="btn-save" (click)="saveSection()">
-              <span class="material-icons-round">save</span>
-              حفظ
-            </button>
+            <div class="valex-modal-footer">
+              <button class="valex-btn valex-btn-outline" (click)="closeSectionForm()">إلغاء</button>
+              <button class="valex-btn valex-btn-primary" (click)="saveSection()">
+                <span class="material-icons-round">save</span> حفظ
+              </button>
+            </div>
           </div>
         </div>
       }
     }
 
-    <!-- ==================== Items Tab ==================== -->
     @if (activeTab() === 'items') {
-      <div class="management-panel">
-        <div class="panel-header">
-          <h3>شاشات التبويب الجانبي</h3>
-          <button class="add-btn" (click)="openItemForm()">
-            <span class="material-icons-round">add</span>
-            شاشة جديدة
+      <div class="valex-card mb-6">
+        <div class="valex-card-header">
+          <h3 class="valex-card-title">شاشات التبويب الجانبي</h3>
+          <button class="valex-btn valex-btn-primary" (click)="openItemForm()">
+            <span class="material-icons-round">add</span> شاشة جديدة
           </button>
         </div>
-
-        @for (section of sections(); track section.id) {
-          <div class="items-section-group">
-            <h4 class="section-group-title">
-              <span class="material-icons-round">{{ section.icon }}</span>
-              {{ section.name }}
-            </h4>
-            <div class="items-grid">
-              @for (item of getItemsBySection(section.id); track item.id) {
-                <div class="management-card">
-                  @if (item.color) {
-                    <div class="card-color-bar" [style.background]="item.color"></div>
-                  }
-                  <div class="card-icon" [style.background]="(item.color || '#a78bfa') + '18'">
-                    <span class="material-icons-round" [style.color]="item.color || '#a78bfa'">{{
-                      item.icon
-                    }}</span>
+        <div class="valex-card-body">
+          @for (section of sections(); track section.id) {
+            <div class="mb-6">
+              <h4 class="font-bold text-sm flex items-center gap-2 mb-3">
+                <span class="material-icons-round text-base">{{ section.icon }}</span>
+                {{ section.name }}
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                @for (item of getItemsBySection(section.id); track item.id) {
+                  <div class="valex-card sidebar-manage-card" [style.border-top-color]="item.color || '#a78bfa'">
+                    <div class="valex-card-body flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                           [style.background]="(item.color || '#a78bfa') + '18'"
+                           [style.color]="item.color || '#a78bfa'">
+                        <span class="material-icons-round text-base">{{ item.icon }}</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-sm">{{ item.label }}</div>
+                        <div class="text-xs text-muted font-mono">{{ item.screenKey }}</div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button class="valex-icon-btn" (click)="openItemForm(item)">
+                          <span class="material-icons-round">edit</span>
+                        </button>
+                        <button class="valex-icon-btn danger" (click)="deleteItem(item)">
+                          <span class="material-icons-round">delete</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div class="card-info">
-                    <h4>{{ item.label }}</h4>
-                    <span class="card-meta"
-                      >{{ item.screenKey }} | ترتيب: {{ item.sortOrder }}</span
-                    >
-                  </div>
-                  <div class="card-actions">
-                    <button class="icon-btn" (click)="openItemForm(item)" title="تعديل">
-                      <span class="material-icons-round">edit</span>
-                    </button>
-                    <button class="icon-btn danger" (click)="deleteItem(item)" title="حذف">
-                      <span class="material-icons-round">delete</span>
-                    </button>
-                  </div>
-                </div>
-              }
+                }
+              </div>
             </div>
-          </div>
-        }
+          }
+        </div>
       </div>
 
-      <!-- Item Form (Inline) -->
       @if (showItemForm()) {
-        <div class="page-form-container">
-          <div class="form-header">
-            <div class="form-header-title">
-              <div class="page-icon blue"><span class="material-icons-round">web</span></div>
-              <h3>{{ editingItem() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h3>
-              @if (editingItem()) {
-                <span class="edit-badge">تعديل</span>
-              }
+        <div class="valex-modal-overlay" (click)="closeItemForm()">
+          <div class="valex-modal max-w-3xl" (click)="$event.stopPropagation()">
+            <div class="valex-modal-header">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+                  <span class="material-icons-round">web</span>
+                </div>
+                <h3>{{ editingItem() ? 'تعديل الشاشة' : 'شاشة جديدة' }}</h3>
+              </div>
+              <button class="valex-icon-btn" (click)="closeItemForm()">
+                <span class="material-icons-round">close</span>
+              </button>
             </div>
-            <button class="close-btn" (click)="closeItemForm()">
-              <span class="material-icons-round">close</span>
-            </button>
-          </div>
-          <div class="form-meta">
-            <div class="form-group">
-              <label>القسم</label>
-              <select
-                [value]="itemForm().sectionId"
-                (change)="itemForm.set({ ...itemForm(), sectionId: +$any($event.target).value })"
-              >
-                @for (sec of sections(); track sec.id) {
-                  <option [value]="sec.id">{{ sec.name }}</option>
-                }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>معرّف الشاشة (screen key)</label>
-              <input
-                type="text"
-                [value]="itemForm().screenKey"
-                (input)="itemForm.set({ ...itemForm(), screenKey: $any($event.target).value })"
-                placeholder="مثال: accounts"
-              />
-            </div>
-            <div class="form-group">
-              <label>اسم الشاشة</label>
-              <input
-                type="text"
-                [value]="itemForm().label"
-                (input)="itemForm.set({ ...itemForm(), label: $any($event.target).value })"
-                placeholder="مثال: الحسابات"
-              />
-            </div>
-            <div class="form-group">
-              <label>المسار (route)</label>
-              <input
-                type="text"
-                [value]="itemForm().route"
-                (input)="itemForm.set({ ...itemForm(), route: $any($event.target).value })"
-                placeholder="مثال: /biz/{bizId}/accounts"
-                dir="ltr"
-              />
-            </div>
-            <div class="form-group">
-              <label>الأيقونة</label>
-              <div class="icon-picker">
-                @for (icon of commonIcons; track icon) {
-                  <button
-                    class="icon-option"
-                    [class.selected]="itemForm().icon === icon"
-                    (click)="itemForm.set({ ...itemForm(), icon: icon })"
-                  >
-                    <span class="material-icons-round">{{ icon }}</span>
-                  </button>
-                }
+            <div class="valex-modal-body">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="valex-form-group">
+                  <label class="valex-label">القسم</label>
+                  <select class="valex-select"
+                    [value]="itemForm().sectionId" (change)="itemForm.set({ ...itemForm(), sectionId: +$any($event.target).value })">
+                    @for (sec of sections(); track sec.id) {
+                      <option [value]="sec.id">{{ sec.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">معرّف الشاشة (screen key)</label>
+                  <input class="valex-input font-mono" type="text"
+                    [value]="itemForm().screenKey" (input)="itemForm.set({ ...itemForm(), screenKey: $any($event.target).value })"
+                    placeholder="مثال: accounts" dir="ltr" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">اسم الشاشة</label>
+                  <input class="valex-input" type="text"
+                    [value]="itemForm().label" (input)="itemForm.set({ ...itemForm(), label: $any($event.target).value })"
+                    placeholder="مثال: الحسابات" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">المسار (route)</label>
+                  <input class="valex-input font-mono" type="text"
+                    [value]="itemForm().route" (input)="itemForm.set({ ...itemForm(), route: $any($event.target).value })"
+                    placeholder="/biz/{bizId}/accounts" dir="ltr" />
+                </div>
+                <div class="valex-form-group">
+                  <label class="valex-label">الترتيب</label>
+                  <input class="valex-input" type="number"
+                    [value]="itemForm().sortOrder" (input)="itemForm.set({ ...itemForm(), sortOrder: +$any($event.target).value })" />
+                </div>
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">الأيقونة</label>
+                  <div class="inventory-icon-picker">
+                    @for (icon of commonIcons; track icon) {
+                      <button class="inventory-icon-btn" [class.selected]="itemForm().icon === icon"
+                        (click)="itemForm.set({ ...itemForm(), icon: icon })">
+                        <span class="material-icons-round">{{ icon }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+                <div class="valex-form-group md:col-span-2">
+                  <label class="valex-label">اللون (اختياري)</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="sidebar-color-option none" [class.selected]="!itemForm().color"
+                      title="بدون لون" (click)="itemForm.set({ ...itemForm(), color: '' })">
+                      <span class="material-icons-round text-sm">block</span>
+                    </button>
+                    @for (c of commonColors; track c.value) {
+                      <button class="sidebar-color-option" [class.selected]="itemForm().color === c.value"
+                        [style.background]="c.value" [title]="c.label"
+                        (click)="itemForm.set({ ...itemForm(), color: c.value })"></button>
+                    }
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="form-group">
-              <label>اللون (اختياري)</label>
-              <div class="color-picker">
-                <button
-                  class="color-option color-option-none"
-                  [class.selected]="!itemForm().color"
-                  title="بدون لون"
-                  (click)="itemForm.set({ ...itemForm(), color: '' })"
-                >
-                  <span class="material-icons-round">block</span>
-                </button>
-                @for (c of commonColors; track c.value) {
-                  <button
-                    class="color-option"
-                    [class.selected]="itemForm().color === c.value"
-                    [style.background]="c.value"
-                    [title]="c.label"
-                    (click)="itemForm.set({ ...itemForm(), color: c.value })"
-                  ></button>
-                }
-              </div>
+            <div class="valex-modal-footer">
+              <button class="valex-btn valex-btn-outline" (click)="closeItemForm()">إلغاء</button>
+              <button class="valex-btn valex-btn-primary" (click)="saveItem()">
+                <span class="material-icons-round">save</span> حفظ
+              </button>
             </div>
-            <div class="form-group">
-              <label>الترتيب</label>
-              <input
-                type="number"
-                [value]="itemForm().sortOrder"
-                (input)="itemForm.set({ ...itemForm(), sortOrder: +$any($event.target).value })"
-              />
-            </div>
-          </div>
-          <div class="form-footer">
-            <button class="btn-cancel" (click)="closeItemForm()">إلغاء</button>
-            <button class="btn-save" (click)="saveItem()">
-              <span class="material-icons-round">save</span>
-              حفظ
-            </button>
           </div>
         </div>
       }
