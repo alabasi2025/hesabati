@@ -1,4 +1,4 @@
-import { DecimalPipe, DatePipe } from '@angular/common';
+import { DecimalPipe, DatePipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoadingStateComponent } from './components/loading-state/loading-state.component';
 import { EmptyStateComponent } from './components/empty-state/empty-state.component';
@@ -16,6 +16,7 @@ export const PAGE_IMPORTS = [
   FormsModule,
   DecimalPipe,
   DatePipe,
+  NgClass,
   LoadingStateComponent,
   EmptyStateComponent,
   StatusBadgeComponent,

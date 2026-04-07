@@ -1,167 +1,194 @@
-<div class="pi-page" dir="rtl">
+<div class="page-content">
+  <app-page-header
+    title="فواتير المشتريات"
+    icon="receipt_long"
+    [breadcrumb]="['الرئيسية', 'الموردين', 'فواتير المشتريات']"
+  >
+    <button class="valex-btn valex-btn-primary" (click)="openNew()">
+      <span class="material-icons-round">add</span>
+      فاتورة جديدة
+    </button>
+  </app-page-header>
 
-  <!-- ===== Page Header ===== -->
-  <div class="pi-header">
-    <div class="pi-header-left">
-      <div class="pi-icon"><span class="material-icons-round">receipt_long</span></div>
-      <div>
-        <div class="pi-title">فواتير المشتريات</div>
-        <div class="pi-subtitle">إدارة فواتير الموردين · أصناف · خصم</div>
-      </div>
-    </div>
-    <div class="pi-header-actions">
-      <button class="pi-btn primary" (click)="openNew()">
-        <span class="material-icons-round">add</span> فاتورة جديدة
-      </button>
-    </div>
-  </div>
-
-  <!-- ===== Stats ===== -->
-  <div class="pi-stats">
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
     @for (key of statusKeys; track key) {
-      <div class="pi-stat" [style.border-right-color]="statusMeta[key].color">
-        <span class="material-icons-round" [style.color]="statusMeta[key].color">{{ statusMeta[key].icon }}</span>
+      <div class="valex-card p-4 flex items-center gap-4 purchase-stat-card">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 purchase-stat-icon"
+             [style.background]="statusMeta[key].color + '1a'"
+             [style.color]="statusMeta[key].color">
+          <span class="material-icons-round text-2xl">{{ statusMeta[key].icon }}</span>
+        </div>
         <div>
-          <div class="pi-stat-num">{{ statusCount(key) }}</div>
-          <div class="pi-stat-lbl">{{ statusMeta[key].label }}</div>
+          <div class="text-2xl font-bold">{{ statusCount(key) }}</div>
+          <div class="text-sm text-muted">{{ statusMeta[key].label }}</div>
         </div>
       </div>
     }
   </div>
 
-  @if (loading()) { <app-loading-state message="جاري التحميل..." /> }
-  @if (!loading() && error() && !showForm()) {
-    <div class="pi-error"><span class="material-icons-round">error</span> {{ error() }}</div>
+  @if (loading()) {
+    <app-loading-state message="جاري التحميل..." />
   }
 
-  <!-- ===== Tabs ===== -->
-  @if (!loading() && !showForm()) {
-    <div class="pi-tabs">
-      @for (key of statusKeys; track key) {
-        <button class="pi-tab" [class.active]="activeTab() === key"
-                (click)="activeTab.set(key)"
-                [style.--tab-color]="statusMeta[key].color">
-          <span class="material-icons-round">{{ statusMeta[key].icon }}</span>
-          {{ statusMeta[key].label }}
-          <span class="tab-count">{{ statusCount(key) }}</span>
-        </button>
-      }
+  @if (!loading() && error() && !showForm()) {
+    <div class="valex-card mb-4 border border-danger/20 bg-danger/5">
+      <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+        <span class="material-icons-round">error</span>
+        {{ error() }}
+      </div>
     </div>
   }
 
-  <!-- ===== Invoices List ===== -->
+  @if (!loading() && !showForm()) {
+    <div class="valex-card mb-6">
+      <div class="valex-card-body py-3">
+        <div class="flex flex-wrap gap-2">
+          @for (key of statusKeys; track key) {
+            <button
+              class="valex-tab-btn"
+              [class.active]="activeTab() === key"
+              (click)="activeTab.set(key)"
+            >
+              <span class="material-icons-round" [style.color]="activeTab() === key ? '' : statusMeta[key].color">
+                {{ statusMeta[key].icon }}
+              </span>
+              {{ statusMeta[key].label }}
+              <span class="valex-badge valex-badge-secondary purchase-tab-count">{{ statusCount(key) }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
   @if (!loading() && !showForm()) {
     @if (filteredInvoices().length === 0) {
-      <app-empty-state icon="receipt_long" message="لا توجد فواتير في هذا التصنيف" sub="اختر تبويباً آخر أو أنشئ فاتورة جديدة" />
+      <app-empty-state
+        icon="receipt_long"
+        title="لا توجد فواتير في هذا التصنيف"
+        message="اختر تبويباً آخر أو أنشئ فاتورة جديدة"
+      />
     } @else {
-      <div class="pi-list">
+      <div class="grid grid-cols-1 gap-4 mb-6">
         @for (inv of filteredInvoices(); track inv.id) {
-          <div class="pi-card" [class.expanded]="expandedId() === inv.id">
-            <div class="pi-card-head" (click)="toggleExpand(inv.id)">
-              <div class="pi-card-num">
-                <span class="material-icons-round">receipt</span>
-                <span class="pi-inv-no">{{ inv.fullSequenceNumber || inv.invoiceNumber }}</span>
-              </div>
-              <div class="pi-card-meta">
-                <span class="pi-date">{{ formatDate(inv.invoiceDate) }}</span>
-                <span class="pi-supplier">{{ inv.supplierName || '—' }}</span>
-              </div>
-              <div class="pi-card-amounts">
-                <span class="amt-total">{{ fmt(inv.totalAmount) }}</span>
-                <span class="amt-remaining">المتبقي: {{ fmt(inv.remainingAmount) }}</span>
-              </div>
-              <div class="pi-card-badges">
-                <span class="badge" [style.background]="getStatusInfo(inv.status).color + '1a'"
-                      [style.color]="getStatusInfo(inv.status).color">
-                  <span class="material-icons-round">{{ getStatusInfo(inv.status).icon }}</span>
-                  {{ getStatusInfo(inv.status).label }}
-                </span>
-                <span class="badge payment">
-                  <span class="material-icons-round">payments</span>
-                  {{ getPaymentLabel(inv.paymentMethod) }}
-                </span>
-              </div>
-              <div class="pi-card-actions" (click)="$event.stopPropagation()">
-                @if (inv.status === 'draft') {
-                  <button class="icon-btn confirm-btn" (click)="confirm(inv)" title="تأكيد">
-                    <span class="material-icons-round">check_circle</span>
-                  </button>
-                  <button class="icon-btn edit-btn" (click)="openEdit(inv)" title="تعديل">
-                    <span class="material-icons-round">edit</span>
-                  </button>
-                }
-                @if (inv.status !== 'completed') {
-                  <button class="icon-btn danger" (click)="remove(inv)" title="حذف">
-                    <span class="material-icons-round">delete</span>
-                  </button>
-                }
-                <span class="material-icons-round expand-icon">{{ expandedId() === inv.id ? 'expand_less' : 'expand_more' }}</span>
+          <div class="valex-card purchase-invoice-card" [class.expanded]="expandedId() === inv.id">
+            <div class="valex-card-body cursor-pointer" (click)="toggleExpand(inv.id)">
+              <div class="flex flex-col xl:flex-row xl:items-center gap-4">
+                <div class="min-w-[170px] flex items-center gap-2">
+                  <span class="material-icons-round text-primary">receipt</span>
+                  <span class="font-mono font-bold text-primary text-sm">{{ inv.fullSequenceNumber || inv.invoiceNumber }}</span>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs text-muted mb-1">{{ formatDate(inv.invoiceDate) }}</div>
+                  <div class="font-bold text-base truncate">{{ inv.supplierName || '—' }}</div>
+                </div>
+
+                <div class="min-w-[150px] xl:text-left">
+                  <div class="font-mono font-bold text-base">{{ fmt(inv.totalAmount) }}</div>
+                  <div class="text-xs font-semibold text-warning">المتبقي: {{ fmt(inv.remainingAmount) }}</div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="valex-badge"
+                        [style.background]="getStatusInfo(inv.status).color + '1a'"
+                        [style.color]="getStatusInfo(inv.status).color">
+                    <span class="material-icons-round text-sm">{{ getStatusInfo(inv.status).icon }}</span>
+                    {{ getStatusInfo(inv.status).label }}
+                  </span>
+                  <span class="valex-badge valex-badge-secondary">
+                    <span class="material-icons-round text-sm">payments</span>
+                    {{ getPaymentLabel(inv.paymentMethod) }}
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
+                  @if (inv.status === 'draft') {
+                    <button class="valex-icon-btn success" (click)="confirm(inv)" title="تأكيد">
+                      <span class="material-icons-round">check_circle</span>
+                    </button>
+                    <button class="valex-icon-btn" (click)="openEdit(inv)" title="تعديل">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                  }
+                  @if (inv.status !== 'completed') {
+                    <button class="valex-icon-btn danger" (click)="remove(inv)" title="حذف">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  }
+                  <span class="material-icons-round text-muted">{{ expandedId() === inv.id ? 'expand_less' : 'expand_more' }}</span>
+                </div>
               </div>
             </div>
+
             @if (expandedId() === inv.id) {
-              <div class="pi-detail-panel">
-                <div class="pi-detail-grid">
-                  <div class="pi-detail-item">
-                    <span class="dl">الرقم العام</span>
-                    <span class="dv seq">{{ inv.fullSequenceNumber || inv.invoiceNumber }}</span>
+              <div class="purchase-detail-panel">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+                  <div class="purchase-detail-item">
+                    <span class="purchase-detail-label">الرقم العام</span>
+                    <span class="purchase-detail-value font-mono text-primary">{{ inv.fullSequenceNumber || inv.invoiceNumber }}</span>
                   </div>
                   @if (inv.supplierSequenceNumber) {
-                    <div class="pi-detail-item">
-                      <span class="dl">رقم المورد</span>
-                      <span class="dv seq supplier">{{ inv.supplierSequenceNumber }}</span>
+                    <div class="purchase-detail-item">
+                      <span class="purchase-detail-label">رقم المورد</span>
+                      <span class="purchase-detail-value font-mono text-secondary">{{ inv.supplierSequenceNumber }}</span>
                     </div>
                   }
-                  <div class="pi-detail-item">
-                    <span class="dl">المورد</span>
-                    <span class="dv">{{ inv.supplierName }}</span>
+                  <div class="purchase-detail-item">
+                    <span class="purchase-detail-label">المورد</span>
+                    <span class="purchase-detail-value">{{ inv.supplierName }}</span>
                   </div>
-                  <div class="pi-detail-item">
-                    <span class="dl">طريقة الدفع</span>
-                    <span class="dv">{{ getPaymentLabel(inv.paymentMethod) }}</span>
+                  <div class="purchase-detail-item">
+                    <span class="purchase-detail-label">طريقة الدفع</span>
+                    <span class="purchase-detail-value">{{ getPaymentLabel(inv.paymentMethod) }}</span>
                   </div>
-                  <div class="pi-detail-item">
-                    <span class="dl">الإجمالي</span>
-                    <span class="dv amount">{{ fmt(inv.totalAmount) }}</span>
+                  <div class="purchase-detail-item">
+                    <span class="purchase-detail-label">الإجمالي</span>
+                    <span class="purchase-detail-value font-mono">{{ fmt(inv.totalAmount) }}</span>
                   </div>
-                  <div class="pi-detail-item">
-                    <span class="dl">المدفوع</span>
-                    <span class="dv amount paid">{{ fmt(inv.paidAmount) }}</span>
+                  <div class="purchase-detail-item">
+                    <span class="purchase-detail-label">المدفوع</span>
+                    <span class="purchase-detail-value font-mono text-success">{{ fmt(inv.paidAmount) }}</span>
                   </div>
-                  <div class="pi-detail-item">
-                    <span class="dl">المتبقي</span>
-                    <span class="dv amount remaining">{{ fmt(inv.remainingAmount) }}</span>
+                  <div class="purchase-detail-item">
+                    <span class="purchase-detail-label">المتبقي</span>
+                    <span class="purchase-detail-value font-mono text-warning">{{ fmt(inv.remainingAmount) }}</span>
                   </div>
                   @if (inv.externalReference) {
-                    <div class="pi-detail-item">
-                      <span class="dl">المرجع الخارجي</span>
-                      <span class="dv">{{ inv.externalReference }}</span>
+                    <div class="purchase-detail-item">
+                      <span class="purchase-detail-label">المرجع الخارجي</span>
+                      <span class="purchase-detail-value">{{ inv.externalReference }}</span>
                     </div>
                   }
                 </div>
+
                 @if (inv.items?.length) {
-                  <div class="pi-items-table">
-                    <table>
+                  <div class="overflow-x-auto">
+                    <table class="valex-table">
                       <thead>
                         <tr>
-                          <th>#</th><th>الصنف</th><th>الكمية</th>
-                          <th class="amt-col">سعر الوحدة</th><th class="amt-col">الإجمالي</th>
+                          <th>#</th>
+                          <th>الصنف</th>
+                          <th>الكمية</th>
+                          <th>سعر الوحدة</th>
+                          <th>الإجمالي</th>
                         </tr>
                       </thead>
                       <tbody>
                         @for (item of inv.items; track $index) {
                           <tr>
-                            <td class="ln-idx">{{ $index + 1 }}</td>
+                            <td class="text-muted">{{ $index + 1 }}</td>
                             <td>{{ item.itemName }}</td>
                             <td>{{ item.quantity }}</td>
-                            <td class="ln-amt">{{ fmt(item.unitCost) }}</td>
-                            <td class="ln-amt">{{ fmt(item.totalCost || (item.quantity * item.unitCost)) }}</td>
+                            <td class="font-mono">{{ fmt(item.unitCost) }}</td>
+                            <td class="font-mono">{{ fmt(item.totalCost || (item.quantity * item.unitCost)) }}</td>
                           </tr>
                         }
                       </tbody>
                       <tfoot>
-                        <tr class="totals-row">
-                          <td colspan="4" class="totals-label">الإجمالي</td>
-                          <td class="ln-amt total">{{ fmt(inv.totalAmount) }}</td>
+                        <tr>
+                          <td colspan="4" class="font-bold">الإجمالي</td>
+                          <td class="font-mono font-bold text-primary">{{ fmt(inv.totalAmount) }}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -175,135 +202,137 @@
     }
   }
 
-  <!-- ===== نموذج الفاتورة المدمج ===== -->
   @if (showForm()) {
-    <div class="pi-form-container">
-      <div class="pi-form-header">
-        <div class="pfh-title">
-          <span class="material-icons-round">edit_note</span>
-          {{ editingId() ? 'تعديل فاتورة' : 'فاتورة مشتريات جديدة' }}
+    <div class="valex-card mb-6">
+      <div class="valex-card-header flex-col lg:flex-row lg:items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+            <span class="material-icons-round">edit_note</span>
+          </div>
+          <div>
+            <h3 class="valex-card-title">{{ editingId() ? 'تعديل فاتورة' : 'فاتورة مشتريات جديدة' }}</h3>
+          </div>
         </div>
-        <div class="pfh-payment">
+
+        <div class="flex flex-wrap gap-2 lg:ms-auto">
           @for (p of paymentOptions; track p.key) {
-            <button class="payment-chip" [class.active]="formHeader().paymentMethod === p.key"
+            <button class="purchase-payment-chip" [class.active]="formHeader().paymentMethod === p.key"
                     (click)="formHeader.update(h => ({...h, paymentMethod: p.key}))">
-              <span class="material-icons-round" [style.color]="p.color">{{ p.icon }}</span> {{ p.label }}
+              <span class="material-icons-round" [style.color]="p.color">{{ p.icon }}</span>
+              {{ p.label }}
             </button>
           }
         </div>
-        <button class="pi-btn ghost" (click)="showForm.set(false)">
+
+        <button class="valex-icon-btn" (click)="showForm.set(false)">
           <span class="material-icons-round">close</span>
         </button>
       </div>
 
-      <div class="pi-form-meta">
-        <div class="pfm-group flex2">
-          <label>المورد <span class="req">*</span></label>
-          <select [ngModel]="formHeader().supplierId"
-                  (ngModelChange)="formHeader.update(h => ({...h, supplierId: $event}))">
-            <option [ngValue]="null">— اختر المورد —</option>
-            @for (s of suppliers(); track s.id) {
-              <option [ngValue]="s.id">{{ s.name }}</option>
-            }
-          </select>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+          <div class="valex-form-group xl:col-span-2">
+            <label class="valex-label">المورد <span class="text-danger">*</span></label>
+            <select class="valex-select" [ngModel]="formHeader().supplierId"
+                    (ngModelChange)="formHeader.update(h => ({...h, supplierId: $event}))">
+              <option [ngValue]="null">— اختر المورد —</option>
+              @for (s of suppliers(); track s.id) {
+                <option [ngValue]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المستودع</label>
+            <select class="valex-select" [ngModel]="formHeader().warehouseId"
+                    (ngModelChange)="formHeader.update(h => ({...h, warehouseId: $event}))">
+              <option [ngValue]="null">— اختياري —</option>
+              @for (w of warehouses(); track w.id) {
+                <option [ngValue]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">العملة</label>
+            <select class="valex-select" [ngModel]="formHeader().currencyId"
+                    (ngModelChange)="formHeader.update(h => ({...h, currencyId: +$event}))">
+              @for (c of currencies(); track c.id) {
+                <option [ngValue]="c.id">{{ c.name }} ({{ c.symbol }})</option>
+              }
+            </select>
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">تاريخ الفاتورة <span class="text-danger">*</span></label>
+            <input class="valex-input" type="date" [ngModel]="formHeader().invoiceDate"
+                   (ngModelChange)="formHeader.update(h => ({...h, invoiceDate: $event}))" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">تاريخ الاستحقاق</label>
+            <input class="valex-input" type="date" [ngModel]="formHeader().dueDate"
+                   (ngModelChange)="formHeader.update(h => ({...h, dueDate: $event}))" />
+          </div>
+          <div class="valex-form-group">
+            <label class="valex-label">المرجع الخارجي</label>
+            <input class="valex-input" type="text" placeholder="رقم فاتورة المورد" [ngModel]="formHeader().externalReference"
+                   (ngModelChange)="formHeader.update(h => ({...h, externalReference: $event}))" />
+          </div>
+          <div class="valex-form-group xl:col-span-2">
+            <label class="valex-label">ملاحظات</label>
+            <input class="valex-input" type="text" placeholder="ملاحظات إضافية" [ngModel]="formHeader().notes"
+                   (ngModelChange)="formHeader.update(h => ({...h, notes: $event}))" />
+          </div>
         </div>
-        <div class="pfm-group">
-          <label>المستودع</label>
-          <select [ngModel]="formHeader().warehouseId"
-                  (ngModelChange)="formHeader.update(h => ({...h, warehouseId: $event}))">
-            <option [ngValue]="null">— اختياري —</option>
-            @for (w of warehouses(); track w.id) {
-              <option [ngValue]="w.id">{{ w.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="pfm-group">
-          <label>العملة</label>
-          <select [ngModel]="formHeader().currencyId"
-                  (ngModelChange)="formHeader.update(h => ({...h, currencyId: +$event}))">
-            @for (c of currencies(); track c.id) {
-              <option [ngValue]="c.id">{{ c.name }} ({{ c.symbol }})</option>
-            }
-          </select>
-        </div>
-        <div class="pfm-group">
-          <label>تاريخ الفاتورة <span class="req">*</span></label>
-          <input type="date" [ngModel]="formHeader().invoiceDate"
-                 (ngModelChange)="formHeader.update(h => ({...h, invoiceDate: $event}))" />
-        </div>
-        <div class="pfm-group">
-          <label>تاريخ الاستحقاق</label>
-          <input type="date" [ngModel]="formHeader().dueDate"
-                 (ngModelChange)="formHeader.update(h => ({...h, dueDate: $event}))" />
-        </div>
-        <div class="pfm-group">
-          <label>المرجع الخارجي</label>
-          <input type="text" placeholder="رقم فاتورة المورد" [ngModel]="formHeader().externalReference"
-                 (ngModelChange)="formHeader.update(h => ({...h, externalReference: $event}))" />
-        </div>
-        <div class="pfm-group flex2">
-          <label>ملاحظات</label>
-          <input type="text" placeholder="ملاحظات إضافية" [ngModel]="formHeader().notes"
-                 (ngModelChange)="formHeader.update(h => ({...h, notes: $event}))" />
-        </div>
-      </div>
 
-      <!-- جدول أصناف الفاتورة -->
-      <div class="pi-lines-wrapper">
-        <div class="pi-table-scroll">
-          <table class="pi-edit-table">
+        <div class="overflow-x-auto mb-6">
+          <table class="valex-table purchase-edit-table">
             <thead>
               <tr>
-                <th class="th-idx">#</th>
-                <th class="th-item">الصنف <span class="req">*</span></th>
-                <th class="th-qty">الكمية</th>
-                <th class="th-cost">سعر الوحدة</th>
-                <th class="th-total">الإجمالي</th>
-                <th class="th-disc">الخصم</th>
-                <th class="th-act"></th>
+                <th>#</th>
+                <th>الصنف <span class="text-danger">*</span></th>
+                <th>الكمية</th>
+                <th>سعر الوحدة</th>
+                <th>الإجمالي</th>
+                <th>الخصم</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               @for (item of formItems(); track $index; let i = $index) {
                 <tr>
-                  <td class="td-idx">{{ i + 1 }}</td>
-                  <td class="td-item">{{ item.itemName }}</td>
-                  <td class="td-qty">{{ item.quantity }}</td>
-                  <td class="td-cost">{{ fmt(item.unitCost) }}</td>
-                  <td class="td-total">{{ fmt(item.quantity * item.unitCost) }}</td>
-                  <td class="td-disc">{{ fmt(item.discount) }}</td>
-                  <td class="td-act">
-                    <button class="line-btn del" (click)="removeItem(i)" title="حذف">
+                  <td class="text-muted">{{ i + 1 }}</td>
+                  <td>{{ item.itemName }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td class="font-mono">{{ fmt(item.unitCost) }}</td>
+                  <td class="font-mono">{{ fmt(item.quantity * item.unitCost) }}</td>
+                  <td class="font-mono text-muted">{{ fmt(item.discount) }}</td>
+                  <td>
+                    <button class="valex-icon-btn danger" (click)="removeItem(i)" title="حذف">
                       <span class="material-icons-round">close</span>
                     </button>
                   </td>
                 </tr>
               }
-              <!-- صف الإضافة -->
-              <tr class="add-row">
-                <td class="td-idx"><span class="material-icons-round" style="font-size:16px;color:var(--text-muted)">add</span></td>
-                <td class="td-item">
-                  <select [(ngModel)]="newItem.inventoryItemId">
+              <tr class="purchase-add-row">
+                <td><span class="material-icons-round text-muted text-sm">add</span></td>
+                <td>
+                  <select class="valex-select" [(ngModel)]="newItem.inventoryItemId">
                     <option [ngValue]="0">اختر الصنف...</option>
                     @for (item of inventoryItems(); track item.id) {
                       <option [ngValue]="item.id">{{ item.name }} {{ item.code ? '(' + item.code + ')' : '' }}</option>
                     }
                   </select>
                 </td>
-                <td class="td-qty">
-                  <input type="number" [(ngModel)]="newItem.quantity" min="0.01" step="0.01" placeholder="1" />
+                <td>
+                  <input class="valex-input" type="number" [(ngModel)]="newItem.quantity" min="0.01" step="0.01" placeholder="1" />
                 </td>
-                <td class="td-cost">
-                  <input type="number" [(ngModel)]="newItem.unitCost" min="0" step="0.01" placeholder="0.00" />
+                <td>
+                  <input class="valex-input" type="number" [(ngModel)]="newItem.unitCost" min="0" step="0.01" placeholder="0.00" />
                 </td>
-                <td class="td-total">
-                  <span class="computed-val">{{ fmt(newItem.quantity * newItem.unitCost) }}</span>
+                <td class="font-mono text-primary font-bold">{{ fmt(newItem.quantity * newItem.unitCost) }}</td>
+                <td>
+                  <input class="valex-input" type="number" [(ngModel)]="newItem.discount" min="0" step="0.01" placeholder="0" />
                 </td>
-                <td class="td-disc">
-                  <input type="number" [(ngModel)]="newItem.discount" min="0" step="0.01" placeholder="0" />
-                </td>
-                <td class="td-act">
-                  <button class="line-btn add" (click)="addItem()" title="إضافة">
+                <td>
+                  <button class="valex-icon-btn success" (click)="addItem()" title="إضافة">
                     <span class="material-icons-round">check</span>
                   </button>
                 </td>
@@ -311,43 +340,48 @@
             </tbody>
           </table>
         </div>
+
+        <div class="purchase-totals-bar mb-4">
+          <div class="purchase-total-box">
+            <div class="purchase-total-label">المجموع الفرعي</div>
+            <div class="purchase-total-value">{{ fmt(formSubtotal()) }}</div>
+          </div>
+          <div class="purchase-total-box">
+            <div class="purchase-total-label">الخصم</div>
+            <div class="purchase-total-value text-success">-{{ fmt(formDiscount()) }}</div>
+          </div>
+          <div class="purchase-total-divider"></div>
+          <div class="purchase-total-box grand">
+            <div class="purchase-total-label">الإجمالي النهائي</div>
+            <div class="purchase-total-value final">{{ fmt(formTotal()) }}</div>
+          </div>
+        </div>
+
+        @if (error()) {
+          <div class="valex-card mb-4 border border-danger/20 bg-danger/5">
+            <div class="valex-card-body flex items-center gap-3 text-danger text-sm font-semibold">
+              <span class="material-icons-round">error</span>
+              {{ error() }}
+            </div>
+          </div>
+        }
       </div>
 
-      <!-- شريط الإجماليات -->
-      <div class="totals-bar">
-        <div class="tot-col">
-          <div class="tot-label">المجموع الفرعي</div>
-          <div class="tot-val">{{ fmt(formSubtotal()) }}</div>
-        </div>
-        <div class="tot-col">
-          <div class="tot-label">الخصم</div>
-          <div class="tot-val disc">-{{ fmt(formDiscount()) }}</div>
-        </div>
-        <div class="tot-sep"></div>
-        <div class="tot-col grand">
-          <div class="tot-label">الإجمالي النهائي</div>
-          <div class="tot-val final">{{ fmt(formTotal()) }}</div>
-        </div>
-      </div>
-
-      @if (error()) {
-        <div class="pi-error"><span class="material-icons-round">error</span> {{ error() }}</div>
-      }
-
-      <div class="pi-form-footer">
-        <button class="pi-btn ghost" (click)="showForm.set(false)">إلغاء</button>
-        <button class="pi-btn secondary" [disabled]="saving()"
-                (click)="save()">
-          <span class="material-icons-round">save</span> حفظ كمسودة
+      <div class="valex-card-footer flex items-center justify-end gap-3">
+        <button class="valex-btn valex-btn-outline" (click)="showForm.set(false)">إلغاء</button>
+        <button class="valex-btn valex-btn-outline" [disabled]="saving()" (click)="save()">
+          <span class="material-icons-round">save</span>
+          حفظ كمسودة
         </button>
-        <button class="pi-btn primary" [disabled]="saving() || !formItems().length"
-                (click)="save()">
-          @if (saving()) { <span class="material-icons-round rotating">sync</span> }
-          @else { <span class="material-icons-round">done_all</span> }
+        <button class="valex-btn valex-btn-primary" [disabled]="saving() || !formItems().length" (click)="save()">
+          @if (saving()) {
+            <span class="material-icons-round rotating">sync</span>
+          } @else {
+            <span class="material-icons-round">done_all</span>
+          }
           {{ editingId() ? 'حفظ التعديلات' : 'إنشاء الفاتورة' }}
         </button>
       </div>
     </div>
   }
-
 </div>

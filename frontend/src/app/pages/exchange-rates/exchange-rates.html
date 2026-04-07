@@ -1,645 +1,565 @@
-<div class="page-container">
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d blue">
-        <span class="material-icons-round">currency_exchange</span>
-      </div>
-      <div>
-        <h1 class="page-title">إدارة العملات وأسعار الصرف</h1>
-        <p class="page-subtitle">إضافة عملات، تحديد أسعار الصرف، وتحويل المبالغ</p>
-      </div>
-    </div>
-    <div class="header-right">
-      @if (activeTab === 'currencies') {
-        <button class="btn-3d btn-primary" (click)="openCurrencyForm()">
-          <span class="material-icons-round">add</span>
-          عملة جديدة
-        </button>
-      }
-      @if (activeTab === 'rates') {
-        <button class="btn-3d btn-primary" (click)="openRateForm()">
-          <span class="material-icons-round">add</span>
-          سعر صرف جديد
-        </button>
-      }
-    </div>
-  </div>
+<div class="page-content">
+  <app-page-header
+    title="إدارة العملات وأسعار الصرف"
+    icon="currency_exchange"
+    [breadcrumb]="['الرئيسية', 'العمليات المالية', 'العملات وأسعار الصرف']"
+  >
+    @if (activeTab === 'currencies') {
+      <button class="valex-btn valex-btn-primary" (click)="openCurrencyForm()">
+        <span class="material-icons-round">add</span>
+        عملة جديدة
+      </button>
+    }
+    @if (activeTab === 'rates') {
+      <button class="valex-btn valex-btn-primary" (click)="openRateForm()">
+        <span class="material-icons-round">add</span>
+        سعر صرف جديد
+      </button>
+    }
+  </app-page-header>
 
-  <!-- ===== تنبيه حساب فروقات العملة ===== -->
   @if (!exchangeDiffAccount.exists) {
-    <div class="alert-banner alert-danger">
-      <span class="material-icons-round">warning</span>
-      <div>
-        <strong>⛔ تنبيه حرج:</strong> لا يوجد حساب فروقات العملة! لن تتمكن من تنفيذ أي عملية بعملة
-        أجنبية. يرجى إنشاء حساب وسيط باسم "فروقات عملة" من صفحة الحسابات.
+    <div class="valex-card mb-6 border border-danger/20 bg-danger/5">
+      <div class="valex-card-body flex items-start gap-3 text-danger">
+        <span class="material-icons-round text-2xl flex-shrink-0">warning</span>
+        <div class="text-sm font-medium leading-6">
+          <strong>تنبيه حرج:</strong>
+          لا يوجد حساب فروقات العملة! لن تتمكن من تنفيذ أي عملية بعملة أجنبية. يرجى إنشاء
+          حساب وسيط باسم "فروقات عملة" من صفحة الحسابات.
+        </div>
       </div>
     </div>
   }
 
-  <!-- ===== Stats Cards ===== -->
-  <div class="stats-row">
-    <div class="stat-card-3d blue">
-      <div class="sc-icon"><span class="material-icons-round">paid</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ activeCurrencies.length }}</div>
-        <div class="sc-label">عملات نشطة</div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+        <span class="material-icons-round text-2xl">paid</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ activeCurrencies.length }}</div>
+        <div class="text-sm text-muted">عملات نشطة</div>
       </div>
     </div>
-    <div class="stat-card-3d green">
-      <div class="sc-icon"><span class="material-icons-round">currency_exchange</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ rates.length }}</div>
-        <div class="sc-label">أسعار مسجلة</div>
+
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+        <span class="material-icons-round text-2xl">currency_exchange</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ rates.length }}</div>
+        <div class="text-sm text-muted">أسعار مسجلة</div>
       </div>
     </div>
-    <div class="stat-card-3d amber">
-      <div class="sc-icon"><span class="material-icons-round">star</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ defaultCurrency?.code || '—' }}</div>
-        <div class="sc-label">العملة الأساسية</div>
+
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+        <span class="material-icons-round text-2xl">star</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ defaultCurrency?.code || '—' }}</div>
+        <div class="text-sm text-muted">العملة الأساسية</div>
       </div>
     </div>
-    <div class="stat-card-3d" [class]="exchangeDiffAccount.exists ? 'green' : 'red'">
-      <div class="sc-icon">
-        <span class="material-icons-round">{{
-          exchangeDiffAccount.exists ? 'check_circle' : 'error'
-        }}</span>
+
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div
+        class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+        [class.bg-success/10]="exchangeDiffAccount.exists"
+        [class.text-success]="exchangeDiffAccount.exists"
+        [class.bg-danger/10]="!exchangeDiffAccount.exists"
+        [class.text-danger]="!exchangeDiffAccount.exists"
+      >
+        <span class="material-icons-round text-2xl">{{ exchangeDiffAccount.exists ? 'check_circle' : 'error' }}</span>
       </div>
-      <div class="sc-body">
-        <div class="sc-num">{{ exchangeDiffAccount.exists ? 'موجود' : 'مفقود' }}</div>
-        <div class="sc-label">حساب فروقات العملة</div>
+      <div>
+        <div class="text-2xl font-bold">{{ exchangeDiffAccount.exists ? 'موجود' : 'مفقود' }}</div>
+        <div class="text-sm text-muted">حساب فروقات العملة</div>
       </div>
     </div>
   </div>
 
-  <!-- ===== التبويبات ===== -->
-  <div class="tabs-bar">
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'currencies'"
-      (click)="activeTab = 'currencies'"
-    >
-      <span class="material-icons-round">paid</span>
-      العملات
-    </button>
-    <button class="tab-btn" [class.active]="activeTab === 'rates'" (click)="activeTab = 'rates'">
-      <span class="material-icons-round">currency_exchange</span>
-      أسعار الصرف
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'converter'"
-      (click)="activeTab = 'converter'"
-    >
-      <span class="material-icons-round">swap_horiz</span>
-      محول العملات
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'revaluation'"
-      (click)="activeTab = 'revaluation'"
-    >
-      <span class="material-icons-round">assessment</span>
-      إعادة التقييم
-    </button>
-  </div>
-
-  <!-- ===== تبويب العملات ===== -->
-  @if (activeTab === 'currencies') {
-    @if (activeCurrencies.length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d"><span class="material-icons-round">paid</span></div>
-        <h3>لا توجد عملات</h3>
-        <p>أضف عملة جديدة للبدء</p>
-        <button class="btn-3d btn-primary" (click)="openCurrencyForm()">
-          <span class="material-icons-round">add</span> عملة جديدة
+  <div class="valex-card mb-6">
+    <div class="valex-card-body py-3">
+      <div class="flex flex-wrap gap-2">
+        <button class="valex-tab-btn" [class.active]="activeTab === 'currencies'" (click)="activeTab = 'currencies'">
+          <span class="material-icons-round">paid</span>
+          العملات
+        </button>
+        <button class="valex-tab-btn" [class.active]="activeTab === 'rates'" (click)="activeTab = 'rates'">
+          <span class="material-icons-round">currency_exchange</span>
+          أسعار الصرف
+        </button>
+        <button class="valex-tab-btn" [class.active]="activeTab === 'converter'" (click)="activeTab = 'converter'">
+          <span class="material-icons-round">swap_horiz</span>
+          محول العملات
+        </button>
+        <button class="valex-tab-btn" [class.active]="activeTab === 'revaluation'" (click)="activeTab = 'revaluation'">
+          <span class="material-icons-round">assessment</span>
+          إعادة التقييم
         </button>
       </div>
-    } @else {
-      <div class="table-container-3d">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>الرمز</th>
-              <th>الاسم</th>
-              <th>الرمز المختصر</th>
-              <th>سعر الصرف</th>
-              <th>الحد الأدنى</th>
-              <th>الحد الأقصى</th>
-              <th>الحالة</th>
-              <th>إجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of activeCurrencies; track c.id) {
-              <tr>
-                <td>
-                  <span class="currency-code-badge">{{ c.code }}</span>
-                </td>
-                <td>{{ c.nameAr }}</td>
-                <td>{{ c.symbol }}</td>
-                <td class="num-cell">{{ c.exchangeRate }}</td>
-                <td class="num-cell">{{ c.minRate || '—' }}</td>
-                <td class="num-cell">{{ c.maxRate || '—' }}</td>
-                <td>
-                  @if (c.isDefault) {
-                    <span class="status-badge badge-primary">أساسية</span>
-                  } @else {
-                    <span class="status-badge badge-success">نشطة</span>
-                  }
-                </td>
-                <td>
-                  <div class="action-btns">
-                    <button class="icon-btn edit-btn" (click)="openCurrencyForm(c)" title="تعديل">
-                      <span class="material-icons-round">edit</span>
-                    </button>
-                    @if (!c.isDefault) {
-                      <button
-                        class="icon-btn delete-btn"
-                        (click)="removeCurrency(c.id)"
-                        title="تعطيل"
-                      >
-                        <span class="material-icons-round">block</span>
-                      </button>
-                    }
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+    </div>
+  </div>
 
-      @if (inactiveCurrencies.length > 0) {
-        <div class="section-divider">
-          <span class="material-icons-round">visibility_off</span>
-          عملات معطّلة ({{ inactiveCurrencies.length }})
-        </div>
-        <div class="table-container-3d faded">
-          <table class="data-table">
+  @if (activeTab === 'currencies') {
+    @if (activeCurrencies.length === 0) {
+      <app-empty-state
+        icon="paid"
+        title="لا توجد عملات"
+        message="أضف عملة جديدة للبدء"
+        actionLabel="عملة جديدة"
+        (action)="openCurrencyForm()"
+      />
+    } @else {
+      <div class="valex-card mb-6">
+        <div class="valex-card-body p-0 overflow-x-auto">
+          <table class="valex-table">
+            <thead>
+              <tr>
+                <th>الرمز</th>
+                <th>الاسم</th>
+                <th>الرمز المختصر</th>
+                <th>سعر الصرف</th>
+                <th>الحد الأدنى</th>
+                <th>الحد الأقصى</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
             <tbody>
-              @for (c of inactiveCurrencies; track c.id) {
+              @for (c of activeCurrencies; track c.id) {
                 <tr>
-                  <td>
-                    <span class="currency-code-badge inactive">{{ c.code }}</span>
-                  </td>
+                  <td><span class="valex-badge valex-badge-primary font-mono">{{ c.code }}</span></td>
                   <td>{{ c.nameAr }}</td>
                   <td>{{ c.symbol }}</td>
-                  <td class="num-cell">{{ c.exchangeRate }}</td>
-                  <td colspan="2"><span class="status-badge badge-muted">معطّلة</span></td>
+                  <td class="font-mono">{{ c.exchangeRate }}</td>
+                  <td class="font-mono">{{ c.minRate || '—' }}</td>
+                  <td class="font-mono">{{ c.maxRate || '—' }}</td>
                   <td>
-                    <button
-                      class="icon-btn success-btn"
-                      (click)="reactivateCurrency(c.id)"
-                      title="إعادة تفعيل"
-                    >
-                      <span class="material-icons-round">check_circle</span>
-                    </button>
+                    @if (c.isDefault) {
+                      <span class="valex-badge valex-badge-warning">أساسية</span>
+                    } @else {
+                      <span class="valex-badge valex-badge-success">نشطة</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <button class="valex-icon-btn" (click)="openCurrencyForm(c)" title="تعديل">
+                        <span class="material-icons-round">edit</span>
+                      </button>
+                      @if (!c.isDefault) {
+                        <button class="valex-icon-btn danger" (click)="removeCurrency(c.id)" title="تعطيل">
+                          <span class="material-icons-round">block</span>
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
-      }
-    }
-  }
-
-  <!-- ===== تبويب أسعار الصرف ===== -->
-  @if (activeTab === 'rates') {
-    @if (rates.length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon-3d"><span class="material-icons-round">currency_exchange</span></div>
-        <h3>لا توجد أسعار صرف</h3>
-        <p>أضف سعر صرف جديد لبدء تحويل العملات</p>
-        <button class="btn-3d btn-primary" (click)="openRateForm()">
-          <span class="material-icons-round">add</span> سعر صرف جديد
-        </button>
       </div>
-    } @else {
-      <div class="rates-list">
-        @for (r of rates; track r.id) {
-          <div class="rate-row-3d">
-            <div class="rr-type-indicator"></div>
-            <div class="rr-icon">
-              <span class="material-icons-round">sync_alt</span>
-            </div>
-            <div class="rr-main">
-              <div class="rr-pair">
-                <span class="rr-currency">{{ getCurrencyName(r.fromCurrencyId) }}</span>
-                <span class="material-icons-round rr-arrow">arrow_back</span>
-                <span class="rr-currency">{{ getCurrencyName(r.toCurrencyId) }}</span>
-              </div>
-              <div class="rr-meta">
-                <span class="rr-date">
-                  <span class="material-icons-round">calendar_today</span>
-                  {{ r.effectiveDate }}
-                </span>
-                @if (r.notes) {
-                  <span class="rr-note">
-                    <span class="material-icons-round">notes</span>
-                    {{ r.notes }}
-                  </span>
-                }
-              </div>
-            </div>
-            <div class="rr-right">
-              <div class="rr-rate">{{ r.rate }}</div>
-              <span class="rr-source-badge" [class]="'source-' + r.source">
-                {{ r.source === 'manual' ? 'يدوي' : r.source === 'market' ? 'سوق' : 'بنك' }}
-              </span>
-            </div>
-            <div class="rr-actions">
-              <button class="icon-btn edit-btn" (click)="openRateForm(r)" title="تعديل">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button class="icon-btn delete-btn" (click)="removeRate(r.id)" title="حذف">
-                <span class="material-icons-round">delete</span>
-              </button>
-            </div>
+
+      @if (inactiveCurrencies.length > 0) {
+        <div class="valex-card mb-6">
+          <div class="valex-card-header">
+            <h3 class="valex-card-title flex items-center gap-2">
+              <span class="material-icons-round text-lg">visibility_off</span>
+              عملات معطّلة ({{ inactiveCurrencies.length }})
+            </h3>
           </div>
-        }
-      </div>
-    }
-  }
-
-  <!-- ===== تبويب محول العملات ===== -->
-  @if (activeTab === 'converter') {
-    <div class="converter-card-3d">
-      <div class="converter-header">
-        <div class="converter-icon">
-          <span class="material-icons-round">swap_horiz</span>
-        </div>
-        <h3>محول العملات</h3>
-      </div>
-      <div class="converter-body">
-        <div class="converter-field">
-          <label class="form-label" for="convert-amount">المبلغ</label>
-          <input
-            id="convert-amount"
-            type="number"
-            class="form-input"
-            [(ngModel)]="convertAmount"
-            placeholder="المبلغ"
-          />
-        </div>
-        <div class="converter-field">
-          <label class="form-label" for="convert-from">من عملة</label>
-          <select id="convert-from" class="form-select" [(ngModel)]="convertFrom" title="من عملة">
-            <option value="">اختر...</option>
-            @for (c of activeCurrencies; track c.id) {
-              <option [value]="c.id">{{ c.nameAr || c.code }}</option>
-            }
-          </select>
-        </div>
-        <div class="converter-arrow">
-          <span class="material-icons-round">arrow_back</span>
-        </div>
-        <div class="converter-field">
-          <label class="form-label" for="convert-to">إلى عملة</label>
-          <select id="convert-to" class="form-select" [(ngModel)]="convertTo" title="إلى عملة">
-            <option value="">اختر...</option>
-            @for (c of activeCurrencies; track c.id) {
-              <option [value]="c.id">{{ c.nameAr || c.code }}</option>
-            }
-          </select>
-        </div>
-        <div class="converter-action">
-          <button class="btn-3d btn-blue" (click)="convert()">
-            <span class="material-icons-round">calculate</span>
-            تحويل
-          </button>
-        </div>
-        @if (convertResult !== null) {
-          <div class="converter-result">
-            <span class="result-value">{{ convertResult | number: '1.2-4' }}</span>
-          </div>
-        }
-      </div>
-    </div>
-  }
-
-  <!-- ===== تبويب إعادة التقييم ===== -->
-  @if (activeTab === 'revaluation') {
-    <div class="reval-section">
-      <div class="reval-header">
-        <div class="reval-icon"><span class="material-icons-round">assessment</span></div>
-        <div>
-          <h3>إعادة تقييم العملات الأجنبية</h3>
-          <p>حساب فروقات أسعار الصرف على الأرصدة بالعملات الأجنبية وإنشاء قيد تعديل تلقائي</p>
-        </div>
-      </div>
-
-      <div class="reval-controls">
-        <div class="form-group">
-          <label class="form-label" for="reval-date">تاريخ التقييم</label>
-          <input id="reval-date" type="date" class="form-input" [(ngModel)]="revalDate" />
-        </div>
-        <button class="btn-3d btn-blue" (click)="loadRevalPreview()" [disabled]="revalLoading">
-          <span class="material-icons-round">{{ revalLoading ? 'sync' : 'preview' }}</span>
-          معاينة
-        </button>
-      </div>
-
-      @if (revalPreview) {
-        @if (revalPreview.skippedReason) {
-          <div class="reval-alert warn">
-            <span class="material-icons-round">warning</span>
-            {{ revalPreview.skippedReason }}
-          </div>
-        } @else if (revalPreview.lines.length === 0) {
-          <div class="reval-alert info">
-            <span class="material-icons-round">info</span>
-            لا توجد فروقات تقييم بالتاريخ المحدد
-          </div>
-        } @else {
-          <!-- ملخص -->
-          <div class="reval-summary">
-            <div class="reval-stat gain">
-              <span class="material-icons-round">trending_up</span>
-              <div>
-                <span class="stat-label">أرباح صرف</span>
-                <span class="stat-value">{{ revalPreview.totalGain | number: '1.2-2' }}</span>
-              </div>
-            </div>
-            <div class="reval-stat loss">
-              <span class="material-icons-round">trending_down</span>
-              <div>
-                <span class="stat-label">خسائر صرف</span>
-                <span class="stat-value">{{ revalPreview.totalLoss | number: '1.2-2' }}</span>
-              </div>
-            </div>
-            <div
-              class="reval-stat net"
-              [class.positive]="revalPreview.netDifference >= 0"
-              [class.negative]="revalPreview.netDifference < 0"
-            >
-              <span class="material-icons-round">balance</span>
-              <div>
-                <span class="stat-label">صافي الفرق</span>
-                <span class="stat-value"
-                  >{{ revalPreview.netDifference | number: '1.2-2' }}
-                  {{ revalPreview.baseCurrencyCode }}</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- جدول التفاصيل -->
-          <div class="reval-table-wrap">
-            <table class="reval-table">
+          <div class="valex-card-body p-0 overflow-x-auto">
+            <table class="valex-table">
               <thead>
                 <tr>
-                  <th>الحساب</th>
-                  <th>العملة</th>
-                  <th>الرصيد</th>
-                  <th>القيمة الدفترية</th>
-                  <th>القيمة الجديدة</th>
-                  <th>الفرق</th>
+                  <th>الرمز</th>
+                  <th>الاسم</th>
+                  <th>الرمز المختصر</th>
+                  <th>سعر الصرف</th>
+                  <th>الحالة</th>
+                  <th>إجراء</th>
                 </tr>
               </thead>
               <tbody>
-                @for (line of revalPreview.lines; track line.accountId) {
-                  @if (line.difference !== 0) {
-                    <tr>
-                      <td>{{ line.accountName }}</td>
-                      <td>
-                        <span class="currency-mini-badge">{{ line.currencyCode }}</span>
-                      </td>
-                      <td class="num-cell">{{ line.balance | number: '1.2-2' }}</td>
-                      <td class="num-cell">{{ line.oldBaseValue | number: '1.2-2' }}</td>
-                      <td class="num-cell">{{ line.newBaseValue | number: '1.2-2' }}</td>
-                      <td
-                        class="num-cell"
-                        [class.gain]="line.difference > 0"
-                        [class.loss]="line.difference < 0"
-                      >
-                        {{ line.difference | number: '1.2-2' }}
-                      </td>
-                    </tr>
-                  }
+                @for (c of inactiveCurrencies; track c.id) {
+                  <tr>
+                    <td><span class="valex-badge valex-badge-secondary font-mono">{{ c.code }}</span></td>
+                    <td>{{ c.nameAr }}</td>
+                    <td>{{ c.symbol }}</td>
+                    <td class="font-mono">{{ c.exchangeRate }}</td>
+                    <td><span class="valex-badge valex-badge-secondary">معطّلة</span></td>
+                    <td>
+                      <button class="valex-icon-btn success" (click)="reactivateCurrency(c.id)" title="إعادة تفعيل">
+                        <span class="material-icons-round">check_circle</span>
+                      </button>
+                    </td>
+                  </tr>
                 }
               </tbody>
             </table>
           </div>
+        </div>
+      }
+    }
+  }
 
-          <!-- زر التنفيذ -->
-          @if (!revalExecuted) {
-            <div class="reval-action">
-              <button class="btn-3d btn-green" (click)="executeReval()" [disabled]="revalLoading">
-                <span class="material-icons-round">check_circle</span>
-                تنفيذ إعادة التقييم وإنشاء القيد
-              </button>
+  @if (activeTab === 'rates') {
+    @if (rates.length === 0) {
+      <app-empty-state
+        icon="currency_exchange"
+        title="لا توجد أسعار صرف"
+        message="أضف سعر صرف جديد لبدء تحويل العملات"
+        actionLabel="سعر صرف جديد"
+        (action)="openRateForm()"
+      />
+    } @else {
+      <div class="grid grid-cols-1 gap-4">
+        @for (r of rates; track r.id) {
+          <div class="valex-card">
+            <div class="valex-card-body flex flex-col lg:flex-row lg:items-center gap-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+                <span class="material-icons-round">sync_alt</span>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 text-sm sm:text-base font-bold mb-2">
+                  <span>{{ getCurrencyName(r.fromCurrencyId) }}</span>
+                  <span class="material-icons-round text-muted text-base">arrow_back</span>
+                  <span>{{ getCurrencyName(r.toCurrencyId) }}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 text-xs text-muted">
+                  <span class="flex items-center gap-1">
+                    <span class="material-icons-round text-sm">calendar_today</span>
+                    {{ r.effectiveDate }}
+                  </span>
+                  @if (r.notes) {
+                    <span class="flex items-center gap-1">
+                      <span class="material-icons-round text-sm">notes</span>
+                      {{ r.notes }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <div class="flex flex-col items-start lg:items-end gap-2">
+                <div class="text-xl font-bold text-primary font-mono">{{ r.rate }}</div>
+                <span class="valex-badge" [class.valex-badge-secondary]="r.source === 'manual'" [class.valex-badge-success]="r.source === 'market'" [class.valex-badge-primary]="r.source === 'bank'">
+                  {{ r.source === 'manual' ? 'يدوي' : r.source === 'market' ? 'سوق' : 'بنك' }}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2 lg:justify-end">
+                <button class="valex-icon-btn" (click)="openRateForm(r)" title="تعديل">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="valex-icon-btn danger" (click)="removeRate(r.id)" title="حذف">
+                  <span class="material-icons-round">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  @if (activeTab === 'converter') {
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <h3 class="valex-card-title flex items-center gap-2">
+          <span class="material-icons-round text-primary">swap_horiz</span>
+          محول العملات
+        </h3>
+      </div>
+      <div class="valex-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+          <div class="valex-form-group">
+            <label class="valex-label" for="convert-amount">المبلغ</label>
+            <input id="convert-amount" type="number" class="valex-input" [(ngModel)]="convertAmount" placeholder="المبلغ" />
+          </div>
+
+          <div class="valex-form-group">
+            <label class="valex-label" for="convert-from">من عملة</label>
+            <select id="convert-from" class="valex-select" [(ngModel)]="convertFrom" title="من عملة">
+              <option value="">اختر...</option>
+              @for (c of activeCurrencies; track c.id) {
+                <option [value]="c.id">{{ c.nameAr || c.code }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="flex items-center justify-center pb-2 text-muted">
+            <span class="material-icons-round text-2xl">arrow_back</span>
+          </div>
+
+          <div class="valex-form-group">
+            <label class="valex-label" for="convert-to">إلى عملة</label>
+            <select id="convert-to" class="valex-select" [(ngModel)]="convertTo" title="إلى عملة">
+              <option value="">اختر...</option>
+              @for (c of activeCurrencies; track c.id) {
+                <option [value]="c.id">{{ c.nameAr || c.code }}</option>
+              }
+            </select>
+          </div>
+
+          <button class="valex-btn valex-btn-primary w-full xl:w-auto" (click)="convert()">
+            <span class="material-icons-round">calculate</span>
+            تحويل
+          </button>
+        </div>
+
+        @if (convertResult !== null) {
+          <div class="exchange-result-box mt-4">
+            <span class="text-sm text-muted">الناتج</span>
+            <div class="text-2xl font-bold text-success font-mono">
+              {{ convertResult | number: '1.2-4' }}
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (activeTab === 'revaluation') {
+    <div class="valex-card mb-6">
+      <div class="valex-card-header">
+        <div>
+          <h3 class="valex-card-title flex items-center gap-2">
+            <span class="material-icons-round text-primary">assessment</span>
+            إعادة تقييم العملات الأجنبية
+          </h3>
+          <p class="text-sm text-muted mt-1">
+            حساب فروقات أسعار الصرف على الأرصدة بالعملات الأجنبية وإنشاء قيد تعديل تلقائي
+          </p>
+        </div>
+      </div>
+      <div class="valex-card-body">
+        <div class="flex flex-wrap items-end gap-4 mb-6">
+          <div class="valex-form-group min-w-[220px]">
+            <label class="valex-label" for="reval-date">تاريخ التقييم</label>
+            <input id="reval-date" type="date" class="valex-input" [(ngModel)]="revalDate" />
+          </div>
+          <button class="valex-btn valex-btn-primary" (click)="loadRevalPreview()" [disabled]="revalLoading">
+            <span class="material-icons-round">{{ revalLoading ? 'sync' : 'preview' }}</span>
+            معاينة
+          </button>
+        </div>
+
+        @if (revalPreview) {
+          @if (revalPreview.skippedReason) {
+            <div class="reval-alert warn">
+              <span class="material-icons-round">warning</span>
+              {{ revalPreview.skippedReason }}
+            </div>
+          } @else if (revalPreview.lines.length === 0) {
+            <div class="reval-alert info">
+              <span class="material-icons-round">info</span>
+              لا توجد فروقات تقييم بالتاريخ المحدد
             </div>
           } @else {
-            <div class="reval-alert success">
-              <span class="material-icons-round">task_alt</span>
-              تم إنشاء القيد المحاسبي رقم: REVAL-{{ revalPreview.date }}
-              @if (revalPreview.journalEntryId) {
-                (معرّف القيد: {{ revalPreview.journalEntryId }})
-              }
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div class="summary-box gain">
+                <span class="material-icons-round">trending_up</span>
+                <div>
+                  <div class="text-sm text-muted">أرباح صرف</div>
+                  <div class="text-xl font-bold">{{ revalPreview.totalGain | number: '1.2-2' }}</div>
+                </div>
+              </div>
+              <div class="summary-box loss">
+                <span class="material-icons-round">trending_down</span>
+                <div>
+                  <div class="text-sm text-muted">خسائر صرف</div>
+                  <div class="text-xl font-bold">{{ revalPreview.totalLoss | number: '1.2-2' }}</div>
+                </div>
+              </div>
+              <div class="summary-box" [class.gain]="revalPreview.netDifference >= 0" [class.loss]="revalPreview.netDifference < 0">
+                <span class="material-icons-round">balance</span>
+                <div>
+                  <div class="text-sm text-muted">صافي الفرق</div>
+                  <div class="text-xl font-bold">
+                    {{ revalPreview.netDifference | number: '1.2-2' }} {{ revalPreview.baseCurrencyCode }}
+                  </div>
+                </div>
+              </div>
             </div>
+
+            <div class="overflow-x-auto mb-6">
+              <table class="valex-table">
+                <thead>
+                  <tr>
+                    <th>الحساب</th>
+                    <th>العملة</th>
+                    <th>الرصيد</th>
+                    <th>القيمة الدفترية</th>
+                    <th>القيمة الجديدة</th>
+                    <th>الفرق</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (line of revalPreview.lines; track line.accountId) {
+                    @if (line.difference !== 0) {
+                      <tr>
+                        <td>{{ line.accountName }}</td>
+                        <td><span class="valex-badge valex-badge-primary font-mono">{{ line.currencyCode }}</span></td>
+                        <td class="font-mono">{{ line.balance | number: '1.2-2' }}</td>
+                        <td class="font-mono">{{ line.oldBaseValue | number: '1.2-2' }}</td>
+                        <td class="font-mono">{{ line.newBaseValue | number: '1.2-2' }}</td>
+                        <td class="font-mono" [class.text-success]="line.difference > 0" [class.text-danger]="line.difference < 0">
+                          {{ line.difference | number: '1.2-2' }}
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (!revalExecuted) {
+              <div class="flex justify-center">
+                <button class="valex-btn valex-btn-primary" (click)="executeReval()" [disabled]="revalLoading">
+                  <span class="material-icons-round">check_circle</span>
+                  تنفيذ إعادة التقييم وإنشاء القيد
+                </button>
+              </div>
+            } @else {
+              <div class="reval-alert success">
+                <span class="material-icons-round">task_alt</span>
+                تم إنشاء القيد المحاسبي رقم: REVAL-{{ revalPreview.date }}
+                @if (revalPreview.journalEntryId) {
+                  (معرّف القيد: {{ revalPreview.journalEntryId }})
+                }
+              </div>
+            }
           }
         }
-      }
+      </div>
     </div>
   }
 
-  <!-- ===== نموذج العملة (Inline) ===== -->
   @if (showCurrencyForm) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue">
-            <span class="material-icons-round">{{ currencyEditId ? 'edit' : 'add_circle' }}</span>
+    <div class="valex-modal-overlay" (click)="showCurrencyForm = false">
+      <div class="valex-modal max-w-4xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">{{ currencyEditId ? 'edit' : 'add_circle' }}</span>
+            </div>
+            <div>
+              <h3>{{ currencyEditId ? 'تعديل عملة' : 'عملة جديدة' }}</h3>
+              <p>@if (currencyEditId) { تعديل بيانات العملة } @else { إضافة عملة جديدة للنظام }</p>
+            </div>
           </div>
-          <h3>{{ currencyEditId ? 'تعديل عملة' : 'عملة جديدة' }}</h3>
-          @if (currencyEditId) {
-            <span class="edit-badge">تعديل</span>
-          }
+          <button class="valex-icon-btn" (click)="showCurrencyForm = false" title="إغلاق">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <button class="close-btn" (click)="showCurrencyForm = false" title="إغلاق">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="form-meta cols-3">
-        <div class="form-group">
-          <label class="form-label" for="cur-code"
-            >رمز العملة <span class="required">*</span></label
-          >
-          <input
-            id="cur-code"
-            type="text"
-            class="form-input"
-            [(ngModel)]="currencyForm.code"
-            placeholder="مثال: EUR"
-            maxlength="5"
-            [disabled]="!!currencyEditId"
-          />
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div class="valex-form-group">
+              <label class="valex-label" for="cur-code">رمز العملة <span class="text-danger">*</span></label>
+              <input id="cur-code" type="text" class="valex-input" [(ngModel)]="currencyForm.code" placeholder="مثال: EUR" maxlength="5" [disabled]="!!currencyEditId" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="cur-name">الاسم بالعربي <span class="text-danger">*</span></label>
+              <input id="cur-name" type="text" class="valex-input" [(ngModel)]="currencyForm.nameAr" placeholder="مثال: يورو" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="cur-symbol">الرمز المختصر <span class="text-danger">*</span></label>
+              <input id="cur-symbol" type="text" class="valex-input" [(ngModel)]="currencyForm.symbol" placeholder="مثال: €" maxlength="5" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="cur-rate">سعر الصرف</label>
+              <input id="cur-rate" type="number" step="0.01" class="valex-input" [(ngModel)]="currencyForm.exchangeRate" placeholder="1" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="cur-min">الحد الأدنى (أرضية)</label>
+              <input id="cur-min" type="number" step="0.01" class="valex-input" [(ngModel)]="currencyForm.minRate" placeholder="اختياري" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="cur-max">الحد الأقصى (سقف)</label>
+              <input id="cur-max" type="number" step="0.01" class="valex-input" [(ngModel)]="currencyForm.maxRate" placeholder="اختياري" />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="cur-name"
-            >الاسم بالعربي <span class="required">*</span></label
-          >
-          <input
-            id="cur-name"
-            type="text"
-            class="form-input"
-            [(ngModel)]="currencyForm.nameAr"
-            placeholder="مثال: يورو"
-          />
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showCurrencyForm = false">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="saveCurrency()">
+            <span class="material-icons-round">{{ currencyEditId ? 'save' : 'add' }}</span>
+            {{ currencyEditId ? 'تحديث' : 'حفظ' }}
+          </button>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="cur-symbol"
-            >الرمز المختصر <span class="required">*</span></label
-          >
-          <input
-            id="cur-symbol"
-            type="text"
-            class="form-input"
-            [(ngModel)]="currencyForm.symbol"
-            placeholder="مثال: €"
-            maxlength="5"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="cur-rate">سعر الصرف</label>
-          <input
-            id="cur-rate"
-            type="number"
-            step="0.01"
-            class="form-input"
-            [(ngModel)]="currencyForm.exchangeRate"
-            placeholder="1"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="cur-min">الحد الأدنى (أرضية)</label>
-          <input
-            id="cur-min"
-            type="number"
-            step="0.01"
-            class="form-input"
-            [(ngModel)]="currencyForm.minRate"
-            placeholder="اختياري"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="cur-max">الحد الأقصى (سقف)</label>
-          <input
-            id="cur-max"
-            type="number"
-            step="0.01"
-            class="form-input"
-            [(ngModel)]="currencyForm.maxRate"
-            placeholder="اختياري"
-          />
-        </div>
-      </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showCurrencyForm = false">إلغاء</button>
-        <button class="btn-save" (click)="saveCurrency()">
-          <span class="material-icons-round">{{ currencyEditId ? 'save' : 'add' }}</span>
-          {{ currencyEditId ? 'تحديث' : 'حفظ' }}
-        </button>
       </div>
     </div>
   }
 
-  <!-- ===== نموذج سعر الصرف (Inline) ===== -->
   @if (showRateForm) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon blue">
-            <span class="material-icons-round">{{ rateEditId ? 'edit' : 'add_circle' }}</span>
+    <div class="valex-modal-overlay" (click)="showRateForm = false">
+      <div class="valex-modal max-w-4xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">{{ rateEditId ? 'edit' : 'add_circle' }}</span>
+            </div>
+            <div>
+              <h3>{{ rateEditId ? 'تعديل سعر الصرف' : 'سعر صرف جديد' }}</h3>
+              <p>@if (rateEditId) { تحديث سعر صرف قائم } @else { إضافة سعر صرف جديد بين العملات }</p>
+            </div>
           </div>
-          <h3>{{ rateEditId ? 'تعديل سعر الصرف' : 'سعر صرف جديد' }}</h3>
-          @if (rateEditId) {
-            <span class="edit-badge">تعديل</span>
-          }
+          <button class="valex-icon-btn" (click)="showRateForm = false" title="إغلاق">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <button class="close-btn" (click)="showRateForm = false" title="إغلاق">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label class="form-label" for="rate-from">من عملة <span class="required">*</span></label>
-          <select
-            id="rate-from"
-            class="form-select"
-            [(ngModel)]="rateForm.fromCurrencyId"
-            title="من عملة"
-          >
-            <option value="">اختر العملة...</option>
-            @for (c of activeCurrencies; track c.id) {
-              <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.code }})</option>
-            }
-          </select>
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div class="valex-form-group">
+              <label class="valex-label" for="rate-from">من عملة <span class="text-danger">*</span></label>
+              <select id="rate-from" class="valex-select" [(ngModel)]="rateForm.fromCurrencyId" title="من عملة">
+                <option value="">اختر العملة...</option>
+                @for (c of activeCurrencies; track c.id) {
+                  <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.code }})</option>
+                }
+              </select>
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="rate-to">إلى عملة <span class="text-danger">*</span></label>
+              <select id="rate-to" class="valex-select" [(ngModel)]="rateForm.toCurrencyId" title="إلى عملة">
+                <option value="">اختر العملة...</option>
+                @for (c of activeCurrencies; track c.id) {
+                  <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.code }})</option>
+                }
+              </select>
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="rate-value">سعر الصرف <span class="text-danger">*</span></label>
+              <input id="rate-value" type="number" step="0.0001" class="valex-input" [(ngModel)]="rateForm.rate" placeholder="0.0037" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="rate-date">تاريخ السريان</label>
+              <input id="rate-date" type="date" class="valex-input" [(ngModel)]="rateForm.effectiveDate" />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="rate-source">المصدر</label>
+              <select id="rate-source" class="valex-select" [(ngModel)]="rateForm.source" title="المصدر">
+                <option value="manual">يدوي</option>
+                <option value="market">سوق</option>
+                <option value="bank">بنك</option>
+              </select>
+            </div>
+            <div class="valex-form-group md:col-span-2 xl:col-span-1">
+              <label class="valex-label" for="rate-notes">ملاحظات</label>
+              <input id="rate-notes" type="text" class="valex-input" [(ngModel)]="rateForm.notes" placeholder="ملاحظات اختيارية" />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="rate-to">إلى عملة <span class="required">*</span></label>
-          <select
-            id="rate-to"
-            class="form-select"
-            [(ngModel)]="rateForm.toCurrencyId"
-            title="إلى عملة"
-          >
-            <option value="">اختر العملة...</option>
-            @for (c of activeCurrencies; track c.id) {
-              <option [value]="c.id">{{ c.nameAr || c.code }} ({{ c.code }})</option>
-            }
-          </select>
+        <div class="valex-modal-footer">
+          <button class="valex-btn valex-btn-outline" (click)="showRateForm = false">إلغاء</button>
+          <button class="valex-btn valex-btn-primary" (click)="saveRate()">
+            <span class="material-icons-round">{{ rateEditId ? 'save' : 'add' }}</span>
+            {{ rateEditId ? 'تحديث' : 'حفظ' }}
+          </button>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="rate-value"
-            >سعر الصرف <span class="required">*</span></label
-          >
-          <input
-            id="rate-value"
-            type="number"
-            step="0.0001"
-            class="form-input"
-            [(ngModel)]="rateForm.rate"
-            placeholder="0.0037"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="rate-date">تاريخ السريان</label>
-          <input
-            id="rate-date"
-            type="date"
-            class="form-input"
-            [(ngModel)]="rateForm.effectiveDate"
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="rate-source">المصدر</label>
-          <select id="rate-source" class="form-select" [(ngModel)]="rateForm.source" title="المصدر">
-            <option value="manual">يدوي</option>
-            <option value="market">سوق</option>
-            <option value="bank">بنك</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="rate-notes">ملاحظات</label>
-          <input
-            id="rate-notes"
-            type="text"
-            class="form-input"
-            [(ngModel)]="rateForm.notes"
-            placeholder="ملاحظات اختيارية"
-          />
-        </div>
-      </div>
-      <div class="form-footer">
-        <button class="btn-cancel" (click)="showRateForm = false">إلغاء</button>
-        <button class="btn-save" (click)="saveRate()">
-          <span class="material-icons-round">{{ rateEditId ? 'save' : 'add' }}</span>
-          {{ rateEditId ? 'تحديث' : 'حفظ' }}
-        </button>
       </div>
     </div>
   }

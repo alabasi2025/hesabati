@@ -1,256 +1,270 @@
-<div class="page-container">
-  <!-- ===== Page Header ===== -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="page-icon-3d green">
-        <span class="material-icons-round">date_range</span>
+<div class="page-content">
+  <app-page-header
+    title="الفترات المحاسبية"
+    icon="date_range"
+    [breadcrumb]="['الرئيسية', 'التقارير', 'الفترات المالية']"
+  >
+    <button
+      type="button"
+      class="valex-btn valex-btn-outline"
+      (click)="showBulkForm = true"
+      title="إنشاء دفعة"
+    >
+      <span class="material-icons-round">playlist_add</span>
+      إنشاء دفعة
+    </button>
+    <button
+      type="button"
+      class="valex-btn valex-btn-primary"
+      (click)="showCreateForm = true"
+      title="سنة مالية جديدة"
+    >
+      <span class="material-icons-round">add</span>
+      سنة مالية جديدة
+    </button>
+  </app-page-header>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary flex-shrink-0">
+        <span class="material-icons-round text-2xl">calendar_month</span>
       </div>
       <div>
-        <h1 class="page-title">الفترات المحاسبية</h1>
-        <p class="page-subtitle">إدارة السنوات المالية والفترات الشهرية وإقفالها</p>
+        <div class="text-2xl font-bold">{{ fiscalYears.length }}</div>
+        <div class="text-sm text-muted">سنوات مالية</div>
       </div>
     </div>
-    <div class="header-right">
-      <button
-        type="button"
-        class="btn-3d btn-ghost"
-        (click)="showBulkForm = true"
-        title="إنشاء دفعة"
-      >
-        <span class="material-icons-round">playlist_add</span>
-        إنشاء دفعة
-      </button>
-      <button
-        type="button"
-        class="btn-3d btn-primary"
-        (click)="showCreateForm = true"
-        title="سنة مالية جديدة"
-      >
-        <span class="material-icons-round">add</span>
-        سنة مالية جديدة
-      </button>
-    </div>
-  </div>
 
-  <!-- ===== Stats Cards ===== -->
-  <div class="stats-row">
-    <div class="stat-card-3d blue">
-      <div class="sc-icon"><span class="material-icons-round">calendar_month</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ fiscalYears.length }}</div>
-        <div class="sc-label">سنوات مالية</div>
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+        <span class="material-icons-round text-2xl">lock_open</span>
+      </div>
+      <div>
+        <div class="text-2xl font-bold">{{ openPeriodsCount }}</div>
+        <div class="text-sm text-muted">فترات مفتوحة</div>
       </div>
     </div>
-    <div class="stat-card-3d green">
-      <div class="sc-icon"><span class="material-icons-round">lock_open</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ openPeriodsCount }}</div>
-        <div class="sc-label">فترات مفتوحة</div>
+
+    <div class="valex-card p-4 flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+        <span class="material-icons-round text-2xl">lock</span>
       </div>
-    </div>
-    <div class="stat-card-3d amber">
-      <div class="sc-icon"><span class="material-icons-round">lock</span></div>
-      <div class="sc-body">
-        <div class="sc-num">{{ closedPeriodsCount }}</div>
-        <div class="sc-label">فترات مقفلة</div>
+      <div>
+        <div class="text-2xl font-bold">{{ closedPeriodsCount }}</div>
+        <div class="text-sm text-muted">فترات مقفلة</div>
       </div>
     </div>
   </div>
 
-  <!-- ===== قائمة السنوات المالية ===== -->
   @if (fiscalYears.length === 0) {
-    <div class="empty-state">
-      <div class="empty-icon-3d"><span class="material-icons-round">date_range</span></div>
-      <h3>لا توجد سنوات مالية</h3>
-      <p>أنشئ سنة مالية جديدة للبدء بإدارة الفترات المحاسبية</p>
-      <button
-        type="button"
-        class="btn-3d btn-primary"
-        (click)="showCreateForm = true"
-        title="سنة مالية جديدة"
-      >
-        <span class="material-icons-round">add</span> سنة مالية جديدة
-      </button>
-    </div>
+    <app-empty-state
+      icon="date_range"
+      title="لا توجد سنوات مالية"
+      message="أنشئ سنة مالية جديدة للبدء بإدارة الفترات المحاسبية"
+      actionLabel="سنة مالية جديدة"
+      (action)="showCreateForm = true"
+    />
   } @else {
-    <!-- شريط السنوات -->
-    <div class="years-bar">
-      @for (fy of fiscalYears; track fy.id) {
-        <button
-          type="button"
-          class="year-chip"
-          [class.active]="selectedYear?.id === fy.id"
-          [class.closed]="fy.isClosed"
-          (click)="loadPeriods(fy)"
-          [title]="'سنة ' + fy.year"
-        >
-          <span class="material-icons-round">{{ fy.isClosed ? 'lock' : 'calendar_month' }}</span>
-          {{ fy.year }}
-        </button>
-      }
-    </div>
-
-    <!-- معلومات السنة المحددة -->
-    @if (selectedYear) {
-      <div class="year-info-bar">
-        <div class="year-info-main">
-          <span class="year-badge" [class.closed]="selectedYear.isClosed">
-            {{ selectedYear.year }}
-          </span>
-          <span class="year-range">{{ selectedYear.startDate }} ← {{ selectedYear.endDate }}</span>
-          @if (selectedYear.isClosed) {
-            <span class="status-badge badge-closed">مقفلة</span>
-          } @else {
-            <span class="status-badge badge-open">مفتوحة</span>
+    <div class="valex-card mb-4">
+      <div class="valex-card-body py-3">
+        <div class="flex flex-wrap gap-2">
+          @for (fy of fiscalYears; track fy.id) {
+            <button
+              type="button"
+              class="valex-tab-btn"
+              [class.active]="selectedYear?.id === fy.id"
+              [class.opacity-60]="fy.isClosed"
+              (click)="loadPeriods(fy)"
+              [title]="'سنة ' + fy.year"
+            >
+              <span class="material-icons-round">{{ fy.isClosed ? 'lock' : 'calendar_month' }}</span>
+              {{ fy.year }}
+            </button>
           }
         </div>
-        @if (!selectedYear.isClosed) {
-          <button
-            type="button"
-            class="btn-3d btn-danger-outline"
-            (click)="closeYear()"
-            title="إقفال السنة"
-          >
-            <span class="material-icons-round">lock</span>
-            إقفال السنة
-          </button>
-        }
+      </div>
+    </div>
+
+    @if (selectedYear) {
+      <div class="valex-card mb-6">
+        <div class="valex-card-body flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="valex-badge" [class.valex-badge-secondary]="selectedYear.isClosed" [class.valex-badge-success]="!selectedYear.isClosed">
+              {{ selectedYear.year }}
+            </span>
+            <span class="text-sm text-muted font-mono">{{ selectedYear.startDate }} ← {{ selectedYear.endDate }}</span>
+            @if (selectedYear.isClosed) {
+              <span class="valex-badge valex-badge-secondary">مقفلة</span>
+            } @else {
+              <span class="valex-badge valex-badge-success">مفتوحة</span>
+            }
+          </div>
+
+          @if (!selectedYear.isClosed) {
+            <button
+              type="button"
+              class="valex-btn valex-btn-outline danger-outline"
+              (click)="closeYear()"
+              title="إقفال السنة"
+            >
+              <span class="material-icons-round">lock</span>
+              إقفال السنة
+            </button>
+          }
+        </div>
       </div>
 
-      <!-- جدول الفترات -->
-      <div class="table-container-3d">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>الشهر</th>
-              <th>من</th>
-              <th>إلى</th>
-              <th>الحالة</th>
-              <th>تاريخ الإقفال</th>
-              <th>إجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (p of periods; track p.id) {
-              <tr [class.closed-row]="p.isClosed">
-                <td class="num-cell">{{ p.month }}</td>
-                <td>
-                  <span class="month-name">{{ getMonthName(p.month) }}</span>
-                </td>
-                <td class="date-cell">{{ p.startDate }}</td>
-                <td class="date-cell">{{ p.endDate }}</td>
-                <td>
-                  @if (p.isClosed) {
-                    <span class="status-badge badge-closed">
-                      <span class="material-icons-round">lock</span> مقفلة
-                    </span>
-                  } @else {
-                    <span class="status-badge badge-open">
-                      <span class="material-icons-round">lock_open</span> مفتوحة
-                    </span>
-                  }
-                </td>
-                <td class="date-cell">
-                  {{ p.closedAt ? (p.closedAt | date: 'yyyy-MM-dd') : '—' }}
-                </td>
-                <td>
-                  @if (!p.isClosed && !selectedYear.isClosed) {
-                    <button
-                      type="button"
-                      class="btn-3d btn-sm btn-danger-outline"
-                      (click)="closePeriod(p)"
-                      title="إقفال الفترة"
-                    >
-                      <span class="material-icons-round">lock</span>
-                      إقفال
-                    </button>
-                  }
-                </td>
+      <div class="valex-card mb-6">
+        <div class="valex-card-body p-0 overflow-x-auto">
+          <table class="valex-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الشهر</th>
+                <th>من</th>
+                <th>إلى</th>
+                <th>الحالة</th>
+                <th>تاريخ الإقفال</th>
+                <th>إجراءات</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (p of periods; track p.id) {
+                <tr [class.opacity-60]="p.isClosed">
+                  <td class="font-mono">{{ p.month }}</td>
+                  <td><span class="font-semibold">{{ getMonthName(p.month) }}</span></td>
+                  <td class="font-mono">{{ p.startDate }}</td>
+                  <td class="font-mono">{{ p.endDate }}</td>
+                  <td>
+                    @if (p.isClosed) {
+                      <span class="valex-badge valex-badge-secondary">
+                        <span class="material-icons-round text-sm">lock</span>
+                        مقفلة
+                      </span>
+                    } @else {
+                      <span class="valex-badge valex-badge-success">
+                        <span class="material-icons-round text-sm">lock_open</span>
+                        مفتوحة
+                      </span>
+                    }
+                  </td>
+                  <td class="font-mono">
+                    {{ p.closedAt ? (p.closedAt | date: 'yyyy-MM-dd') : '—' }}
+                  </td>
+                  <td>
+                    @if (!p.isClosed && !selectedYear.isClosed) {
+                      <button
+                        type="button"
+                        class="valex-btn valex-btn-outline danger-outline valex-btn-sm"
+                        (click)="closePeriod(p)"
+                        title="إقفال الفترة"
+                      >
+                        <span class="material-icons-round">lock</span>
+                        إقفال
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     }
   }
 
-  <!-- ===== نموذج إنشاء سنة مالية (Inline) ===== -->
   @if (showCreateForm) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon green"><span class="material-icons-round">add_circle</span></div>
-          <h3>سنة مالية جديدة</h3>
+    <div class="valex-modal-overlay" (click)="showCreateForm = false">
+      <div class="valex-modal max-w-xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">add_circle</span>
+            </div>
+            <div>
+              <h3>سنة مالية جديدة</h3>
+              <p>إنشاء سنة مالية جديدة وإدارة فتراتها</p>
+            </div>
+          </div>
+          <button type="button" class="valex-icon-btn" (click)="showCreateForm = false" title="إغلاق">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <button type="button" class="close-btn" (click)="showCreateForm = false" title="إغلاق">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label class="form-label" for="new-year">السنة <span class="required">*</span></label>
-          <input
-            id="new-year"
-            type="number"
-            class="form-input"
-            [(ngModel)]="newYear"
-            min="2000"
-            max="2100"
-            placeholder="2025"
-          />
+        <div class="valex-modal-body">
+          <div class="valex-form-group">
+            <label class="valex-label" for="new-year">السنة <span class="text-danger">*</span></label>
+            <input
+              id="new-year"
+              type="number"
+              class="valex-input"
+              [(ngModel)]="newYear"
+              min="2000"
+              max="2100"
+              placeholder="2025"
+            />
+          </div>
         </div>
-      </div>
-      <div class="form-footer">
-        <button type="button" class="btn-cancel" (click)="showCreateForm = false">إلغاء</button>
-        <button type="button" class="btn-save" (click)="createYear()">
-          <span class="material-icons-round">add</span> إنشاء
-        </button>
+        <div class="valex-modal-footer">
+          <button type="button" class="valex-btn valex-btn-outline" (click)="showCreateForm = false">إلغاء</button>
+          <button type="button" class="valex-btn valex-btn-primary" (click)="createYear()">
+            <span class="material-icons-round">add</span>
+            إنشاء
+          </button>
+        </div>
       </div>
     </div>
   }
 
-  <!-- ===== نموذج إنشاء دفعة (Inline) ===== -->
   @if (showBulkForm) {
-    <div class="page-form-container">
-      <div class="form-header">
-        <div class="form-header-title">
-          <div class="page-icon green"><span class="material-icons-round">playlist_add</span></div>
-          <h3>إنشاء سنوات مالية دفعة واحدة</h3>
+    <div class="valex-modal-overlay" (click)="showBulkForm = false">
+      <div class="valex-modal max-w-2xl" (click)="$event.stopPropagation()">
+        <div class="valex-modal-header">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+              <span class="material-icons-round">playlist_add</span>
+            </div>
+            <div>
+              <h3>إنشاء سنوات مالية دفعة واحدة</h3>
+              <p>إضافة مجموعة سنوات مالية خلال خطوة واحدة</p>
+            </div>
+          </div>
+          <button type="button" class="valex-icon-btn" (click)="showBulkForm = false" title="إغلاق">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
-        <button type="button" class="close-btn" (click)="showBulkForm = false" title="إغلاق">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="form-meta">
-        <div class="form-group">
-          <label class="form-label" for="bulk-start">من سنة <span class="required">*</span></label>
-          <input
-            id="bulk-start"
-            type="number"
-            class="form-input"
-            [(ngModel)]="bulkStartYear"
-            min="2000"
-            max="2100"
-          />
+        <div class="valex-modal-body">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="valex-form-group">
+              <label class="valex-label" for="bulk-start">من سنة <span class="text-danger">*</span></label>
+              <input
+                id="bulk-start"
+                type="number"
+                class="valex-input"
+                [(ngModel)]="bulkStartYear"
+                min="2000"
+                max="2100"
+              />
+            </div>
+            <div class="valex-form-group">
+              <label class="valex-label" for="bulk-end">إلى سنة <span class="text-danger">*</span></label>
+              <input
+                id="bulk-end"
+                type="number"
+                class="valex-input"
+                [(ngModel)]="bulkEndYear"
+                min="2000"
+                max="2100"
+              />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="bulk-end">إلى سنة <span class="required">*</span></label>
-          <input
-            id="bulk-end"
-            type="number"
-            class="form-input"
-            [(ngModel)]="bulkEndYear"
-            min="2000"
-            max="2100"
-          />
+        <div class="valex-modal-footer">
+          <button type="button" class="valex-btn valex-btn-outline" (click)="showBulkForm = false">إلغاء</button>
+          <button type="button" class="valex-btn valex-btn-primary" (click)="createBulkYears()">
+            <span class="material-icons-round">playlist_add</span>
+            إنشاء
+          </button>
         </div>
-      </div>
-      <div class="form-footer">
-        <button type="button" class="btn-cancel" (click)="showBulkForm = false">إلغاء</button>
-        <button type="button" class="btn-save" (click)="createBulkYears()">
-          <span class="material-icons-round">playlist_add</span> إنشاء
-        </button>
       </div>
     </div>
   }
