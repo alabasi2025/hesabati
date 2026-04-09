@@ -246,6 +246,16 @@ export class VouchersComponent extends BasePageComponent {
       if (field === 'entityType') { copy[i].accountId = null; copy[i].entityId = null; }
       if (field === 'accountId')  copy[i].entityId = null;
       if (field === 'currencyId' && value === 1) { copy[i].foreignAmount = null; copy[i].exchangeRate = null; }
+      if (field === 'currencyId' && value !== 1) {
+        // تعبئة السعر الافتراضي تلقائياً من بيانات العملة
+        const currency = this.currencies().find((c: any) => c.id === value);
+        if (currency?.exchangeRate) {
+          copy[i].exchangeRate = Number(currency.exchangeRate);
+          if (copy[i].foreignAmount) {
+            copy[i].amount = Math.round(Number(copy[i].foreignAmount) * copy[i].exchangeRate * 100) / 100;
+          }
+        }
+      }
       if (field === 'foreignAmount' || field === 'exchangeRate') {
         const fa = Number(copy[i].foreignAmount) || 0;
         const er = Number(copy[i].exchangeRate)  || 0;
@@ -297,6 +307,20 @@ export class VouchersComponent extends BasePageComponent {
     if (!this.treasuryId()) { this.error.set('اختر الخزينة / الحساب المالي'); return; }
     const valid = this.formLines().filter(l => Number(l.amount) > 0);
     if (valid.length === 0) { this.error.set('أدخل سطراً واحداً على الأقل بمبلغ'); return; }
+
+    // تحقق من سعر الصرف ضمن السقف المسموح
+    for (const line of valid) {
+      if (line.currencyId && line.currencyId !== 1 && line.exchangeRate) {
+        const currency = this.currencies().find((c: any) => c.id === line.currencyId);
+        if (currency) {
+          const min = currency.minRate ? Number(currency.minRate) : null;
+          const max = currency.maxRate ? Number(currency.maxRate) : null;
+          const rate = Number(line.exchangeRate);
+          if (min && rate < min) { this.error.set(`سعر الصرف ${rate} أقل من الحد الأدنى ${min} لعملة ${currency.code}`); this.saving.set(false); return; }
+          if (max && rate > max) { this.error.set(`سعر الصرف ${rate} أعلى من الحد الأقصى ${max} لعملة ${currency.code}`); this.saving.set(false); return; }
+        }
+      }
+    }
     this.saving.set(true);
     this.error.set('');
     try {

@@ -83,6 +83,57 @@ export class FiscalPeriodsComponent extends BasePageComponent {
     }
   }
 
+  // فتح فترة محاسبية
+  async reopenPeriod(period: any) {
+    if (!confirm(`هل تريد فتح فترة ${this.getMonthName(period.month)}؟`)) return;
+    try {
+      await this.api.reopenFiscalPeriod(this.bizId, period.id);
+      this.toast.success(`تم فتح فترة ${this.getMonthName(period.month)}`);
+      this.loadPeriods();
+    } catch (e: any) {
+      this.toast.error(e?.error?.error || 'فشل فتح الفترة');
+    }
+  }
+
+  // فتح سنة مالية
+  async reopenYear() {
+    if (!this.selectedYear) return;
+    if (!confirm(`هل تريد فتح السنة المالية ${this.selectedYear.year}؟`)) return;
+    try {
+      await this.api.reopenFiscalYear(this.bizId, this.selectedYear.id);
+      this.toast.success(`تم فتح السنة المالية ${this.selectedYear.year}`);
+      this.load();
+    } catch (e: any) {
+      this.toast.error(e?.error?.error || 'فشل فتح السنة');
+    }
+  }
+
+  // إعادة تقييم العملات للفترة
+  revalLoading = false;
+  revalResult: any = null;
+
+  async previewRevaluation(period: any) {
+    this.revalLoading = true;
+    try {
+      this.revalResult = await this.api.previewRevaluation(this.bizId, period.endDate);
+    } catch (e: any) {
+      this.toast.error(e?.error?.error || 'فشل المعاينة');
+    } finally {
+      this.revalLoading = false;
+    }
+  }
+
+  async executeRevaluation(period: any) {
+    if (!confirm('هل تريد تنفيذ إعادة التقييم وإنشاء قيود فروقات العملة؟')) return;
+    try {
+      const result = await this.api.executeRevaluation(this.bizId, period.endDate);
+      this.toast.success('تم إعادة التقييم بنجاح');
+      this.revalResult = result;
+    } catch (e: any) {
+      this.toast.error(e?.error?.error || 'فشل إعادة التقييم');
+    }
+  }
+
   async closeYear() {
     if (!this.selectedYear) return;
     if (!confirm(`هل تريد إقفال السنة المالية ${this.selectedYear.year}؟ هذا الإجراء لا يمكن التراجع عنه.`)) return;

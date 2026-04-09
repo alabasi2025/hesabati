@@ -392,6 +392,15 @@ export class JournalComponent extends BasePageComponent {
       // عند تغيير الحساب الفرعي: أعد ضبط الكيان التحليلي فقط
       if (field === 'accountId') copy[i].entityId = null;
       // عند تغيير العملة لعملة محلية: امسح المبالغ الأجنبية
+      if (field === 'currencyId' && value !== 1) {
+        const currency = this.currencies().find((c: any) => c.id === value);
+        if (currency?.exchangeRate) {
+          copy[i].exchangeRate = Number(currency.exchangeRate);
+          if (copy[i].foreignAmount) {
+            copy[i].amount = Math.round(Number(copy[i].foreignAmount) * copy[i].exchangeRate * 100) / 100;
+          }
+        }
+      }
       if (field === 'currencyId' && value === 1) {
         copy[i].foreignAmount = null;
         copy[i].exchangeRate = null;

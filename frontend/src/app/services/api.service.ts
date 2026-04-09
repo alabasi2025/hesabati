@@ -1036,6 +1036,16 @@ export class ApiService {
       method: 'POST',
     });
   }
+  reopenFiscalPeriod(bizId: number, periodId: number) {
+    return this.request<any>(`/businesses/${bizId}/fiscal-periods/${periodId}/reopen`, {
+      method: 'POST',
+    });
+  }
+  reopenFiscalYear(bizId: number, yearId: number) {
+    return this.request<any>(`/businesses/${bizId}/fiscal-years/${yearId}/reopen`, {
+      method: 'POST',
+    });
+  }
   getAccountCurrencies(accountId: number) {
     return this.request<any[]>(`/accounts/${accountId}/currencies`);
   }
