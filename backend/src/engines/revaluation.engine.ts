@@ -103,13 +103,36 @@ export async function executeRevaluation(
     return buildResult(effectiveDate, baseCurrency.id, baseCurrency.code, lines, null);
   }
 
-  // إنشاء القيد داخل transaction
+  // البحث عن قيد إعادة تقييم سابق لهذي الفترة — تعديله بدل إنشاء جديد
+  const existingRevalRef = `REVAL-${effectiveDate}`;
+  const [existingEntry] = await db
+    .select({ id: journalEntries.id })
+    .from(journalEntries)
+    .where(and(
+      eq(journalEntries.businessId, bizId),
+      eq(journalEntries.reference, existingRevalRef),
+    ))
+    .limit(1);
+
   const journalEntryId = await db.transaction(async (tx) => {
     const totalDiff = significantLines.reduce((s, l) => s + l.difference, 0);
     const absTotal = significantLines.reduce((s, l) => s + Math.abs(l.difference), 0);
 
-    // إنشاء القيد الرئيسي
-    const [entry] = await tx.insert(journalEntries).values({
+    let entryId: number;
+
+    if (existingEntry) {
+      // تعديل القيد القديم: حذف السطور القديمة + تحديث المبالغ
+      await tx.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, existingEntry.id));
+      await tx.update(journalEntries).set({
+        totalDebit: String(Math.round(absTotal * 100) / 100),
+        totalCredit: String(Math.round(absTotal * 100) / 100),
+        description: `إعادة تقييم العملات الأجنبية بتاريخ ${effectiveDate} (مُحدّث)`,
+        updatedAt: new Date(),
+      }).where(eq(journalEntries.id, existingEntry.id));
+      entryId = existingEntry.id;
+    } else {
+      // إنشاء قيد جديد
+      const [entry] = await tx.insert(journalEntries).values({
       businessId: bizId,
       entryNumber: `REVAL-${effectiveDate}`,
       description: `إعادة تقييم العملات الأجنبية بتاريخ ${effectiveDate}`,
@@ -121,6 +144,8 @@ export async function executeRevaluation(
       createdBy: userId,
       status: "confirmed",
     }).returning();
+      entryId = entry.id;
+    }
 
     let sortOrder = 0;
     const diffAccountId = diffCheck.accountId!;
@@ -132,7 +157,7 @@ export async function executeRevaluation(
       if (line.difference > 0) {
         // ربح: مدين الحساب الأصلي، دائن حساب فروقات العملة
         await tx.insert(journalEntryLines).values({
-          journalEntryId: entry.id,
+          journalEntryId: entryId,
           accountId: line.accountId,
           lineType: "debit",
           amount: String(roundedDiff),
@@ -140,7 +165,7 @@ export async function executeRevaluation(
           sortOrder: sortOrder++,
         });
         await tx.insert(journalEntryLines).values({
-          journalEntryId: entry.id,
+          journalEntryId: entryId,
           accountId: diffAccountId,
           lineType: "credit",
           amount: String(roundedDiff),
@@ -150,7 +175,7 @@ export async function executeRevaluation(
       } else {
         // خسارة: مدين حساب فروقات العملة، دائن الحساب الأصلي
         await tx.insert(journalEntryLines).values({
-          journalEntryId: entry.id,
+          journalEntryId: entryId,
           accountId: diffAccountId,
           lineType: "debit",
           amount: String(roundedDiff),
@@ -158,7 +183,7 @@ export async function executeRevaluation(
           sortOrder: sortOrder++,
         });
         await tx.insert(journalEntryLines).values({
-          journalEntryId: entry.id,
+          journalEntryId: entryId,
           accountId: line.accountId,
           lineType: "credit",
           amount: String(roundedDiff),
@@ -187,7 +212,7 @@ export async function executeRevaluation(
       `);
     }
 
-    return entry.id;
+    return entryId;
   });
 
   return buildResult(effectiveDate, baseCurrency.id, baseCurrency.code, lines, journalEntryId);
@@ -229,7 +254,14 @@ async function computeRevaluationLines(
     // القيمة الدفترية = الرصيد × 1 (بالعملة نفسها)
     // القيمة الجديدة = الرصيد × سعر الصرف الجديد
     // الفرق = القيمة الجديدة - القيمة الدفترية
-    const oldBaseValue = balance; // القيمة الدفترية الحالية
+    // القيمة الدفترية = الرصيد × السعر الافتراضي (currencies.exchange_rate)
+    const [currencyRow] = await db
+      .select({ exchangeRate: currencies.exchangeRate })
+      .from(currencies)
+      .where(eq(currencies.id, row.currencyId))
+      .limit(1);
+    const defaultRate = currencyRow ? parseFloat(String(currencyRow.exchangeRate)) : 1;
+    const oldBaseValue = Math.round(balance * defaultRate * 100) / 100;
     const newBaseValue = Math.round(balance * newRate * 100) / 100;
     const difference = Math.round((newBaseValue - oldBaseValue) * 100) / 100;
 
