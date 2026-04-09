@@ -45,7 +45,7 @@ export class PartnersComponent extends BasePageComponent {
       ]);
       this.business.set(biz);
       this.partners.set(partners);
-      this.partnerAccounts.set((accs as any[]).filter((a: any) => a.accountType === 'partner'));
+      this.partnerAccounts.set((accs as any[]).filter((a: any) => a.accountType === 'partner' && a.isLeafAccount === false));
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }

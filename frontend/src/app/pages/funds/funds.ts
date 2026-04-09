@@ -122,7 +122,7 @@ export class FundsComponent extends BasePageComponent {
       // جلب الحسابات نوع صندوق (منفصل حتى لا يؤثر فشله على عرض الصناديق)
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
-        this.fundAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'fund'));
+        this.fundAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'fund' && a.isLeafAccount === false));
       } catch {
         this.fundAccounts.set([]);
       }

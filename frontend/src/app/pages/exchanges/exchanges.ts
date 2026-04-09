@@ -75,7 +75,7 @@ export class ExchangesComponent extends BasePageComponent {
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
         this.exchangeAccounts.set(
-          (allAccounts || []).filter((a: any) => a.accountType === 'exchange'),
+          (allAccounts || []).filter((a: any) => a.accountType === 'exchange' && a.isLeafAccount === false),
         );
       } catch {
         this.exchangeAccounts.set([]);

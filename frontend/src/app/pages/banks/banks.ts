@@ -74,7 +74,7 @@ export class BanksComponent extends BasePageComponent {
       this.activeFilter.set('all');
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
-        this.bankAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'bank'));
+        this.bankAccounts.set((allAccounts || []).filter((a: any) => a.accountType === 'bank' && a.isLeafAccount === false));
       } catch {
         this.bankAccounts.set([]);
       }

@@ -75,7 +75,7 @@ export class WalletsComponent extends BasePageComponent {
       try {
         const allAccounts = await this.api.getAccounts(this.bizId);
         this.walletAccounts.set(
-          (allAccounts || []).filter((a: any) => a.accountType === 'e_wallet'),
+          (allAccounts || []).filter((a: any) => a.accountType === 'e_wallet' && a.isLeafAccount === false),
         );
       } catch {
         this.walletAccounts.set([]);

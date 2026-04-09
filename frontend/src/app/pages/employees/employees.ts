@@ -49,7 +49,7 @@ export class EmployeesComponent extends BasePageComponent {
       ]);
       this.employees.set(emps); this.stations.set(sts);
       this.departments.set(deps); this.jobTitles.set(titles);
-      this.employeeAccounts.set((accs as any[]).filter((a: any) => a.accountType === 'employee' || a.accountSubNatureKey === 'employee'));
+      this.employeeAccounts.set((accs as any[]).filter((a: any) => a.accountType === 'employee' && a.isLeafAccount === false || a.accountSubNatureKey === 'employee'));
     } catch (e: unknown) {
       console.error(e);
       this.toast.error(e instanceof Error ? e.message : 'حدث خطأ أثناء تحميل بيانات الموظفين');

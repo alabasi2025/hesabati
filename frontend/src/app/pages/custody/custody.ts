@@ -95,7 +95,7 @@ export class CustodyComponent extends BasePageComponent {
       this.records.set(custodyRecordsData || []);
       this.custodyAccounts.set(custodyAccountsData || []);
       this.filteredAccounts.set(
-        (allAccounts || []).filter((a: any) => a.accountType === 'custody'),
+        (allAccounts || []).filter((a: any) => a.accountType === 'custody' && a.isLeafAccount === false),
       );
     } catch (e) {
       console.error(e);

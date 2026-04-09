@@ -61,7 +61,7 @@ export class WarehouseComponent extends BasePageComponent {
       this.stations.set(sts.status === 'fulfilled' ? sts.value : []);
       this.warehouseTypes.set(types.status === 'fulfilled' ? types.value : []);
       const allAccs = accs.status === 'fulfilled' ? (accs.value as any[]) : [];
-      this.warehouseAccounts.set(allAccs.filter((a: any) => a.accountType === 'warehouse'));
+      this.warehouseAccounts.set(allAccs.filter((a: any) => a.accountType === 'warehouse' && a.isLeafAccount === false));
     } catch (e) { console.error(e); }
     this.loading.set(false);
   }
