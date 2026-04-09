@@ -21,10 +21,10 @@
     "check:tdad": "node ../.tdad/scripts/validate-workflows.mjs"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.11",
+    "@hono/node-server": "^1.19.13",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.1",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.12",
     "jsonwebtoken": "^9.0.2",
     "postgres": "^3.4.9",

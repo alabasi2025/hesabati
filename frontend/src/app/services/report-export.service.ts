@@ -27,7 +27,7 @@ export interface ExcelOptions {
 export class ReportExportService {
 
   async exportExcel(options: ExcelOptions): Promise<void> {
-    const XLSX = await import('xlsx');
+    const XLSX = await import('xlsx-js-style');
     const wb = XLSX.utils.book_new();
 
     for (const sheet of options.sheets) {
