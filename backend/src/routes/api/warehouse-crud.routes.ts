@@ -96,38 +96,48 @@ warehouseRoutes.post(
     const data = validation.data as Record<string, unknown> & {
       name?: string;
       warehouseType?: string;
-      subType?: unknown;
-      subTypeId?: number;
-      sequenceNumber?: number;
-      code?: string;
+      accountId?: number;
     };
-    const subTypeRaw = data.subType ?? data.subTypeId;
-    if (subTypeRaw != null && typeof subTypeRaw !== "object") {
-      const subTypeId =
-        typeof subTypeRaw === "number"
-          ? subTypeRaw
-          : Number.parseInt(String(subTypeRaw), 10);
-      if (!Number.isNaN(subTypeId)) {
-        data.subTypeId = subTypeId;
-        const { sequenceNumber, code } = await getNextItemInCategorySequence(
-          bizId,
-          "warehouse",
-          subTypeId,
-        );
-        data.sequenceNumber = sequenceNumber;
-        data.code = code;
-      }
-    }
+
+    // حساب التحكم إلزامي
+    const accountId = data.accountId != null && Number(data.accountId) > 0 ? Number(data.accountId) : null;
+    if (!accountId) return c.json({ error: 'يجب اختيار حساب تحكم مرتبط بالمخزن' }, 400);
+
+    const [acc] = await db
+      .select({ id: accounts.id, code: accounts.code })
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.businessId, bizId)))
+      .limit(1);
+    if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
+
+    // كود مركّب: WHS-01/1, WHS-01/2, ...
+    const existingWarehouses = await db.select({ id: warehouses.id }).from(warehouses)
+      .where(and(eq(warehouses.businessId, bizId), eq(warehouses.accountId, accountId)));
+    const subSeq = existingWarehouses.length + 1;
+    const warehouseCode = `${acc.code}/${subSeq}`;
+
     const name = (data.name ?? "") as string;
     const warehouseType = (
       ["main", "station", "sub"].includes(String(data.warehouseType ?? ""))
         ? data.warehouseType
         : "main"
     ) as "main" | "station" | "sub";
-    const subType = typeof data.subType === "string" ? data.subType : null;
+
     const [created] = await db
       .insert(warehouses)
-      .values({ ...data, businessId: bizId, name, warehouseType } as any)
+      .values({
+        businessId: bizId,
+        name,
+        warehouseType,
+        accountId,
+        code: warehouseCode,
+        sequenceNumber: subSeq,
+        stationId: data.stationId != null ? Number(data.stationId) : null,
+        responsiblePerson: typeof data.responsiblePerson === 'string' ? data.responsiblePerson.trim() || null : null,
+        location: typeof data.location === 'string' ? data.location.trim() || null : null,
+        notes: typeof data.notes === 'string' ? data.notes.trim() || null : null,
+        isActive: data.isActive !== false,
+      } as any)
       .returning();
     return c.json(created, 201);
   }),

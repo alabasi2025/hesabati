@@ -41,120 +41,22 @@ fundsRoutes.post(
         ? Number(body.accountId)
         : null;
 
-    let accountId: number;
-    let fundCode: string;
-    let fundLedgerCode: string;
-    let fundSeqNumber: number;
+    // حساب التحكم إلزامي — يُنشأ أولاً من صفحة الحسابات
+    if (!providedAccountId) return c.json({ error: 'يجب اختيار حساب تحكم مرتبط بالصندوق' }, 400);
 
-    if (providedAccountId) {
-      // حساب موجود — كود مركّب حسب عدد الصناديق المرتبطة به
-      const [acc] = await db
-        .select({
-          id: accounts.id,
-          sequenceNumber: accounts.sequenceNumber,
-          code: accounts.code,
-          // ledgerCode removed
-        })
-        .from(accounts)
-        .where(
-          and(
-            eq(accounts.id, providedAccountId),
-            eq(accounts.businessId, bizId),
-          ),
-        )
-        .limit(1);
-      if (!acc) return c.json({ error: "الحساب المحدد غير موجود" }, 400);
-      const existingFunds = await db
-        .select({ id: funds.id })
-        .from(funds)
-        .where(
-          and(
-            eq(funds.businessId, bizId),
-            eq(funds.accountId, providedAccountId),
-          ),
-        );
-      const subSeq = existingFunds.length + 1;
-      accountId = acc.id;
-      const paddedFundCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
-      fundCode = paddedFundCode;
-      fundLedgerCode = paddedFundCode
-        .replace(
-          /^([A-Z]+)/,
-          (_m, p) =>
-            ({
-              FND: "001",
-              BNK: "002",
-              WLT: "003",
-              EXC: "004",
-              WHS: "005",
-              CUS: "006",
-              SUP: "007",
-              EMP: "008",
-              PRT: "009",
-              BIL: "010",
-              INT: "011",
-              BDG: "012",
-              STL: "013",
-              PNG: "014",
-            })[p] ?? "099",
-        )
-        .replace("/", "-");
-      fundSeqNumber = acc.sequenceNumber ?? subSeq;
-    } else {
-      // لا يوجد حساب — ينشئ المحرك حساباً مستقلاً جديداً تلقائياً
-      const [subNature] = await db
-        .select({ id: accountSubNatures.id })
-        .from(accountSubNatures)
-        .where(
-          and(
-            eq(accountSubNatures.businessId, bizId),
-            eq(accountSubNatures.natureKey, "fund"),
-          ),
-        )
-        .limit(1);
-      const codes = await generateFinancialEntityCodes(
-        bizId,
-        "fund",
-        db as any,
-      );
-      const [newAcc] = await db
-        .insert(accounts)
-        .values({
-          businessId: bizId,
-          name: String(vd.name),
-          accountType: "fund" as any,
-          accountSubNatureId: subNature?.id ?? null,
-          isLeafAccount: true,
-          code: codes.accountCode,
-          sequenceNumber: codes.sequenceNumber,
-        })
-        .returning();
-      accountId = newAcc.id;
-      fundCode = codes.entityCode;
-      fundLedgerCode = codes.entityCode
-        .replace(
-          /^([A-Z]+)/,
-          (_m, p) =>
-            ({
-              FND: "001",
-              BNK: "002",
-              WLT: "003",
-              EXC: "004",
-              WHS: "005",
-              CUS: "006",
-              SUP: "007",
-              EMP: "008",
-              PRT: "009",
-              BIL: "010",
-              INT: "011",
-              BDG: "012",
-              STL: "013",
-              PNG: "014",
-            })[p] ?? "099",
-        )
-        .replace("/", "-");
-      fundSeqNumber = codes.sequenceNumber;
-    }
+    const [acc] = await db
+      .select({ id: accounts.id, sequenceNumber: accounts.sequenceNumber, code: accounts.code })
+      .from(accounts)
+      .where(and(eq(accounts.id, providedAccountId), eq(accounts.businessId, bizId)))
+      .limit(1);
+    if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
+
+    const existingFunds = await db.select({ id: funds.id }).from(funds)
+      .where(and(eq(funds.businessId, bizId), eq(funds.accountId, providedAccountId)));
+    const subSeq = existingFunds.length + 1;
+    const accountId = acc.id;
+    const fundCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+    const fundSeqNumber = subSeq;
 
     // تحديد العملة الافتراضية
     let defaultCurrencyId: number | null = null;
