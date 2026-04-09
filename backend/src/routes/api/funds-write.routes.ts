@@ -51,11 +51,33 @@ fundsRoutes.post(
       .limit(1);
     if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
 
+    // حساب عدد الكيانات الموجودة تحت هذا الحساب الرقابي
     const existingFunds = await db.select({ id: funds.id }).from(funds)
-      .where(and(eq(funds.businessId, bizId), eq(funds.accountId, providedAccountId)));
-    const subSeq = existingFunds.length + 1;
-    const accountId = acc.id;
+      .where(and(eq(funds.businessId, bizId)));
+    const fundsUnderControl = existingFunds.filter((f: any) => {
+      // نحسب الصناديق المرتبطة بحسابات تحليلية تحت هذا الرقابي
+      return true; // سنستخدم عدد الحسابات التحليلية بدلاً
+    });
+    const existingAnalytical = await db.select({ id: accounts.id }).from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.parentAccountId, providedAccountId), eq(accounts.isLeafAccount, true)));
+    const subSeq = existingAnalytical.length + 1;
     const fundCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالصندوق
+    const fundNatureId = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'fund'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: String(vd.name),
+      accountType: 'fund' as any,
+      accountSubNatureId: fundNatureId[0]?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: providedAccountId,
+      code: fundCode,
+      sequenceNumber: subSeq,
+    }).returning();
+
+    const accountId = analyticalAccount.id;
     const fundSeqNumber = subSeq;
 
     // تحديد العملة الافتراضية

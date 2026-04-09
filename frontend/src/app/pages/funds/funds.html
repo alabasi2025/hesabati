@@ -7,6 +7,7 @@
   </app-page-header>
 
   <!-- Summary -->
+  @if (!showFundForm() && !loading()) {
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
     <div class="valex-card p-4 flex items-center gap-4">
       <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-success/10 text-success">
@@ -28,7 +29,10 @@
     </div>
   </div>
 
+  }
+
   <!-- Filter Tabs -->
+  @if (!showFundForm() && !loading()) {
   <div class="valex-card mb-4">
     <div class="valex-card-body py-3">
       <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -59,6 +63,7 @@
       </div>
     </div>
   </div>
+  }
 
   @if (loading()) {
     <app-loading-state [loading]="loading()" />
