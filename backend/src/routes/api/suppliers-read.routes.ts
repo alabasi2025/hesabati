@@ -38,7 +38,7 @@ const supplierSelect = {
   // من حساب التحكم
   accountCode: accounts.code,
   accountName: accounts.name,
-  accountLedgerCode: accounts.ledgerCode,
+  accountCode: accounts.code,
 };
 
 suppliersReadRoutes.get(

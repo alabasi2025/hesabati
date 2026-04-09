@@ -118,7 +118,7 @@ journalEntriesRoutes.get(
           description: journalEntryLines.description,
           sortOrder: journalEntryLines.sortOrder,
           accountName: accounts.name,
-          ledgerCode: accounts.ledgerCode,
+          accountCode: accounts.code,
           entityType: journalEntryLines.entityType,
           entityId: journalEntryLines.entityId,
           currencyId: journalEntryLines.currencyId,

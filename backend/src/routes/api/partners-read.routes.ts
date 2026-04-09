@@ -32,7 +32,7 @@ partnersReadRoutes.get(
         createdAt: businessPartners.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
         accountSequence: accounts.sequenceNumber,
       })
       .from(businessPartners)

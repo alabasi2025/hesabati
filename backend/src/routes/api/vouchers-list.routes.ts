@@ -474,7 +474,7 @@ vouchersRouter.get(
         .map((n: string) => `'${n.replace(/'/g, "''")}'`)
         .join(",");
       const linesResult = await db.execute(sql`
-      SELECT je.reference as voucher_ref, jel.*, a.name as account_name, a.account_type as account_type, a.ledger_code as ledger_code
+      SELECT je.reference as voucher_ref, jel.*, a.name as account_name, a.account_type as account_type, a.code as account_code
       FROM journal_entries je
       JOIN journal_entry_lines jel ON jel.journal_entry_id = je.id
       LEFT JOIN accounts a ON a.id = jel.account_id
@@ -489,8 +489,8 @@ vouchersRouter.get(
           accountId: (line as any).accountId || (line as any).account_id,
           accountName: (line as any).accountName || (line as any).account_name,
           accountType: (line as any).accountType || (line as any).account_type,
-          ledgerCode:
-            (line as any).ledgerCode || (line as any).ledger_code || null,
+          accountCode:
+            (line as any).account_code || null,
           lineType: (line as any).lineType || (line as any).line_type,
           amount: (line as any).amount,
         });
@@ -504,7 +504,7 @@ vouchersRouter.get(
       const vIdPlaceholders = voucherIds.join(",");
       const vlResult = await db.execute(sql`
       SELECT vl.voucher_id, vl.account_id, vl.entity_type, vl.entity_id, vl.amount, vl.description,
-        a.name as account_name, a.account_type as account_type, a.ledger_code as ledger_code
+        a.name as account_name, a.account_type as account_type, a.code as account_code
       FROM voucher_lines vl
       LEFT JOIN accounts a ON a.id = vl.account_id
       WHERE vl.voucher_id IN ${sql.raw("(" + vIdPlaceholders + ")")}
@@ -517,7 +517,7 @@ vouchersRouter.get(
           accountId: (vl as any).accountId || (vl as any).account_id,
           accountName: (vl as any).accountName || (vl as any).account_name,
           accountType: (vl as any).accountType || (vl as any).account_type,
-          ledgerCode: (vl as any).ledgerCode || (vl as any).ledger_code || null,
+          accountCode: (vl as any).account_code || null,
           entityType: (vl as any).entityType || (vl as any).entity_type || null,
           entityId: (vl as any).entityId || (vl as any).entity_id || null,
           amount: (vl as any).amount,

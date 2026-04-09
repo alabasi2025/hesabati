@@ -44,7 +44,7 @@ warehousesReadRoutes.get(
         updatedAt: warehouses.updatedAt,
         accountCode: accounts.code,
         accountName: accounts.name,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(warehouses)
       .leftJoin(accounts, eq(accounts.id, warehouses.accountId))
@@ -77,7 +77,7 @@ warehousesReadRoutes.get(
         updatedAt: warehouses.updatedAt,
         accountCode: accounts.code,
         accountName: accounts.name,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(warehouses)
       .leftJoin(accounts, eq(accounts.id, warehouses.accountId))

@@ -195,7 +195,6 @@ export const accounts = pgTable(
     provider: varchar("provider", { length: 200 }),
     sequenceNumber: integer("sequence_number"),
     code: varchar("code", { length: 30 }),
-    ledgerCode: varchar("ledger_code", { length: 20 }),
     responsiblePerson: varchar("responsible_person", { length: 200 }),
     parentAccountId: integer("parent_account_id"),
     isLeafAccount: boolean("is_leaf_account").notNull().default(true),
@@ -227,10 +226,7 @@ export const accounts = pgTable(
       table.businessId,
       table.code,
     ),
-    ledgerCodeUnique: unique("accounts_biz_ledger_unique").on(
-      table.businessId,
-      table.ledgerCode,
-    ),
+
   }),
 );
 
@@ -363,7 +359,6 @@ export const wallets = pgTable(
     ),
     sequenceNumber: integer("sequence_number"),
     code: varchar("code", { length: 30 }),
-    ledgerCode: varchar("ledger_code", { length: 30 }),
     accountNumber: varchar("account_number", { length: 100 }),
     provider: varchar("provider", { length: 200 }),
     responsiblePerson: varchar("responsible_person", { length: 200 }),
@@ -421,7 +416,6 @@ export const exchanges = pgTable(
     ),
     sequenceNumber: integer("sequence_number"),
     code: varchar("code", { length: 30 }),
-    ledgerCode: varchar("ledger_code", { length: 30 }),
     accountNumber: varchar("account_number", { length: 100 }),
     provider: varchar("provider", { length: 200 }),
     responsiblePerson: varchar("responsible_person", { length: 200 }),
@@ -479,7 +473,6 @@ export const banks = pgTable(
     ),
     sequenceNumber: integer("sequence_number"),
     code: varchar("code", { length: 30 }),
-    ledgerCode: varchar("ledger_code", { length: 30 }),
     accountNumber: varchar("account_number", { length: 100 }),
     provider: varchar("provider", { length: 200 }),
     responsiblePerson: varchar("responsible_person", { length: 200 }),
@@ -538,7 +531,6 @@ export const funds = pgTable(
     ),
     sequenceNumber: integer("sequence_number"),
     code: varchar("code", { length: 30 }),
-    ledgerCode: varchar("ledger_code", { length: 30 }),
     stationId: integer("station_id").references(() => stations.id),
     responsiblePerson: varchar("responsible_person", { length: 200 }),
     description: text("description"),

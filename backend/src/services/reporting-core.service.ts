@@ -130,7 +130,7 @@ export async function getTrialBalance(
 
   const result = await db.execute(sql`
     SELECT
-      a.id as account_id, a.name as account_name, a.account_type, a.ledger_code,
+      a.id as account_id, a.name as account_name, a.account_type, a.code,
       COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as total_debit,
       COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) as total_credit,
       COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) -
@@ -139,10 +139,10 @@ export async function getTrialBalance(
     LEFT JOIN journal_entry_lines jel ON jel.account_id = a.id
     LEFT JOIN journal_entries je ON je.id = jel.journal_entry_id ${dateCondition}
     WHERE a.business_id = ${bizId}
-    GROUP BY a.id, a.name, a.account_type, a.ledger_code
+    GROUP BY a.id, a.name, a.account_type, a.code
     HAVING COALESCE(SUM(CASE WHEN jel.line_type = 'debit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) > 0
     OR COALESCE(SUM(CASE WHEN jel.line_type = 'credit' THEN CAST(jel.amount AS NUMERIC) ELSE 0 END), 0) > 0
-    ORDER BY a.ledger_code NULLS LAST, a.account_type, a.name
+    ORDER BY a.code NULLS LAST, a.account_type, a.name
   `);
 
   const accountRows = Array.isArray(result)

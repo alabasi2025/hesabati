@@ -9,12 +9,6 @@ import {
   getNextSequence,
   generateItemCode,
 } from "../middleware/sequencing.ts";
-import {
-  generateControlLedgerCode,
-  generateEntityLedgerCode,
-  getNextControlSequence,
-  getNextEntitySequence,
-} from "../engines/ledger-code.engine.ts";
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -251,6 +245,8 @@ async function seed() {
     code?: string | null,
     sequenceNumber?: number | null,
     controlLedgerCode?: string | null,
+    isControl: boolean = false,
+    parentAccountId?: number | null,
   ) => {
     // احصل على natureKey من accountSubNatureId
     const [subNature] = accountSubNatureId
@@ -262,26 +258,6 @@ async function seed() {
       : [null];
     const natureKey = subNature?.natureKey || accountType;
 
-    // توليد الرقم المحاسبي حسب نوع الحساب
-    let ledgerCode: string;
-    if (controlLedgerCode) {
-      // حساب تحليلي → XXX-YYY-ZZZ
-      const entitySeq = await getNextEntitySequence(
-        businessId,
-        controlLedgerCode,
-        db as any,
-      );
-      ledgerCode = generateEntityLedgerCode(controlLedgerCode, entitySeq);
-    } else {
-      // حساب تحكم → XXX-YYY
-      const controlSeq = await getNextControlSequence(
-        businessId,
-        natureKey,
-        db as any,
-      );
-      ledgerCode = generateControlLedgerCode(natureKey, controlSeq);
-    }
-
     // إذا كان هناك كود محدد مسبقاً، استخدمه مباشرة
     if (code) {
       const [account] = await db
@@ -291,9 +267,9 @@ async function seed() {
           name,
           accountType,
           accountSubNatureId,
-          isLeafAccount: true,
+          isLeafAccount: !isControl,
+          parentAccountId: parentAccountId ?? null,
           code,
-          ledgerCode,
           sequenceNumber: sequenceNumber ?? null,
         })
         .returning();
@@ -311,9 +287,9 @@ async function seed() {
         name,
         accountType,
         accountSubNatureId,
-        isLeafAccount: true,
+        isLeafAccount: !isControl,
+        parentAccountId: parentAccountId ?? null,
         code: generatedCode,
-        ledgerCode,
         sequenceNumber: generatedSeq,
       })
       .returning();
@@ -329,12 +305,14 @@ async function seed() {
     "حسابات الشركاء",
     "partner",
     getNatureId(b1.id, "partner"),
+    null, null, null, true,
   );
   const partnerCtrlB2 = await createLinkedAccount(
     b2.id,
     "حسابات الشركاء",
     "partner",
     getNatureId(b2.id, "partner"),
+    null, null, null, true,
   );
 
   const partnerSeedData = [
@@ -387,9 +365,7 @@ async function seed() {
       pt.fullName,
       "partner",
       getNatureId(pt.businessId, "partner"),
-      null,
-      null,
-      pt.ctrl.ledgerCode,
+      null, null, null, false, pt.ctrl.id,
     );
 
     const [createdPartner] = await db
@@ -504,12 +480,14 @@ async function seed() {
     "حسابات الموظفين",
     "employee",
     getNatureId(b1.id, "employee"),
+    null, null, null, true,
   );
   const empCtrlB2 = await createLinkedAccount(
     b2.id,
     "حسابات الموظفين",
     "employee",
     getNatureId(b2.id, "employee"),
+    null, null, null, true,
   );
 
   const employeeSeedData: {
@@ -793,9 +771,7 @@ async function seed() {
       emp.fullName,
       "employee",
       getNatureId(emp.businessId, "employee"),
-      null,
-      null,
-      emp.ctrl.ledgerCode,
+      null, null, null, false, emp.ctrl.id,
     );
 
     const [createdEmp] = await db
@@ -852,19 +828,13 @@ async function seed() {
       db as any,
     );
 
-    const controlSeq = await getNextControlSequence(
-      row.businessId,
-      natureKey,
-      db as any,
-    );
-    const ledgerCode = generateControlLedgerCode(natureKey, controlSeq);
+    // ledgerCode removed
     normalizedAccounts.push({
       ...row,
       accountSubNatureId: natureId ?? null,
       isLeafAccount: true,
       sequenceNumber,
       code,
-      ledgerCode,
     });
   }
 
@@ -874,448 +844,395 @@ async function seed() {
   console.log("✅ الحسابات");
 
   // ===================== الصناديق =====================
-  // المنطق الجديد: لكل صندوق يُنشأ حساب fund في الدليل أولاً ثم يُنشأ الصندوق مرتبطاً به
-  const fundSeedData: {
+  // البنية الهرمية: حساب رقابي (FND-01) → صناديق تحليلية (FND-01/01, FND-01/02...)
+  const fundGroups: {
+    controlName: string;
     businessId: number;
-    name: string;
-    stationId?: number;
-    responsiblePerson?: string;
-    description?: string;
-    isActive?: boolean;
+    funds: { name: string; stationId?: number; responsiblePerson?: string; description?: string; isActive?: boolean }[];
   }[] = [
-    // حسابات عامة
-    { businessId: b1.id, name: "خزنة المالك الشخصية" },
-    { businessId: b1.id, name: "النقد الشخصي (كاش)" },
-    // المحطات
-    { businessId: b1.id, name: "صندوق رئيسي - الدهمية", stationId: s1.id },
+    // === العمل 1: المحطات ===
     {
+      controlName: "صناديق شخصية",
       businessId: b1.id,
-      name: "صندوق رئيسي - الصبالية وجمال",
-      stationId: s2.id,
-    },
-    { businessId: b1.id, name: "صندوق غليل", stationId: s3.id },
-    {
-      businessId: b1.id,
-      name: "صندوق سلف الموظفين - الدهمية",
-      stationId: s1.id,
+      funds: [
+        { name: "خزنة المالك الشخصية" },
+        { name: "النقد الشخصي (كاش)" },
+      ],
     },
     {
+      controlName: "صناديق المحطات",
       businessId: b1.id,
-      name: "صندوق سلف الموظفين - الصبالية وجمال",
-      stationId: s2.id,
-    },
-    { businessId: b1.id, name: "صندوق سلف الموظفين - غليل", stationId: s3.id },
-    { businessId: b1.id, name: "صندوق العهدة - الدهمية", stationId: s1.id },
-    {
-      businessId: b1.id,
-      name: "صندوق العهدة - الصبالية وجمال",
-      stationId: s2.id,
-    },
-    { businessId: b1.id, name: "صندوق العهدة - غليل", stationId: s3.id },
-    // صناديق علي صعدي
-    {
-      businessId: b1.id,
-      name: "صندوق 2023 - علي صعدي",
-      responsiblePerson: "علي الصعدي",
-      description: "صندوق مخلوط - معلق يحتاج تصفية",
-      isActive: false,
+      funds: [
+        { name: "صندوق رئيسي - الدهمية", stationId: s1.id },
+        { name: "صندوق رئيسي - الصبالية وجمال", stationId: s2.id },
+        { name: "صندوق غليل", stationId: s3.id },
+      ],
     },
     {
+      controlName: "صناديق السلف",
       businessId: b1.id,
-      name: "الخزنة - علي صعدي",
-      responsiblePerson: "علي الصعدي",
+      funds: [
+        { name: "صندوق سلف الموظفين - الدهمية", stationId: s1.id },
+        { name: "صندوق سلف الموظفين - الصبالية وجمال", stationId: s2.id },
+        { name: "صندوق سلف الموظفين - غليل", stationId: s3.id },
+      ],
     },
     {
+      controlName: "صناديق العهدة",
       businessId: b1.id,
-      name: "صندوق الخرج - علي صعدي",
-      responsiblePerson: "علي الصعدي",
+      funds: [
+        { name: "صندوق العهدة - الدهمية", stationId: s1.id },
+        { name: "صندوق العهدة - الصبالية وجمال", stationId: s2.id },
+        { name: "صندوق العهدة - غليل", stationId: s3.id },
+      ],
     },
     {
+      controlName: "صناديق علي صعدي",
       businessId: b1.id,
-      name: "صندوق التوريدات - علي صعدي",
-      responsiblePerson: "علي الصعدي",
+      funds: [
+        { name: "صندوق 2023 - علي صعدي", responsiblePerson: "علي الصعدي", description: "صندوق مخلوط - معلق يحتاج تصفية", isActive: false },
+        { name: "الخزنة - علي صعدي", responsiblePerson: "علي الصعدي" },
+        { name: "صندوق الخرج - علي صعدي", responsiblePerson: "علي الصعدي" },
+        { name: "صندوق التوريدات - علي صعدي", responsiblePerson: "علي الصعدي" },
+      ],
     },
-    // معبر
+    // === العمل 2: معبر ===
     {
+      controlName: "صناديق معبر",
       businessId: b2.id,
-      name: "صندوق تحصيل معبر",
-      stationId: s6.id,
-      responsiblePerson: "حسن المعبري",
+      funds: [
+        { name: "صندوق تحصيل معبر", stationId: s6.id, responsiblePerson: "حسن المعبري" },
+        { name: "خزنة معبر", responsiblePerson: "حسن المعبري" },
+      ],
     },
-    { businessId: b2.id, name: "خزنة معبر", responsiblePerson: "حسن المعبري" },
-    // شخصي
-    { businessId: b3.id, name: "خزنة شخصية" },
+    // === العمل 3: شخصي ===
+    {
+      controlName: "صناديق شخصية",
+      businessId: b3.id,
+      funds: [
+        { name: "خزنة شخصية" },
+      ],
+    },
   ];
 
-  const accountFundCount = new Map<number, number>();
-  for (const fd of fundSeedData) {
-    // 1) إنشاء حساب fund رقابي (XXX-YYY جزئان) — كل صندوق له حسابه المستقل
-    const fundNatureId = getNatureId(fd.businessId, "fund");
-    const account = await createLinkedAccount(
-      fd.businessId,
-      fd.name,
-      "fund",
-      fundNatureId,
-    );
-
-    // 2) كود الصندوق = كود الحساب / الرقم الفرعي داخل الحساب
-    // مثال: FND-01/1 (أول صندوق)، FND-01/2 (ثانٍ تحت نفس الحساب)
-    const subSeq = (accountFundCount.get(account.id) ?? 0) + 1;
-    accountFundCount.set(account.id, subSeq);
-
-    const [createdFund] = await db
-      .insert(schema.funds)
+  for (const group of fundGroups) {
+    // 1) إنشاء حساب رقابي (FND-01) — is_leaf_account = false
+    const fundNatureId = getNatureId(group.businessId, "fund");
+    const { code: controlCode, sequenceNumber: controlSeq } =
+      await generateLeafAccountCode(group.businessId, "fund", db as any);
+    const [controlAccount] = await db
+      .insert(schema.accounts)
       .values({
-        businessId: fd.businessId,
-        name: fd.name,
-        accountId: account.id,
-        defaultCurrencyId: yerCurrencyId,
-        sequenceNumber: account.sequenceNumber,
-        code: `${account.code}/${String(subSeq).padStart(2, "0")}`,
-        ledgerCode: `${account.code}/${String(subSeq).padStart(2, "0")}`
-          .replace(
-            /^([A-Z]+)/,
-            (_m, p: string) =>
-              ({
-                FND: "001",
-                BNK: "002",
-                WLT: "003",
-                EXC: "004",
-                WHS: "005",
-                CUS: "006",
-                SUP: "007",
-                EMP: "008",
-                PRT: "009",
-                BIL: "010",
-                INT: "011",
-                BDG: "012",
-                STL: "013",
-                PNG: "014",
-              })[p] ?? "099",
-          )
-          .replace("/", "-"),
-        stationId: fd.stationId ?? null,
-        responsiblePerson: fd.responsiblePerson ?? null,
-        description: fd.description ?? null,
-        isActive: fd.isActive ?? true,
+        businessId: group.businessId,
+        name: group.controlName,
+        accountType: "fund" as any,
+        accountSubNatureId: fundNatureId,
+        isLeafAccount: false,
+        code: controlCode,
+        sequenceNumber: controlSeq,
       })
       .returning();
 
-    // إضافة أرصدة للعملات الثلاث
-    await db.insert(schema.fundBalances).values(
-      allThreeCurrencyIds.map((cid) => ({
-        fundId: createdFund.id,
-        currencyId: cid,
-        balance: "0",
-        updatedAt: new Date(),
-      })),
-    );
+    // 2) إنشاء صناديق تحليلية تحت الحساب الرقابي
+    let subSeq = 0;
+    for (const fd of group.funds) {
+      subSeq++;
+      const fundCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [createdFund] = await db
+        .insert(schema.funds)
+        .values({
+          businessId: group.businessId,
+          name: fd.name,
+          accountId: controlAccount.id,
+          defaultCurrencyId: yerCurrencyId,
+          sequenceNumber: subSeq,
+          code: fundCode,
+          stationId: fd.stationId ?? null,
+          responsiblePerson: fd.responsiblePerson ?? null,
+          description: fd.description ?? null,
+          isActive: fd.isActive ?? true,
+        })
+        .returning();
+
+      // أرصدة العملات الثلاث
+      await db.insert(schema.fundBalances).values(
+        allThreeCurrencyIds.map((cid) => ({
+          fundId: createdFund.id,
+          currencyId: cid,
+          balance: "0",
+          updatedAt: new Date(),
+        })),
+      );
+    }
   }
   console.log("✅ الصناديق (مع حساباتها المرتبطة + أرصدة 3 عملات)");
 
   // ===================== البنوك =====================
-  const bankSeedData: {
+  // البنية الهرمية: حساب رقابي (BNK-01) → بنوك تحليلية (BNK-01/01, BNK-01/02...)
+  const bankGroups: {
+    controlName: string;
     businessId: number;
-    name: string;
-    provider?: string;
-    accountNumber?: string;
-    responsiblePerson?: string;
-    description?: string;
-    isActive?: boolean;
+    banks: { name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[];
   }[] = [
-    { businessId: b1.id, name: "كريمي الحديدة - جاري", provider: "الكريمي" },
-    { businessId: b1.id, name: "كريمي الحديدة - توفير", provider: "الكريمي" },
-    { businessId: b1.id, name: "كريمي صنعاء - جاري", provider: "الكريمي" },
-    { businessId: b1.id, name: "كريمي صنعاء - توفير", provider: "الكريمي" },
-    { businessId: b3.id, name: "حساب شخصي - كريمي", provider: "بنك الكريمي" },
+    {
+      controlName: "كريمي الحديدة",
+      businessId: b1.id,
+      banks: [
+        { name: "كريمي الحديدة - جاري", provider: "الكريمي" },
+        { name: "كريمي الحديدة - توفير", provider: "الكريمي" },
+      ],
+    },
+    {
+      controlName: "كريمي صنعاء",
+      businessId: b1.id,
+      banks: [
+        { name: "كريمي صنعاء - جاري", provider: "الكريمي" },
+        { name: "كريمي صنعاء - توفير", provider: "الكريمي" },
+      ],
+    },
+    {
+      controlName: "بنوك شخصية",
+      businessId: b3.id,
+      banks: [
+        { name: "حساب شخصي - كريمي", provider: "بنك الكريمي" },
+      ],
+    },
   ];
 
-  const accountBankCount = new Map<number, number>();
-  for (const bk of bankSeedData) {
-    // 1) إنشاء حساب bank رقابي (XXX-YYY جزئان) — كل بنك له حسابه المستقل
-    const bankNatureId = getNatureId(bk.businessId, "bank");
-    const account = await createLinkedAccount(
-      bk.businessId,
-      bk.name,
-      "bank",
-      bankNatureId,
-    );
-
-    // 2) كود البنك = كود الحساب / الرقم الفرعي داخل الحساب
-    // مثال: BNK-01/1 (أول بنك)، BNK-01/2 (ثانٍ تحت نفس الحساب)
-    const subSeq = (accountBankCount.get(account.id) ?? 0) + 1;
-    accountBankCount.set(account.id, subSeq);
-
-    const [createdBank] = await db
-      .insert(schema.banks)
+  for (const group of bankGroups) {
+    const bankNatureId = getNatureId(group.businessId, "bank");
+    const { code: controlCode, sequenceNumber: controlSeq } =
+      await generateLeafAccountCode(group.businessId, "bank", db as any);
+    const [controlAccount] = await db
+      .insert(schema.accounts)
       .values({
-        businessId: bk.businessId,
-        name: bk.name,
-        accountId: account.id,
-        defaultCurrencyId: yerCurrencyId,
-        sequenceNumber: account.sequenceNumber,
-        code: `${account.code}/${String(subSeq).padStart(2, "0")}`,
-        ledgerCode: `${account.code}/${String(subSeq).padStart(2, "0")}`
-          .replace(
-            /^([A-Z]+)/,
-            (_m, p: string) =>
-              ({
-                FND: "001",
-                BNK: "002",
-                WLT: "003",
-                EXC: "004",
-                WHS: "005",
-                CUS: "006",
-                SUP: "007",
-                EMP: "008",
-                PRT: "009",
-                BIL: "010",
-                INT: "011",
-                BDG: "012",
-                STL: "013",
-                PNG: "014",
-              })[p] ?? "099",
-          )
-          .replace("/", "-"),
-        provider: bk.provider ?? null,
-        accountNumber: bk.accountNumber ?? null,
-        responsiblePerson: bk.responsiblePerson ?? null,
-        description: bk.description ?? null,
-        isActive: bk.isActive ?? true,
+        businessId: group.businessId,
+        name: group.controlName,
+        accountType: "bank" as any,
+        accountSubNatureId: bankNatureId,
+        isLeafAccount: false,
+        code: controlCode,
+        sequenceNumber: controlSeq,
       })
       .returning();
 
-    // إضافة أرصدة للعملات الثلاث
-    await db.insert(schema.bankBalances).values(
-      allThreeCurrencyIds.map((cid) => ({
-        bankId: createdBank.id,
-        currencyId: cid,
-        balance: "0",
-        updatedAt: new Date(),
-      })),
-    );
+    let subSeq = 0;
+    for (const bk of group.banks) {
+      subSeq++;
+      const bankCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [createdBank] = await db
+        .insert(schema.banks)
+        .values({
+          businessId: group.businessId,
+          name: bk.name,
+          accountId: controlAccount.id,
+          defaultCurrencyId: yerCurrencyId,
+          sequenceNumber: subSeq,
+          code: bankCode,
+          provider: bk.provider ?? null,
+          accountNumber: bk.accountNumber ?? null,
+          responsiblePerson: bk.responsiblePerson ?? null,
+          description: bk.description ?? null,
+          isActive: bk.isActive ?? true,
+        })
+        .returning();
+
+      await db.insert(schema.bankBalances).values(
+        allThreeCurrencyIds.map((cid) => ({
+          bankId: createdBank.id,
+          currencyId: cid,
+          balance: "0",
+          updatedAt: new Date(),
+        })),
+      );
+    }
   }
   console.log("✅ البنوك (مع حساباتها المرتبطة + أرصدة 3 عملات)");
 
   // ===================== المحافظ الإلكترونية =====================
-  const walletSeedData: {
+  const walletGroups: {
+    controlName: string;
     businessId: number;
-    name: string;
-    provider?: string;
-    accountNumber?: string;
-    responsiblePerson?: string;
-    description?: string;
-    isActive?: boolean;
+    wallets: { name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[];
   }[] = [
     {
+      controlName: "جوالي",
       businessId: b1.id,
-      name: "جوالي 1 - شخصي",
-      provider: "جوالي",
-      accountNumber: "774424555",
+      wallets: [
+        { name: "جوالي 1 - شخصي", provider: "جوالي", accountNumber: "774424555" },
+        { name: "جوالي 2 - شخصي", provider: "جوالي", accountNumber: "771506017" },
+        { name: "جوالي 3 - وكيل", provider: "جوالي", accountNumber: "774424555" },
+      ],
     },
     {
+      controlName: "جيب وون كاش",
       businessId: b1.id,
-      name: "جوالي 2 - شخصي",
-      provider: "جوالي",
-      accountNumber: "771506017",
+      wallets: [
+        { name: "جيب", provider: "جيب", accountNumber: "774424555" },
+        { name: "ون كاش", provider: "ون كاش", accountNumber: "774424555" },
+      ],
     },
     {
+      controlName: "حاسب",
       businessId: b1.id,
-      name: "جوالي 3 - وكيل",
-      provider: "جوالي",
-      accountNumber: "774424555",
+      wallets: [
+        { name: "حاسب - رئيسي", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 1", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 2", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 3", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 4", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 5", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 6", provider: "خدمة حاسب" },
+        { name: "حاسب - نقطة 7", provider: "خدمة حاسب" },
+      ],
     },
     {
-      businessId: b1.id,
-      name: "جيب",
-      provider: "جيب",
-      accountNumber: "774424555",
+      controlName: "محافظ معبر",
+      businessId: b2.id,
+      wallets: [
+        { name: "جوالي - معبر", provider: "جوالي" },
+        { name: "ون كاش - معبر", provider: "ون كاش" },
+      ],
     },
     {
-      businessId: b1.id,
-      name: "ون كاش",
-      provider: "ون كاش",
-      accountNumber: "774424555",
+      controlName: "محافظ شخصية",
+      businessId: b3.id,
+      wallets: [
+        { name: "حساب شخصي - جوالي", provider: "جوالي" },
+      ],
     },
-    { businessId: b1.id, name: "حاسب - رئيسي", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 1", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 2", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 3", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 4", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 5", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 6", provider: "خدمة حاسب" },
-    { businessId: b1.id, name: "حاسب - نقطة 7", provider: "خدمة حاسب" },
-    { businessId: b2.id, name: "جوالي - معبر", provider: "جوالي" },
-    { businessId: b2.id, name: "ون كاش - معبر", provider: "ون كاش" },
-    { businessId: b3.id, name: "حساب شخصي - جوالي", provider: "جوالي" },
   ];
 
-  const accountWalletCount = new Map<number, number>();
-  for (const wl of walletSeedData) {
-    // كل محفظة لها حسابها الرقابي المستقل (XXX-YYY جزئان)
-    const walletNatureId = getNatureId(wl.businessId, "e_wallet");
-    const account = await createLinkedAccount(
-      wl.businessId,
-      wl.name,
-      "e_wallet",
-      walletNatureId,
-    );
-
-    const subSeq = (accountWalletCount.get(account.id) ?? 0) + 1;
-    accountWalletCount.set(account.id, subSeq);
-
-    const [createdWallet] = await db
-      .insert(schema.wallets)
+  for (const group of walletGroups) {
+    const walletNatureId = getNatureId(group.businessId, "e_wallet");
+    const { code: controlCode, sequenceNumber: controlSeq } =
+      await generateLeafAccountCode(group.businessId, "e_wallet", db as any);
+    const [controlAccount] = await db
+      .insert(schema.accounts)
       .values({
-        businessId: wl.businessId,
-        name: wl.name,
-        accountId: account.id,
-        defaultCurrencyId: yerCurrencyId,
-        sequenceNumber: account.sequenceNumber,
-        code: `${account.code}/${String(subSeq).padStart(2, "0")}`,
-        ledgerCode: `${account.code}/${String(subSeq).padStart(2, "0")}`
-          .replace(
-            /^([A-Z]+)/,
-            (_m, p: string) =>
-              ({
-                FND: "001",
-                BNK: "002",
-                WLT: "003",
-                EXC: "004",
-                WHS: "005",
-                CUS: "006",
-                SUP: "007",
-                EMP: "008",
-                PRT: "009",
-                BIL: "010",
-                INT: "011",
-                BDG: "012",
-                STL: "013",
-                PNG: "014",
-              })[p] ?? "099",
-          )
-          .replace("/", "-"),
-        provider: wl.provider ?? null,
-        accountNumber: wl.accountNumber ?? null,
-        responsiblePerson: wl.responsiblePerson ?? null,
-        description: wl.description ?? null,
-        isActive: wl.isActive ?? true,
+        businessId: group.businessId,
+        name: group.controlName,
+        accountType: "e_wallet" as any,
+        accountSubNatureId: walletNatureId,
+        isLeafAccount: false,
+        code: controlCode,
+        sequenceNumber: controlSeq,
       })
       .returning();
 
-    // إضافة أرصدة للعملات الثلاث
-    await db.insert(schema.walletBalances).values(
-      allThreeCurrencyIds.map((cid) => ({
-        walletId: createdWallet.id,
-        currencyId: cid,
-        balance: "0",
-        updatedAt: new Date(),
-      })),
-    );
+    let subSeq = 0;
+    for (const wl of group.wallets) {
+      subSeq++;
+      const walletCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [createdWallet] = await db
+        .insert(schema.wallets)
+        .values({
+          businessId: group.businessId,
+          name: wl.name,
+          accountId: controlAccount.id,
+          defaultCurrencyId: yerCurrencyId,
+          sequenceNumber: subSeq,
+          code: walletCode,
+          provider: wl.provider ?? null,
+          accountNumber: wl.accountNumber ?? null,
+          responsiblePerson: wl.responsiblePerson ?? null,
+          description: wl.description ?? null,
+          isActive: wl.isActive ?? true,
+        })
+        .returning();
+
+      await db.insert(schema.walletBalances).values(
+        allThreeCurrencyIds.map((cid) => ({
+          walletId: createdWallet.id,
+          currencyId: cid,
+          balance: "0",
+          updatedAt: new Date(),
+        })),
+      );
+    }
   }
   console.log("✅ المحافظ الإلكترونية (مع حساباتها المرتبطة + أرصدة 3 عملات)");
 
   // ===================== الصرافين =====================
-  const exchangeSeedData: {
+  const exchangeGroups: {
+    controlName: string;
     businessId: number;
-    name: string;
-    provider?: string;
-    accountNumber?: string;
-    responsiblePerson?: string;
-    description?: string;
-    isActive?: boolean;
+    exchanges: { name: string; provider?: string; accountNumber?: string; responsiblePerson?: string; description?: string; isActive?: boolean }[];
   }[] = [
-    { businessId: b1.id, name: "الحوشبي - باسم المحطات", provider: "الحوشبي" },
-    { businessId: b1.id, name: "الحوشبي - باسم المالك", provider: "الحوشبي" },
-    { businessId: b1.id, name: "النجم", provider: "النجم" },
     {
+      controlName: "الحوشبي",
       businessId: b1.id,
-      name: "ابن عامر",
-      provider: "ابن عامر",
-      isActive: false,
+      exchanges: [
+        { name: "الحوشبي - باسم المحطات", provider: "الحوشبي" },
+        { name: "الحوشبي - باسم المالك", provider: "الحوشبي" },
+      ],
     },
     {
+      controlName: "النجم وابن عامر",
       businessId: b1.id,
-      name: "النهمي - المحطات",
-      provider: "النهمي",
-      isActive: false,
+      exchanges: [
+        { name: "النجم", provider: "النجم" },
+        { name: "ابن عامر", provider: "ابن عامر", isActive: false },
+      ],
     },
     {
+      controlName: "النهمي",
       businessId: b1.id,
-      name: "النهمي - محمد المراني",
-      provider: "النهمي",
-      isActive: false,
-    },
-    {
-      businessId: b1.id,
-      name: "النهمي - الرئيسي",
-      provider: "النهمي",
-      isActive: false,
+      exchanges: [
+        { name: "النهمي - المحطات", provider: "النهمي", isActive: false },
+        { name: "النهمي - محمد المراني", provider: "النهمي", isActive: false },
+        { name: "النهمي - الرئيسي", provider: "النهمي", isActive: false },
+      ],
     },
   ];
 
-  const accountExchangeCount = new Map<number, number>();
-  for (const ex of exchangeSeedData) {
-    // كل صراف له حسابه الرقابي المستقل (XXX-YYY جزئان)
-    const exchangeNatureId = getNatureId(ex.businessId, "exchange");
-    const account = await createLinkedAccount(
-      ex.businessId,
-      ex.name,
-      "exchange",
-      exchangeNatureId,
-    );
-
-    const subSeq = (accountExchangeCount.get(account.id) ?? 0) + 1;
-    accountExchangeCount.set(account.id, subSeq);
-
-    const [createdExchange] = await db
-      .insert(schema.exchanges)
+  for (const group of exchangeGroups) {
+    const exchangeNatureId = getNatureId(group.businessId, "exchange");
+    const { code: controlCode, sequenceNumber: controlSeq } =
+      await generateLeafAccountCode(group.businessId, "exchange", db as any);
+    const [controlAccount] = await db
+      .insert(schema.accounts)
       .values({
-        businessId: ex.businessId,
-        name: ex.name,
-        accountId: account.id,
-        defaultCurrencyId: yerCurrencyId,
-        sequenceNumber: account.sequenceNumber,
-        code: `${account.code}/${String(subSeq).padStart(2, "0")}`,
-        ledgerCode: `${account.code}/${String(subSeq).padStart(2, "0")}`
-          .replace(
-            /^([A-Z]+)/,
-            (_m, p: string) =>
-              ({
-                FND: "001",
-                BNK: "002",
-                WLT: "003",
-                EXC: "004",
-                WHS: "005",
-                CUS: "006",
-                SUP: "007",
-                EMP: "008",
-                PRT: "009",
-                BIL: "010",
-                INT: "011",
-                BDG: "012",
-                STL: "013",
-                PNG: "014",
-              })[p] ?? "099",
-          )
-          .replace("/", "-"),
-        provider: ex.provider ?? null,
-        accountNumber: ex.accountNumber ?? null,
-        responsiblePerson: ex.responsiblePerson ?? null,
-        description: ex.description ?? null,
-        isActive: ex.isActive ?? true,
+        businessId: group.businessId,
+        name: group.controlName,
+        accountType: "exchange" as any,
+        accountSubNatureId: exchangeNatureId,
+        isLeafAccount: false,
+        code: controlCode,
+        sequenceNumber: controlSeq,
       })
       .returning();
 
-    // إضافة أرصدة للعملات الثلاث
-    await db.insert(schema.exchangeBalances).values(
-      allThreeCurrencyIds.map((cid) => ({
-        exchangeId: createdExchange.id,
-        currencyId: cid,
-        balance: "0",
-        updatedAt: new Date(),
-      })),
-    );
+    let subSeq = 0;
+    for (const ex of group.exchanges) {
+      subSeq++;
+      const exchangeCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [createdExchange] = await db
+        .insert(schema.exchanges)
+        .values({
+          businessId: group.businessId,
+          name: ex.name,
+          accountId: controlAccount.id,
+          defaultCurrencyId: yerCurrencyId,
+          sequenceNumber: subSeq,
+          code: exchangeCode,
+          provider: ex.provider ?? null,
+          accountNumber: ex.accountNumber ?? null,
+          responsiblePerson: ex.responsiblePerson ?? null,
+          description: ex.description ?? null,
+          isActive: ex.isActive ?? true,
+        })
+        .returning();
+
+      await db.insert(schema.exchangeBalances).values(
+        allThreeCurrencyIds.map((cid) => ({
+          exchangeId: createdExchange.id,
+          currencyId: cid,
+          balance: "0",
+          updatedAt: new Date(),
+        })),
+      );
+    }
   }
   console.log("✅ الصرافين (مع حساباتهم المرتبطة + أرصدة 3 عملات)");
 
@@ -1386,6 +1303,7 @@ async function seed() {
       def.name,
       "supplier",
       getNatureId(businessId, "supplier"),
+      null, null, null, true,
     );
     const [st] = await db
       .insert(schema.supplierTypes)
@@ -1503,9 +1421,7 @@ async function seed() {
       sup.name,
       "supplier",
       getNatureId(sup.businessId, "supplier"),
-      null,
-      null,
-      st.account.ledgerCode,
+      null, null, null, false, st.account.id,
     );
 
     const [createdSup] = await db
@@ -1540,12 +1456,14 @@ async function seed() {
     "حسابات المخازن",
     "warehouse",
     getNatureId(b1.id, "warehouse"),
+    null, null, null, true,
   );
   const whsCtrlB2 = await createLinkedAccount(
     b2.id,
     "حسابات المخازن",
     "warehouse",
     getNatureId(b2.id, "warehouse"),
+    null, null, null, true,
   );
 
   const warehouseSeedData = [
@@ -1598,9 +1516,7 @@ async function seed() {
       whs.name,
       "warehouse",
       getNatureId(whs.businessId, "warehouse"),
-      null,
-      null,
-      whs.ctrl.ledgerCode,
+      null, null, null, false, whs.ctrl.id,
     );
 
     const [createdWhs] = await db
@@ -1636,6 +1552,7 @@ async function seed() {
     "حسابات العهد",
     "custody",
     getNatureId(b1.id, "custody"),
+    null, null, null, true,
   );
 
   const custodySeedData = [
@@ -1669,9 +1586,7 @@ async function seed() {
       `عهدة - ${cus.partyName}`,
       "custody",
       getNatureId(cus.businessId, "custody"),
-      null,
-      null,
-      cus.ctrl.ledgerCode,
+      null, null, null, false, cus.ctrl.id,
     );
 
     await db.insert(schema.custodyRecords).values({
@@ -1693,6 +1608,7 @@ async function seed() {
     "حسابات الميزانية",
     "budget",
     getNatureId(b1.id, "budget"),
+    null, null, null, true,
   );
 
   const budgetSeedData = [
@@ -1730,9 +1646,7 @@ async function seed() {
       bdg.name,
       "budget",
       getNatureId(bdg.businessId, "budget"),
-      null,
-      null,
-      bdg.ctrl.ledgerCode,
+      null, null, null, false, bdg.ctrl.id,
     );
 
     await db.insert(schema.expenseBudget).values({
@@ -1915,17 +1829,19 @@ async function seed() {
     },
   ];
 
-  const pendingControlCode = generateControlLedgerCode("pending", 1); // 014-001
+  // إنشاء حساب رقابي للمعلقات
+  const pngCtrlB1 = await createLinkedAccount(
+    b1.id, "الحسابات المعلقة", "pending",
+    getNatureId(b1.id, "pending"),
+    null, null, null, true,
+  );
   for (const item of pendingItems) {
-    // إنشاء حساب تحليلي لكل حساب معلق (XXX-YYY-ZZZ)
     const account = await createLinkedAccount(
       item.businessId,
       `حساب معلق - ${item.personOrEntity}`,
       "pending",
       getNatureId(item.businessId, "pending"),
-      null,
-      null,
-      pendingControlCode,
+      null, null, null, false, pngCtrlB1.id,
     );
 
     // إنشاء سجل في pending_accounts مع ربطه بالحساب
@@ -1945,6 +1861,12 @@ async function seed() {
 
   // ===================== الحسابات الوسيطة (عمليات قيد الانتظار) =====================
   // حسابات وسيطة للعمليات التشغيلية (فواتير مشتريات، تحويلات مخازن، إلخ)
+  // إنشاء حساب رقابي للوسيطة
+  const intCtrlB1 = await createLinkedAccount(
+    b1.id, "الحسابات الوسيطة", "intermediary",
+    getNatureId(b1.id, "intermediary"),
+    null, null, null, true,
+  );
   const intermediaryAccounts = [
     {
       name: "فواتير مشتريات قيد الاستلام",
@@ -1960,16 +1882,13 @@ async function seed() {
     },
   ];
 
-  const intermediaryControlCode = generateControlLedgerCode("intermediary", 1); // 011-001
   for (const intAcc of intermediaryAccounts) {
     await createLinkedAccount(
       b1.id,
       intAcc.name,
       "intermediary",
       getNatureId(b1.id, "intermediary"),
-      null,
-      null,
-      intermediaryControlCode,
+      null, null, null, false, intCtrlB1.id,
     );
   }
   console.log("✅ الحسابات الوسيطة");
@@ -1982,9 +1901,7 @@ async function seed() {
       "فروقات عملة",
       "intermediary",
       getNatureId(biz.id, "intermediary"),
-      null,
-      null,
-      intermediaryControlCode,
+      null, null, null, false, biz.id === b1.id ? intCtrlB1.id : undefined,
     );
     exchangeDiffAccounts[biz.id] = diffAccount.id;
   }
@@ -2116,6 +2033,12 @@ async function seed() {
     .where(eq(schema.accountSubNatures.natureKey, "billing"))
     .limit(1);
 
+  // إنشاء حساب رقابي للفوترة
+  const bilCtrlB1 = await createLinkedAccount(
+    b1.id, "حسابات الفوترة", "billing",
+    billingNature?.id ?? null,
+    null, null, null, true,
+  );
   const billingConfigs: (typeof schema.billingSystemsConfig.$inferSelect)[] =
     [];
   for (const bsys of billingSystems) {
@@ -2123,16 +2046,6 @@ async function seed() {
       b1.id,
       "billing",
       db as any,
-    );
-    const billingControlCode = generateControlLedgerCode("billing", 1);
-    const bEntitySeq = await getNextEntitySequence(
-      b1.id,
-      billingControlCode,
-      db as any,
-    );
-    const bLedgerCode = generateEntityLedgerCode(
-      billingControlCode,
-      bEntitySeq,
     );
     const [bAcc] = await db
       .insert(schema.accounts)
@@ -2142,9 +2055,9 @@ async function seed() {
         accountType: "billing",
         accountSubNatureId: billingNature?.id ?? null,
         code: bCode,
-        ledgerCode: bLedgerCode,
         sequenceNumber: bSeq,
         isLeafAccount: true,
+        parentAccountId: bilCtrlB1.id,
         isActive: true,
       })
       .returning();

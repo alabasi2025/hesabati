@@ -9,7 +9,6 @@ import {
   TYPE_PREFIXES,
   generateLeafAccountCode,
 } from "./sequencing.types.ts";
-import { NATURE_PREFIXES } from "./ledger-code.engine.ts";
 import {
   getNextSequence,
   getCurrentSequence,
@@ -439,10 +438,9 @@ export async function getNextAccountSequence(
 /**
  * توليد أكواد الكيان المالي (صندوق/بنك/محفظة/صراف) مع إنشاء حساب مستقل تلقائياً
  *
- * الآلية: كل كيان يحصل على حسابه المستقل + كود مركّب + ledgerCode
+ * الآلية: كل كيان يحصل على حسابه المستقل + كود مركّب
  *   - كود الحساب:  FND-01, FND-02, FND-03...  (عداد مستقل لكل نوع)
  *   - كود الكيان:  FND-01/1  (دائماً /1 لحساب جديد مستقل)
- *   - ledgerCode:  FND-01-01 (للتقارير — نفس البادئة والـ padding)
  *
  * @param bizId      - معرّف العمل
  * @param natureKey  - نوع الكيان: fund | bank | e_wallet | exchange
@@ -455,7 +453,6 @@ export async function generateFinancialEntityCodes(
 ): Promise<{
   accountCode: string;
   entityCode: string;
-  ledgerCode: string;
   sequenceNumber: number;
 }> {
   const { code: accountCode, sequenceNumber } = await generateLeafAccountCode(
@@ -465,9 +462,9 @@ export async function generateFinancialEntityCodes(
   );
   const entityCode = `${accountCode}/1`;
   // ledgerCode يستخدم البادئة الرقمية (001-XX-01، 002-XX-01...)
-  const numericPrefix = NATURE_PREFIXES[natureKey] || "099";
-  const ledgerCode = `${numericPrefix}-${String(sequenceNumber).padStart(2, "0")}-01`;
-  return { accountCode, entityCode, ledgerCode, sequenceNumber };
+  // ledgerCode removed — numericPrefix no longer needed
+  const numericPrefix = "";
+  return { accountCode, entityCode, sequenceNumber };
 }
 
 /**

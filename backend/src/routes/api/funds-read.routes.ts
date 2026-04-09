@@ -43,7 +43,7 @@ fundsRoutes.get(
         stationName: stations.name,
         accountName: accounts.name,
         accountCode: accounts.code,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(funds)
       .leftJoin(accounts, eq(funds.accountId, accounts.id))

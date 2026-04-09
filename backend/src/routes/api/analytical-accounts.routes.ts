@@ -17,7 +17,6 @@ import {
 } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { safeHandler, getBody, parseId } from "../../middleware/helpers.ts";
-import { generateFullLedgerCode } from "../../engines/ledger-code.engine.ts";
 import { generateLeafAccountCode } from "../../middleware/sequencing.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
@@ -37,7 +36,7 @@ analyticalAccountsRoutes.get(
         id: accounts.id,
         name: accounts.name,
         code: accounts.code,
-        ledgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
         accountType: accounts.accountType,
         accountSubNatureId: accounts.accountSubNatureId,
         sequenceNumber: accounts.sequenceNumber,
@@ -49,13 +48,12 @@ analyticalAccountsRoutes.get(
         and(
           eq(accounts.businessId, bizId),
           eq(accounts.isLeafAccount, true),
-          isNotNull(accounts.ledgerCode),
+          isNotNull(accounts.code),
         ),
       )
-      .orderBy(accounts.ledgerCode);
+      .orderBy(accounts.code);
 
     const analyticalAccounts = leafAccounts.filter(
-      (a) => (a.ledgerCode as string).split("-").length === 3,
     );
 
     // جلب أنواع الحسابات الفرعية
@@ -149,13 +147,6 @@ analyticalAccountsRoutes.post(
       )
       .limit(1);
 
-    // توليد ledgerCode مستقل (XXX-YYY-ZZZ)
-    const ledgerCode = await generateFullLedgerCode(
-      bizId,
-      natureKey,
-      db as any,
-    );
-
     // توليد الكود التشغيلي
     const { code: generatedCode, sequenceNumber } =
       await generateLeafAccountCode(bizId, natureKey, db);
@@ -169,7 +160,6 @@ analyticalAccountsRoutes.post(
         accountSubNatureId: subNature?.id || null,
         isLeafAccount: true,
         code: generatedCode,
-        ledgerCode,
         sequenceNumber,
       })
       .returning();
@@ -230,7 +220,6 @@ analyticalAccountsRoutes.delete(
     if (!existing) return c.json({ error: "الحساب غير موجود" }, 404);
 
     // التحقق أنه حساب تحليلي (XXX-YYY-ZZZ)
-    const lc = existing.ledgerCode as string;
     if (!lc || lc.split("-").length !== 3)
       return c.json({ error: "هذا ليس حساب تحليلي" }, 400);
 

@@ -87,7 +87,7 @@ employeesReadRoutes.get(
       // من حساب التحكم
       accountName: accounts.name,
       accountCode: accounts.code,
-      accountLedgerCode: accounts.ledgerCode,
+      accountCode: accounts.code,
     };
 
     if (usePagination) {
@@ -155,7 +155,7 @@ employeesReadRoutes.get(
         stationName: stations.name,
         accountName: accounts.name,
         accountCode: accounts.code,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(employees)
       .leftJoin(stations, eq(stations.id, employees.stationId))

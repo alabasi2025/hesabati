@@ -43,7 +43,7 @@ import {
   verifyFundOwnership,
 } from "../routes/api/_shared/ownership.ts";
 
-import { validateTransactionOwnership, getSequenceYear, generateVoucherNumberByTreasury, resolveTemplatePrefix, resolveTreasuryForVoucher } from "./transaction-helpers.ts";
+import { validateTransactionOwnership, getSequenceYear, generateVoucherNumberByTreasury, resolveTemplatePrefix, resolveTreasuryForVoucher, validateFiscalPeriodOpen } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types';
 import { updateSubledgerBalance } from '../engines/subledger.engine.ts';
 
@@ -70,6 +70,12 @@ export async function postTransaction(
   const ownershipError = await validateTransactionOwnership(bizId, data);
   if (ownershipError) {
     throw new Error(ownershipError);
+  }
+
+  // ✅ إصلاح: التحقق من أن الفترة المالية غير مقفلة
+  const fiscalError = await validateFiscalPeriodOpen(bizId, data.voucherDate);
+  if (fiscalError) {
+    throw new Error(fiscalError);
   }
 
   // === تنفيذ العملية داخل transaction واحد ===

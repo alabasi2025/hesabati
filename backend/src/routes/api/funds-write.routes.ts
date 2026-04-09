@@ -21,10 +21,6 @@ import { checkPermission } from "../../middleware/permissions.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import { requireResourceOwnership } from "./_shared/ownership.ts";
 import { generateFinancialEntityCodes } from "../../engines/sequencing-entity.engine.ts";
-import {
-  generateControlLedgerCode,
-  getNextControlSequence,
-} from "../../engines/ledger-code.engine.ts";
 import { accountSubNatures } from "../../db/schema/index.ts";
 import type { AppContext } from "./_shared/types.ts";
 
@@ -57,7 +53,7 @@ fundsRoutes.post(
           id: accounts.id,
           sequenceNumber: accounts.sequenceNumber,
           code: accounts.code,
-          ledgerCode: accounts.ledgerCode,
+          // ledgerCode removed
         })
         .from(accounts)
         .where(
@@ -121,8 +117,6 @@ fundsRoutes.post(
         "fund",
         db as any,
       );
-      const controlSeq = await getNextControlSequence(bizId, "fund", db as any);
-      const accLedgerCode = generateControlLedgerCode("fund", controlSeq);
       const [newAcc] = await db
         .insert(accounts)
         .values({
@@ -132,7 +126,6 @@ fundsRoutes.post(
           accountSubNatureId: subNature?.id ?? null,
           isLeafAccount: true,
           code: codes.accountCode,
-          ledgerCode: accLedgerCode,
           sequenceNumber: codes.sequenceNumber,
         })
         .returning();
@@ -176,7 +169,6 @@ fundsRoutes.post(
       defaultCurrencyId: defaultCurrencyId,
       sequenceNumber: fundSeqNumber,
       code: fundCode,
-      ledgerCode: fundLedgerCode,
       stationId:
         vd.stationId != null && Number(vd.stationId) > 0
           ? Number(vd.stationId)

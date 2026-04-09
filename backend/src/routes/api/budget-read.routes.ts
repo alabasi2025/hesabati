@@ -37,7 +37,7 @@ budgetReadRoutes.get(
         createdAt: expenseBudget.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(expenseBudget)
       .leftJoin(accounts, eq(expenseBudget.accountId, accounts.id))

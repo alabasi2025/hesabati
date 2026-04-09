@@ -28,10 +28,6 @@ import {
   getNextChildAccountSequence,
   getNextItemInCategorySequence,
 } from "../../middleware/sequencing.ts";
-import {
-  generateControlLedgerCode,
-  getNextControlSequence,
-} from "../../engines/ledger-code.engine.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import { getBizId } from "./_shared/context-helpers.ts";
 import {
@@ -181,15 +177,8 @@ accountsWriteRoutes.post(
       }
     }
 
-    // توليد الرقم المحاسبي (ledgerCode) للحسابات الفرعية فقط — حساب تحكم XXX-YYY
-    let ledgerCode: string | null = null;
     if (isLeafAccount && subNature) {
-      const controlSeq = await getNextControlSequence(
-        bizId,
-        subNature.natureKey,
-        db,
-      );
-      ledgerCode = generateControlLedgerCode(subNature.natureKey, controlSeq);
+      // ledgerCode removed — code is sufficient
     }
 
     let created: typeof accounts.$inferSelect | undefined;
@@ -203,7 +192,6 @@ accountsWriteRoutes.post(
       isLeafAccount,
       sequenceNumber,
       code: hasManualCode ? String(body.code).trim() : generatedCode,
-      ledgerCode,
       updatedAt: new Date(),
     };
     delete payload.linkedEntityType;
@@ -338,7 +326,6 @@ accountsWriteRoutes.put(
     delete body.accountSubNatureId;
     delete body.accountType;
     delete body.code;
-    delete body.ledgerCode;
 
     const [updated] = await db
       .update(accounts)

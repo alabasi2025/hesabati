@@ -42,6 +42,8 @@ import {
 import { validateTransactionOwnership, getSequenceYear, generateVoucherNumberByTreasury, resolveTemplatePrefix, computeBalancedTotals, resolveTreasuryForVoucher } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult } from './transaction.types';
 import { applyAccountingForConfirmedVoucher } from './transaction-post.service';
+import { updateSubledgerBalance } from '../engines/subledger.engine.ts';
+import { fiscalPeriods } from '../db/schema/index.ts';
 
 // ===================== إلغاء معاملة (Cancel) =====================
 
@@ -105,6 +107,8 @@ export async function cancelTransaction(
             balance = account_balances.balance + ${delta},
             updated_at = NOW()
         `);
+        // ✅ إصلاح: عكس الدفاتر الفرعية (subledger) عند الإلغاء
+        await updateSubledgerBalance(tx, l.accountId, currencyId, delta);
       }
     } else {
       // fallback للسندات القديمة/غير المتوقعة
@@ -244,6 +248,8 @@ export async function confirmDraftTransaction(
         ON CONFLICT (account_id, currency_id) DO UPDATE SET
           balance = account_balances.balance + ${amount}, updated_at = NOW()
       `);
+      // ✅ إصلاح: تحديث الدفاتر الفرعية عند اعتماد المسودة
+      await updateSubledgerBalance(tx, debitAccountId, currencyId, amount);
     }
 
     if (creditAccountId) {
@@ -261,6 +267,8 @@ export async function confirmDraftTransaction(
         ON CONFLICT (account_id, currency_id) DO UPDATE SET
           balance = account_balances.balance - ${amount}, updated_at = NOW()
       `);
+      // ✅ إصلاح: تحديث الدفاتر الفرعية عند اعتماد المسودة
+      await updateSubledgerBalance(tx, creditAccountId, currencyId, -amount);
     }
 
     // تحديث أرصدة الصناديق (كان ناقصاً في enhancements.ts!)

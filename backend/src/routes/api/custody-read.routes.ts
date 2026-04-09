@@ -57,7 +57,7 @@ custodyReadRoutes.get(
         createdAt: custodyRecords.createdAt,
         accountName: accounts.name,
         accountCode: accounts.code,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(custodyRecords)
       .leftJoin(accounts, eq(custodyRecords.accountId, accounts.id))
@@ -97,7 +97,7 @@ custodyReadRoutes.get(
         updatedAt: custodyRecords.updatedAt,
         accountName: accounts.name,
         accountCode: accounts.code,
-        accountLedgerCode: accounts.ledgerCode,
+        accountCode: accounts.code,
       })
       .from(custodyRecords)
       .leftJoin(accounts, eq(custodyRecords.accountId, accounts.id))

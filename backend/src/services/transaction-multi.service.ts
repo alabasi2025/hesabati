@@ -44,7 +44,7 @@ import {
   verifyFundOwnership,
 } from "../routes/api/_shared/ownership.ts";
 
-import { validateMultiTransactionOwnership, computeBalancedTotals, getSequenceYear, generateVoucherNumberByTreasuryMulti, resolveTemplatePrefix, resolveTreasuryForMulti } from "./transaction-helpers.ts";
+import { validateMultiTransactionOwnership, computeBalancedTotals, getSequenceYear, generateVoucherNumberByTreasuryMulti, resolveTemplatePrefix, resolveTreasuryForMulti, validateFiscalPeriodOpen } from "./transaction-helpers.ts";
 import type { TransactionData, TransactionResult, TransactionLine, MultiTransactionData } from './transaction.types';
 import { updateSubledgerBalance } from '../engines/subledger.engine.ts';
 
@@ -80,6 +80,10 @@ export async function postMultiTransaction(
 
   const ownershipError = await validateMultiTransactionOwnership(bizId, data);
   if (ownershipError) throw new Error(ownershipError);
+
+  // ✅ إصلاح: التحقق من أن الفترة المالية غير مقفلة
+  const fiscalError = await validateFiscalPeriodOpen(bizId, data.voucherDate);
+  if (fiscalError) throw new Error(fiscalError);
 
   const totals = computeBalancedTotals(data.lines);
 

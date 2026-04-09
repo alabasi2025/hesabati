@@ -1,9 +1,55 @@
 import { eq, and } from 'drizzle-orm';
-import { accounts, funds, operationTypes } from '../db/schema/index.ts';
+import { accounts, funds, operationTypes, fiscalPeriods } from '../db/schema/index.ts';
 import { TYPE_PREFIXES } from '../middleware/sequencing.ts';
 import { generateVoucherFullSequence } from '../engines/sequencing-entity.engine.ts';
 import { verifyAccountOwnership, verifyFundOwnership } from '../routes/api/_shared/ownership.ts';
 import type { TransactionData, TransactionLine, MultiTransactionData } from './transaction.types.ts';
+import { db } from '../db/index.ts';
+
+/**
+ * التحقق من أن الفترة المالية غير مقفلة لتاريخ السند
+ * يمنع الترحيل في فترة مالية مغلقة
+ */
+export async function validateFiscalPeriodOpen(
+  bizId: number,
+  voucherDate: Date | null | undefined,
+): Promise<string | null> {
+  const date = voucherDate || new Date();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  const closedPeriods = await db
+    .select({ id: fiscalPeriods.id, month: fiscalPeriods.month })
+    .from(fiscalPeriods)
+    .where(
+      and(
+        eq(fiscalPeriods.businessId, bizId),
+        eq(fiscalPeriods.month, month),
+        eq(fiscalPeriods.isClosed, true),
+      ),
+    )
+    .limit(1);
+
+  if (closedPeriods.length > 0) {
+    return `لا يمكن إنشاء سند في فترة مالية مغلقة (شهر ${month}/${year})`;
+  }
+  return null;
+}
+
+/**
+ * التحقق من أن الحساب leaf (تحليلي) وليس رقابي
+ */
+async function validateAccountIsLeaf(accountId: number): Promise<string | null> {
+  const [acc] = await db
+    .select({ id: accounts.id, name: accounts.name, isLeaf: accounts.isLeafAccount })
+    .from(accounts)
+    .where(eq(accounts.id, accountId))
+    .limit(1);
+  if (acc && !acc.isLeaf) {
+    return `لا يمكن الترحيل على حساب رقابي "${acc.name}" — اختر حساباً تحليلياً`;
+  }
+  return null;
+}
 
 export async function validateTransactionOwnership(
   bizId: number,
@@ -13,11 +59,16 @@ export async function validateTransactionOwnership(
     const valid = await verifyAccountOwnership(data.debitAccountId, bizId);
     if (!valid)
       return `الحساب المدين (${data.debitAccountId}) لا ينتمي لهذا العمل`;
+    // ✅ منع الترحيل على حساب رقابي
+    const leafError = await validateAccountIsLeaf(data.debitAccountId);
+    if (leafError) return leafError;
   }
   if (data.creditAccountId) {
     const valid = await verifyAccountOwnership(data.creditAccountId, bizId);
     if (!valid)
       return `الحساب الدائن (${data.creditAccountId}) لا ينتمي لهذا العمل`;
+    const leafError = await validateAccountIsLeaf(data.creditAccountId);
+    if (leafError) return leafError;
   }
   if (data.toFundId) {
     const valid = await verifyFundOwnership(data.toFundId, bizId);
@@ -42,6 +93,9 @@ export async function validateMultiTransactionOwnership(
   for (const id of accountIds) {
     const valid = await verifyAccountOwnership(id, bizId);
     if (!valid) return `الحساب (${id}) لا ينتمي لهذا العمل`;
+    // ✅ منع الترحيل على حساب رقابي
+    const leafError = await validateAccountIsLeaf(id);
+    if (leafError) return leafError;
   }
   if (data.toFundId) {
     const valid = await verifyFundOwnership(data.toFundId, bizId);

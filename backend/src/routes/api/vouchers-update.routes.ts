@@ -396,31 +396,92 @@ vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddl
 // 4. ط¬ظ„ط¨ ط±طµظٹط¯ ط­ط³ط§ط¨ (ظ„ط¹ط±ط¶ظ‡ ط£ط«ظ†ط§ط، ط¥ظ†ط´ط§ط، ط§ظ„ط¹ظ…ظ„ظٹط©)
 
 
-// 5. حذف السند (مع تجاهل القيد المرتبط إن كان محذوفاً)
-vouchersUpdateRouter.delete('/vouchers/:id', safeHandler('حذف سند', async (c) => {
+// 5. حذف السند — يعكس الأرصدة أولاً ثم يحذف + يسجّل في Audit Log
+vouchersUpdateRouter.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(), safeHandler('حذف سند', async (c) => {
+  const bizId = getBizId(c as AppContext);
+  const userId = getUserId(c as AppContext) ?? 0;
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: 'معرّف السند غير صالح' }, 400);
 
-  const [voucher] = await db.select().from(vouchers).where(eq(vouchers.id, id));
+  const [voucher] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
   if (!voucher) return c.json({ error: 'السند غير موجود' }, 404);
 
-  // احذف سطور السند
-  await db.delete(voucherLines).where(eq(voucherLines.voucherId, id));
+  // ⛔ منع حذف سند مراجع — يجب إلغاء المراجعة أولاً
+  if (voucher.status === 'reviewed') {
+    return c.json({ error: 'لا يمكن حذف سند مراجع. قم بإلغاء المراجعة أولاً' }, 400);
+  }
 
-  // احذف القيد المحاسبي المرتبط إن وُجد (تجاهل الخطأ إن كان محذوفاً)
-  try {
-    const [linked] = await db.select({ id: journalEntries.id })
-      .from(journalEntries)
-      .where(eq(journalEntries.reference, voucher.voucherNumber ?? ''))
-      .limit(1);
-    if (linked?.id) {
-      await db.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, linked.id));
-      await db.delete(journalEntries).where(eq(journalEntries.id, linked.id));
+  await db.transaction(async (tx) => {
+    // ✅ عكس أرصدة الحسابات من سطور القيد
+    const currencyId = voucher.currencyId || 1;
+    const amount = parseFloat(String(voucher.amount));
+
+    try {
+      const [linked] = await tx.select({ id: journalEntries.id })
+        .from(journalEntries)
+        .where(and(eq(journalEntries.reference, voucher.voucherNumber ?? ''), eq(journalEntries.businessId, bizId)))
+        .limit(1);
+      if (linked?.id) {
+        const lines = await tx.select({
+          accountId: journalEntryLines.accountId,
+          lineType: journalEntryLines.lineType,
+          lineAmount: journalEntryLines.amount,
+        }).from(journalEntryLines).where(eq(journalEntryLines.journalEntryId, linked.id));
+
+        for (const l of lines) {
+          const lineAmount = parseFloat(String(l.lineAmount));
+          const delta = l.lineType === 'debit' ? -lineAmount : lineAmount;
+          await tx.execute(sql`
+            INSERT INTO account_balances (account_id, currency_id, balance)
+            VALUES (${l.accountId}, ${currencyId}, ${delta})
+            ON CONFLICT (account_id, currency_id) DO UPDATE SET
+              balance = account_balances.balance + ${delta}, updated_at = NOW()
+          `);
+        }
+
+        await tx.delete(journalEntryLines).where(eq(journalEntryLines.journalEntryId, linked.id));
+        await tx.delete(journalEntries).where(eq(journalEntries.id, linked.id));
+      }
+    } catch { /* القيد محذوف مسبقاً */ }
+
+    // ✅ عكس أرصدة الصناديق
+    if (voucher.toFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${voucher.toFundId}, ${currencyId}, ${-amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance - ${amount}, updated_at = NOW()
+      `);
     }
-  } catch { /* القيد محذوف مسبقاً — تجاهل */ }
+    if (voucher.fromFundId) {
+      await tx.execute(sql`
+        INSERT INTO fund_balances (fund_id, currency_id, balance)
+        VALUES (${voucher.fromFundId}, ${currencyId}, ${amount})
+        ON CONFLICT (fund_id, currency_id) DO UPDATE SET
+          balance = fund_balances.balance + ${amount}, updated_at = NOW()
+      `);
+    }
 
-  // احذف السند
-  await db.delete(vouchers).where(eq(vouchers.id, id));
+    // حذف سطور السند ثم السند
+    await tx.delete(voucherLines).where(eq(voucherLines.voucherId, id));
+    await tx.delete(vouchers).where(eq(vouchers.id, id));
+
+    // ✅ تسجيل في Audit Log
+    await tx.insert(auditLog).values({
+      userId,
+      businessId: bizId,
+      action: 'delete_voucher',
+      tableName: 'vouchers',
+      recordId: id,
+      oldData: {
+        voucherNumber: voucher.voucherNumber,
+        voucherType: voucher.voucherType,
+        amount: String(amount),
+        status: voucher.status,
+      },
+    });
+  });
+
   return c.json({ success: true });
 }));
 
