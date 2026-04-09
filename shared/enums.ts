@@ -20,8 +20,9 @@
  * migration 0009 رسّخ هذين القيمين نهائياً
  */
 export const VoucherStatus = {
-  Unreviewed: 'unreviewed',
-  Reviewed: 'reviewed',
+  Draft: 'draft',
+  Confirmed: 'confirmed',
+  Cancelled: 'cancelled',
 } as const;
 export type VoucherStatus = (typeof VoucherStatus)[keyof typeof VoucherStatus];
 

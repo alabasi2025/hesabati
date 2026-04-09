@@ -36,7 +36,7 @@ vouchersUpdateRouter.put('/businesses/:bizId/vouchers/:id', bizAuthMiddleware(),
 
   const [existing] = await db.select().from(vouchers).where(and(eq(vouchers.id, id), eq(vouchers.businessId, bizId)));
   if (!existing) return c.json({ error: 'ط§ظ„ط³ظ†ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯' }, 404);
-  if (existing.status === 'reviewed') return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھط¹ط¯ظٹظ„ ط³ظ†ط¯ ظ…ط±ط§ط¬ط¹طŒ ظ‚ظ… ط¨ط¥ظ„ط؛ط§ط، ط§ظ„ظ…ط±ط§ط¬ط¹ط© ط£ظˆظ„ط§ظ‹' }, 400);
+  if (existing.status === 'confirmed') return c.json({ error: 'ظ„ط§ ظٹظ…ظƒظ† طھط¹ط¯ظٹظ„ ط³ظ†ط¯ ظ…ط±ط§ط¬ط¹طŒ ظ‚ظ… ط¨ط¥ظ„ط؛ط§ط، ط§ظ„ظ…ط±ط§ط¬ط¹ط© ط£ظˆظ„ط§ظ‹' }, 400);
 
   const body = await getBody(c);
   const parseOptionalId = (value: unknown): number | null => {
@@ -348,7 +348,7 @@ vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddl
 
   const body = await getBody(c);
   const newStatus = body.status;
-  if (!['unreviewed', 'reviewed'].includes(newStatus)) {
+  if (!['draft', 'confirmed'].includes(newStatus)) {
     return c.json({ error: 'ط§ظ„ط­ط§ظ„ط© ط؛ظٹط± طµط§ظ„ط­ط©. ط§ظ„ظ‚ظٹظ… ط§ظ„ظ…ط³ظ…ظˆط­ط©: unreviewed, reviewed' }, 400);
   }
 
@@ -364,17 +364,17 @@ vouchersUpdateRouter.post('/businesses/:bizId/vouchers/:id/status', bizAuthMiddl
     }
 
     // ظ†ظ‚ط·ط© ط§ظ„طھط±ط­ظٹظ„ ط§ظ„ظ…ظˆط­ط¯ط©: ط§ط¹طھظ…ط§ط¯ ط§ظ„ظ…ط³ظˆط¯ط© ظپظ‚ط· ط¹ط¨ط± ط§ظ„ظ…ط­ط±ظƒ ط§ظ„ظ…ط§ظ„ظٹ.
-    if (existing.status === 'unreviewed' && newStatus === 'reviewed') {
+    if (existing.status === 'draft' && newStatus === 'confirmed') {
       const result = await confirmDraftTransaction(bizId, userId, id);
       return c.json(result.voucher);
     }
 
     // ط§ظ„ط³ظ…ط§ط­ ط¨ط§ظ„ط±ط¬ظˆط¹ ظ…ظ† reviewed ط¥ظ„ظ‰ unreviewed (ط¥ظ„ط؛ط§ط، ط§ظ„ظ…ط±ط§ط¬ط¹ط©)
-    if (existing.status === 'reviewed' && newStatus === 'unreviewed') {
+    if (existing.status === 'confirmed' && newStatus === 'draft') {
       const [updated] = await db.update(vouchers).set({
-        status: newStatus as 'unreviewed', updatedAt: new Date(),
+        status: newStatus as 'draft', updatedAt: new Date(),
       }).where(eq(vouchers.id, id)).returning();
-      await logAction({ userId, businessId: bizId, action: 'update', tableName: 'vouchers', recordId: id!, oldData: { status: 'reviewed' }, newData: { status: 'unreviewed' } }).catch(() => {});
+      await logAction({ userId, businessId: bizId, action: 'update', tableName: 'vouchers', recordId: id!, oldData: { status: 'confirmed' }, newData: { status: 'draft' } }).catch(() => {});
       return c.json(updated);
     }
 
@@ -407,7 +407,7 @@ vouchersUpdateRouter.delete('/businesses/:bizId/vouchers/:id', bizAuthMiddleware
   if (!voucher) return c.json({ error: 'السند غير موجود' }, 404);
 
   // ⛔ منع حذف سند مراجع — يجب إلغاء المراجعة أولاً
-  if (voucher.status === 'reviewed') {
+  if (voucher.status === 'confirmed') {
     return c.json({ error: 'لا يمكن حذف سند مراجع. قم بإلغاء المراجعة أولاً' }, 400);
   }
 

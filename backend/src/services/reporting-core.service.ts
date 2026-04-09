@@ -66,7 +66,7 @@ export async function getProfitAndLoss(
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status IN ('unreviewed', 'reviewed')
+    AND v.status IN ('draft', 'confirmed')
     AND v.voucher_date >= ${dateFrom}::date
     AND v.voucher_date <= ${dateTo}::date
   `);
@@ -88,7 +88,7 @@ export async function getProfitAndLoss(
     FROM vouchers v
     JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status IN ('unreviewed', 'reviewed')
+    AND v.status IN ('draft', 'confirmed')
     AND v.voucher_date >= ${dateFrom}::date
     AND v.voucher_date <= ${dateTo}::date
     GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.voucher_type
@@ -234,7 +234,7 @@ export async function getAccountStatement(
         END as source_type
       FROM vouchers v
       WHERE v.business_id = ${bizId}
-      AND v.status IN ('unreviewed', 'reviewed')
+      AND v.status IN ('draft', 'confirmed')
       AND v.voucher_date >= ${dateFrom}
       AND v.voucher_date <= ${dateTo}
       AND (v.from_fund_id = ${accountId} OR v.to_fund_id = ${accountId})

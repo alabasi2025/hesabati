@@ -124,7 +124,7 @@ export async function postTransaction(
         businessId: bizId,
         voucherNumber: voucherNumber!,
         voucherType: data.voucherType,
-        status: "unreviewed",
+        status: "draft",
         amount: String(data.amount),
         currencyId: data.currencyId,
         fromAccountId: data.creditAccountId || null,

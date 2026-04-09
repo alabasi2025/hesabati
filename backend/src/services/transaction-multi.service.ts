@@ -134,7 +134,7 @@ export async function postMultiTransaction(
         businessId: bizId,
         voucherNumber: voucherNumber!,
         voucherType: data.voucherType,
-        status: "unreviewed",
+        status: "draft",
         amount: String(totals.total),
         currencyId: data.currencyId,
         fromAccountId: data.fromAccountId || null,

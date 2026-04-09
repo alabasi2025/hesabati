@@ -64,7 +64,7 @@ export const voucherSchema = z.object({
 
 export const voucherMultiSchema = z.object({
   voucherType: z.enum(["receipt", "payment", "transfer", "journal"]).optional(),
-  status: z.enum(["unreviewed", "reviewed"]).optional(),
+  status: z.enum(["draft", "confirmed"]).optional(),
   description: z.string().optional().nullable(),
   reference: z.string().max(200).optional().nullable(),
   fromAccountId: z.number().int().positive().optional().nullable(),

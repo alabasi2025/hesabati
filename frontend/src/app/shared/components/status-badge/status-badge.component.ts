@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export type StatusType =
-  | 'unreviewed' | 'reviewed'
+  | 'draft' | 'confirmed'
   | 'active' | 'inactive' | 'suspended'
   | 'open' | 'in_progress' | 'completed' | 'disputed'
   | 'pending' | 'resolved' | 'written_off'

@@ -394,8 +394,8 @@
                         <td class="font-mono">{{ v.amount | number: '1.0-0' }} ر.ي</td>
                         <td>{{ v.description || '-' }}</td>
                         <td>
-                          <span class="valex-badge" [class.valex-badge-info]="v.status === 'reviewed'" [class.valex-badge-warning]="v.status !== 'reviewed'">
-                            {{ v.status === 'reviewed' ? 'مراجع' : 'غير مراجع' }}
+                          <span class="valex-badge" [class.valex-badge-info]="v.status === 'confirmed'" [class.valex-badge-warning]="v.status !== 'confirmed'">
+                            {{ v.status === 'confirmed' ? 'مراجع' : 'غير مراجع' }}
                           </span>
                         </td>
                         <td class="font-mono">{{ v.voucherDate || v.createdAt | date: 'yyyy/MM/dd' }}</td>

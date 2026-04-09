@@ -51,13 +51,11 @@ export interface TransitionResult {
 
 // ===================== الحالات الافتراضية =====================
 
-const DEFAULT_STATUSES = ['unreviewed', 'reviewed'];
+const DEFAULT_STATUSES = ['draft', 'confirmed', 'cancelled'];
 
 const DEFAULT_TRANSITIONS = [
-  { fromStatus: 'unreviewed', toStatus: 'reviewed', actionName: 'مراجعة', actionIcon: 'check_circle', actionColor: '#22c55e' },
-  { fromStatus: 'reviewed', toStatus: 'unreviewed', actionName: 'إلغاء المراجعة', actionIcon: 'undo', actionColor: '#f59e0b' },
-  { fromStatus: 'pending_approval', toStatus: 'approved', actionName: 'اعتماد', actionIcon: 'verified', actionColor: '#22c55e' },
-  { fromStatus: 'pending_approval', toStatus: 'rejected', actionName: 'رفض', actionIcon: 'block', actionColor: '#ef4444' },
+  { fromStatus: 'draft', toStatus: 'confirmed', actionName: 'اعتماد', actionIcon: 'check_circle', actionColor: '#22c55e' },
+  { fromStatus: 'confirmed', toStatus: 'cancelled', actionName: 'إلغاء', actionIcon: 'cancel', actionColor: '#ef4444' },
 ];
 
 // ===================== جلب إعدادات سير العمل =====================
@@ -209,7 +207,7 @@ export async function setupDefaultWorkflow(bizId: number, operationTypeId: numbe
     .set({
       workflowConfig: {
         enabled: true,
-        initialStatus: 'unreviewed',
+        initialStatus: 'draft',
         statuses: DEFAULT_STATUSES,
       } as any,
       updatedAt: new Date(),

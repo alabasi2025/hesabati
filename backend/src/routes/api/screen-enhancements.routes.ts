@@ -174,7 +174,7 @@ screenEnhRouter.get(
       COUNT(*) as operations_count
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId} AND v.status = 'reviewed'
+    WHERE v.business_id = ${bizId} AND v.status = 'confirmed'
     AND v.voucher_date >= ${currentFrom}::date AND v.voucher_date <= ${currentTo}::date
   `);
     const currentRows = normalizeDbResult<PeriodStatsRow>(currentResult);
@@ -187,7 +187,7 @@ screenEnhRouter.get(
       COUNT(*) as operations_count
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
-    WHERE v.business_id = ${bizId} AND v.status = 'reviewed'
+    WHERE v.business_id = ${bizId} AND v.status = 'confirmed'
     AND v.voucher_date >= ${prevFrom}::date AND v.voucher_date <= ${prevTo}::date
   `);
     const prevRows = normalizeDbResult<PeriodStatsRow>(prevResult);
@@ -293,7 +293,7 @@ screenEnhRouter.get(
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status IN ('unreviewed', 'reviewed')
+    AND v.status IN ('draft', 'confirmed')
     AND v.voucher_date >= ${fromDate}::date
     AND v.voucher_date <= ${toDate}::date
     GROUP BY ${groupExpr}, ${labelExpr}
@@ -350,7 +350,7 @@ screenEnhRouter.post(
           businessId: bizId,
           voucherNumber,
           voucherType: vType,
-          status: "unreviewed",
+          status: "draft",
           amount: String(amount),
           currencyId: body.currencyId || 1,
           fromAccountId: body.fromAccountId || null,
@@ -403,7 +403,7 @@ screenEnhRouter.post(
         businessId: bizId,
         voucherNumber,
         voucherType: vType,
-        status: "unreviewed",
+        status: "draft",
         amount: String(amount),
         currencyId: body.currencyId || 1,
         fromAccountId: body.fromAccountId || null,

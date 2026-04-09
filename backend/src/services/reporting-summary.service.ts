@@ -45,7 +45,7 @@ export async function getDailySummary(bizId: number, date: string) {
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status IN ('unreviewed', 'reviewed')
+    AND v.status IN ('draft', 'confirmed')
     AND v.voucher_date::date = ${date}::date
   `);
 
@@ -66,7 +66,7 @@ export async function getDailySummary(bizId: number, date: string) {
     FROM vouchers v
     JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status IN ('unreviewed', 'reviewed')
+    AND v.status IN ('draft', 'confirmed')
     AND v.voucher_date::date = ${date}::date
     GROUP BY ot.id, ot.name, ot.icon, ot.color, ot.voucher_type
     ORDER BY total DESC
@@ -106,9 +106,9 @@ export async function getAggregatedSummary(userId: number) {
       b.id, b.name, b.code, b.type, b.icon, b.color,
       (SELECT COUNT(*) FROM accounts a WHERE a.business_id = b.id AND a.is_active = true) as accounts_count,
       (SELECT COUNT(*) FROM funds f WHERE f.business_id = b.id AND f.is_active = true) as funds_count,
-      (SELECT COUNT(*) FROM vouchers v WHERE v.business_id = b.id AND v.status IN ('unreviewed', 'reviewed')) as vouchers_count,
+      (SELECT COUNT(*) FROM vouchers v WHERE v.business_id = b.id AND v.status IN ('draft', 'confirmed')) as vouchers_count,
       (SELECT COALESCE(SUM(CAST(v.amount AS NUMERIC)), 0) FROM vouchers v
-       WHERE v.business_id = b.id AND v.status IN ('unreviewed', 'reviewed')) as total_volume,
+       WHERE v.business_id = b.id AND v.status IN ('draft', 'confirmed')) as total_volume,
       (SELECT COALESCE(SUM(CAST(ab.balance AS NUMERIC)), 0) FROM account_balances ab
        JOIN accounts a ON a.id = ab.account_id WHERE a.business_id = b.id) as total_balance
     FROM businesses b
@@ -156,7 +156,7 @@ export async function getMonthlyRevenueExpenses(bizId: number, year: number) {
     FROM vouchers v
     LEFT JOIN operation_types ot ON ot.id = v.operation_type_id
     WHERE v.business_id = ${bizId}
-    AND v.status IN ('unreviewed', 'reviewed')
+    AND v.status IN ('draft', 'confirmed')
     AND EXTRACT(YEAR FROM v.voucher_date) = ${year}
     GROUP BY EXTRACT(MONTH FROM v.voucher_date)
     ORDER BY month

@@ -65,7 +65,7 @@ export class JournalComponent extends BasePageComponent {
     reference:       '',
     operationTypeId: null as number | null,
     categoryKey:     '' as string,
-    status:          'draft' as 'draft' | 'unreviewed' | 'reviewed',
+    status:          'draft' as 'draft' | 'draft' | 'confirmed',
   });
 
   // الرقم التسلسلي المعاين
@@ -116,8 +116,8 @@ export class JournalComponent extends BasePageComponent {
 
   readonly statusOptions = [
     { key: 'draft',      label: 'مسودة',       icon: 'edit_note',    color: '#64748b' },
-    { key: 'unreviewed', label: 'غير مراجع',   icon: 'pending',      color: '#f59e0b' },
-    { key: 'reviewed',   label: 'مراجع',       icon: 'check_circle', color: '#10b981' },
+    { key: 'draft', label: 'غير مراجع',   icon: 'pending',      color: '#f59e0b' },
+    { key: 'confirmed',   label: 'مراجع',       icon: 'check_circle', color: '#10b981' },
   ];
 
   protected override onBizIdChange(_bizId: number): void { this.load(); this.loadCategories(); }
@@ -314,7 +314,7 @@ export class JournalComponent extends BasePageComponent {
     <div class="meta-item"><div class="meta-label">التاريخ</div><div class="meta-value">${this.formatDate(entry.entryDate)}</div></div>
     <div class="meta-item"><div class="meta-label">البيان</div><div class="meta-value">${entry.description}</div></div>
     ${entry.reference ? `<div class="meta-item"><div class="meta-label">المرجع</div><div class="meta-value">${entry.reference}</div></div>` : ''}
-    <div class="meta-item"><div class="meta-label">الحالة</div><div class="meta-value">${entry.status === 'reviewed' ? 'مراجع' : entry.status === 'unreviewed' ? 'غير مراجع' : 'مسودة'}</div></div>
+    <div class="meta-item"><div class="meta-label">الحالة</div><div class="meta-value">${entry.status === 'confirmed' ? 'مراجع' : entry.status === 'draft' ? 'غير مراجع' : 'مسودة'}</div></div>
   </div>
   <table>
     <thead><tr><th>#</th><th>الحساب</th><th>الحساب التحليلي</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead>

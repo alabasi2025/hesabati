@@ -76,12 +76,12 @@ describe('StatusBadge — status mapping', () => {
   };
 
   it('should map unreviewed to warning', () => {
-    expect(STATUS_CONFIG['unreviewed'].cls).toBe('warning');
-    expect(STATUS_CONFIG['unreviewed'].label).toBe('غير مراجع');
+    expect(STATUS_CONFIG['draft'].cls).toBe('warning');
+    expect(STATUS_CONFIG['draft'].label).toBe('غير مراجع');
   });
 
   it('should map reviewed to success', () => {
-    expect(STATUS_CONFIG['reviewed'].cls).toBe('success');
+    expect(STATUS_CONFIG['confirmed'].cls).toBe('success');
   });
 
   it('should map active to success', () => {
@@ -179,7 +179,7 @@ describe('ApiService — Facade method delegation', () => {
 
 describe('Shared enums — completeness check', () => {
   // نحاكي قيم الـ enums للتحقق
-  const VoucherStatus = { UNREVIEWED: 'unreviewed', REVIEWED: 'reviewed' };
+  const VoucherStatus = { UNREVIEWED: 'draft', REVIEWED: 'confirmed' };
   const VoucherType = {
     RECEIPT: 'receipt', PAYMENT: 'payment', TRANSFER: 'transfer',
     JOURNAL: 'journal', COLLECTION: 'collection', DELIVERY: 'delivery',
@@ -210,6 +210,6 @@ describe('Shared enums — completeness check', () => {
   });
 
   it('reviewed status should be lowercase', () => {
-    expect(VoucherStatus.REVIEWED).toBe('reviewed');
+    expect(VoucherStatus.REVIEWED).toBe('confirmed');
   });
 });

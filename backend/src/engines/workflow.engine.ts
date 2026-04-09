@@ -99,7 +99,7 @@ export async function getWorkflowStats(bizId: number): Promise<{
   return {
     totalVouchers: all.length,
     byStatus,
-    pendingReview: byStatus['unreviewed'] ?? 0,
+    pendingReview: byStatus['draft'] ?? 0,
   };
 }
 
@@ -138,7 +138,7 @@ export async function resetVoucherToUnreviewed(
 
   await db
     .update(vouchers)
-    .set({ status: 'unreviewed' })
+    .set({ status: 'draft' })
     .where(and(eq(vouchers.id, voucherId), eq(vouchers.businessId, bizId)));
 
   // تسجيل في التاريخ
@@ -147,7 +147,7 @@ export async function resetVoucherToUnreviewed(
     businessId: bizId,
     userId,
     fromStatus: voucher.status,
-    toStatus: 'unreviewed',
+    toStatus: 'draft',
     notes: `إعادة تعيين: ${reason}`,
     createdAt: new Date(),
   } as typeof workflowHistory.$inferInsert);

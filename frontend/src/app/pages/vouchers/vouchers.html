@@ -319,7 +319,7 @@
           <span class="material-icons-round">save</span> حفظ كمسودة
         </button>
         <button class="valex-btn valex-btn-primary" [disabled]="saving()"
-          (click)="formHeader.update(h=>({...h,status:'unreviewed'}));save()">
+          (click)="formHeader.update(h=>({...h,status:'draft'}));save()">
           @if (saving()) {
             <span class="material-icons-round journal-spin">sync</span>
           } @else {
@@ -361,9 +361,9 @@
                   {{ fmt(v.amount) }}
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                  @if (v.status === 'reviewed') {
+                  @if (v.status === 'confirmed') {
                     <span class="valex-badge valex-badge-info"><span class="material-icons-round text-sm">verified</span> مراجع</span>
-                  } @else if (v.status === 'unreviewed') {
+                  } @else if (v.status === 'draft') {
                     <span class="valex-badge valex-badge-warning"><span class="material-icons-round text-sm">pending</span> غير مراجع</span>
                   } @else {
                     <span class="valex-badge valex-badge-secondary"><span class="material-icons-round text-sm">edit_note</span> مسودة</span>

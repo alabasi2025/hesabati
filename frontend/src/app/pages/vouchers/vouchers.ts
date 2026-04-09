@@ -69,7 +69,7 @@ export class VouchersComponent extends BasePageComponent {
     operationTypeId: null as number | null,
     currencyId:      1,
     exchangeRate:    null as number | null,
-    status:          'unreviewed' as 'draft' | 'unreviewed' | 'reviewed',
+    status:          'draft' as 'draft' | 'draft' | 'confirmed',
   });
 
   // ===== Treasury =====
@@ -138,10 +138,10 @@ export class VouchersComponent extends BasePageComponent {
     'warehouse': ['warehouse'],
   };
 
-  readonly statusOptions: { key: 'draft'|'unreviewed'|'reviewed'; label: string; icon: string; color: string }[] = [
+  readonly statusOptions: { key: 'draft'|'draft'|'confirmed'; label: string; icon: string; color: string }[] = [
     { key: 'draft',      label: 'مسودة',     icon: 'edit_note',    color: '#64748b' },
-    { key: 'unreviewed', label: 'غير مراجع', icon: 'pending',      color: '#f59e0b' },
-    { key: 'reviewed',   label: 'مراجع',     icon: 'check_circle', color: '#10b981' },
+    { key: 'draft', label: 'غير مراجع', icon: 'pending',      color: '#f59e0b' },
+    { key: 'confirmed',   label: 'مراجع',     icon: 'check_circle', color: '#10b981' },
   ];
 
   protected override onBizIdChange(_bizId: number): void { this.load(); }
@@ -193,7 +193,7 @@ export class VouchersComponent extends BasePageComponent {
   openNew(type: 'receipt' | 'payment' = 'receipt') {
     this.editingId.set(null);
     this.formHeader.set({ voucherType: type, date: new Date().toISOString().split('T')[0],
-      description: '', reference: '', operationTypeId: null, currencyId: 1, exchangeRate: null, status: 'unreviewed' });
+      description: '', reference: '', operationTypeId: null, currencyId: 1, exchangeRate: null, status: 'draft' });
     this.treasuryType.set('');
     this.treasuryId.set(null);
     this.previewNumber.set('');
@@ -216,7 +216,7 @@ export class VouchersComponent extends BasePageComponent {
       operationTypeId: v.operationTypeId || null,
       currencyId:      v.currencyId || 1,
       exchangeRate:    v.exchangeRate ? Number(v.exchangeRate) : null,
-      status:          v.status || 'unreviewed',
+      status:          v.status || 'draft',
     });
     // Treasury
     if (v.fromFundId)      { this.treasuryType.set('fund');     this.treasuryId.set(v.fromFundId); }
@@ -503,7 +503,7 @@ export class VouchersComponent extends BasePageComponent {
   </div>
   <div class="footer">
     <span>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-YE')}</span>
-    <span>حالة السند: ${v.status === 'reviewed' ? 'مراجع' : v.status === 'unreviewed' ? 'غير مراجع' : 'مسودة'}</span>
+    <span>حالة السند: ${v.status === 'confirmed' ? 'مراجع' : v.status === 'draft' ? 'غير مراجع' : 'مسودة'}</span>
   </div>
   <script>window.onload = () => { window.print(); }<\/script>
 </body></html>`;

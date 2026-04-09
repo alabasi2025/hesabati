@@ -109,7 +109,7 @@ docsRoutes.get('/api/docs/openapi.json', (c) => {
               "pending",
               "posted",
               "cancelled",
-              "reviewed"
+              "confirmed"
             ]
           },
           "sequenceNumber": {
@@ -438,8 +438,8 @@ docsRoutes.get('/api/docs/openapi.json', (c) => {
                       "pending",
                       "posted",
                       "cancelled",
-                      "reviewed",
-                      "unreviewed"
+                      "confirmed",
+                      "draft"
                     ]
                   }
                 }

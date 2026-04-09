@@ -215,7 +215,7 @@ export async function canCancelVoucher(
 
   if (!v) return { can: false, reason: 'السند غير موجود' };
   if (v.status === 'cancelled') return { can: false, reason: 'السند ملغى مسبقاً' };
-  if (v.status === 'reviewed') return { can: false, reason: 'لا يمكن إلغاء سند مراجَع' };
+  if (v.status === 'confirmed') return { can: false, reason: 'لا يمكن إلغاء سند مراجَع' };
 
   return { can: true };
 }

@@ -20,7 +20,7 @@ export const voucherTypeEnum = pgEnum('voucher_type', [
   'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer',
 ]);
 
-export const voucherStatusEnum = pgEnum('voucher_status', ['unreviewed', 'reviewed']);
+export const voucherStatusEnum = pgEnum('voucher_status', ['draft', 'confirmed', 'cancelled']);
 export const expenseTypeEnum = pgEnum('expense_type', ['fixed', 'variable', 'annual']);
 export const warehouseTypeEnum = pgEnum('warehouse_type', ['main', 'station', 'sub', 'custody']);
 export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'transfer', 'adjustment', 'supply_invoice', 'supply_order', 'dispatch', 'transfer_out', 'receive_transfer']);

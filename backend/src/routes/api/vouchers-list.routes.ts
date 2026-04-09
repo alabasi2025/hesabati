@@ -449,8 +449,8 @@ vouchersRouter.get(
         COALESCE(SUM(CASE WHEN v.voucher_type = 'payment' THEN CAST(v.amount AS NUMERIC) ELSE 0 END), 0) as total_payments,
         COUNT(CASE WHEN v.voucher_type = 'receipt' THEN 1 END) as receipt_count,
         COUNT(CASE WHEN v.voucher_type = 'payment' THEN 1 END) as payment_count,
-        COUNT(CASE WHEN v.status = 'unreviewed' THEN 1 END) as unreviewed_count,
-        COUNT(CASE WHEN v.status = 'reviewed' THEN 1 END) as reviewed_count
+        COUNT(CASE WHEN v.status = 'draft' THEN 1 END) as unreviewed_count,
+        COUNT(CASE WHEN v.status = 'confirmed' THEN 1 END) as reviewed_count
       FROM vouchers v WHERE ${conditions}
     `),
     ]);

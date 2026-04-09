@@ -97,7 +97,7 @@ export const vouchers = pgTable("vouchers", {
     .references(() => businesses.id),
   voucherNumber: varchar("voucher_number", { length: 50 }).notNull(),
   voucherType: voucherTypeEnum("voucher_type").notNull(),
-  status: voucherStatusEnum("status").notNull().default("unreviewed"),
+  status: voucherStatusEnum("status").notNull().default("draft"),
   amount: decimal("amount", { precision: 20, scale: 2 }).notNull(),
   currencyId: integer("currency_id")
     .notNull()
