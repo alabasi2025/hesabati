@@ -178,6 +178,9 @@ export async function postTransaction(
       amount: String(data.amount),
       description: entryDesc,
       sortOrder: 0,
+      currencyId: data.currencyId,
+      foreignAmount: data.currencyId !== 1 ? String(data.amount) : null,
+      exchangeRate: data.exchangeRate ? String(data.exchangeRate) : null,
     });
 
     // --- 5. إنشاء سطور القيد - الطرف الدائن ---
@@ -189,6 +192,9 @@ export async function postTransaction(
         amount: String(data.amount),
         description: entryDesc,
         sortOrder: 1,
+        currencyId: data.currencyId,
+        foreignAmount: data.currencyId !== 1 ? String(data.amount) : null,
+        exchangeRate: data.exchangeRate ? String(data.exchangeRate) : null,
       });
     }
 

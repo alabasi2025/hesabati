@@ -13,7 +13,7 @@ import { safeHandler, getBody, toErrorMessage } from '../../middleware/helpers.t
 import { validateBody, voucherMultiSchema } from '../../middleware/validation.ts';
 import { checkPermission } from '../../middleware/permissions.ts';
 import { postMultiTransaction } from '../../engines/transaction.engine.ts';
-import { isForeignCurrency, requireExchangeDiffAccount } from '../../engines/currency.engine.ts';
+import { isForeignCurrency, requireExchangeDiffAccount, validateRateBounds } from '../../engines/currency.engine.ts';
 import { wsService } from '../../services/websocket.service.ts';
 import { getBizId, getUserId } from './_shared/context-helpers.ts';
 import { validateEntityAccountLinks, validateSubledgerAccountEntries } from './_shared/account-guards.ts';
@@ -52,6 +52,13 @@ vouchersCreateRouter.post(
       const diffCheck = await requireExchangeDiffAccount(bizId);
       if (!diffCheck.exists) {
         return c.json({ error: 'لا يمكن تنفيذ عملية بعملة أجنبية بدون وجود حساب فروقات العملة. يرجى إنشاء حساب وسيط باسم "فروقات عملة" أولاً من صفحة الحسابات.' }, 400);
+      }
+      // ✅ التحقق من سعر الصرف ضمن السقف المسموح
+      if (data.exchangeRate) {
+        const rateBounds = await validateRateBounds(currencyId, Number(data.exchangeRate));
+        if (!rateBounds.valid) {
+          return c.json({ error: `سعر الصرف ${data.exchangeRate} خارج النطاق المسموح (من ${rateBounds.minRate} إلى ${rateBounds.maxRate})` }, 400);
+        }
       }
     }
 

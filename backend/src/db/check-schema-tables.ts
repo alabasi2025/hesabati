@@ -152,7 +152,6 @@ const expectedTables: Record<string, string[]> = {
     "linked_employee_id",
     "responsible_person",
     "parent_account_id",
-    "supported_currencies",
     "can_initiate_receipt",
     "can_initiate_payment",
     "can_receive_payment",

@@ -125,7 +125,29 @@ export async function getExchangeRate(
     return rate;
   }
 
-  return 1; // fallback: لا تحويل
+  // fallback: استخدام السعر الافتراضي من جدول العملات
+  const [fromCurrency] = await db
+    .select({ exchangeRate: currencies.exchangeRate })
+    .from(currencies)
+    .where(eq(currencies.id, fromCurrencyId))
+    .limit(1);
+  const [toCurrency] = await db
+    .select({ exchangeRate: currencies.exchangeRate })
+    .from(currencies)
+    .where(eq(currencies.id, toCurrencyId))
+    .limit(1);
+
+  if (fromCurrency && toCurrency) {
+    const fromRate = parseFloat(String(fromCurrency.exchangeRate));
+    const toRate = parseFloat(String(toCurrency.exchangeRate));
+    if (fromRate > 0 && toRate > 0) {
+      const rate = fromRate / toRate;
+      rateCache.set(cacheKey, { rate, timestamp: Date.now() });
+      return rate;
+    }
+  }
+
+  return 1; // fallback أخير: لا تحويل
 }
 
 /**

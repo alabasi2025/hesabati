@@ -31,7 +31,6 @@ export const accountSchema = z.object({
   subType: z.string().max(100).optional().nullable(),
   responsiblePerson: z.string().max(200).optional().nullable(),
   parentAccountId: z.number().int().positive().optional().nullable(),
-  supportedCurrencies: z.array(z.string()).optional(),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   subTypeId: z.number().int().positive().optional(),

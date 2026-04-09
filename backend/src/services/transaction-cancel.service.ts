@@ -241,6 +241,8 @@ export async function confirmDraftTransaction(
         amount: String(amount),
         description: existing.description || "",
         sortOrder: 0,
+        currencyId: currencyId,
+        exchangeRate: existing.exchangeRate ? String(existing.exchangeRate) : null,
       });
       await tx.execute(sql`
         INSERT INTO account_balances (account_id, currency_id, balance)
@@ -260,6 +262,8 @@ export async function confirmDraftTransaction(
         amount: String(amount),
         description: existing.description || "",
         sortOrder: 1,
+        currencyId: currencyId,
+        exchangeRate: existing.exchangeRate ? String(existing.exchangeRate) : null,
       });
       await tx.execute(sql`
         INSERT INTO account_balances (account_id, currency_id, balance)

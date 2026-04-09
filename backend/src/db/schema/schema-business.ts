@@ -199,9 +199,6 @@ export const accounts = pgTable(
     parentAccountId: integer("parent_account_id"),
     isLeafAccount: boolean("is_leaf_account").notNull().default(true),
     linkedEmployeeId: integer("linked_employee_id"),
-    supportedCurrencies: jsonb("supported_currencies")
-      .$type<string[]>()
-      .default(["YER", "SAR", "USD"]),
 
     canInitiateReceipt: boolean("can_initiate_receipt").notNull().default(true),
     canInitiatePayment: boolean("can_initiate_payment").notNull().default(true),

@@ -190,6 +190,9 @@ export async function postMultiTransaction(
         amount: String(line.amount),
         description: line.description ?? entryDesc,
         sortOrder: i,
+        currencyId: data.currencyId,
+        foreignAmount: data.currencyId !== 1 ? String(line.amount) : null,
+        exchangeRate: data.exchangeRate ? String(data.exchangeRate) : null,
       });
 
       const delta = line.lineType === "debit" ? line.amount : -line.amount;

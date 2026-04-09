@@ -118,6 +118,29 @@ fiscalRoutes.post('/businesses/:bizId/fiscal-periods/:periodId/close', bizAuthMi
   if (!period) return c.json({ error: 'الفترة غير موجودة' }, 404);
   if (period.isClosed) return c.json({ error: 'الفترة مقفلة مسبقاً' }, 400);
 
+  // التحقق الترتيبي: لا يمكن إقفال فترة إذا فيه فترة قبلها مفتوحة
+  const earlierOpen = await db.select({ id: fiscalPeriods.id, month: fiscalPeriods.month }).from(fiscalPeriods)
+    .where(and(
+      eq(fiscalPeriods.fiscalYearId, period.fiscalYearId),
+      eq(fiscalPeriods.isClosed, false),
+    ));
+  const earlier = earlierOpen.filter(p => p.month < period.month);
+  if (earlier.length > 0) {
+    const minMonth = Math.min(...earlier.map(p => p.month));
+    return c.json({ error: `لا يمكن إقفال هذه الفترة — أقفل الشهر ${minMonth} أولاً` }, 400);
+  }
+
+  // فحص فروقات العملة غير المسوّاة
+  const { previewRevaluation } = await import('../../engines/revaluation.engine.ts');
+  const revalPreview = await previewRevaluation(bizId, period.endDate);
+  const hasUnsettledDiffs = revalPreview.lines.some(l => Math.abs(l.difference) >= 0.01);
+  if (hasUnsettledDiffs) {
+    return c.json({ 
+      error: 'لا يمكن إقفال الفترة — يوجد فروقات عملة غير مسوّاة. قم بإعادة التقييم أولاً',
+      revaluation: revalPreview,
+    }, 400);
+  }
+
   const [updated] = await db.update(fiscalPeriods).set({
     isClosed: true,
     closedAt: new Date(),
@@ -153,4 +176,66 @@ fiscalRoutes.post('/businesses/:bizId/fiscal-years/:yearId/close', bizAuthMiddle
   }).where(eq(fiscalYears.id, yearId)).returning();
 
   return c.json(updated);
+}));
+
+// ===================== فتح فترة محاسبية =====================
+fiscalRoutes.post('/businesses/:bizId/fiscal-periods/:periodId/reopen', bizAuthMiddleware(), safeHandler('فتح فترة محاسبية', async (c) => {
+  const bizId = getBizId(c);
+  const periodId = parseId(c.req.param('periodId'));
+  const userId = getUserId(c);
+  if (!periodId) return c.json({ error: 'معرّف الفترة غير صالح' }, 400);
+
+  const [period] = await db.select().from(fiscalPeriods)
+    .where(and(eq(fiscalPeriods.id, periodId), eq(fiscalPeriods.businessId, bizId))).limit(1);
+  if (!period) return c.json({ error: 'الفترة غير موجودة' }, 404);
+  if (!period.isClosed) return c.json({ error: 'الفترة مفتوحة مسبقاً' }, 400);
+
+  // التحقق الترتيبي: لا يمكن فتح فترة إذا فيه فترة بعدها مقفلة
+  const laterClosed = await db.select({ id: fiscalPeriods.id, month: fiscalPeriods.month }).from(fiscalPeriods)
+    .where(and(
+      eq(fiscalPeriods.fiscalYearId, period.fiscalYearId),
+      eq(fiscalPeriods.isClosed, true),
+    ));
+  const laterPeriods = laterClosed.filter(p => p.month > period.month);
+  if (laterPeriods.length > 0) {
+    const maxMonth = Math.max(...laterPeriods.map(p => p.month));
+    return c.json({ error: `لا يمكن فتح هذه الفترة — افتح الشهر ${maxMonth} أولاً` }, 400);
+  }
+
+  const [updated] = await db.update(fiscalPeriods).set({
+    isClosed: false,
+    closedAt: null,
+    closedBy: null,
+  }).where(eq(fiscalPeriods.id, periodId)).returning();
+
+  return c.json(updated);
+}));
+
+// ===================== فتح سنة مالية =====================
+fiscalRoutes.post('/businesses/:bizId/fiscal-years/:yearId/reopen', bizAuthMiddleware(), safeHandler('فتح سنة مالية', async (c) => {
+  const bizId = getBizId(c);
+  const yearId = parseId(c.req.param('yearId'));
+  if (!yearId) return c.json({ error: 'معرّف السنة غير صالح' }, 400);
+
+  const [fy] = await db.select().from(fiscalYears)
+    .where(and(eq(fiscalYears.id, yearId), eq(fiscalYears.businessId, bizId))).limit(1);
+  if (!fy) return c.json({ error: 'السنة غير موجودة' }, 404);
+  if (!fy.isClosed) return c.json({ error: 'السنة مفتوحة مسبقاً' }, 400);
+
+  // التحقق: لا يمكن فتح سنة إذا فيه سنة بعدها مقفلة
+  const laterYears = await db.select({ id: fiscalYears.id, year: fiscalYears.year }).from(fiscalYears)
+    .where(and(eq(fiscalYears.businessId, bizId), eq(fiscalYears.isClosed, true)));
+  const later = laterYears.filter(y => y.year > fy.year);
+  if (later.length > 0) {
+    const maxYear = Math.max(...later.map(y => y.year));
+    return c.json({ error: `لا يمكن فتح هذه السنة — افتح السنة ${maxYear} أولاً` }, 400);
+  }
+
+  await db.update(fiscalYears).set({
+    isClosed: false,
+    closedAt: null,
+    closedBy: null,
+  }).where(eq(fiscalYears.id, yearId));
+
+  return c.json({ success: true });
 }));
