@@ -938,12 +938,26 @@ async function seed() {
     for (const fd of group.funds) {
       subSeq++;
       const fundCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      // إنشاء حساب تحليلي خاص بالصندوق
+      const [fundAccount] = await db
+        .insert(schema.accounts)
+        .values({
+          businessId: group.businessId,
+          name: fd.name,
+          accountType: "fund" as any,
+          accountSubNatureId: fundNatureId,
+          isLeafAccount: true,
+          parentAccountId: controlAccount.id,
+          code: fundCode,
+          sequenceNumber: subSeq,
+        })
+        .returning();
       const [createdFund] = await db
         .insert(schema.funds)
         .values({
           businessId: group.businessId,
           name: fd.name,
-          accountId: controlAccount.id,
+          accountId: fundAccount.id,
           defaultCurrencyId: yerCurrencyId,
           sequenceNumber: subSeq,
           code: fundCode,
@@ -1020,12 +1034,25 @@ async function seed() {
     for (const bk of group.banks) {
       subSeq++;
       const bankCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [bankAccount] = await db
+        .insert(schema.accounts)
+        .values({
+          businessId: group.businessId,
+          name: bk.name,
+          accountType: "bank" as any,
+          accountSubNatureId: bankNatureId,
+          isLeafAccount: true,
+          parentAccountId: controlAccount.id,
+          code: bankCode,
+          sequenceNumber: subSeq,
+        })
+        .returning();
       const [createdBank] = await db
         .insert(schema.banks)
         .values({
           businessId: group.businessId,
           name: bk.name,
-          accountId: controlAccount.id,
+          accountId: bankAccount.id,
           defaultCurrencyId: yerCurrencyId,
           sequenceNumber: subSeq,
           code: bankCode,
@@ -1124,12 +1151,25 @@ async function seed() {
     for (const wl of group.wallets) {
       subSeq++;
       const walletCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [walletAccount] = await db
+        .insert(schema.accounts)
+        .values({
+          businessId: group.businessId,
+          name: wl.name,
+          accountType: "e_wallet" as any,
+          accountSubNatureId: walletNatureId,
+          isLeafAccount: true,
+          parentAccountId: controlAccount.id,
+          code: walletCode,
+          sequenceNumber: subSeq,
+        })
+        .returning();
       const [createdWallet] = await db
         .insert(schema.wallets)
         .values({
           businessId: group.businessId,
           name: wl.name,
-          accountId: controlAccount.id,
+          accountId: walletAccount.id,
           defaultCurrencyId: yerCurrencyId,
           sequenceNumber: subSeq,
           code: walletCode,
@@ -1207,12 +1247,25 @@ async function seed() {
     for (const ex of group.exchanges) {
       subSeq++;
       const exchangeCode = `${controlCode}/${String(subSeq).padStart(2, "0")}`;
+      const [exchAccount] = await db
+        .insert(schema.accounts)
+        .values({
+          businessId: group.businessId,
+          name: ex.name,
+          accountType: "exchange" as any,
+          accountSubNatureId: exchangeNatureId,
+          isLeafAccount: true,
+          parentAccountId: controlAccount.id,
+          code: exchangeCode,
+          sequenceNumber: subSeq,
+        })
+        .returning();
       const [createdExchange] = await db
         .insert(schema.exchanges)
         .values({
           businessId: group.businessId,
           name: ex.name,
-          accountId: controlAccount.id,
+          accountId: exchAccount.id,
           defaultCurrencyId: yerCurrencyId,
           sequenceNumber: subSeq,
           code: exchangeCode,
