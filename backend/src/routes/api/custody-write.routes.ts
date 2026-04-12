@@ -10,6 +10,7 @@ import {
   custodyRecords,
   custodySettlements,
 } from "../../db/schema/index.ts";
+import { accountSubNatures } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { checkPermission } from "../../middleware/permissions.ts";
 import { safeHandler, parseId, getBody } from "../../middleware/helpers.ts";
@@ -47,13 +48,27 @@ custodyWriteRoutes.post(
     const existingUnderAccount = await db.select({ id: custodyRecords.id }).from(custodyRecords)
       .where(and(eq(custodyRecords.businessId, bizId), eq(custodyRecords.accountId, accountId)));
     const subSeq = existingUnderAccount.length + 1;
-    const custodyNumber = `${acc.code}/${subSeq}`;
+    const custodyNumber = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالعهدة
+    const [cusNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'custody'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: `عهدة - ${String(body.partyName)}`,
+      accountType: 'custody' as any,
+      accountSubNatureId: cusNature?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: accountId,
+      code: custodyNumber,
+      sequenceNumber: subSeq,
+    }).returning();
 
     const [created] = await db
       .insert(custodyRecords)
       .values({
         businessId: bizId,
-        accountId,
+        accountId: analyticalAccount.id,
         custodyNumber,
         custodyType: String(body.custodyType),
         contentType: String(body.contentType),

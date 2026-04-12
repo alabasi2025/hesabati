@@ -13,6 +13,7 @@ import {
   voucherLines,
   journalEntryLines,
 } from "../../db/schema/index.ts";
+import { accountSubNatures } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { validateBody } from "../../middleware/validation.ts";
 import {
@@ -54,7 +55,21 @@ banksRoutes.post(
     const existingBanks = await db.select({ id: banks.id }).from(banks)
       .where(and(eq(banks.businessId, bizId), eq(banks.accountId, accountId)));
     const subSeq = existingBanks.length + 1;
-    const bankCode = `${acc.code}/${subSeq}`;
+    const bankCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالكيان
+    const [bankNatureRows] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'bank'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: String(body.name).trim(),
+      accountType: 'bank' as any,
+      accountSubNatureId: bankNatureRows?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: accountId,
+      code: bankCode,
+      sequenceNumber: subSeq,
+    }).returning();
 
     // تحديد العملة الافتراضية
     let defaultCurrencyId: number | null = null;
@@ -65,7 +80,7 @@ banksRoutes.post(
     const insertPayload: typeof banks.$inferInsert = {
       businessId: bizId,
       name: String(body.name).trim(),
-      accountId: accountId,
+      accountId: analyticalAccount.id,
       defaultCurrencyId: defaultCurrencyId,
       sequenceNumber: acc.sequenceNumber,
       code: bankCode,

@@ -13,6 +13,7 @@ import {
   voucherLines,
   journalEntryLines,
 } from "../../db/schema/index.ts";
+import { accountSubNatures } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import {
   safeHandler,
@@ -50,7 +51,21 @@ exchangesRoutes.post(
     const existingExchanges = await db.select({ id: exchanges.id }).from(exchanges)
       .where(and(eq(exchanges.businessId, bizId), eq(exchanges.accountId, accountId)));
     const subSeq = existingExchanges.length + 1;
-    const exchangeCode = `${acc.code}/${subSeq}`;
+    const exchangeCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالكيان
+    const [exchangeNatureRows] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'exchange'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: String(body.name).trim(),
+      accountType: 'exchange' as any,
+      accountSubNatureId: exchangeNatureRows?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: accountId,
+      code: exchangeCode,
+      sequenceNumber: subSeq,
+    }).returning();
 
     // تحديد العملة الافتراضية
     let defaultCurrencyId: number | null = null;
@@ -61,7 +76,7 @@ exchangesRoutes.post(
     const insertPayload: typeof exchanges.$inferInsert = {
       businessId: bizId,
       name: String(body.name).trim(),
-      accountId: accountId,
+      accountId: analyticalAccount.id,
       defaultCurrencyId: defaultCurrencyId,
       sequenceNumber: acc.sequenceNumber,
       code: exchangeCode,

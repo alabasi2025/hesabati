@@ -60,7 +60,21 @@ employeesWriteRoutes.post(
       .from(employees)
       .where(and(eq(employees.businessId, bizId), eq(employees.accountId, accountId)));
     const subSeq = existingCount.length + 1;
-    const employeeCode = `${acc.code}/${subSeq}`;
+    const employeeCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالموظف
+    const [empNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'employee'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: fullName,
+      accountType: 'employee' as any,
+      accountSubNatureId: empNature?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: accountId,
+      code: employeeCode,
+      sequenceNumber: subSeq,
+    }).returning();
 
     const departmentId = body.departmentId != null && Number(body.departmentId) > 0
       ? Number(body.departmentId)
@@ -82,7 +96,7 @@ employeesWriteRoutes.post(
           business_id, account_id, default_currency_id, sequence_number, code, full_name, station_id,
           department, job_title, salary, salary_currency, phone, status, notes, is_manager
         ) VALUES (
-          ${bizId}, ${accountId}, ${defaultCurrencyId}, ${employeeSeq}, ${employeeCode}, ${fullName},
+          ${bizId}, ${analyticalAccount.id}, ${defaultCurrencyId}, ${employeeSeq}, ${employeeCode}, ${fullName},
           ${body.stationId ?? null}, ${body.department ?? null}, ${body.jobTitle ?? null},
           ${body.salary ?? '0'}, ${body.salaryCurrency ?? 'YER'}, ${body.phone ?? null},
           ${body.status ?? 'active'}, ${body.notes ?? null}, ${body.isManager ?? false}

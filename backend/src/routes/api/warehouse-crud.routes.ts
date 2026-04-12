@@ -19,6 +19,7 @@ import {
   inventoryItems,
   accounts,
 } from "../../db/schema/index.ts";
+import { accountSubNatures } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { warehouseSchema, validateBody } from "../../middleware/validation.ts";
 import {
@@ -114,7 +115,21 @@ warehouseRoutes.post(
     const existingWarehouses = await db.select({ id: warehouses.id }).from(warehouses)
       .where(and(eq(warehouses.businessId, bizId), eq(warehouses.accountId, accountId)));
     const subSeq = existingWarehouses.length + 1;
-    const warehouseCode = `${acc.code}/${subSeq}`;
+    const warehouseCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالمخزن
+    const [whsNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'warehouse'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name,
+      accountType: 'warehouse' as any,
+      accountSubNatureId: whsNature?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: accountId,
+      code: warehouseCode,
+      sequenceNumber: subSeq,
+    }).returning();
 
     const name = (data.name ?? "") as string;
     const warehouseType = (
@@ -129,7 +144,7 @@ warehouseRoutes.post(
         businessId: bizId,
         name,
         warehouseType,
-        accountId,
+        accountId: analyticalAccount.id,
         code: warehouseCode,
         sequenceNumber: subSeq,
         stationId: data.stationId != null ? Number(data.stationId) : null,

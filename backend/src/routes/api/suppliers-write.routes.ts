@@ -53,7 +53,21 @@ suppliersWriteRoutes.post(
       .from(suppliers)
       .where(and(eq(suppliers.businessId, bizId), eq(suppliers.accountId, acc.id)));
     const subSeq = existingSuppliers.length + 1;
-    const supplierCode = `${acc.code}/${subSeq}`;
+    const supplierCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+
+    // إنشاء حساب تحليلي خاص بالمورد
+    const [supNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'supplier'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: supplierName,
+      accountType: 'supplier' as any,
+      accountSubNatureId: supNature?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: acc.id,
+      code: supplierCode,
+      sequenceNumber: subSeq,
+    }).returning();
 
     let defaultCurrencyId: number | null = null;
     if (body.defaultCurrencyId && Number(body.defaultCurrencyId) > 0) {
@@ -68,7 +82,7 @@ suppliersWriteRoutes.post(
         supplierTypeId,
         sequenceNumber: supplierSeq,
         code: supplierCode,
-        accountId: acc.id,
+        accountId: analyticalAccount.id,
         phone: typeof body.phone === 'string' ? body.phone.trim() || null : null,
         category: typeof body.category === 'string' ? body.category.trim() || null : null,
         notes: typeof body.notes === 'string' ? body.notes.trim() || null : null,

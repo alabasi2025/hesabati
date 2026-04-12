@@ -13,6 +13,7 @@ import {
   partnerBalances,
   accountCurrencies,
 } from "../../db/schema/index.ts";
+import { accountSubNatures } from "../../db/schema/index.ts";
 import { bizAuthMiddleware } from "../../middleware/bizAuth.ts";
 import { safeHandler, getBody, parseId } from "../../middleware/helpers.ts";
 import { getNextBusinessPartnerSequence } from "../../middleware/sequencing.ts";
@@ -68,6 +69,21 @@ partnersWriteRoutes.post(
         ),
       );
     const subSeq = existingPartners.length + 1;
+
+    // إنشاء حساب تحليلي خاص بالشريك
+    const partnerCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
+    const [prtNature] = await db.select({ id: accountSubNatures.id }).from(accountSubNatures)
+      .where(and(eq(accountSubNatures.businessId, bizId), eq(accountSubNatures.natureKey, 'partner'))).limit(1);
+    const [analyticalAccount] = await db.insert(accounts).values({
+      businessId: bizId,
+      name: partnerFullName,
+      accountType: 'partner' as any,
+      accountSubNatureId: prtNature?.id ?? null,
+      isLeafAccount: true,
+      parentAccountId: accountId,
+      code: partnerCode,
+      sequenceNumber: subSeq,
+    }).returning();
     const partnerCode = `${acc.code}/${subSeq}`;
 
     const partnerSharePercentage =
