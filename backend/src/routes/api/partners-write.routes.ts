@@ -84,7 +84,6 @@ partnersWriteRoutes.post(
       code: partnerCode,
       sequenceNumber: subSeq,
     }).returning();
-    const partnerCode = `${acc.code}/${subSeq}`;
 
     const partnerSharePercentage =
       typeof body.sharePercentage === "number" ||

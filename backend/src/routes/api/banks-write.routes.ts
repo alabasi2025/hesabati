@@ -52,9 +52,9 @@ banksRoutes.post(
     if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
 
     // كود مركّب: كود الحساب/رقم فرعي (BNK-01/1, BNK-01/2)
-    const existingBanks = await db.select({ id: banks.id }).from(banks)
-      .where(and(eq(banks.businessId, bizId), eq(banks.accountId, accountId)));
-    const subSeq = existingBanks.length + 1;
+    const existingAnalytical = await db.select({ id: accounts.id }).from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.parentAccountId, accountId), eq(accounts.isLeafAccount, true)));
+    const subSeq = existingAnalytical.length + 1;
     const bankCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
 
     // إنشاء حساب تحليلي خاص بالكيان

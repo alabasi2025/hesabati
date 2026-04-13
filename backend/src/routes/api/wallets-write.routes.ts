@@ -48,9 +48,9 @@ walletsRoutes.post(
       .limit(1);
     if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
 
-    const existingWallets = await db.select({ id: wallets.id }).from(wallets)
-      .where(and(eq(wallets.businessId, bizId), eq(wallets.accountId, accountId)));
-    const subSeq = existingWallets.length + 1;
+    const existingAnalytical = await db.select({ id: accounts.id }).from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.parentAccountId, accountId), eq(accounts.isLeafAccount, true)));
+    const subSeq = existingAnalytical.length + 1;
     const walletCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
 
     // إنشاء حساب تحليلي خاص بالكيان

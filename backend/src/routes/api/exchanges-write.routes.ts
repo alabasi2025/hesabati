@@ -48,9 +48,9 @@ exchangesRoutes.post(
       .limit(1);
     if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
 
-    const existingExchanges = await db.select({ id: exchanges.id }).from(exchanges)
-      .where(and(eq(exchanges.businessId, bizId), eq(exchanges.accountId, accountId)));
-    const subSeq = existingExchanges.length + 1;
+    const existingAnalytical = await db.select({ id: accounts.id }).from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.parentAccountId, accountId), eq(accounts.isLeafAccount, true)));
+    const subSeq = existingAnalytical.length + 1;
     const exchangeCode = `${acc.code}/${String(subSeq).padStart(2, "0")}`;
 
     // إنشاء حساب تحليلي خاص بالكيان
