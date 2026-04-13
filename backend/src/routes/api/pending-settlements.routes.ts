@@ -67,12 +67,17 @@ pendingSettlementsRoutes.post('/businesses/:bizId/pending-accounts', bizAuthMidd
     
     const { code, sequenceNumber } = await generateLeafAccountCode(bizId, 'pending', tx as any);
     
+    // جلب الحساب الرقابي للمعلقات
+    const [pngCtrl] = await tx.select({ id: accounts.id }).from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.accountType, 'pending'), eq(accounts.isLeafAccount, false)))
+      .limit(1);
     const [account] = await tx.insert(accounts).values({
       businessId: bizId,
       name: `حساب معلق - ${d.personOrEntity || 'غير معروف'}`,
       accountType: 'pending',
       accountSubNatureId: pendingNature.id,
       isLeafAccount: true,
+      parentAccountId: pngCtrl?.id ?? null,
       code,
       sequenceNumber,
       isActive: true,

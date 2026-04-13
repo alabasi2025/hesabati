@@ -88,6 +88,10 @@ billingConfigWriteRoutes.post(
         .where(eq(accountSubNatures.natureKey, 'billing'))
         .limit(1);
 
+      // جلب الحساب الرقابي للفوترة
+      const [bilCtrl] = await db.select({ id: accounts.id }).from(accounts)
+        .where(and(eq(accounts.businessId, bizId), eq(accounts.accountType, 'billing'), eq(accounts.isLeafAccount, false)))
+        .limit(1);
       const [newAcc] = await db
         .insert(accounts)
         .values({
@@ -98,6 +102,7 @@ billingConfigWriteRoutes.post(
           code: genCode,
           sequenceNumber: genSeq,
           isLeafAccount: true,
+          parentAccountId: bilCtrl?.id ?? null,
           isActive: true,
         })
         .returning({ id: accounts.id });

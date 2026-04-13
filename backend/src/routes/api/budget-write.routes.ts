@@ -35,9 +35,38 @@ budgetWriteRoutes.post(
       .limit(1);
     if (!acc) return c.json({ error: 'الحساب المحدد غير موجود' }, 400);
 
+    // جلب الحساب الرقابي للميزانية
+    const [bdgCtrl] = await db.select({ id: accounts.id }).from(accounts)
+      .where(and(eq(accounts.businessId, bizId), eq(accounts.accountType, 'budget'), eq(accounts.isLeafAccount, false)))
+      .limit(1);
+
+    // التحقق: هل الحساب المحدد تحليلي؟ إذا لا، ننشئ واحد
+    const [selectedAcc] = await db.select({ id: accounts.id, isLeaf: accounts.isLeafAccount }).from(accounts)
+      .where(eq(accounts.id, accountId)).limit(1);
+    
+    let finalAccountId = accountId;
+    if (selectedAcc && !selectedAcc.isLeaf) {
+      // الحساب رقابي — ننشئ حساب تحليلي تحته
+      const existingAnalytical = await db.select({ id: accounts.id }).from(accounts)
+        .where(and(eq(accounts.businessId, bizId), eq(accounts.parentAccountId, accountId), eq(accounts.isLeafAccount, true)));
+      const subSeq = existingAnalytical.length + 1;
+      const [acc] = await db.select({ code: accounts.code }).from(accounts).where(eq(accounts.id, accountId)).limit(1);
+      const budgetCode = `${acc?.code ?? 'BDG'}/${String(subSeq).padStart(2, "0")}`;
+      const [analyticalAccount] = await db.insert(accounts).values({
+        businessId: bizId,
+        name: String(body.name ?? ''),
+        accountType: 'budget' as any,
+        isLeafAccount: true,
+        parentAccountId: accountId,
+        code: budgetCode,
+        sequenceNumber: subSeq,
+      }).returning();
+      finalAccountId = analyticalAccount.id;
+    }
+
     const [created] = await db.insert(expenseBudget).values({
       businessId: bizId,
-      accountId,
+      accountId: finalAccountId,
       name: String(body.name ?? ''),
       stationId: (body.stationId as number | null) ?? null,
       amount: String(body.amount ?? 0),
